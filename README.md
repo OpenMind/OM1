@@ -21,9 +21,9 @@
 
 ## Getting Started
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech`, and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
-### Package Management and VENV
+### Package Management and Virtual Environment
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
 
@@ -51,13 +51,13 @@ uv venv
 
 ### Obtain an OpenMind API Key
 
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.com/).
+Get your API key from [OpenMind Portal](https://portal.openmind.com/).
 1. Create your account on OpenMind Portal if you haven't yet.
 2. Go to the dashboard and create a new API key.
 3. Copy the generated API key.
-4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Or, configure it in the `.env` file using this command - `cp .env.example .env` and add your key to the `.env`.
+4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Alternatively, configure it in the `.env` file by running `cp .env.example .env` and then adding your key to `.env`.
 
-Alternatively, you can set your API key in the `.bashrc` file
+Alternatively, you can set your API key in your shell profile:
 
 ```bash
 vi ~/.bashrc # for Linux
@@ -71,7 +71,7 @@ export OM_API_KEY="<your_api_key>"
 ```
 
 ```bash
-source ~/.bashrc # for linux
+source ~/.bashrc # for Linux
 source ~/.zshrc # for macOS
 ```
 
@@ -91,7 +91,7 @@ uv run src/run.py spot
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
 > **Note:** This is just an example agent configuration.
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
 
 ## What's Next?
 
@@ -114,7 +114,7 @@ elif output_interface.action == "shake paw":
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
 
-OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, please see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, will be dockerized and can then interface with OM1 through DDS middleware or websockets.
+OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, is dockerized and interfaces with OM1 through DDS middleware or websockets.
 
 ## Recommended Development Platforms
 
@@ -136,27 +136,28 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
+OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The following features are supported with BrainPack:
 
-- **om1**
-- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR(S2L) sensor, the SLAM Toolbox and the Nav2 stack.
-- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
-- **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
-- **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
+- **Navigation** - Autonomous path planning and movement.
+- **SLAM** - Simultaneous Localization and Mapping for persistent map-based operation.
+- **Auto Charging** - Automated docking and battery charging workflows.
+- **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
+
+For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
 
 ## Simulator Support
 
-OM1 integrates with popular robotics simulators to enable rapid prototyping and testing without physical hardware. We currently support Gazebo with Unitree Go2 and Isaac Sim with Unitree Go2 and G1.
+OM1 integrates with popular robotics simulators to enable rapid prototyping and testing without physical hardware.
 
 ### Gazebo
 
-Full support for Gazebo with ROS2 integration. Ideal for testing autonomous SLAM map generation and navigation stacks, sensor simulation, and multi-robot scenarios.
+Open source Gazebo support is designed for rapid prototyping, conversational interaction, and behavior testing. Gazebo integration with OM1 is supported for Unitree Go2.
 
 See [Gazebo](docs/simulators/gazebo.md) to get started.
 
 ### Isaac Sim
 
-NVIDIA Isaac Sim support for physics-accurate simulation with GPU acceleration.
+NVIDIA Isaac Sim support enables physics-accurate simulation with GPU acceleration. Isaac Sim integration with OM1 is supported for Unitree Go2 and G1.
 
 Requires NVIDIA GPU and CUDA support. See [Isaac Sim Setup](docs/simulators/isaac-sim.md) to get started.
 

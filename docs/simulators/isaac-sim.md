@@ -151,6 +151,8 @@ You'll now be able to see Isaac Sim running on your system.
 
 ![ ](../assets/isaac-sim.png)
 
+> **Note**: You can skio Step 6 to Step 8 if you don't have Enterprise Plan Subscription. SLAM and Navigation are only supported as Premium features.
+
 Step 6: Open a new terminal , switch to base directory `OM1-ros2-sdk` and run:
 
 ```bash

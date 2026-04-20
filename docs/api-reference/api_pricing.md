@@ -50,6 +50,7 @@ The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit
   - Private model access (ships later this year)
 - **OMCU:** 1.5M units
 - All features in **Pro** plan
+- Access to all premium features. More details [here](../developing/premium_features.md)
 
 ### Custom Plan
 For custom pricing, quotas, or special requirements, please [contact our support team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)

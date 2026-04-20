@@ -96,6 +96,7 @@ Step 4: Open a terminal and run the following commands. You'll now be able to se
 source install/setup.bash
 ros2 launch go2_gazebo_sim go2_launch.py
 ```
+> **Note**: You can skio Step 5 to Step 7 if you don't have Enterprise Plan Subscription. SLAM and Navigation are only supported as Premium features.
 
 Step 5: Open a new terminal and run:
 
