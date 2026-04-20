@@ -138,7 +138,7 @@ Updater service for ota_agent:
 
 5. **RTSP Streaming** - The om1-video-processor component streams video and audio data to an RTSP server, enabling real-time video and audio streaming to external systems.
 
-6. **Openmind Privacy System - Face detection and Anonymisation** - A real-time, on-device face detection and blurring module designed to protect personal identity during video capture and streaming. It runs entirely on the robot’s edge device, requiring no cloud or network connectivity.
+6. **Openmind Privacy System - Face detection and Anonymization** - A real-time, on-device face detection and blurring module designed to protect personal identity during video capture and streaming. It runs entirely on the robot’s edge device, requiring no cloud or network connectivity.
 
 7. **Auto charging** - The system uses AprilTag-based visual docking combined with Nav2 navigation. When the robot needs to charge, it navigates to the charging station's general area using the Nav2 stack. Once nearby, it switches to precision docking mode where it detects AprilTags mounted on or near the charging dock using its onboard cameras.
 

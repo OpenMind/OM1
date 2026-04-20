@@ -141,7 +141,7 @@ OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The follow
 - **Navigation** - Autonomous path planning and movement.
 - **SLAM** - Simultaneous Localization and Mapping for persistent map-based operation.
 - **Auto Charging** - Automated docking and battery charging workflows.
-- **Face Detection and Anonymisation** - Real-time perception and privacy-aware processing.
+- **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
 
 For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
 
