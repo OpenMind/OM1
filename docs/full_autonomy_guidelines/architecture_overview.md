@@ -41,14 +41,25 @@ The full autonomy stack is built from modular, containerized services that commu
 
 OM1 full autonomy is powered by tightly integrated services that run in separate containers and communicate in real time.
 
-### 1. OM1 (`om1`)
+### OM1 (`om1`)
 The central intelligence of the system, responsible for:
 - High-level decision making and behavior planning
 - Natural language understanding and generation
 - Task planning and execution monitoring
 - Integration with external AI services
 
-### 2. OM1 ROS2 SDK (`om1-ros2-sdk`)
+### OM1 Avatar (`om1-avatar`)
+
+Frontend interface layer that provides:
+
+- React-based UI.
+- Real-time avatar rendering.
+- System status visualization.
+- User interaction on the BrainPack display.
+
+## Premium Features
+
+### OM1 ROS2 SDK (`om1-ros2-sdk`)
 The robotics middleware that provides:
 - Sensor data acquisition and processing
 - SLAM (Simultaneous Localization and Mapping)
@@ -63,16 +74,7 @@ The `om1-ros2-sdk` consists of the following:
 - watchdog: Monitors sensor and topic health, automatically restarting om1_sensor if issues are detected.
 - zenoh_bridge: Acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
 
-### 3. OM1 Avatar (`om1-avatar`)
-
-Frontend interface layer that provides:
-
-- React-based UI.
-- Real-time avatar rendering.
-- System status visualization.
-- User interaction on the BrainPack display.
-
-### 4. Video Processor (`om1-video-processor`)
+### Video Processor (`om1-video-processor`)
 
 Media handling subsystem:
 - Camera feed processing
@@ -107,7 +109,7 @@ It runs entirely on the **robot's edge device** and automatically blurs the face
 
 We prioritize safety and want to protect everyone's identity – when in doubt (low confidence, motion blur, occlusion), we focus on the side of privacy and blur anyway.
 
-We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
+We currently provide full autonomy for Unitree G1, Unitree Go2 and LimZ Tron through the BrainPack.
 
 ### 5. System Setup
 
