@@ -1,4 +1,7 @@
-# Premium Features
+---
+title: Premium Features
+icon: premium
+---
 
 ## Open Source Access
 
