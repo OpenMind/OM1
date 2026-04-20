@@ -2,7 +2,7 @@
 
 ## Open Source Access
 
-OM1 and Simulation is fully open source and publicly accessible. You can explore, use, and contribute to the codebase freely.
+OM1 and Simulation environment are fully open source and publicly accessible. You can explore, use, and contribute to the codebase freely.
 
 ## Premium Features
 

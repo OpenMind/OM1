@@ -51,7 +51,7 @@
 * [System Config](full_autonomy_guidelines/system_config.md)
 * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
-* [Premium Features](deveoping/premium_features)
+* [Premium Features](developing/premium_features)
 
 ## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
 
