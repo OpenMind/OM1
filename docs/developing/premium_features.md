@@ -42,7 +42,7 @@ Based on your use case and feasibility, we may offer:
 
 To unlock premium features, contact our team to learn more about the Enterprise Plan:
 
-- **Email**: support@openmind.com
+- **Email**: [Support Team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)
 - **Website**: [OpenMind Portal](https://portal.openmind.com)
 
 Our team will work with you to understand your needs and provide access to the full suite of premium capabilities.
