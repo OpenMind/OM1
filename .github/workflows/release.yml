@@ -1,17 +1,20 @@
-name: Build and Push Docker Image
+name: "ECR Release Workflow"
+
 on:
   push:
     branches: [ "main" ]
     paths-ignore:
       - "docs/**"
     tags:
-      - 'v*'
-
+      - "v*"
   workflow_dispatch:
 
 jobs:
   build-amd64:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
@@ -28,20 +31,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry-type: public
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: openmindagi/om1
+          images: public.ecr.aws/b8k9c8n5/openmind/om1
           tags: |
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
@@ -61,6 +69,9 @@ jobs:
 
   build-arm64:
     runs-on: ubuntu-22.04-arm
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
@@ -77,20 +88,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry-type: public
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: openmindagi/om1
+          images: public.ecr.aws/b8k9c8n5/openmind/om1
           tags: |
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
@@ -110,16 +126,28 @@ jobs:
 
   create-manifest:
     runs-on: ubuntu-latest
-    needs: [build-amd64, build-arm64]
+    permissions:
+      id-token: write
+      contents: read
+      deployments: write
+    needs: [ build-amd64, build-arm64 ]
+    environment:
+      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
+      url: https://gallery.ecr.aws/b8k9c8n5/openmind/om1
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry-type: public
 
       - name: Create manifest list and push
         run: |
@@ -142,6 +170,6 @@ jobs:
 
             docker buildx imagetools create \
               --tag $tag \
-              openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }} \
-              openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}
+              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-amd64.outputs.image-digest }} \
+              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-arm64.outputs.image-digest }}
           done
