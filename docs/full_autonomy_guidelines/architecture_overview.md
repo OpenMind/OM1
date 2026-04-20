@@ -113,16 +113,6 @@ Key functions:
 - Ensures compatibility with new features and fixes
 - This service guarantees that the OTA system can evolve without manual intervention.
 
-#### om1_monitor
-This service is used for setting up the Wi-Fi, local network, and local status page.
-
-Key functions:
-- Wi-Fi configuration
-- Local network setup
-- Local status and monitoring page
-
-This service exposes a web interface for initial device configuration.
-
 ## System Architecture
 1. **Sensor Data Collection** - The OM1-ros2-sdk gathers data from sensors such as LiDAR and cameras, publishing ROS2 topics for localization and mapping.
 
