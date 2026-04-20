@@ -1,6 +1,6 @@
 ---
 title: Premium Features
-icon: premium
+icon: crown
 ---
 
 ## Open Source Access
