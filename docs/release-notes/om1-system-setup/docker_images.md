@@ -9,10 +9,6 @@ git clone https://github.com/OpenMind/OM1-system-setup
 ```
 
 ```bash
-    cd OM1-system-setup
-    cd WIFI
-    docker-compose up -d om1_monitor
-
     cd ..
     cd OTA
     docker-compose up -d ota_agent
