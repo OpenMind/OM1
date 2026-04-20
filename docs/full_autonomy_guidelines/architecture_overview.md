@@ -63,7 +63,7 @@ The `om1-ros2-sdk` consists of the following:
 - watchdog: Monitors sensor and topic health, automatically restarting om1_sensor if issues are detected.
 - zenoh_bridge: Acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
 
-### 3. OM1 Avatar (om1-avatar)
+### 3. OM1 Avatar (`om1-avatar`)
 
 Frontend interface layer that provides:
 
@@ -72,7 +72,7 @@ Frontend interface layer that provides:
 - System status visualization.
 - User interaction on the BrainPack display.
 
-### 4. Video Processor (om1-video-processor)
+### 4. Video Processor (`om1-video-processor`)
 
 Media handling subsystem:
 - Camera feed processing
