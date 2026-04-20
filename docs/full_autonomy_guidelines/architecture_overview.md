@@ -4,26 +4,42 @@ description: "Full autonomy architecture and introduction"
 icon: sitemap
 ---
 
-OM1 supports Full Autonomy Mode on both Nvidia AGX and Thor platforms, enabling advanced perception, mapping, navigation, and interaction capabilities with minimal human input.
+This section describes the full autonomy architecture and deployment model for OM1 with BrainPack.
 
-   - AGX: Supported with a limited feature set.
+## Accessibility
 
-   - Thor: Provides comprehensive support for full autonomy.
+- OM1 is publicly accessible and open source.
+- The rest of the full autonomy stack is available as paid premium features through **Enterprise Plan Subscription**. For more details, refer [Premium Features](../developing/premium_features.md)
 
-On the Nvidia Thor platform, OM1 includes advanced machine learning capabilities such as:
+### Platform Support
 
-   - Face recognition
+- Nvidia AGX: Supported with a limited feature set.
+- Nvidia Thor: Fully supported and recommended for ML-heavy autonomy workloads.
 
-   - Anonymization
+### Robot Support
 
-Thor is fully supported and optimized for ML-driven workloads, making it the recommended platform for deployments requiring advanced autonomy and perception features.
+- Unitree Go2
+- Unitree G1
+- LimX Tron
 
-The Full Autonomy stack is built from modular, containerized services that communicate through well-defined interfaces. The diagram below shows how these components interact within the system.
+### Feature Availability
+
+- Navigation: Supported in full autonomy deployments.
+- SLAM: Supported in full autonomy deployments.
+- Face Detection and Anonymisation: Best on Thor.
+- Auto Charging: Currently supported for Go2.
+
+The exact feature profile depends on hardware, sensors, and deployment configuration.
+
+## Architecture Overview
+
+The full autonomy stack is built from modular, containerized services that communicate through well-defined interfaces.
 
 ![ ](../assets/full-autonomy-assets/full_autonomy_architecture.png)
 
 ## Core Components
-OM1’s full autonomy is powered by the following tightly integrated services, each running in its own container and communicating in real time:
+
+OM1 full autonomy is powered by tightly integrated services that run in separate containers and communicate in real time.
 
 ### 1. OM1 (`om1`)
 The central intelligence of the system, responsible for:
@@ -47,15 +63,17 @@ The `om1-ros2-sdk` consists of the following:
 - watchdog: Monitors sensor and topic health, automatically restarting om1_sensor if issues are detected.
 - zenoh_bridge: Acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
 
-### 3. OM1 Avatar (`om1-avatar`)
-Frontend interface components:
-- React-based user interface
-- Real-time avatar rendering
-- System status visualization
-- User interaction layer
-- Runs on the robot's BrainPack screen
+### 3. OM1 Avatar (om1-avatar)
 
-### 4. Video Processor (`om1-video-processor`)
+Frontend interface layer that provides:
+
+- React-based UI.
+- Real-time avatar rendering.
+- System status visualization.
+- User interaction on the BrainPack display.
+
+### 4. Video Processor (om1-video-processor)
+
 Media handling subsystem:
 - Camera feed processing
 - Face detection and recognition
@@ -75,7 +93,6 @@ Media handling subsystem:
 - Time Synchronization: Coordinates multiple media streams (audio/video) to play in sync
 - Network Remote Control: Provides VCR-like commands (play, pause, stop, seek) for media playback over a network
 
-#### Architecture Diagram
 
 ![ ](../assets/om1_video_processor_architecture.png)
 
@@ -96,22 +113,19 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 
 #### ota_agent
 
-Key functions:
-- Pull new images
-- Start and stop containers
-- Restart services
-- Upgrade existing images
+Main OTA lifecycle service:
 
-This is the main service responsible for OTA (Over-The-Air) application lifecycle management.
+- Pulls new images.
+- Starts and stops containers.
+- Restarts services.
+- Upgrades application images.
 
 #### ota_updater
 
-Ota_updater is used to update the OTA_agent.
+Updater service for ota_agent:
 
-Key functions:
-- Updates the OTA agent to the latest version
-- Ensures compatibility with new features and fixes
-- This service guarantees that the OTA system can evolve without manual intervention.
+- Updates ota_agent to the latest version.
+- Maintains compatibility with new fixes and features.
 
 ## System Architecture
 1. **Sensor Data Collection** - The OM1-ros2-sdk gathers data from sensors such as LiDAR and cameras, publishing ROS2 topics for localization and mapping.
