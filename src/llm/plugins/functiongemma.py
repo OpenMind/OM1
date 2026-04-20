@@ -32,7 +32,7 @@ def _extract_voice_input(prompt: str) -> str:
     """
     match = re.search(r"Voice:\s*([^\n]+)", prompt)
     if match:
-        return match.group(1).strip()
+        return match.group(1).strip().strip('"\'')
 
     return ""
 
