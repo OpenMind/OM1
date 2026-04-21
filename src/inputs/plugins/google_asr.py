@@ -334,8 +334,15 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
                 logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
 
         if self.session:
-            self.session.close()
-            logging.info("Zenoh ASR session closed")
+            try:
+                self.session.close()
+                logging.info("Zenoh ASR session closed")
+            except Exception as e:
+                logging.warning(f"Failed to close Zenoh ASR session: {e}")
 
         if self.asr:
-            self.asr.stop()
+            try:
+                self.asr.stop()
+                logging.info("ASR provider stopped")
+            except Exception as e:
+                logging.warning(f"Failed to stop ASR provider: {e}")
