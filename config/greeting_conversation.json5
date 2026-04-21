@@ -232,6 +232,16 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
           priority: 2,
         },
         {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "set_mode_hook",
+            mode: "following",
+          },
+          priority: 3,
+        },
+        {
           hook_type: "on_exit",
           handler_type: "function",
           handler_config: {
@@ -240,6 +250,16 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
           },
           timeout_seconds: 5,
           priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "set_mode_hook",
+            mode: "greeting",
+          },
+          priority: 2,
         },
       ],
     },
