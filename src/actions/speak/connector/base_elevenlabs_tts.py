@@ -309,6 +309,3 @@ class BaseElevenLabsTTSConnector(ActionConnector[BaseElevenLabsTTSConfig, SpeakI
         if self.session:
             self.session.close()
             logging.info("Elevenlabs TTS Zenoh client closed")
-
-        if self.tts:
-            self.tts.stop()

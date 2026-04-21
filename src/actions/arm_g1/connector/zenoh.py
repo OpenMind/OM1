@@ -23,7 +23,7 @@ CUSTOM_ACTION_MAP = {
     "face_wave": "face_wave",
     "hands_up": "hands_up",
     "stand_still": "stand_still",
-    "wave": "wave",
+    "wave": "face_wave",
     "show_hand": "show_hand",
     "show_hand1": "show_hand1",
     "show_hand2": "show_hand2",
