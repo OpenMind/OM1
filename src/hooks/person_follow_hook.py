@@ -40,6 +40,7 @@ class StartPersonFollowHookContext(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+
 class SwitchPersonFollowHookContext(BaseModel):
     """
     Context for switching person follow target.
@@ -56,6 +57,7 @@ class SwitchPersonFollowHookContext(BaseModel):
     )
 
     model_config = ConfigDict(extra="allow")
+
 
 class StopPersonFollowHookContext(BaseModel):
     """
@@ -231,7 +233,7 @@ async def stop_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
 
-    returns
+    Returns
     -------
     Dict[str, Any]
         Result of the operation with 'status' and 'message'.
@@ -269,7 +271,7 @@ async def set_mode_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     context : Dict[str, Any]
         Context dictionary containing configuration parameters including 'mode'.
 
-    returns
+    Returns
     -------
     Dict[str, Any]
         Result of the operation with 'status' and 'message'.
@@ -277,16 +279,16 @@ async def set_mode_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     ctx = SetModeHookContext(**context)
     base_url = ctx.base_url
     mode = ctx.mode
-    commmand = f"{base_url}/command"
+    command = f"{base_url}/command"
 
     payload = {"cmd": "set_mode", "mode": mode}
 
     try:
         async with aiohttp.ClientSession() as session:
-            logging.info(f"Person Follow: Setting mode to '{mode}' at {commmand}")
+            logging.info(f"Person Follow: Setting mode to '{mode}' at {command}")
 
             async with session.post(
-                commmand,
+                command,
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=5),
@@ -301,4 +303,3 @@ async def set_mode_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     except aiohttp.ClientError as e:
         logging.error(f"Person Follow: Set mode error: {str(e)}")
         return {"status": "error", "message": f"Connection error: {str(e)}"}
-
