@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 
+import aiohttp
 from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
@@ -83,6 +84,36 @@ class GeetingEndHookContext(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class GreetingStartHookContext(BaseModel):
+    """
+    Configuration for greeting_start_hook.
+
+    Parameters
+    ----------
+    base_url : str
+        The base URL for the HTTP request.
+    recent_duration : int
+        The number of recent seconds to query.
+    timeout : float
+        Timeout in seconds for the HTTP request. Defaults to 5.0.
+    """
+
+    base_url: str = Field(
+        ...,
+        description="The base URL for the HTTP request",
+    )
+    recent_duration: int = Field(
+        default=1,
+        description="The number of recent seconds to query",
+    )
+    timeout: float = Field(
+        default=5.0,
+        description="Timeout in seconds for the HTTP request",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+
 async def geeting_end_hook(context: Dict[str, Any]):
     """
     Hook to handle the end of a greeting conversation.
@@ -148,4 +179,33 @@ async def geeting_end_hook(context: Dict[str, Any]):
 
     except Exception:
         logging.exception("Error in geeting_end_hook")
+        return False
+
+
+async def greeting_start_hook(context: Dict[str, Any]):
+    """
+    Hook to handle the start of a greeting conversation.
+
+    Parameters
+    ----------
+    context : Dict[str, Any]
+        Context dictionary containing relevant information for the hook.
+    """
+    ctx = GreetingStartHookContext(**context)
+
+    try:
+        url = f"{ctx.base_url}/who"
+        timeout = aiohttp.ClientTimeout(total=ctx.recent_duration)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, json={"recent_sec": ctx.recent_duration}) as response:
+                response.raise_for_status()
+                data = await response.json()
+                logging.info(f"Greeting conversation started. Response: {data}")
+                return True
+    except aiohttp.ClientError as e:
+        logging.error(f"HTTP request failed in greeting_start_hook: {e}")
+        return False
+    except Exception as e:
+        logging.exception(f"Error in greeting_start_hook: {e}")
         return False
