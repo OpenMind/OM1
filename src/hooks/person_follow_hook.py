@@ -39,6 +39,22 @@ class StartPersonFollowHookContext(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+class SwitchPersonFollowHookContext(BaseModel):
+    """
+    Context for switching person follow target.
+
+    Parameters
+    ----------
+    switch_url : str
+        URL for the person following switch endpoint.
+    """
+
+    base_url: str = Field(
+        default=PERSON_FOLLOW_BASE_URL,
+        description="Base URL for the person following system to send the switch command",
+    )
+
+    model_config = ConfigDict(extra="allow")
 
 class StopPersonFollowHookContext(BaseModel):
     """
@@ -130,6 +146,44 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     except aiohttp.ClientError as e:
         logging.error(f"Person Follow: Connection error: {str(e)}")
         elevenlabs_provider.add_pending_message("I couldn't connect to the person following system.")
+        return {"status": "error", "message": f"Connection error: {str(e)}"}
+
+
+async def switch_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Hook to switch person following target.
+
+    Parameters
+    ----------
+    context : Dict[str, Any]
+        Context dictionary containing configuration parameters.
+    """
+    ctx = SwitchPersonFollowHookContext(**context)
+    base_url = ctx.base_url
+
+    elevenlabs_provider = ElevenLabsTTSProvider()
+    switch_url = f"{base_url}/switch"
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            logging.info(f"Person Follow: Calling switch at {switch_url}")
+
+            async with session.post(
+                switch_url,
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as response:
+                if response.status == 200:
+                    logging.info("Person Follow: Switched successfully")
+                    elevenlabs_provider.add_pending_message("I'll follow a new person now.")
+                    return {"status": "success", "message": "Person tracking target switched"}
+                else:
+                    logging.error(f"Person Follow: Failed to switch (status {response.status})")
+                    elevenlabs_provider.add_pending_message("I couldn't switch to a new person.")
+                    return {"status": "error", "message": f"Switch failed with status {response.status}"}
+
+    except aiohttp.ClientError as e:
+        logging.error(f"Person Follow: Switch error: {str(e)}")
+        elevenlabs_provider.add_pending_message("I couldn't connect to switch the person.")
         return {"status": "error", "message": f"Connection error: {str(e)}"}
 
 
