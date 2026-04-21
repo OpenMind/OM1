@@ -336,3 +336,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         if self.session:
             self.session.close()
             logging.info("Zenoh ASR session closed")
+
+        if self.asr:
+            self.asr.stop()
