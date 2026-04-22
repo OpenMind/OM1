@@ -340,7 +340,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             except Exception as e:
                 logging.warning(f"Failed to close Zenoh ASR session: {e}")
 
-        # Todo:
+        # TODO:
         # Consider sending the TTS status multiple times to ASR provider to ensure that
         # the ASR provider properly receives the interrupt signal,
         # especially in cases where the mode switch happens during TTS playback
