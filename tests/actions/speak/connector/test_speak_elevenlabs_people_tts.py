@@ -104,7 +104,7 @@ async def test_get_voice_id_with_face_presence_match(
     connector = SpeakElevenLabsTTSConnector(mock_config)
 
     mock_face_presence = Mock()
-    mock_face_presence.input = "John"
+    mock_face_presence.input = "In Camera View: 1 known (John). Closest: John."
     mock_face_presence.tick = 123
 
     mock_io_instance.get_input.return_value = mock_face_presence
@@ -267,7 +267,7 @@ async def test_get_voice_id_with_single_known_face_camera_format(
     connector = SpeakElevenLabsTTSConnector(mock_config)
 
     mock_face_presence = Mock()
-    mock_face_presence.input = "In Camera View: 1 known (John) and 1 unknown face."
+    mock_face_presence.input = "In Camera View: 1 known (John) and 1 unknown face. Closest: John."
     mock_face_presence.tick = 123
 
     mock_io_instance.get_input.return_value = mock_face_presence
@@ -301,7 +301,7 @@ async def test_get_voice_id_with_multiple_known_faces_picks_first(
     connector = SpeakElevenLabsTTSConnector(mock_config)
 
     mock_face_presence = Mock()
-    mock_face_presence.input = "In Camera View: 2 known (John and Jane) and 2 unknown faces."
+    mock_face_presence.input = "In Camera View: 2 known (John and Jane) and 2 unknown faces. Closest: John."
     mock_face_presence.tick = 123
 
     mock_io_instance.get_input.return_value = mock_face_presence
@@ -375,7 +375,7 @@ async def test_connect_uses_mapped_voice_id(
     connector.audio_pub = None
 
     mock_face_presence = Mock()
-    mock_face_presence.input = "Jane"
+    mock_face_presence.input = "In Camera View: 1 known (Jane). Closest: Jane."
     mock_face_presence.tick = 123
 
     mock_io_instance.get_input.return_value = mock_face_presence

@@ -96,6 +96,7 @@ class GeetingHookContext(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+
 async def greeting_start_hook(context: Dict[str, Any]):
     """
     Hook to handle the start of a greeting conversation.

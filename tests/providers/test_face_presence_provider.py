@@ -26,23 +26,27 @@ def _patch_post(monkeypatch, provider: FacePresenceProvider, payload: dict):
 
 def test_presence_snapshot_to_text_variants():
     # 1 known, 0 unknown
-    snap = PresenceSnapshot(ts=1.0, names=["wendy"], unknown_faces=0, raw={})
-    assert snap.to_text() == "In Camera View: 1 known (wendy)."
+    snap = PresenceSnapshot(timestamp=1.0, names=["wendy"], unknown_faces=0, closest_name="wendy", raw={})
+    assert snap.to_text() == "In Camera View: 1 known (wendy). Closest: wendy."
 
     # 3 known, 2 unknown (ordering and 'and' grammar)
-    snap = PresenceSnapshot(ts=1.0, names=["wendy", "alice", "bob"], unknown_faces=2, raw={})
-    assert snap.to_text() == "In Camera View: 3 known (wendy, alice and bob) and 2 unknown faces."
+    snap = PresenceSnapshot(
+        timestamp=1.0, names=["wendy", "alice", "bob"], unknown_faces=2, closest_name="wendy", raw={}
+    )
+    assert snap.to_text() == "In Camera View: 3 known (wendy, alice and bob) and 2 unknown faces. Closest: wendy."
 
     # 0 known, 1 unknown (singular form)
-    snap = PresenceSnapshot(ts=1.0, names=[], unknown_faces=1, raw={})
-    assert snap.to_text() == "In Camera View: 1 unknown face."
+    snap = PresenceSnapshot(timestamp=1.0, names=[], unknown_faces=1, closest_name="unknown", raw={})
+    assert snap.to_text() == "In Camera View: 1 unknown face. Closest: unknown."
 
     # duplicates and 'unknown' should be cleaned out
-    snap = PresenceSnapshot(ts=1.0, names=["wendy", "wendy", "unknown"], unknown_faces=0, raw={})
-    assert snap.to_text() == "In Camera View: 1 known (wendy)."
+    snap = PresenceSnapshot(
+        timestamp=1.0, names=["wendy", "wendy", "unknown"], unknown_faces=0, closest_name="wendy", raw={}
+    )
+    assert snap.to_text() == "In Camera View: 1 known (wendy). Closest: wendy."
 
     # nothing
-    snap = PresenceSnapshot(ts=1.0, names=[], unknown_faces=0, raw={})
+    snap = PresenceSnapshot(timestamp=1.0, names=[], unknown_faces=0, closest_name="unknown", raw={})
     assert snap.to_text() == "No one in view."
 
 
@@ -63,6 +67,9 @@ def test_frames_based_unknown_suppressed(monkeypatch):
     payload = {
         "server_ts": 1000.0,
         "recent_sec": 3.0,
+        "faces": [
+            {"name": "wendy", "area": 1000},
+        ],
         "now": ["wendy"],
         "unknown_now": 0,
         "frames_recent": 40,  # >= min_obs_window
@@ -93,6 +100,13 @@ def test_frames_based_unknown_kept(monkeypatch):
     payload = {
         "server_ts": 1000.0,
         "recent_sec": 3.0,
+        "faces": [
+            {"name": "wendy", "area": 1000},
+            {"name": "unknown", "area": 800},
+            {"name": "unknown", "area": 700},
+            {"name": "unknown", "area": 600},
+            {"name": "unknown", "area": 550},
+        ],
         "now": ["wendy"],
         "unknown_now": 0,
         "frames_recent": 40,
@@ -104,8 +118,8 @@ def test_frames_based_unknown_kept(monkeypatch):
 
     snap = provider._fetch_snapshot()
     assert set(snap.names) == {"wendy"}
-    assert snap.unknown_faces == 5
-    assert provider.unknown_faces == 5
+    assert snap.unknown_faces == 4
+    assert provider.unknown_faces == 4
 
 
 def test_frames_recent_zero_falls_back_to_now(monkeypatch):
@@ -118,6 +132,11 @@ def test_frames_recent_zero_falls_back_to_now(monkeypatch):
     payload = {
         "server_ts": 1000.0,
         "recent_sec": 3.0,
+        "faces": [
+            {"name": "wendy", "area": 1000},
+            {"name": "unknown", "area": 800},
+            {"name": "unknown", "area": 700},
+        ],
         "now": ["wendy", "unknown", "unknown"],
         "unknown_now": 2,
         "frames_recent": 0,
@@ -143,6 +162,11 @@ def test_prefer_now_path(monkeypatch):
     payload = {
         "server_ts": 1000.0,
         "recent_sec": 3.0,
+        "faces": [
+            {"name": "alice", "area": 1000},
+            {"name": "alice", "area": 900},
+            {"name": "unknown", "area": 800},
+        ],
         "now": ["alice", "alice", "unknown"],
         "unknown_now": 1,
         "frames_recent": 999,
@@ -175,7 +199,7 @@ def test_emit_invokes_callbacks(monkeypatch):
         got.append(line)
 
     provider.register_message_callback(cb)
-    snap = PresenceSnapshot(ts=1.0, names=["alice", "bob"], unknown_faces=1, raw={})
+    snap = PresenceSnapshot(timestamp=1.0, names=["alice", "bob"], unknown_faces=1, closest_name="alice", raw={})
     provider._emit(snap.to_text())
 
     assert got, "callback should be invoked"

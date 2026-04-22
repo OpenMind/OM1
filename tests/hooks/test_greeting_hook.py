@@ -2,15 +2,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from hooks.greeting_hook import GeetingEndHookContext, geeting_end_hook
+from hooks.greeting_hook import GeetingHookContext, geeting_end_hook
 
 
-class TestGeetingEndHookContext:
-    """Tests for GeetingEndHookContext model."""
+class TestGeetingHookContext:
+    """Tests for GeetingHookContext model."""
 
     def test_context_default_values(self):
         """Test context model with default values."""
-        context = GeetingEndHookContext()
+        context = GeetingHookContext()
         assert context.message == ""
         assert context.tts_provider == "elevenlabs"
         assert context.base_url is None
@@ -21,10 +21,12 @@ class TestGeetingEndHookContext:
         assert context.output_format is None
         assert context.rate is None
         assert context.enable_tts_interrupt is False
+        assert context.robot_name is None
+        assert context.custom_message is None
 
     def test_context_custom_values(self):
         """Test context model with custom values."""
-        context = GeetingEndHookContext(
+        context = GeetingHookContext(
             message="Hello, world!",
             tts_provider="kokoro",
             base_url="http://localhost:8880",
@@ -35,6 +37,8 @@ class TestGeetingEndHookContext:
             output_format="mp3",
             rate=24000,
             enable_tts_interrupt=True,
+            robot_name="TestBot",
+            custom_message="Welcome to the test!",
         )
         assert context.message == "Hello, world!"
         assert context.tts_provider == "kokoro"
@@ -46,10 +50,12 @@ class TestGeetingEndHookContext:
         assert context.output_format == "mp3"
         assert context.rate == 24000
         assert context.enable_tts_interrupt is True
+        assert context.robot_name == "TestBot"
+        assert context.custom_message == "Welcome to the test!"
 
     def test_context_extra_fields_allowed(self):
         """Test that extra fields are allowed in the context."""
-        context = GeetingEndHookContext(message="Test", extra_field="extra_value")  # type: ignore
+        context = GeetingHookContext(message="Test", extra_field="extra_value")  # type: ignore
         # Should not raise an error due to Config.extra = "allow"
         assert context.message == "Test"
 

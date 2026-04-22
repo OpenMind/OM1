@@ -1,7 +1,7 @@
+import asyncio
 import logging
 import threading
 import time
-import asyncio
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
@@ -340,7 +340,9 @@ class FacePresenceProvider:
                 seen_names.add(name)
                 names.append(name)
 
-        unknown_count_in_faces = sum(1 for face in filtered_faces if (face.get("name", "") or "").strip().lower() == "unknown")
+        unknown_count_in_faces = sum(
+            1 for face in filtered_faces if (face.get("name", "") or "").strip().lower() == "unknown"
+        )
 
         timestamp = float(data.get("server_ts", time.time()))
         self._unknown_faces = int(unknown_count_in_faces)
