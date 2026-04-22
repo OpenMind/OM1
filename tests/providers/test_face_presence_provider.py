@@ -50,7 +50,6 @@ def test_presence_snapshot_to_text_variants():
     assert snap.to_text() == "No one in view."
 
 
-# ---------------------- frames-based suppression ---------------------- #
 def test_frames_based_unknown_suppressed(monkeypatch):
     """
     Suppress when frames_recent >= min_obs_window and
@@ -62,7 +61,7 @@ def test_frames_based_unknown_suppressed(monkeypatch):
         unknown_frac_threshold=0.15,  # 15%
         min_obs_window=24,  # need at least 24 frames
     )
-    provider.prefer_recent = True
+    provider.prefer_recent = True  # type: ignore
 
     payload = {
         "server_ts": 1000.0,
@@ -95,7 +94,7 @@ def test_frames_based_unknown_kept(monkeypatch):
         unknown_frac_threshold=0.15,
         min_obs_window=24,
     )
-    provider.prefer_recent = True
+    provider.prefer_recent = True  # type: ignore
 
     payload = {
         "server_ts": 1000.0,
@@ -127,7 +126,7 @@ def test_frames_recent_zero_falls_back_to_now(monkeypatch):
     When frames_recent == 0, provider should fall back to `now` values.
     """
     provider = FacePresenceProvider(base_url="http://fake", recent_sec=3.0)
-    provider.prefer_recent = True
+    provider.prefer_recent = True  # type: ignore
 
     payload = {
         "server_ts": 1000.0,
@@ -157,7 +156,7 @@ def test_prefer_now_path(monkeypatch):
     prefer_recent=False → use `now` path regardless of frames fields.
     """
     provider = FacePresenceProvider(base_url="http://fake", recent_sec=3.0)
-    provider.prefer_recent = False
+    provider.prefer_recent = False  # type: ignore
 
     payload = {
         "server_ts": 1000.0,
@@ -182,7 +181,6 @@ def test_prefer_now_path(monkeypatch):
     assert provider.unknown_faces == 1
 
 
-# ---------------------- plumbing / misc ---------------------- #
 def test_set_recent_sec_clamps():
     provider = FacePresenceProvider(base_url="http://fake", recent_sec=3.0)
     provider.set_recent_sec(-10)
