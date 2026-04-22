@@ -108,19 +108,23 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
             tts_provider: "elevenlabs",
-            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
+            robot_name: "${ROBOT_NAME:-Bits}",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
         {
           hook_type: "on_entry",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
             tts_provider: "elevenlabs",
-            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
+            robot_name: "${ROBOT_NAME:-Bits}",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
@@ -204,20 +208,26 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
             tts_provider: "elevenlabs",
-            message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            custom_message: "How can I help you today?",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
           priority: 1,
         },
         {
           hook_type: "on_entry",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
             tts_provider: "elevenlabs",
-            message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            custom_message: "How can I help you today?",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
           priority: 1,
