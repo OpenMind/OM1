@@ -71,7 +71,7 @@ sudo chmod +x /usr/local/bin/start-kiosk.sh
 
 Add the below script to `/etc/systemd/system/kiosk.service` to launch the kiosk mode automatically on boot.
 
-```bash
+```ini
 # /etc/systemd/system/kiosk.service
 [Unit]
 Description=Kiosk Browser
@@ -86,8 +86,11 @@ User=openmind
 
 [Install]
 WantedBy=graphical.target
+```
+
 Enable and start the service:
 
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable kiosk.service
 sudo systemctl start kiosk.service

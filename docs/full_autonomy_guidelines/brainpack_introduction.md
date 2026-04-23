@@ -4,17 +4,52 @@ description: "Introduction to the BrainPack"
 icon: backpack
 ---
 
-## Basic Introduction
+## Overview
 
-- From research to real-world autonomy, the **OM1 BrainPack** is a plug-and-play module that brings full autonomy to your robots.
-- It is designed to be mounted directly onto a robot to bring together mapping, object recognition, remote control, and self charging, giving humanoids and quadrupeds what they need to navigate, remember, and act with purpose.
-- The BrainPack makes your robot smarter — a system that **learns, moves, and builds with you.**
-- These BrainPacks provide NVIDIA Thor to Unitree dogs and humanoids. Each of them comes with an open reference design, speakers, and connectivity to other sensors via Ethernet and USB, with multiple power options.
-- The BrainPack supports modern and future NVIDIA hardware(NVIDIA Thor) and software (JetPack 7.05), current and future versions of ROS2, and is robot agnostic to control different form factors.
+From research to real-world autonomy, the **OM1 BrainPack** is a plug-and-play module that brings full autonomy to your robots.
+
+The BrainPack is designed to be mounted directly onto a robot to bring together mapping, object recognition, remote control, and self-charging capabilities — giving humanoids and quadrupeds what they need to navigate, remember, and act with purpose.
+
+> The BrainPack makes your robot smarter — a system that **learns, moves, and builds with you.**
 
 ![ ](../assets/brainpack.png)
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **NVIDIA Thor** | Provides powerful GPU compute for AI inference and navigation |
+| **JetPack 7.0** | Latest NVIDIA software stack with optimized ML libraries |
+| **ROS2 Support** | Compatible with current and future versions of ROS2 |
+| **Robot Agnostic** | Control different robot form factors (quadrupeds, humanoids) |
+| **Connectivity** | Ethernet, USB, and multiple power options |
+| **Open Reference Design** | Build your own with published specifications |
+
+## Hardware Specifications
+
+Each BrainPack comes with:
+
+- NVIDIA Thor compute module
+- Integrated speakers for TTS output
+- Multiple connectivity options (Ethernet, USB)
+- Flexible power input options
+- Mounting hardware for Unitree robots
+
 ![ ](../assets/brainpack_2.png)
 
-## Next steps
-We'll shortly be releasing the **BOM** so that you can build your own BrainPack and details on **DIY** guideline for it.
+## Supported Robots
+
+| Robot | Support Level |
+|-------|---------------|
+| Unitree Go2 | ✅ Fully Supported |
+| Unitree G1 | ✅ Fully Supported |
+| LimX Tron | ✅ Fully Supported |
+
+## Next Steps
+
+We'll shortly be releasing:
+
+- **Bill of Materials (BOM)** — Complete parts list to build your own BrainPack
+- **DIY Guidelines** — Step-by-step assembly instructions
+
 Stay tuned!
