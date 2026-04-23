@@ -143,6 +143,12 @@ class XAILLM(LLM[R]):
                 return T.cast(R, result)
 
             return None
+        except openai.APIStatusError as e:
+            logging.error(f"XAI API error: HTTP {e.status_code} - {e.message}")
+            return None
+        except openai.APIConnectionError as e:
+            logging.error(f"XAI connection error: {e.message}")
+            return None
         except Exception as e:
-            logging.error(f"XAI API error: {e}")
+            logging.error(f"XAI unexpected error: {type(e).__name__}: {e}")
             return None

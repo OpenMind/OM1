@@ -142,3 +142,42 @@ async def test_ask_api_error(llm):
 
         result = await llm.ask("test prompt")
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_status_error(llm):
+    """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    mock_response = MagicMock()
+    mock_response.status_code = 502
+    mock_response.headers = {}
+    error = openai.APIStatusError(
+        message="Bad Gateway",
+        response=mock_response,
+        body=None,
+    )
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_connection_error(llm):
+    """Test error handling for network connection errors"""
+    import openai
+
+    error = openai.APIConnectionError(request=MagicMock())
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None

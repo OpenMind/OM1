@@ -1,14 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
 from llm.plugins.near_ai_llm import NearAIConfig, NearAILLM
-
-
-class DummyOutputModel(BaseModel):
-    test_field: str
 
 
 @pytest.fixture
@@ -341,3 +336,40 @@ class TestNearAILLMAsk:
 
             call_args = mock_parse.call_args
             assert call_args.kwargs.get("timeout") == 30
+
+    @pytest.mark.asyncio
+    async def test_ask_api_status_error(self, llm):
+        """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+        import openai
+
+        mock_response = MagicMock()
+        mock_response.status_code = 502
+        mock_response.headers = {}
+        error = openai.APIStatusError(
+            message="Bad Gateway",
+            response=mock_response,
+            body=None,
+        )
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(
+                llm._client.beta.chat.completions,
+                "parse",
+                AsyncMock(side_effect=error),
+            )
+            result = await llm.ask("test prompt")
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_ask_api_connection_error(self, llm):
+        """Test error handling for network connection errors"""
+        import openai
+
+        error = openai.APIConnectionError(request=MagicMock())
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(
+                llm._client.beta.chat.completions,
+                "parse",
+                AsyncMock(side_effect=error),
+            )
+            result = await llm.ask("test prompt")
+            assert result is None

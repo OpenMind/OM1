@@ -1,14 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
 from llm.plugins.openrouter import OpenRouter, OpenRouterConfig
-
-
-class DummyOutputModel(BaseModel):
-    test_field: str
 
 
 @pytest.fixture
@@ -139,5 +134,113 @@ async def test_ask_api_error(llm):
             AsyncMock(side_effect=Exception("API error")),
         )
 
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_status_error(llm):
+    """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    mock_response = MagicMock()
+    mock_response.status_code = 502
+    mock_response.headers = {}
+    error = openai.APIStatusError(
+        message="Bad Gateway",
+        response=mock_response,
+        body=None,
+    )
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_init_no_model(config):
+    """Test that missing model defaults to llama"""
+    config.model = None
+    llm = OpenRouter(config, available_actions=None)
+    assert llm._config.model == "meta-llama/llama-3.3-70b-instruct"
+
+
+@pytest.mark.asyncio
+async def test_ask_messages_none_branch(llm, mock_response_with_tool_calls):
+    """Test messages=None branch by calling the unwrapped function directly"""
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(return_value=mock_response_with_tool_calls),
+        )
+        # Call __wrapped__ to bypass decorators and hit messages=None branch
+        result = await llm.ask.__wrapped__.__wrapped__(
+            llm, "test prompt", messages=None
+        )
+        assert isinstance(result, CortexOutputModel)
+
+
+@pytest.mark.asyncio
+async def test_ask_empty_choices(llm):
+    """Test ask returns None when API returns empty choices"""
+    empty_response = MagicMock()
+    empty_response.choices = []
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(return_value=empty_response),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_no_tool_calls_returns_none(llm):
+    """Test ask returns None when response has no tool calls"""
+    response = MagicMock()
+    response.choices = [MagicMock(message=MagicMock(tool_calls=None))]
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(return_value=response),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_connection_error_branch(llm):
+    """Test APIConnectionError branch is hit"""
+    import openai
+
+    error = openai.APIConnectionError(request=MagicMock())
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_unexpected_error_branch(llm):
+    """Test generic Exception branch is hit"""
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=RuntimeError("something broke")),
+        )
         result = await llm.ask("test prompt")
         assert result is None

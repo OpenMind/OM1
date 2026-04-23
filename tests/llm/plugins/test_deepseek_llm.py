@@ -1,14 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
 from llm.plugins.deepseek_llm import DeepSeekConfig, DeepSeekLLM
-
-
-class DummyOutputModel(BaseModel):
-    test_field: str
 
 
 @pytest.fixture
@@ -162,3 +157,42 @@ async def test_io_provider_timing(llm, mock_response):
         assert llm.io_provider.llm_start_time is not None
         assert llm.io_provider.llm_end_time is not None
         assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time
+
+
+@pytest.mark.asyncio
+async def test_ask_api_status_error(llm):
+    """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    mock_response = MagicMock()
+    mock_response.status_code = 502
+    mock_response.headers = {}
+    error = openai.APIStatusError(
+        message="Bad Gateway",
+        response=mock_response,
+        body=None,
+    )
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_connection_error(llm):
+    """Test error handling for network connection errors"""
+    import openai
+
+    error = openai.APIConnectionError(request=MagicMock())
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(side_effect=error),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
