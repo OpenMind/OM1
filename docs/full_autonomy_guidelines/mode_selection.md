@@ -31,26 +31,26 @@ Once the robot is powered on, it autonomously progresses through predefined oper
 
 Example config to setup context_aware transition type for transitioning into navigation mode from slam mode.
 
-```json5
-{
-  from_mode: "slam",
-  to_mode: "navigation",
-  transition_type: "context_aware",
-  context_conditions: { exploration_done: true },
-  priority: 3,
-  cooldown_seconds: 5.0,
-}
+```
+    {
+      from_mode: "slam",
+      to_mode: "navigation",
+      transition_type: "context_aware",
+      context_conditions: { exploration_done: true },
+      priority: 3,
+      cooldown_seconds: 5.0,
+    }
 ```
 
-```json5
-{
-  from_mode: "mode_1",
-  to_mode: "mode_2",
-  transition_type: "context_aware",
-  context_conditions: { owner_identified: true, temperature: 70 },
-  priority: 2,
-  cooldown_seconds: 5.0,
-}
+```
+    {
+      from_mode: "mode_1",
+      to_mode: "mode_2",
+      transition_type: "context_aware",
+      context_conditions: { owner_identified: true, temperature: 70 },
+      priority: 2,
+      cooldown_seconds: 5.0,
+    }
 ```
 
 ## Time based
@@ -63,15 +63,15 @@ If an intervention occurs during this interval, such as user interaction or anot
 
 Example config to setup time based transition type for transitioning into guard mode from conversation mode.
 
-```json5
-{
-  "from_mode": "conversation",
-  "to_mode": "guard",
-  "transition_type": "time_based",
-  "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
-  "priority": 2,
-  "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
-}
+```
+   {
+      "from_mode": "conversation",
+      "to_mode": "guard",
+      "transition_type": "time_based",
+      "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
+      "priority": 2,
+      "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
+    }
 ```
 
 ## Input Triggered (Voice Commands)
@@ -120,4 +120,4 @@ Example config to setup time based transition type for transitioning into guard 
 
    ![ ](../assets/full-autonomy-assets/video_streams.png)
 
-These steps and exploration methods provide a structured approach to understanding and managing OM1's modes.
+These steps and exploration methods provide a structured approach to understanding and managing OM1’s modes.

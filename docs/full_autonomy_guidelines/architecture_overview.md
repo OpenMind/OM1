@@ -176,20 +176,4 @@ A self-update companion for `ota_agent`. Because `ota_agent` manages all other c
 
 ---
 
-## Runtime Behavior
-
-Once deployed, the full autonomy stack operates as a continuous, event-driven pipeline. The services run in parallel and interact through shared topics, REST APIs, and streaming protocols:
-
-1. **Sensor data collection** — `om1_sensor` continuously reads from the LiDAR and depth camera, publishing typed ROS2 topics. The orchestrator consumes these topics to maintain an up-to-date occupancy map and robot pose estimate.
-
-2. **Autonomous decision-making** — OM1 receives the robot's current pose, sensor summaries, and any incoming user speech. It assembles these into a prompt, queries the configured LLM, and routes the response to the appropriate output: spoken reply via TTS, movement command to the motion controller, or an instruction to a downstream service like Person Following.
-
-3. **Continuous monitoring** — The `watchdog` service runs independently, polling sensor topic timestamps and `om1_sensor` process health. If a sensor goes silent or a topic stops updating, it automatically restarts the affected process and logs the event, without requiring operator intervention.
-
-4. **User interaction** — The OM1 Avatar reflects the robot's current state on the BrainPack display in real time — speaking, listening, navigating, or idle — and accepts local input from the touchscreen. This keeps the robot legible and approachable to anyone in the same room.
-
-5. **Video and audio streaming** — The `om1-video-processor` runs as a parallel pipeline, independently of the navigation and reasoning stack. It continuously captures, processes, and streams blurred video and noise-cancelled audio to the RTSP server, making the robot's visual perspective available to remote consumers at all times.
-
----
-
 Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you.
