@@ -6,8 +6,15 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-import json5
-import zenoh
+try:
+    import json5
+except ImportError:
+    json5 = None  # type: ignore
+
+try:
+    import zenoh
+except ImportError:
+    zenoh = None  # type: ignore
 
 from runtime.config import (
     LifecycleHookType,
@@ -134,6 +141,8 @@ class ModeManager:
 
             temp_file = runtime_config_path + ".tmp"
             with open(temp_file, "w") as f:
+                if json5 is None:
+                    raise ImportError("json5 is required to write configuration files")
                 json5.dump(runtime_config, f, indent=2)
 
             os.rename(temp_file, runtime_config_path)
@@ -669,7 +678,7 @@ class ModeManager:
 
         return None
 
-    def _zenoh_mode_status_request(self, data: zenoh.Sample):
+    def _zenoh_mode_status_request(self, data: "zenoh.Sample"):
         """
         Process incoming mode status requests via Zenoh.
 
@@ -716,7 +725,7 @@ class ModeManager:
             if self._zenoh_mode_status_response_pub is not None:
                 return self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
 
-    def _zenoh_context_update(self, data: zenoh.Sample):
+    def _zenoh_context_update(self, data: "zenoh.Sample"):
         """
         Process incoming context update messages via Zenoh.
 

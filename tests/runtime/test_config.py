@@ -14,6 +14,7 @@ from runtime.config import (
     TransitionType,
     _load_mode_components,
     _load_schema,
+    _validate_required_field,
     load_mode_config,
     mode_config_to_dict,
     validate_config_schema,
@@ -476,6 +477,212 @@ class TestLoadModeConfig:
         finally:
             os.unlink(temp_file)
 
+    def test_load_mode_config_missing_default_mode(self):
+        """Test load_mode_config with missing default_mode field."""
+        config_data = {
+            "version": "v1.0.3",
+            "name": "test_system",
+            "api_key": "test_key",
+            "system_governance": "Test governance",
+            "cortex_llm": {"type": "test_llm"},
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError) as exc_info:
+                    load_mode_config("missing_default_mode_test")
+
+                error_msg = str(exc_info.value)
+                assert "default_mode" in error_msg
+                assert "is missing" in error_msg
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_missing_system_prompt_base(self):
+        """Test load_mode_config with missing system_prompt_base in mode."""
+        config_data = {
+            "version": "v1.0.3",
+            "name": "test_system",
+            "default_mode": "default",
+            "api_key": "test_key",
+            "system_governance": "Test governance",
+            "cortex_llm": {"type": "test_llm"},
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    # Missing required system_prompt_base
+                }
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError) as exc_info:
+                    load_mode_config("missing_system_prompt_test")
+
+                error_msg = str(exc_info.value)
+                assert "system_prompt_base" in error_msg
+                assert "mode 'default'" in error_msg
+                assert "is missing" in error_msg
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_default_mode_not_in_modes(self):
+        """Test load_mode_config when default_mode doesn't match any defined mode."""
+        config_data = {
+            "version": "v1.0.3",
+            "name": "test_system",
+            "default_mode": "nonexistent",
+            "api_key": "test_key",
+            "system_governance": "Test governance",
+            "cortex_llm": {"type": "test_llm"},
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError) as exc_info:
+                    load_mode_config("default_mode_not_in_modes_test")
+
+                error_msg = str(exc_info.value)
+                assert "Default mode 'nonexistent' not found" in error_msg
+                assert "Available modes:" in error_msg
+                assert "default" in error_msg
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_transition_rule_invalid_from_mode(self):
+        """Test load_mode_config with transition rule referencing unknown from_mode."""
+        config_data = {
+            "version": "v1.0.3",
+            "name": "test_system",
+            "default_mode": "default",
+            "api_key": "test_key",
+            "system_governance": "Test governance",
+            "cortex_llm": {"type": "test_llm"},
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+            "transition_rules": [
+                {
+                    "from_mode": "unknown",
+                    "to_mode": "default",
+                    "transition_type": "manual",
+                }
+            ],
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError) as exc_info:
+                    load_mode_config("invalid_from_mode_test")
+
+                error_msg = str(exc_info.value)
+                assert "unknown 'from_mode' 'unknown'" in error_msg
+                assert "transition rule at index 0" in error_msg
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_transition_rule_missing_from_mode(self):
+        """Test load_mode_config with transition rule missing from_mode field."""
+        config_data = {
+            "version": "v1.0.3",
+            "name": "test_system",
+            "default_mode": "default",
+            "api_key": "test_key",
+            "system_governance": "Test governance",
+            "cortex_llm": {"type": "test_llm"},
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+            "transition_rules": [
+                {
+                    "to_mode": "default",
+                    "transition_type": "manual",
+                    # Missing from_mode
+                }
+            ],
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError) as exc_info:
+                    load_mode_config("missing_from_mode_test")
+
+                error_msg = str(exc_info.value)
+                assert "from_mode" in error_msg
+                assert "is missing" in error_msg
+                assert "transition rule at index 0" in error_msg
+
+        finally:
+            os.unlink(temp_file)
+
 
 class TestModeConfigToDict:
     """Test cases for mode_config_to_dict function."""
@@ -746,3 +953,55 @@ class TestValidateConfigSchema:
             with pytest.raises(ValidationError):
                 validate_config_schema(config)  # type: ignore
             assert "root" in caplog.text or "Schema validation failed" in caplog.text
+
+
+class TestValidateRequiredField:
+    """Test cases for _validate_required_field helper function."""
+
+    def test_validate_required_field_exists(self):
+        """Test that function returns field value when it exists."""
+        config = {"name": "test_mode", "value": 42}
+        result = _validate_required_field(config, "name")
+        assert result == "test_mode"
+
+    def test_validate_required_field_missing_no_context(self):
+        """Test clear error message when required field is missing."""
+        config = {"other_field": "value"}
+        with pytest.raises(ValueError) as exc_info:
+            _validate_required_field(config, "system_prompt_base")
+        error_msg = str(exc_info.value)
+        assert "system_prompt_base" in error_msg
+        assert "is missing" in error_msg
+        assert "Please ensure this field is defined" in error_msg
+
+    def test_validate_required_field_missing_with_mode_context(self):
+        """Test error message includes mode context for better diagnostics."""
+        config = {"other_field": "value"}
+        with pytest.raises(ValueError) as exc_info:
+            _validate_required_field(
+                config, "system_prompt_base", context="mode 'advanced'"
+            )
+        error_msg = str(exc_info.value)
+        assert "system_prompt_base" in error_msg
+        assert "in mode 'advanced'" in error_msg
+
+    def test_validate_required_field_missing_with_rule_context(self):
+        """Test error message includes rule index context."""
+        config = {}
+        with pytest.raises(ValueError) as exc_info:
+            _validate_required_field(
+                config, "from_mode", context="transition rule at index 2"
+            )
+        error_msg = str(exc_info.value)
+        assert "from_mode" in error_msg
+        assert "transition rule at index 2" in error_msg
+
+    def test_validate_required_field_with_custom_field_type(self):
+        """Test error message with custom field type label."""
+        config = {}
+        with pytest.raises(ValueError) as exc_info:
+            _validate_required_field(
+                config, "cortex_llm", field_type="required property"
+            )
+        error_msg = str(exc_info.value)
+        assert "required property 'cortex_llm'" in error_msg

@@ -6,7 +6,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import json5
+try:
+    import json5
+except ImportError:
+    json5 = None  # type: ignore
 from jsonschema import ValidationError, validate
 
 from actions import load_action
@@ -85,6 +88,45 @@ def validate_config_schema(raw_config: dict) -> None:
         field_path = ".".join(str(p) for p in e.path) if e.path else "root"
         logging.error(f"Schema validation failed at field '{field_path}': {e.message}")
         raise
+
+
+def _validate_required_field(
+    config_dict: dict,
+    field_name: str,
+    context: str = "",
+    field_type: str = "field",
+) -> Any:
+    """
+    Validate that a required field exists in a configuration dictionary.
+
+    Parameters
+    ----------
+    config_dict : dict
+        The configuration dictionary to check.
+    field_name : str
+        The name of the required field.
+    context : str
+        Additional context for error message (e.g., mode name, rule index).
+    field_type : str
+        Type of field for error message (e.g., 'field', 'property').
+
+    Returns
+    -------
+    Any
+        The field value if it exists.
+
+    Raises
+    ------
+    ValueError
+        If the required field is missing with detailed error context.
+    """
+    if field_name not in config_dict:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required {field_type} '{field_name}' is missing{context_msg}. "
+            f"Please ensure this field is defined in your configuration."
+        )
+    return config_dict[field_name]
 
 
 @dataclass
@@ -551,6 +593,8 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
 
     with open(config_path, "r") as f:
         try:
+            if json5 is None:
+                raise ImportError("json5 is required to load configuration files")
             raw_config = json5.load(f)
         except Exception as e:
             raise ValueError(f"Failed to parse configuration file '{config_path}': {e}") from e
@@ -570,10 +614,15 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
 
     load_unitree(g_ut_eth)
 
+    # Validate and extract default_mode early to provide clear error messages
+    default_mode = _validate_required_field(
+        raw_config, "default_mode", context="global configuration", field_type="field"
+    )
+
     mode_system_config = ModeSystemConfig(
         version=config_version,
         name=raw_config.get("name", "mode_system"),
-        default_mode=raw_config["default_mode"],
+        default_mode=default_mode,
         config_name=config_name,
         allow_manual_switching=raw_config.get("allow_manual_switching", True),
         mode_memory_enabled=raw_config.get("mode_memory_enabled", True),
@@ -590,12 +639,20 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
     )
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
+        # Validate required mode fields early
+        system_prompt_base = _validate_required_field(
+            mode_data,
+            "system_prompt_base",
+            context=f"mode '{mode_name}'",
+            field_type="field",
+        )
+
         mode_config = ModeConfig(
             version=mode_data.get("version", "1.0.1"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
-            system_prompt_base=mode_data["system_prompt_base"],
+            system_prompt_base=system_prompt_base,
             hertz=mode_data.get("hertz", 1.0),
             lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", []), api_key=g_api_key),
             timeout_seconds=mode_data.get("timeout_seconds"),
@@ -614,11 +671,31 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
 
         mode_system_config.modes[mode_name] = mode_config
 
-    for rule_data in raw_config.get("transition_rules", []):
+    for rule_idx, rule_data in enumerate(raw_config.get("transition_rules", [])):
+        # Validate required transition rule fields early
+        from_mode = _validate_required_field(
+            rule_data,
+            "from_mode",
+            context=f"transition rule at index {rule_idx}",
+            field_type="field",
+        )
+        to_mode = _validate_required_field(
+            rule_data,
+            "to_mode",
+            context=f"transition rule at index {rule_idx}",
+            field_type="field",
+        )
+        transition_type_str = _validate_required_field(
+            rule_data,
+            "transition_type",
+            context=f"transition rule at index {rule_idx}",
+            field_type="field",
+        )
+
         rule = TransitionRule(
-            from_mode=rule_data["from_mode"],
-            to_mode=rule_data["to_mode"],
-            transition_type=TransitionType(rule_data["transition_type"]),
+            from_mode=from_mode,
+            to_mode=to_mode,
+            transition_type=TransitionType(transition_type_str),
             trigger_keywords=rule_data.get("trigger_keywords", []),
             priority=rule_data.get("priority", 1),
             cooldown_seconds=rule_data.get("cooldown_seconds", 0.0),
@@ -626,6 +703,32 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
             context_conditions=rule_data.get("context_conditions", {}),
         )
         mode_system_config.transition_rules.append(rule)
+
+    # Validate that default_mode exists in the loaded modes
+    if default_mode not in mode_system_config.modes:
+        available_modes = ", ".join(mode_system_config.modes.keys())
+        raise ValueError(
+            f"Default mode '{default_mode}' not found in available modes. "
+            f"Available modes: {available_modes if available_modes else 'none'}. "
+            f"Please ensure the default_mode matches one of the defined modes in your configuration."
+        )
+
+    # Validate that modes referenced in transition rules exist
+    for rule_idx, rule in enumerate(mode_system_config.transition_rules):
+        if rule.from_mode not in mode_system_config.modes:
+            available_modes = ", ".join(mode_system_config.modes.keys())
+            raise ValueError(
+                f"Transition rule at index {rule_idx} references unknown 'from_mode' '{rule.from_mode}'. "
+                f"Available modes: {available_modes}. "
+                f"Please ensure all transition rules reference valid mode names."
+            )
+        if rule.to_mode not in mode_system_config.modes:
+            available_modes = ", ".join(mode_system_config.modes.keys())
+            raise ValueError(
+                f"Transition rule at index {rule_idx} references unknown 'to_mode' '{rule.to_mode}'. "
+                f"Available modes: {available_modes}. "
+                f"Please ensure all transition rules reference valid mode names."
+            )
 
     return mode_system_config
 

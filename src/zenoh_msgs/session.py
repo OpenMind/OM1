@@ -1,11 +1,20 @@
-import logging
+from __future__ import annotations
 
-import zenoh
+import logging
+from typing import TYPE_CHECKING
+
+try:
+    import zenoh
+except ImportError:
+    zenoh = None  # type: ignore
+
+if TYPE_CHECKING:
+    from zenoh import Config, Session
 
 logging.basicConfig(level=logging.INFO)
 
 
-def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
+def create_zenoh_config(network_discovery: bool = True) -> "zenoh.Config":
     """
     Create a Zenoh configuration for a client connecting to a local server.
 
@@ -27,7 +36,7 @@ def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     return config
 
 
-def open_zenoh_session() -> zenoh.Session:
+def open_zenoh_session() -> "zenoh.Session":
     """
     Open a Zenoh session with a local connection first, then fall back to network discovery.
 
