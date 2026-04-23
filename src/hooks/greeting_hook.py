@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from providers.face_presence_provider import FacePresenceProvider
 from providers.greeting_conversation_state_provider import (
     GreetingConversationStateMachineProvider,
 )
@@ -11,9 +12,9 @@ from providers.kokoro_tts_provider import KokoroTTSProvider
 from providers.riva_tts_provider import RivaTTSProvider
 
 
-class GeetingEndHookContext(BaseModel):
+class GeetingHookContext(BaseModel):
     """
-    Configuration for geeting_end_hook.
+    Configuration for geeting hooks.
 
     Parameters
     ----------
@@ -37,6 +38,10 @@ class GeetingEndHookContext(BaseModel):
         Audio sample rate in Hz.
     enable_tts_interrupt : bool
         Enable TTS interrupt capability.
+    robot_name : Optional[str]
+        Name of the robot to use in greetings.
+    custom_message : Optional[str]
+        Custom message to use instead of the default greeting.
     """
 
     message: str = Field(
@@ -80,7 +85,86 @@ class GeetingEndHookContext(BaseModel):
         description="Enable TTS interrupt capability",
     )
 
+    robot_name: Optional[str] = Field(
+        default=None,
+        description="Name of the robot to use in greetings",
+    )
+    custom_message: Optional[str] = Field(
+        default=None,
+        description="Custom message to use instead of the default greeting",
+    )
+
     model_config = ConfigDict(extra="allow")
+
+
+async def greeting_start_hook(context: Dict[str, Any]):
+    """
+    Hook to handle the start of a greeting conversation.
+
+    Parameters
+    ----------
+    context : Dict[str, Any]
+        Context dictionary containing relevant information for the hook.
+    """
+    ctx = GeetingHookContext(**context)
+
+    tts_provider = ctx.tts_provider.lower()
+    provider = None
+
+    try:
+        if tts_provider == "elevenlabs":
+            provider = ElevenLabsTTSProvider(
+                url=ctx.base_url or "https://api.openmind.com/api/core/elevenlabs/tts",
+                api_key=ctx.api_key,
+                elevenlabs_api_key=ctx.elevenlabs_api_key,
+                voice_id=ctx.voice_id or "JBFqnCBsd6RMkjVDRZzb",
+                model_id=ctx.model_id or "eleven_flash_v2_5",
+                output_format=ctx.output_format or "pcm_16000",
+                rate=ctx.rate or 16000,
+                enable_tts_interrupt=ctx.enable_tts_interrupt,
+            )
+        elif tts_provider == "kokoro":
+            provider = KokoroTTSProvider(
+                url=ctx.base_url or "http://127.0.0.1:8880/v1",
+                api_key=ctx.api_key,
+                voice_id=ctx.voice_id or "af_bella",
+                model_id=ctx.model_id or "kokoro",
+                output_format=ctx.output_format or "pcm",
+                rate=ctx.rate or 24000,
+                enable_tts_interrupt=ctx.enable_tts_interrupt,
+            )
+        elif tts_provider == "riva":
+            provider = RivaTTSProvider(
+                url=ctx.base_url or "http://127.0.0.1:50051",
+                api_key=ctx.api_key,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported TTS provider: {tts_provider}. " f"Supported providers are: elevenlabs, kokoro, riva"
+            )
+
+        provider.start()
+
+        robot_intro = f"I'm {ctx.robot_name}. " if ctx.robot_name else ""
+        help_message = ctx.custom_message if ctx.custom_message else "How can I help you today?"
+
+        face_presence_provider = FacePresenceProvider()
+        face_snapshot_status = await face_presence_provider.fetch_snapshot()
+        if face_snapshot_status is not None:
+            closet_name = face_snapshot_status.closest_name
+            if closet_name.lower() != "unknown":
+                provider.add_pending_message(f"Hello {closet_name}! {robot_intro}Nice to see you. {help_message}")
+            else:
+                provider.add_pending_message(f"Hello! {robot_intro}{help_message}")
+        else:
+            provider.add_pending_message(f"Hello! {robot_intro}{help_message}")
+
+        logging.info("Greeting start hook executed successfully.")
+
+        return True
+    except Exception:
+        logging.exception("Error in greeting_start_hook")
+        return False
 
 
 async def geeting_end_hook(context: Dict[str, Any]):
@@ -92,7 +176,7 @@ async def geeting_end_hook(context: Dict[str, Any]):
     context : Dict[str, Any]
         Context dictionary containing relevant information for the hook.
     """
-    ctx = GeetingEndHookContext(**context)
+    ctx = GeetingHookContext(**context)
 
     tts_provider = ctx.tts_provider.lower()
     provider = None

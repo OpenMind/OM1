@@ -123,3 +123,5 @@ class ASRProvider:
         self.running = False
         self.audio_stream.stop()
         self.ws_client.stop()
+
+        logging.info("ASR provider stopped")
