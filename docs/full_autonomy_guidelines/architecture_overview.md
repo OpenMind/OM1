@@ -99,7 +99,7 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 
 > **Note:** Currently supported on **Go2 only**.
 
-- **Navigation & Localisation** - Integration with Nav2 for autonomous navigation. We have a custom localisation pipeline that the robot uses to determine its position and plan paths through its environment.
+- **Navigation & Localisation** - Integration with Nav2 for autonomous navigation. We have a custom localisation pipeline that the robot uses to determine its position and plan paths through its environment.Process incoming LaserScan message to determine feasible paths.Publish feasible paths and visualization markers.
 
 | Component | Description |
 |-----------|-------------|
@@ -108,6 +108,8 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 | **Nav2 AMCL** | A probabilistic particle filter that converges on the most likely position as new sensor data arrives. Robust in dynamic environments where the map may have changed. |
 
 > Refer to [Hybrid Localisation](./localisation.md) for an in-depth explanation of the system.
+
+- **Obstacle Avoidance** - The obstacle avoidance system generates candidate paths by projecting straight-line segments from the robot's origin across a configurable range of headings and distances. Each candidate path is evaluated by fusing data from multiple sensor sources — RPLidar 360° laser scans, Intel RealSense depth images, and hazard point clouds, to determine which paths are clear of obstacles. Path segment geometry is precomputed once to eliminate redundant calculations at runtime. Feasible paths are then published as ROS2 topics alongside RViz visualization markers, giving operators real-time visibility into the robot's path selection decisions.
 
 #### Components
 
@@ -153,7 +155,7 @@ This service is designed for use cases such as personal assistance, guided tours
 
 ---
 
-## System Setup
+## OM1-OTA
 
 All services in the full autonomy stack are delivered as OTA-managed containers. The `ota_agent` and `ota_updater` services handle the full lifecycle of every container on the device, ensuring the robot stays up to date without requiring manual intervention.
 
