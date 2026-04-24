@@ -47,7 +47,7 @@
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Overview](full_autonomy_guidelines/architecture_overview.md)
-* [Hybrid Localisation](full_autonomy_guidelines/localisation.md)
+* [Hybrid Localisation](full_autonomy_guidelines/localization.md)
 * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
 * [System Config](full_autonomy_guidelines/system_config.md)
 * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
