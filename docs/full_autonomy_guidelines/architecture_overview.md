@@ -107,7 +107,7 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 | **Correlative Scan Matching (CSM)** | Identifies distinctive geometric landmarks in sensor data and aligns them against a reference map |
 | **Nav2 AMCL** | A probabilistic particle filter that converges on the most likely position as new sensor data arrives. Robust in dynamic environments where the map may have changed. |
 
-> Refer to [Hybrid Localisation](./localisation.md) for an in-depth explanation of the system.
+> Refer to [Hybrid Localisation](./localization.md) for an in-depth explanation of the system.
 
 - **Obstacle Avoidance** - The obstacle avoidance system generates candidate paths by projecting straight-line segments from the robot's origin across a configurable range of headings and distances. Each candidate path is evaluated by fusing data from multiple sensor sources — RPLidar 360° laser scans, Intel RealSense depth images, and hazard point clouds, to determine which paths are clear of obstacles. Path segment geometry is precomputed once to eliminate redundant calculations at runtime. Feasible paths are then published as ROS2 topics alongside RViz visualization markers, giving operators real-time visibility into the robot's path selection decisions.
 

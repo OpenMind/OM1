@@ -101,9 +101,9 @@
     * [v1.0.x](release-notes/om1-video-processor/v1.0.x.md)
     * [Docker Images](release-notes/om1-video-processor/docker_images.md)
 * OM1 System Setup
-    * [beta](release-notes/om1-system-setup/beta.md)
-    * [v1.0.x](release-notes/om1-system-setup/v1.0.x.md)
-    * [Docker Images](release-notes/om1-system-setup/docker_images.md)
+    * [beta](release-notes/OM1-OTA/beta.md)
+    * [v1.0.x](release-notes/OM1-OTA/v1.0.x.md)
+    * [Docker Images](release-notes/OM1-OTA/docker_images.md)
 
 ## Good to know concepts <a href="#robotics" id="robotics"></a>
 
