@@ -1,6 +1,6 @@
 ---
-title: Hybrid Localisation
-description: "Introducing Hybrid Localisation"
+title: Hybrid Localization
+description: "Introducing Hybrid Localization"
 icon: arrows-spin
 ---
 

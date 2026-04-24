@@ -3,9 +3,9 @@ title: Docker Images
 icon: docker
 ---
 
-The OM1-system-setup is provided as a Docker image for easy setup.
+The OM1-OTA is provided as a Docker image for easy setup.
 ```bash
-git clone https://github.com/OpenMind/OM1-system-setup
+git clone https://github.com/OpenMind/OM1-OTA
 ```
 
 ```bash
