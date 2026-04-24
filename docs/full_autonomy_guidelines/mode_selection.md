@@ -88,7 +88,7 @@ Example config to setup time based transition type for transitioning into guard 
 |--------------|------------------|
 | **Welcome** | `reset`, `start over`, `welcome mode`, `restart`, `initialize` |
 | **Conversation** | `talk`, `chat`, `conversation`, `tell me`, `ask you`, `discuss` |
-| **Slam** | `explore`, `map`, `navigate`, `look around`, `slam`, `wander` |
+| **SLAM** | `explore`, `map`, `navigate`, `look around`, `slam`, `wander` |
 | **Navigation** | `navigate`, `navigation`, `go to`, `take me to`, `show me` |
 | **Guard** | `guard`, `security`, `patrol`, `keep watch` |
 
