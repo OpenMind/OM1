@@ -1,0 +1,328 @@
+{
+  // OM1-sim configuration for Unitree Go2 Gazebo simulation
+  // Works with OM1-sim repo (no SLAM, Nav2, or mapping stack needed)
+  version: "v1.0.0",
+
+  // Mode system configuration
+  default_mode: "autonomy",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 10,
+      model: "gpt-4.1",
+    },
+  },
+
+  modes: {
+    autonomy: {
+      display_name: "Autonomous Exploration",
+      description: "Autonomous movement with lidar-based obstacle avoidance",
+      system_prompt_base: "You are Bits, an autonomous robot dog exploring a simulated environment. Your mission is to:\n1. Navigate the environment safely using lidar-based obstacle avoidance\n2. Avoid obstacles and maintain spatial awareness\n3. Report interesting discoveries and landmarks\n4. Respond to voice commands from users\n\nYou have access to path information that tells you which directions are safe to move. Always choose safe directions.\nWhile exploring, describe where you are and what you see in simple, natural language.",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },>
+      ],
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 0,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 20,
+          },
+        },
+        {
+          name: "move_go2_autonomy",
+          llm_label: "move",
+          connector: "sim_zenoh",
+          config: {
+            mode: "autonomy",
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "I'm online and ready to explore the environment safely. Let me know if you need anything!",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Switching to autonomous exploration mode. I'll move around and avoid obstacles.",
+          },
+          priority: 0,
+        },
+      ],
+    },
+
+    conversation: {
+      display_name: "Social Interaction",
+      description: "Focused conversation and social interaction mode",
+      system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
+      save_interactions: true,
+      hertz: 1,
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 20,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 30,
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I'm ready to chat! What would you like to talk about?",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "I'm ready to chat! What would you like to talk about?",
+          },
+        },
+      ],
+    },
+
+    guard: {
+      display_name: "Security Guard",
+      description: "Patrol and security monitoring mode",
+      system_prompt_base: "You are Bits in security mode. Your mission:\n\
+    1. Patrol and monitor all designated areas.\n\
+    2. Actively move using the 'move' function to cover different locations and routes.\n\
+    3. Watch for unusual or suspicious activity (humans, objects, sounds, or motion).\n\
+    4. EMERGENCY PROTOCOL - DO NOT MOVE when:\n\
+       - Someone appears injured, unconscious, or in distress\n\
+       - Someone needs help or assistance\n\
+       In these situations, immediately stop all movement and call 'emergency_alert' with a detailed description.\n\
+    5. If you detect a potential threat but no emergency, stay at a safe distance, observe carefully, and report immediately.\n\
+    6. Always prioritize safety — avoid collisions and obstacles detected by LIDAR or camera.\n\
+    7. Log key events with timestamp and brief summary.\n\
+    8. REGULAR STATUS UPDATES: When patrolling and nothing unusual is happening, periodically use 'speak' to provide brief status reports like:\n\
+       - 'Area secure, continuing patrol'\n\
+       - 'No unusual activity detected'\n\
+       - 'Perimeter clear, all systems normal'\n\
+       - 'Patrol ongoing, environment secure'\n\n\
+    MOVEMENT RULES:\n\
+    - Only use 'move' function when the area is secure and no emergency situations are detected\n\
+    - If security_camera_observation indicates injury or distress, DO NOT MOVE and call 'emergency_alert'\n\
+    - Otherwise, patrol dynamically: vary routes, occasionally stop to scan surroundings, then continue\n\
+    - During routine patrol with no incidents, provide occasional status updates using 'speak'\n\
+   Be professional and calm — your tone should inspire trust and vigilance.",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "move_go2_autonomy",
+          llm_label: "move",
+          connector: "sim_zenoh",
+          config: {
+            mode: "guard",
+          },
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 10,
+          },
+        },
+        {
+          name: "emergency_alert",
+          llm_label: "emergency_alert",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 0,
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I will continue my security patrol.",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Security mode activated.",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "Security patrol complete. All areas checked.",
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    // From autonomy mode
+    {
+      from_mode: "autonomy",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop exploring",
+        "come back",
+        "talk",
+        "chat",
+        "enough exploring",
+        "stop moving",
+      ],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "autonomy",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol", "watch the area"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+
+    // From conversation mode
+    {
+      from_mode: "conversation",
+      to_mode: "autonomy",
+      transition_type: "input_triggered",
+      trigger_keywords: ["explore", "move around", "start moving", "go explore"],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol", "keep watch"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "guard",
+      transition_type: "time_based",
+      trigger_keywords: ["guard", "security", "patrol", "keep watch"],
+      priority: 2,
+      timeout_seconds: 300.0,
+    },
+
+    // From guard mode
+    {
+      from_mode: "guard",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop guarding",
+        "end patrol",
+        "talk",
+        "chat",
+        "come here",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "guard",
+      to_mode: "autonomy",
+      transition_type: "input_triggered",
+      trigger_keywords: ["explore", "move around", "go explore"],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}
