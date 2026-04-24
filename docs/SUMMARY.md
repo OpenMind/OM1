@@ -53,6 +53,7 @@
 * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
 * [Premium Features](developing/premium_features.md)
+* [API Endpoints to Interact with Premium Features](full_autonomy_guidelines/api_endpoints.md)
 
 ## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
 
