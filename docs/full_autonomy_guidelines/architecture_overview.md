@@ -178,4 +178,4 @@ A self-update companion for `ota_agent`. Because `ota_agent` manages all other c
 
 ---
 
-Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you.
+Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you. To access the premium features through API endpoints refer the documentation [here](./api_endpoints.md).
