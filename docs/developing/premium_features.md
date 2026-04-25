@@ -15,7 +15,7 @@ All other features beyond the core framework are available exclusively through o
 - Specialized hardware support
 - Extended simulation capabilities
 - SLAM map generation and Navigation
-- Face detection and Anozation
+- Face detection and Anonymization
 - Custom feature development
 
 ## Simulation Limitations

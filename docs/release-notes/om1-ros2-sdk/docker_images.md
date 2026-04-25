@@ -3,19 +3,7 @@ title: Docker Images
 icon: docker
 ---
 
-The OM1-ros2-sdk is provided as a Docker image for easy setup.
-```bash
-git clone https://github.com/OpenMind/OM1-ros2-sdk.git
-```
-```bash
-cd OM1-ros2-sdk
-docker-compose up orchestrator -d --no-build
-docker-compose up om1_sensor -d --no-build
-docker-compose up watchdog -d --no-build
-docker-compose up zenoh-bridge -d --no-build
-```
-
-The docker images are also available at Docker Hub.
+The OM1-ros2-sdk is provided as a Docker image for easy setup. The docker images are also available at Docker Hub.
 
 - [v1.0.1](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1)
 - [v1.0.1-beta.3](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1-beta.3)

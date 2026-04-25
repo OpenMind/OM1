@@ -4,13 +4,13 @@ description: "Introduction to the OM1 modes"
 icon: gamepad-modern
 ---
 
-## What are modes?
-Modes define the primary behavioral state and functional context of the OM1 system.
-Each mode adjusts how OM1 perceives its environment, processes user inputs, and prioritizes tasks. By switching modes, OM1 can dynamically transition between social interaction, exploration, patrol, or autonomous operation based on user intent or system triggers.
+## What Are Modes?
+
+Modes define the primary behavioral state and functional context of the OM1 system. Each mode adjusts how OM1 perceives its environment, processes user inputs, and prioritizes tasks. By switching modes, OM1 can dynamically transition between social interaction, exploration, patrol, or autonomous operation based on user intent or system triggers.
 
 Modes can be user-selected (via voice commands or UI).
 
-## Modes Supported within OM1 for Unitree Go2 Currently
+## Supported Modes for Unitree Go2
 
 ![ ](../assets/full-autonomy-assets/modes.png)
 
@@ -37,5 +37,6 @@ Modes can be user-selected (via voice commands or UI).
 
 ## Introducing Lifecycle
 
-Each operational mode in OM1 follows a defined lifecycle, representing the complete process from entry to exit of that mode.
-A mode lifecycle ensures predictable behavior, safe transitions, and consistent data handling across all system states.
+Each operational mode in OM1 follows a defined lifecycle, representing the complete process from entry to exit of that mode. A mode lifecycle ensures predictable behavior, safe transitions, and consistent data handling across all system states.
+
+For more details, see [Lifecycle](./lifecycle.md).
