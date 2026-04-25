@@ -12,7 +12,7 @@ OM1 is a modular robotics intelligence platform that connects perception, langua
 
 | Platform | Support Level | Notes |
 |----------|---------------|-------|
-| **NVIDIA AGX** | Limited | Suitable for deployments that do not require heavy ML inference workloads |
+| **NVIDIA AGX Orin** | Limited | Suitable for deployments that do not require heavy ML inference workloads |
 | **NVIDIA Thor** | Full | Recommended for ML-heavy autonomy workloads. Leverages GPU and DLA across navigation, vision, and audio processing |
 
 ### Robot Support
@@ -75,7 +75,7 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 
 #### Features
 
-- **Sensor drivers** — Low-level drivers for onboard hardware sensors:
+- **Sensor drivers** - Low-level drivers for onboard hardware sensors:
   - *Intel RealSense D435* — Provides an RGB color stream plus a calibrated depth map, giving the robot the ability to perceive the 3D structure of its surroundings.
   - *RPLidar* — Emits a 360° 2D laser scan of the environment, used as the primary input for mapping and localisation.
   Both sensors publish their data as typed ROS2 topics consumed by the orchestrator and navigation pipeline.
@@ -141,7 +141,7 @@ The OM1 Video Processor is a dedicated media processing pipeline that runs entir
 
 ---
 
-### Person Following (`om1-person-following`)
+### Person Following (`person-following`)
 
 The Person Following service enables the robot to autonomously detect, track, and follow a designated person through its environment. It combines continuous visual detection with spatial reasoning and scene understanding, allowing the robot to stay close to a person while navigating around obstacles in its path.
 
