@@ -63,7 +63,7 @@ class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional
             raise ValueError("Missing origin coordinates or yaw in config.")
         self._yaw_offset = math.radians(yaw0_deg) if yaw0_deg is not None else 0.0
 
-        self.pose_x = 0.0  # metres East  of origin
+        self.pose_x = 0.0  # metres East of origin
         self.pose_y = 0.0  # metres North of origin
         self.pose_yaw = 0.0  # rad
 
