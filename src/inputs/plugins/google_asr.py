@@ -334,5 +334,19 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
                 logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
 
         if self.session:
-            self.session.close()
-            logging.info("Zenoh ASR session closed")
+            try:
+                self.session.close()
+                logging.info("Zenoh ASR session closed")
+            except Exception as e:
+                logging.warning(f"Failed to close Zenoh ASR session: {e}")
+
+        # TODO:
+        # Consider sending the TTS status multiple times to ASR provider to ensure that
+        # the ASR provider properly receives the interrupt signal,
+        # especially in cases where the mode switch happens during TTS playback
+        # if self.asr:
+        #     try:
+        #         self.asr.stop()
+        #         logging.info("ASR provider stopped")
+        #     except Exception as e:
+        #         logging.warning(f"Failed to stop ASR provider: {e}")
