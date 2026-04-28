@@ -615,10 +615,7 @@ class MoveGo2SimZenohConnector(ActionConnector[MoveGo2SimZenohConfig, MoveInput]
             return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
 
     def stop(self) -> None:
-        """
-        Stop movement and close the Zenoh session.
-        """
-        self._send_stop()
+        self._send_move(0.0, 0.0, 0.0)
         if self.session is not None:
             self.session.close()
             self.session = None
