@@ -115,25 +115,37 @@ class UnitreeGo2Patrol(Background[UnitreeGo2PatrolConfig]):
             unknown_captures = report.get("unknown_captures", [])
             track_ids = [capture.get("track_id") for capture in unknown_captures]
 
-            if len(unknown_captures) > 0 and not self.is_paused and not any(track_id in self.uploaded_track_ids for track_id in track_ids) and time.time() - self.last_force_resume_time > self.config.safe_force_resume_seconds:
+            if (
+                len(unknown_captures) > 0
+                and not self.is_paused
+                and not any(track_id in self.uploaded_track_ids for track_id in track_ids)
+                and time.time() - self.last_force_resume_time > self.config.safe_force_resume_seconds
+            ):
                 logging.info(f"Detected {len(unknown_captures)} unknown captures")
                 try:
-                    self.loop.run_until_complete(
-                        self.patrol_provider.pause_patrol()
-                    )
+                    self.loop.run_until_complete(self.patrol_provider.pause_patrol())
                     self.is_paused = True
                     self.last_pause_time = time.time()
                     logging.info("Patrol paused to handle unknown captures")
                 except Exception:
                     logging.exception("Failed to pause patrol")
 
-            if self.is_paused and len(track_ids) > 0 and any(detection.get("unknown_duration", 0) > self.config.unknown_capture_threshold for detection in unknown_captures):
+            if (
+                self.is_paused
+                and len(track_ids) > 0
+                and any(
+                    detection.get("unknown_duration", 0) > self.config.unknown_capture_threshold
+                    for detection in unknown_captures
+                )
+            ):
                 try:
-                    description = f"Detected unknown person with track IDs: {track_ids} at {time.strftime('%Y-%m-%d %H:%M:%S')}"
-                    self.loop.run_until_complete(
-                        self.patrol_provider.upload_patrol_image(frame_base64, description)
+                    description = (
+                        f"Detected unknown person with track IDs: {track_ids} at {time.strftime('%Y-%m-%d %H:%M:%S')}"
                     )
-                    self.elevenlabs_provider.add_pending_message("Alert: Unknown person detected during patrol. Image has been uploaded for review.")
+                    self.loop.run_until_complete(self.patrol_provider.upload_patrol_image(frame_base64, description))
+                    self.elevenlabs_provider.add_pending_message(
+                        "Alert: Unknown person detected during patrol. Image has been uploaded for review."
+                    )
                     logging.info(f"Uploaded patrol data for track IDs: {track_ids}")
                 except Exception:
                     logging.exception("Failed to upload patrol data")
@@ -141,9 +153,7 @@ class UnitreeGo2Patrol(Background[UnitreeGo2PatrolConfig]):
                 self.uploaded_track_ids.update(track_ids)
 
                 try:
-                    self.loop.run_until_complete(
-                        self.patrol_provider.resume_patrol()
-                    )
+                    self.loop.run_until_complete(self.patrol_provider.resume_patrol())
                     self.is_paused = False
                     logging.info("Patrol resumed after handling unknown captures")
                 except Exception:
@@ -151,9 +161,7 @@ class UnitreeGo2Patrol(Background[UnitreeGo2PatrolConfig]):
 
             if self.is_paused and time.time() - self.last_pause_time > self.config.force_resume_seconds:
                 try:
-                    self.loop.run_until_complete(
-                        self.patrol_provider.resume_patrol()
-                    )
+                    self.loop.run_until_complete(self.patrol_provider.resume_patrol())
                     self.is_paused = False
                     self.last_force_resume_time = time.time()
                     logging.info("Force resumed patrol after prolonged pause")
