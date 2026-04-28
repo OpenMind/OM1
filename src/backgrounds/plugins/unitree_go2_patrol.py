@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 from pydantic import Field
 
@@ -18,7 +19,7 @@ class UnitreeGo2PatrolConfig(BackgroundConfig):
         description="Base URL for the patrol control API",
     )
     face_presence_base_url: str = Field(
-        default="http://127.0.0.1:6793",
+        default="http://localhost:6793",
         description="Base URL for the face presence API",
     )
     patrol_image_report_base_url: str = Field(
@@ -30,8 +31,20 @@ class UnitreeGo2PatrolConfig(BackgroundConfig):
         description="API key for OpenMind patrol upload endpoint",
     )
     unknown_capture_threshold: int = Field(
-        default=3,
+        default=2,
         description="Threshold for the duration of detecting unknown faces before triggering an alert",
+    )
+    upload_cooldown_seconds: int = Field(
+        default=5,
+        description="Minimum seconds to wait before uploading the same track_id again",
+    )
+    force_resume_seconds: int = Field(
+        default=15,
+        description="Seconds to wait before force resuming patrol if unknown captures persist",
+    )
+    safe_force_resume_seconds: int = Field(
+        default=5,
+        description="Minimum seconds to wait before force resuming patrol to avoid rapid pause/resume cycles",
     )
 
 
@@ -63,6 +76,8 @@ class UnitreeGo2Patrol(Background[UnitreeGo2PatrolConfig]):
         self.loop = asyncio.new_event_loop()
         self.uploaded_track_ids = set()
         self.is_paused = False
+        self.last_pause_time = 0
+        self.last_force_resume_time = 0
 
         logging.info("Initialized Unitree Go2 Patrol Background Task")
 
@@ -98,61 +113,52 @@ class UnitreeGo2Patrol(Background[UnitreeGo2PatrolConfig]):
             report = self.loop.run_until_complete(self.patrol_provider.get_report())
             frame_base64 = report.get("frame_b64", "")
             unknown_captures = report.get("unknown_captures", [])
+            track_ids = [capture.get("track_id") for capture in unknown_captures]
 
-            # Check if we need to pause due to multiple unknown captures
-            if len(unknown_captures) > 1 and not self.is_paused:
-                logging.warning(f"Multiple unknown captures detected ({len(unknown_captures)}), pausing patrol")
-                self.loop.run_until_complete(self.patrol_provider.pause_patrol())
-                self.is_paused = True
-
-            # Process qualified captures (exceeding threshold)
-            qualified_captures = [
-                capture
-                for capture in unknown_captures
-                if capture.get("unknown_duration", 0) >= self.config.unknown_capture_threshold
-            ]
-
-            # Upload images for new qualified captures
-            newly_uploaded = False
-            for capture in qualified_captures:
-                track_id = capture.get("track_id")
-                if track_id and track_id not in self.uploaded_track_ids:
-                    if frame_base64:
-                        logging.warning(
-                            f"Uploading capture for track_id {track_id} "
-                            f"(duration: {capture.get('unknown_duration', 0):.1f}s)"
-                        )
-                        description = (
-                            f"Unknown person detected (track_id: {track_id}, "
-                            f"duration: {capture.get('unknown_duration', 0):.1f}s, "
-                            f"bbox: {capture.get('bbox', [])}, "
-                            f"area: {capture.get('area', 0)})"
-                        )
-                        upload_result = self.loop.run_until_complete(
-                            self.patrol_provider.upload_patrol_image(frame_base64, description)
-                        )
-                        if upload_result:
-                            logging.info(f"Successfully uploaded patrol image for track_id {track_id}")
-                            self.uploaded_track_ids.add(track_id)
-                        newly_uploaded = True
-
-            # Resume patrol if paused and all qualified captures have been uploaded
-            if self.is_paused and newly_uploaded:
-                all_uploaded = all(
-                    capture.get("track_id") in self.uploaded_track_ids
-                    for capture in qualified_captures
-                    if capture.get("track_id")
-                )
-                if all_uploaded:
-                    self.elevenlabs_provider.add_pending_message(
-                        "Alert: Unknown person detected. Please check the patrol report for details."
+            if len(unknown_captures) > 0 and not self.is_paused and not any(track_id in self.uploaded_track_ids for track_id in track_ids) and time.time() - self.last_force_resume_time > self.config.safe_force_resume_seconds:
+                logging.info(f"Detected {len(unknown_captures)} unknown captures")
+                try:
+                    self.loop.run_until_complete(
+                        self.patrol_provider.pause_patrol()
                     )
-                    logging.info("All qualified captures uploaded, resuming patrol")
-                    self.loop.run_until_complete(self.patrol_provider.resume_patrol())
-                    self.is_paused = False
+                    self.is_paused = True
+                    self.last_pause_time = time.time()
+                    logging.info("Patrol paused to handle unknown captures")
+                except Exception:
+                    logging.exception("Failed to pause patrol")
 
-            if len(unknown_captures) == 0 and self.uploaded_track_ids:
-                self.uploaded_track_ids.clear()
+            if self.is_paused and len(track_ids) > 0 and any(detection.get("unknown_duration", 0) > self.config.unknown_capture_threshold for detection in unknown_captures):
+                try:
+                    description = f"Detected unknown person with track IDs: {track_ids} at {time.strftime('%Y-%m-%d %H:%M:%S')}"
+                    self.loop.run_until_complete(
+                        self.patrol_provider.upload_patrol_image(frame_base64, description)
+                    )
+                    self.elevenlabs_provider.add_pending_message("Alert: Unknown person detected during patrol. Image has been uploaded for review.")
+                    logging.info(f"Uploaded patrol data for track IDs: {track_ids}")
+                except Exception:
+                    logging.exception("Failed to upload patrol data")
+
+                self.uploaded_track_ids.update(track_ids)
+
+                try:
+                    self.loop.run_until_complete(
+                        self.patrol_provider.resume_patrol()
+                    )
+                    self.is_paused = False
+                    logging.info("Patrol resumed after handling unknown captures")
+                except Exception:
+                    logging.exception("Failed to resume patrol")
+
+            if self.is_paused and time.time() - self.last_pause_time > self.config.force_resume_seconds:
+                try:
+                    self.loop.run_until_complete(
+                        self.patrol_provider.resume_patrol()
+                    )
+                    self.is_paused = False
+                    self.last_force_resume_time = time.time()
+                    logging.info("Force resumed patrol after prolonged pause")
+                except Exception:
+                    logging.exception("Failed to force resume patrol")
 
         except Exception as e:
             logging.error(f"Error getting patrol report: {e}")

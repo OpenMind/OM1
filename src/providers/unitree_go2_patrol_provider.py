@@ -20,7 +20,7 @@ class UnitreeGo2PatrolProvider:
         self,
         api_key: str = "",
         patrol_base_url: str = "http://localhost:5000",
-        face_presence_base_url: str = "http://127.0.0.1:6793",
+        face_presence_base_url: str = "http://localhost:6793",
         patrol_image_report_base_url: str = "https://api.openmind.com",
     ):
         """
@@ -33,7 +33,7 @@ class UnitreeGo2PatrolProvider:
         patrol_base_url : str, optional
             Base URL for the patrol control API (default is "http://localhost:5000").
         face_presence_base_url : str, optional
-            Base URL for the patrol report API (default is "http://127.0.0.1:6793").
+            Base URL for the patrol report API (default is "http://localhost:6793").
         patrol_image_report_base_url : str, optional
             URL for reporting patrol images to OpenMind API (default is "https://api.openmind.com").
         """
@@ -126,9 +126,14 @@ class UnitreeGo2PatrolProvider:
             logging.error(f"Failed to resume patrol: {e}")
             raise
 
-    async def get_report(self) -> dict:
+    async def get_report(self, recent_sec: int = 3) -> dict:
         """
         Get the current patrol report.
+
+        Parameters
+        ----------
+        recent_sec : int, optional
+            Time window in seconds for recent face presence data (default is 3 seconds).
 
         Returns
         -------
@@ -140,14 +145,13 @@ class UnitreeGo2PatrolProvider:
         aiohttp.ClientError
             If the HTTP request fails.
         """
-        logging.info("Getting patrol report")
         url = f"{self.face_presence_base_url}/who"
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                headers = {"Content-Type": "application/json"}
+                async with session.post(url, json={"recent_sec": recent_sec}, headers=headers) as response:
                     response.raise_for_status()
                     report_data = await response.json()
-                    logging.info(f"Patrol report retrieved successfully: {response.status}")
                     return report_data
         except aiohttp.ClientError as e:
             logging.error(f"Failed to get patrol report: {e}")
