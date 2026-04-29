@@ -231,7 +231,15 @@ class ConfidenceCalculator:
 class GreetingConversationStateMachineProvider:
     """Manages greeting conversation state transitions based on confidence scores."""
 
-    def __init__(self, max_turn_count: int = 3) -> None:
+    def __init__(self, max_turn_count: int = 5) -> None:
+        """
+        Initialize the state machine with default values.
+
+        Parameters
+        ----------
+        max_turn_count : int, optional
+            Maximum number of conversational turns before forcing a transition to finished (default is 5).
+        """
         self.current_state = ConversationState.IDLE
         self.previous_state = None
         self.state_entry_time = time.time()
