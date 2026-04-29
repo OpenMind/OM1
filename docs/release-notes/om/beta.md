@@ -1,10 +1,57 @@
 ---
 title: OM1 Beta Release
-description: "v1.0.2-beta.1"
+description: "v1.0.2-beta.2"
 icon: rectangle-beta
 ---
 
-## [v1.0.2-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.1) - latest
+## [v1.0.2-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.2) - latest
+
+### What's New
+
+- Added Unitree Go2 patrol background plugin with autonomous patrol routes and back-and-forth patterns
+- Added conversation mode and person follow functionality for natural interactions with dynamic tracking
+- Introduced base ElevenLabs TTS connector for high-quality voice synthesis
+- Added Unitree G1 configuration and updated to Gemini 3.1 model
+- Added greeting conversation config with customizable greeting scenarios
+- Introduced GitHub Actions workflow for ECS deployments with environment-specific configurations
+
+### Improvements
+
+- Refactored `_emit` method for message delivery with better error handling and comprehensive test coverage
+- Enhanced ASR provider logging and updated `om1-modules` dependency for improved debugging
+- Refined voice input extraction to remove surrounding quotes for better parsing accuracy
+- Simplified environment selection in release workflow for streamlined deployments
+- Included Jan in greeting prompts and agents for expanded interaction capabilities
+- Updated `om1-modules` revision with improved functionality
+
+### Bug Fixes
+
+- Renamed `done_payment` to `down_payment` for correct terminology
+- Fixed farewell message handling in greeting conversations
+- Commented out problematic `ASR.stop()` call with TODO for future resolution
+
+### Documentation
+
+- Added comprehensive premium feature documentation
+- Elaborated full autonomy documentation with detailed guides
+- General documentation updates and improvements across the codebase
+
+### Dependency Updates
+
+- Upgraded testing dependencies:
+  - `pytest` to `9.0.3`
+  - `pytest-asyncio` to `1.3.0`
+- Updated core dependencies:
+  - `gdown` from `5.2.0` to `5.2.2`
+  - `python-multipart` from `0.0.22` to `0.0.26`
+  - `python-dotenv` from `1.0.1` to `1.2.2`
+- Pinned `numpy` to `1.26.4` for stability
+
+### Cleanup
+
+- Removed extra space in comment for code consistency
+
+## [v1.0.2-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.1)
 
 ### What’s New
 
@@ -111,7 +158,7 @@ icon: rectangle-beta
 - Introducing Lifecycle
     Each operational mode in OM1 follows a defined lifecycle, representing the complete process from entry to exit of that mode. A mode lifecycle ensures predictable behavior, safe transitions, and consistent data handling across all system states.
 
-### [v1.0.0-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.3)
+## [v1.0.0-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.3)
 
 - Downgraded Python to 3.10 for better Jetson support.
 - Integrated Nav2 for state feedback and target publishing, with auto AI-mode disable after localization.
