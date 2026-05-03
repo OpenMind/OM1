@@ -65,6 +65,14 @@ from .unitree_api_msgs import RequestHeader as UnitreeRequestHeader
 from .unitree_api_msgs import RequestIdentity as UnitreeRequestIdentity
 from .unitree_api_msgs import RequestLease as UnitreeRequestLease
 from .unitree_api_msgs import RequestPolicy as UnitreeRequestPolicy
+from .unitree_go import (
+    BmsState,
+    IMUState,
+    LowState,
+    MotorState,
+    SportModeState,
+    TimeSpec,
+)
 
 __all__ = [
     # std_msgs
@@ -145,4 +153,11 @@ __all__ = [
     "UnitreeRequestIdentity",
     "UnitreeRequestLease",
     "UnitreeRequestPolicy",
+    # unitree_go
+    "TimeSpec",
+    "IMUState",
+    "MotorState",
+    "BmsState",
+    "LowState",
+    "SportModeState",
 ]

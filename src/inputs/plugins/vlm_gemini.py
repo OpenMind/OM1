@@ -4,7 +4,6 @@ import time
 from queue import Empty, Queue
 from typing import List, Optional
 
-from openai.types.chat import ChatCompletion
 from pydantic import Field
 
 from inputs.base import Message, SensorConfig
@@ -36,6 +35,24 @@ class VLMGeminiConfig(SensorConfig):
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     camera_index: int = Field(default=0, description="Index of the camera device")
+    model: str = Field(
+        default="gemini-2.5-flash",
+        description="Gemini model id; supported (server-side): "
+        "gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, "
+        "gemini-3-flash-preview, gemini-3-pro-preview, "
+        "gemini-3.1-flash-lite-preview, gemini-3.1-pro-preview",
+    )
+    max_tokens: int = Field(
+        default=1024,
+        description="Token budget for VLM response. Reasoning-capable models "
+        "(gemini-3.x, 2.5-pro) consume hidden reasoning tokens "
+        "before visible content — bump to 2048+ if responses cut off.",
+    )
+    prompt: Optional[str] = Field(
+        default=None,
+        description="Prompt sent with each frame. Defaults to a one-sentence "
+        "scene-description prompt; override for task-specific use.",
+    )
 
 
 class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
@@ -80,35 +97,37 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         )
         camera_index = self.config.camera_index
 
-        self.vlm: VLMGeminiProvider = VLMGeminiProvider(
+        provider_kwargs = dict(
             base_url=base_url,
             api_key=api_key,
             stream_url=stream_base_url,
             camera_index=camera_index,
+            model=self.config.model,
+            max_tokens=self.config.max_tokens,
         )
+        if self.config.prompt is not None:
+            provider_kwargs["prompt"] = self.config.prompt
+        self.vlm: VLMGeminiProvider = VLMGeminiProvider(**provider_kwargs)
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
         self.descriptor_for_LLM = "Vision"
 
-    def _handle_vlm_message(self, raw_message: ChatCompletion):
+    def _handle_vlm_message(self, content: str):
         """
         Process incoming VLM messages.
 
-        Parses JSON messages from the VLM service and adds valid responses
-        to the message buffer for further processing.
-
         Parameters
         ----------
-        raw_message : str
-            Raw JSON message received from the VLM service
+        content : str
+            Plain text content from the VLM proxy (already extracted from
+            choices[0].message.content by the provider).
         """
-        content = raw_message.choices[0].message.content
-        if content is not None:
+        if content:
             logging.info(f"VLM Gemini received message: {content}")
             self.message_buffer.put(content)
         else:
-            logging.warning("VLM Gemini received message with None content")
+            logging.warning("VLM Gemini received empty message")
 
     async def _poll(self) -> Optional[str]:
         """
