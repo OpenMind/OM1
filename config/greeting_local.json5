@@ -102,7 +102,7 @@
           handler_type: "function",
           handler_config: {
             module_name: "greeting_hook",
-            function: "geeting_end_hook",
+            function: "greeting_end_hook",
             tts_provider: "kokoro",
             model_id: "${KOKORO_MODEL_ID:-mlx-community/Kokoro-82M-bf16}",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",

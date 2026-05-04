@@ -117,7 +117,7 @@
           handler_type: "function",
           handler_config: {
             module_name: "greeting_hook",
-            function: "geeting_end_hook",
+            function: "greeting_end_hook",
             tts_provider: "elevenlabs",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },

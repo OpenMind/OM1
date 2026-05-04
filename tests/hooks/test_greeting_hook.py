@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from hooks.greeting_hook import GeetingHookContext, geeting_end_hook, greeting_start_hook
+from hooks.greeting_hook import GreetingHookContext, greeting_end_hook, greeting_start_hook
 
 
 class TestGeetingHookContext:
@@ -10,7 +10,7 @@ class TestGeetingHookContext:
 
     def test_context_default_values(self):
         """Test context model with default values."""
-        context = GeetingHookContext()
+        context = GreetingHookContext()
         assert context.message == ""
         assert context.tts_provider == "elevenlabs"
         assert context.base_url is None
@@ -26,7 +26,7 @@ class TestGeetingHookContext:
 
     def test_context_custom_values(self):
         """Test context model with custom values."""
-        context = GeetingHookContext(
+        context = GreetingHookContext(
             message="Hello, world!",
             tts_provider="kokoro",
             base_url="http://localhost:8880",
@@ -55,7 +55,7 @@ class TestGeetingHookContext:
 
     def test_context_extra_fields_allowed(self):
         """Test that extra fields are allowed in the context."""
-        context = GeetingHookContext(message="Test", extra_field="extra_value")  # type: ignore
+        context = GreetingHookContext(message="Test", extra_field="extra_value")  # type: ignore
         # Should not raise an error due to Config.extra = "allow"
         assert context.message == "Test"
 
@@ -579,7 +579,7 @@ class TestGreetingStartHook:
 
 
 class TestGeetingEndHook:
-    """Tests for geeting_end_hook function."""
+    """Tests for greeting_end_hook function."""
 
     @pytest.mark.asyncio
     async def test_hook_with_elevenlabs_default_params(self, mock_elevenlabs_provider, mock_greeting_state_provider):
@@ -595,7 +595,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             mock_provider_class.assert_called_once()
@@ -636,7 +636,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             call_kwargs = mock_provider_class.call_args[1]
@@ -663,7 +663,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             call_kwargs = mock_provider_class.call_args[1]
@@ -699,7 +699,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             call_kwargs = mock_provider_class.call_args[1]
@@ -725,7 +725,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             call_kwargs = mock_provider_class.call_args[1]
@@ -751,7 +751,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             call_kwargs = mock_provider_class.call_args[1]
@@ -772,7 +772,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             mock_elevenlabs_provider.start.assert_called_once()
@@ -795,7 +795,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             message = mock_kokoro_provider.add_pending_message.call_args[0][0]
@@ -815,7 +815,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             mock_riva_provider.start.assert_called_once()
@@ -831,7 +831,7 @@ class TestGeetingEndHook:
         with patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class:
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -848,7 +848,7 @@ class TestGeetingEndHook:
             mock_provider_class.side_effect = Exception("Provider initialization failed")
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -866,7 +866,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -883,7 +883,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             mock_provider_class.assert_called_once()
@@ -902,10 +902,10 @@ class TestGeetingEndHook:
             mock_provider_class.side_effect = ValueError("Test error")
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
-            assert "Error in geeting_end_hook" in caplog.text
+            assert "Error in greeting_end_hook" in caplog.text
             assert "Test error" in caplog.text
 
     @pytest.mark.asyncio
@@ -920,7 +920,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.side_effect = Exception("State provider failed")
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -937,7 +937,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
 
@@ -954,7 +954,7 @@ class TestGeetingEndHook:
             mock_provider_class.side_effect = Exception("Test error")
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -972,7 +972,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is False
 
@@ -993,7 +993,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            result = await geeting_end_hook(context)
+            result = await greeting_end_hook(context)
 
             assert result is True
             assert "Greeting conversation ended due to maximum turn count" in caplog.text
