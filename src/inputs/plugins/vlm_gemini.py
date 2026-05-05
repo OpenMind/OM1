@@ -97,17 +97,25 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         )
         camera_index = self.config.camera_index
 
-        provider_kwargs = dict(
-            base_url=base_url,
-            api_key=api_key,
-            stream_url=stream_base_url,
-            camera_index=camera_index,
-            model=self.config.model,
-            max_tokens=self.config.max_tokens,
-        )
         if self.config.prompt is not None:
-            provider_kwargs["prompt"] = self.config.prompt
-        self.vlm: VLMGeminiProvider = VLMGeminiProvider(**provider_kwargs)
+            self.vlm: VLMGeminiProvider = VLMGeminiProvider(
+                base_url=base_url,
+                api_key=api_key,
+                stream_url=stream_base_url,
+                camera_index=camera_index,
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                prompt=self.config.prompt,
+            )
+        else:
+            self.vlm: VLMGeminiProvider = VLMGeminiProvider(
+                base_url=base_url,
+                api_key=api_key,
+                stream_url=stream_base_url,
+                camera_index=camera_index,
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+            )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 

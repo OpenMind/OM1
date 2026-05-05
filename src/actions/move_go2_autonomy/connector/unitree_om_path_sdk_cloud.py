@@ -5,7 +5,6 @@ import random
 from queue import Queue
 from typing import List, Optional
 
-import zenoh
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
@@ -23,6 +22,8 @@ from zenoh_msgs import (
     UnitreeRequest,
     UnitreeRequestHeader,
     UnitreeRequestIdentity,
+    ZenohSampleType,
+    ZenohSessionType,
     open_zenoh_session,
     prepare_header,
 )
@@ -190,7 +191,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         # for the cmd_vel / api/sport/request publisher when use_zenoh=True.
         self.ai_status_request = "om/ai/request"
         self.ai_status_response = "om/ai/response"
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
         self.pub = None
         self._sport_pub = None
 
@@ -511,6 +512,11 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
             header=header,
             parameter=json.dumps({"x": vx, "y": vy, "z": vyaw}),
         )
+
+        if self._sport_pub is None:
+            logging.warning("_publish_sport_move: sport publisher not ready")
+            return
+
         self._sport_pub.put(request.serialize())
 
     def _pick_path_angle(self, available: list, default: float = 0.0) -> float:
@@ -683,15 +689,19 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
 
-    def _zenoh_ai_status_request(self, data: zenoh.Sample):
+    def _zenoh_ai_status_request(self, data: ZenohSampleType):
         """
         Process an incoming AI control status message.
 
         Parameters
         ----------
-        data : zenoh.Sample
+        data : ZenohSampleType
             The Zenoh sample received, which should have a 'payload' attribute.
         """
+        if self._zenoh_ai_status_response_pub is None:
+            logging.error("Zenoh AI status response publisher not initialized")
+            return
+
         ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
         logging.info(f"Received AI Control Status message: {ai_control_status}")
 

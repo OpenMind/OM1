@@ -1,9 +1,7 @@
 import logging
 from typing import Callable, Optional
 
-import zenoh
-
-from zenoh_msgs import open_zenoh_session
+from zenoh_msgs import ZenohSessionType, open_zenoh_session
 
 
 class ZenohListenerProvider:
@@ -23,7 +21,7 @@ class ZenohListenerProvider:
         topic : str, optional
             The topic on which to subscribe messages (default is "speech").
         """
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()

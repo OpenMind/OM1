@@ -4,7 +4,6 @@ import random
 from queue import Queue
 from typing import List, Optional
 
-import zenoh
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
@@ -18,6 +17,8 @@ from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
     String,
+    ZenohSampleType,
+    ZenohSessionType,
     open_zenoh_session,
     prepare_header,
 )
@@ -101,7 +102,7 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
         self.ai_status_response = "om/ai/response"
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
         self.pub = None
 
         try:
@@ -516,7 +517,7 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
 
-    def _zenoh_ai_status_request(self, data: zenoh.Sample):
+    def _zenoh_ai_status_request(self, data: ZenohSampleType):
         """
         Process an incoming AI control status message.
 
@@ -525,6 +526,10 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
+        if self._zenoh_ai_status_response_pub is None:
+            logging.error("Zenoh AI status response publisher not initialized")
+            return
+
         ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
         logging.info(f"Received AI Control Status message: {ai_control_status}")
 

@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Optional
 
-import zenoh
 from zenoh import ZBytes
 
 from actions.arm_g1.interface import ArmInput
@@ -12,6 +11,7 @@ from zenoh_msgs import (
     UnitreeRequest,
     UnitreeRequestHeader,
     UnitreeRequestIdentity,
+    ZenohSessionType,
     open_zenoh_session,
 )
 
@@ -52,7 +52,7 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
             Configuration for the action connector.
         """
         super().__init__(config)
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()
