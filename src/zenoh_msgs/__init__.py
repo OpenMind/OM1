@@ -81,7 +81,7 @@ from .idl import (
     status_msgs,
     std_msgs,
 )
-from .session import create_zenoh_config, open_zenoh_session
+from .session import ZenohSampleType, ZenohSessionType, create_zenoh_config, open_zenoh_session
 
 __all__ = [
     # std_msgs
@@ -170,6 +170,8 @@ __all__ = [
     # session
     "create_zenoh_config",
     "open_zenoh_session",
+    "ZenohSessionType",
+    "ZenohSampleType",
     # modules
     "session",
     # idl submodules

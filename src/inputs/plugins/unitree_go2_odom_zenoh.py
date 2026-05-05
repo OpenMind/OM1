@@ -32,7 +32,7 @@ class UnitreeGo2OdomZenohConfig(SensorConfig):
     ----------
     topic : str
         Zenoh keyexpression to subscribe to.
-    schema : str
+    message_schema : str
         ``geometry_msgs/msg/PoseStamped`` or ``nav_msgs/msg/Odometry``.
     """
 
@@ -40,7 +40,7 @@ class UnitreeGo2OdomZenohConfig(SensorConfig):
         default="utlidar/robot_pose",
         description="Zenoh key for Go2 robot_pose / odom.",
     )
-    schema: str = Field(
+    message_schema: str = Field(
         default="geometry_msgs/msg/PoseStamped",
         description="Message schema for the odom topic.",
     )
@@ -59,7 +59,7 @@ class UnitreeGo2OdomZenoh(FuserInput[UnitreeGo2OdomZenohConfig, Optional[dict]])
 
         self.odom = UnitreeGo2OdomZenohProvider(
             topic=self.config.topic,
-            schema=self.config.schema,
+            schema=self.config.message_schema,
         )
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 

@@ -72,17 +72,25 @@ class VLMGeminiZenoh(FuserInput[VLMGeminiZenohConfig, Optional[str]]):
         if not api_key:
             raise ValueError("VLMGeminiZenoh: api_key not configured and OM_API_KEY env var is empty")
 
-        provider_kwargs = dict(
-            base_url=self.config.base_url,
-            api_key=api_key,
-            topic=self.config.topic,
-            decode_format=self.config.decode_format,
-            model=self.config.model,
-            max_tokens=self.config.max_tokens,
-        )
         if self.config.prompt is not None:
-            provider_kwargs["prompt"] = self.config.prompt
-        self.vlm: VLMGeminiZenohProvider = VLMGeminiZenohProvider(**provider_kwargs)
+            self.vlm: VLMGeminiZenohProvider = VLMGeminiZenohProvider(
+                base_url=self.config.base_url,
+                api_key=api_key,
+                topic=self.config.topic,
+                decode_format=self.config.decode_format,
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                prompt=self.config.prompt,
+            )
+        else:
+            self.vlm: VLMGeminiZenohProvider = VLMGeminiZenohProvider(
+                base_url=self.config.base_url,
+                api_key=api_key,
+                topic=self.config.topic,
+                decode_format=self.config.decode_format,
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+            )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
