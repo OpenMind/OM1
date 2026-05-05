@@ -57,7 +57,7 @@ class CloudZenohClient:
             The URL with the token added as a query parameter.
         """
         sep = "&" if "?" in url else "?"
-        return f"{url}{sep}token={token}"
+        return f"{url}{sep}api_key={token}"
 
     def declare_subscriber(
         self,
@@ -167,7 +167,8 @@ class CloudZenohClient:
             The message to be sent to the server, which will be JSON-encoded.
         """
         if self._websocket is None:
-            raise RuntimeError("not connected")
+            return
+
         coro = self._websocket.send(json.dumps(msg, separators=(",", ":")))
         asyncio.run_coroutine_threadsafe(coro, self._loop)
 
@@ -180,6 +181,9 @@ class CloudZenohClient:
         data : bytes
             The raw bytes to be sent to the server.
         """
+        # Wait for the connection to be established (with a reasonable timeout)
+        if not self._connected.wait(timeout=30.0):
+            raise RuntimeError("not connected: timeout waiting for connection")
         if self._websocket is None:
             raise RuntimeError("not connected")
         coro = self._websocket.send(data)

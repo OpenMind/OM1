@@ -8,12 +8,14 @@ from typing import Dict, List, Optional, Union
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_msgs import open_zenoh_session, sensor_msgs
+from zenoh_msgs import load_session_config, open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
 
 def simple_paths_processor(
+    api_key: Optional[str],
+    use_sim: bool,
     data_queue: mp.Queue,
     control_queue: mp.Queue,
     logging_config: Optional[LoggingConfig] = None,
@@ -23,6 +25,10 @@ def simple_paths_processor(
 
     Parameters
     ----------
+    api_key : Optional[str]
+        API Key for authentication with the Zenoh broker, if required.
+    use_sim : bool
+        Whether to use the simulation endpoint instead of a local one.
     data_queue : mp.Queue
         Queue for receiving paths data.
     control_queue : mp.Queue
@@ -41,6 +47,7 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
+        logging.info(f"Received paths message from Zenoh.{msg.payload}")
         paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
         msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
         current_time = time.time()
@@ -60,7 +67,9 @@ def simple_paths_processor(
     running = True
 
     try:
-        session = open_zenoh_session()
+        load_session_config(api_key, use_sim)
+        logging.info(f"Opening Zenoh session for SimplePathsProvider {api_key}, use_sim={use_sim}")
+        session = open_zenoh_session("simple_paths_processor")
         session.declare_subscriber("om/paths", paths_callback)
         logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
@@ -84,7 +93,19 @@ class SimplePathsProvider:
     Singleton class to provide simple path processing using Zenoh.
     """
 
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None, use_sim: bool = False):
+        """
+        Initialize the SimplePathsProvider, set up Zenoh session, and prepare for path processing.
+
+        Parameters
+        ----------
+        api_key : Optional[str]
+            API Key for authentication with the Zenoh broker, if required.
+        use_sim : bool
+            Whether to use the simulation endpoint instead of a local one.
+        """
+        self.api_key = api_key
+        self.use_sim = use_sim
         self.session = None
         self.paths = None
 
@@ -119,7 +140,7 @@ class SimplePathsProvider:
         if not self._simple_paths_processor_thread or not self._simple_paths_processor_thread.is_alive():
             self._simple_paths_processor_thread = mp.Process(
                 target=simple_paths_processor,
-                args=(self.data_queue, self.control_queue, get_logging_config()),
+                args=(self.api_key, self.use_sim, self.data_queue, self.control_queue, get_logging_config()),
             )
             self._simple_paths_processor_thread.start()
             logging.info("SimplePathsProvider started.")

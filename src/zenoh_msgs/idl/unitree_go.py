@@ -1,5 +1,3 @@
-"""IDL classes for the unitree_go ROS2 message package."""
-
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
@@ -8,7 +6,7 @@ from pycdr2.types import array, float32, int8, int16, int32, uint8, uint16, uint
 
 @dataclass
 class TimeSpec(IdlStruct, typename="TimeSpec"):
-    """unitree_go/msg/TimeSpec — robot-clock timestamp."""
+    """TimeSpec message."""
 
     sec: int32
     nanosec: uint32
@@ -16,7 +14,7 @@ class TimeSpec(IdlStruct, typename="TimeSpec"):
 
 @dataclass
 class IMUState(IdlStruct, typename="IMUState"):
-    """unitree_go/msg/IMUState."""
+    """IMUState message."""
 
     quaternion: array[float32, 4]
     gyroscope: array[float32, 3]
@@ -27,7 +25,7 @@ class IMUState(IdlStruct, typename="IMUState"):
 
 @dataclass
 class MotorState(IdlStruct, typename="MotorState"):
-    """unitree_go/msg/MotorState."""
+    """MotorState message."""
 
     mode: uint8
     q: float32
@@ -44,7 +42,7 @@ class MotorState(IdlStruct, typename="MotorState"):
 
 @dataclass
 class BmsState(IdlStruct, typename="BmsState"):
-    """unitree_go/msg/BmsState — battery state."""
+    """BmsState message."""
 
     version_high: uint8
     version_low: uint8
@@ -59,7 +57,7 @@ class BmsState(IdlStruct, typename="BmsState"):
 
 @dataclass
 class LowState(IdlStruct, typename="LowState"):
-    """unitree_go/msg/LowState — full Go2 robot low-level state."""
+    """LowState message."""
 
     head: array[uint8, 2]
     level_flag: uint8
@@ -87,7 +85,7 @@ class LowState(IdlStruct, typename="LowState"):
 
 @dataclass
 class SportModeState(IdlStruct, typename="SportModeState"):
-    """unitree_go/msg/SportModeState — gait/locomotion-controller state."""
+    """SportModeState message."""
 
     stamp: TimeSpec
     error_code: uint32

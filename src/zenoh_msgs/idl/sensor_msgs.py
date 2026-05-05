@@ -39,12 +39,7 @@ class CameraInfo(IdlStruct, typename="CameraInfo"):
 
 @dataclass
 class Image(IdlStruct, typename="Image"):
-    """Image message.
-
-    ``data`` uses ``bytes`` rather than ``sequence[uint8]`` so consumers
-    can feed it straight to ``numpy.frombuffer(...)``. On-wire format is
-    identical to ``sequence[uint8]``.
-    """
+    """Image message."""
 
     header: Header
     height: uint32
@@ -263,7 +258,7 @@ class Paths(IdlStruct, typename="Paths"):
 
 @dataclass
 class Joy(IdlStruct, typename="Joy"):
-    """sensor_msgs/msg/Joy — joystick state."""
+    """Joy message."""
 
     header: Header
     axes: List[float32]
