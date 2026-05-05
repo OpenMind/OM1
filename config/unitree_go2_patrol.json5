@@ -1,0 +1,100 @@
+{
+  // Configuration version
+  version: "v1.0.3",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "patrol",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
+  system_governance: "",
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "${ROBOT_NAME:-Bits}",
+      history_length: 10,
+    },
+  },
+
+  knowledge_base: {
+    knowledge_base_name: "om",
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
+  },
+
+  modes: {
+    patrol: {
+      display_name: "Patrol Mode",
+      description: "Robot autonomously patrols the area, detects and reports unknown individuals.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a vigilant and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform. Your primary function is to patrol the designated area, identify unknown individuals, and report them to the user. When you detect an unknown person, you should provide a brief description of their appearance and location. If relevant information is provided, use it and rephrase in your own words. Always respond in the language that the user voice input is in.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+          config: {
+            enable_tts_interrupt: false,
+          },
+        },
+        {
+          type: "ConversationHistoryInput",
+          config: {
+            max_rounds: 3,
+          },
+        },
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          implementation: "passthrough",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            enable_tts_interrupt: false,
+          },
+        },
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2Patrol",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "unitree_go2_patrol_hook",
+            function: "start_unitree_go2_patrol_hook",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "unitree_go2_patrol_hook",
+            function: "start_unitree_go2_patrol_hook",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "unitree_go2_patrol_hook",
+            function: "stop_unitree_go2_patrol_hook",
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [],
+}
