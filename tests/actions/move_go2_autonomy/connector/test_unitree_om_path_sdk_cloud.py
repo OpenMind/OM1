@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud import (
+from actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh import (
     MoveUnitreeOMPathSDKCloudConfig,
     MoveUnitreeOMPathSDKCloudConnector,
 )

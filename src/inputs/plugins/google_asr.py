@@ -152,9 +152,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
-        # Guard flag: when True, this instance ignores incoming ASR messages.
-        self._stopped = False
-
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
             chunk=chunk,
@@ -188,6 +185,9 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
             self.session = None
             self.asr_publisher = None
+
+        # Guard flag: when True, this instance ignores incoming ASR messages.
+        self._stopped = False
 
     def _handle_asr_message(self, raw_message: str):
         """

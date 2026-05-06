@@ -10,20 +10,12 @@
   agent_inputs: [
     {
       type: "UnitreeGo2OdomZenoh",
-      config: {
-        topic: "odom",
-      },
     },
     {
       type: "GoogleASRInput",
     },
     {
       type: "VLMGeminiZenoh",
-      config: {
-        topic: "camera/realsense2_camera_node/color/image_raw",
-        model: "gemini-2.5-flash",
-        max_tokens: 2048,
-      },
     },
     {
       type: "SimplePaths",
@@ -40,13 +32,7 @@
     {
       name: "move_go2_autonomy",
       llm_label: "move",
-      connector: "unitree_om_path_sdk_cloud",
-      config: {
-        use_zenoh: true,
-        move_via_sport_api: false,
-        cmd_vel_topic: "cmd_vel",
-        permissive_paths: true,
-      },
+      connector: "unitree_om_path_sdk_zenoh",
     },
     {
       name: "speak",

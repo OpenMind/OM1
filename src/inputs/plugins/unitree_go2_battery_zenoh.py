@@ -100,15 +100,20 @@ class UnitreeGo2BatteryZenoh(FuserInput[UnitreeGo2BatteryZenohConfig, List[float
         Push the latest battery snapshot to the teleops status channel.
         """
         with self._lock:
-            level, t, v = self.battery_percentage, self.battery_t, self.battery_voltage
+            battery_percentage, battery_t, battery_voltage = (
+                self.battery_percentage,
+                self.battery_t,
+                self.battery_voltage,
+            )
+
         self.status_provider.share_status(
             TeleopsStatus(
                 machine_name="UnitreeGo2",
                 update_time=str(time.time()),
                 battery_status=BatteryStatus(
-                    battery_level=level,
-                    temperature=t,
-                    voltage=v,
+                    battery_level=battery_percentage,
+                    temperature=battery_t,
+                    voltage=battery_voltage,
                     timestamp=str(time.time()),
                     charging_status=False,
                 ),
