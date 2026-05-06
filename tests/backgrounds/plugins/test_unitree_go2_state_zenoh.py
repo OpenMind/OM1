@@ -6,16 +6,6 @@ from backgrounds.plugins.unitree_go2_state_zenoh import (
 )
 
 
-class TestUnitreeGo2StateZenohConfig:
-    def test_default_topic(self):
-        config = UnitreeGo2StateZenohConfig()
-        assert config.topic == "sportmodestate"
-
-    def test_custom_topic(self):
-        config = UnitreeGo2StateZenohConfig(topic="custom/state")
-        assert config.topic == "custom/state"
-
-
 class TestUnitreeGo2StateZenoh:
     def test_initialization_default(self):
         with patch("backgrounds.plugins.unitree_go2_state_zenoh.UnitreeGo2StateZenohProvider") as mock_provider_class:
@@ -34,10 +24,10 @@ class TestUnitreeGo2StateZenoh:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            config = UnitreeGo2StateZenohConfig(topic="my/key")
+            config = UnitreeGo2StateZenohConfig()
             background = UnitreeGo2StateZenoh(config)
 
-            mock_provider_class.assert_called_once_with(topic="my/key")
+            mock_provider_class.assert_called_once_with()
             assert background.unitree_go2_state_provider is mock_provider
 
     def test_initialization_logging(self, caplog):

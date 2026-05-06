@@ -543,13 +543,13 @@ class MoveUnitreeOMPathSDKZenohConnector(ActionConnector[MoveUnitreeOMPathSDKZen
         if gap > 0:  # Turn left
             if not self.path_provider.turn_left:
                 self._move_robot(0.3, 0, self.turn_speed)
-                return True
+                return False
             sharpness = min(self.path_provider.turn_left)
             self._move_robot(sharpness * 0.15, 0, self.turn_speed)
         else:  # Turn right
             if not self.path_provider.turn_right:
                 self._move_robot(0.3, 0, -self.turn_speed)
-                return True
+                return False
             sharpness = 8 - max(self.path_provider.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True

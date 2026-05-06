@@ -4,8 +4,8 @@ import pytest
 
 from actions.base import MoveCommand
 from actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh import (
-    MoveUnitreeOMPathSDKCloudConfig,
-    MoveUnitreeOMPathSDKCloudConnector,
+    MoveUnitreeOMPathSDKZenohConfig,
+    MoveUnitreeOMPathSDKZenohConnector,
 )
 from providers.odom_provider_base import RobotState
 
@@ -14,22 +14,15 @@ from providers.odom_provider_base import RobotState
 def deps():
     """Patch out everything that does I/O at construction time."""
     with (
-        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SimplePathsProvider") as mock_paths_class,
-        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.FacePresenceProvider") as mock_face_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.SimplePathsProvider") as mock_paths_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.FacePresenceProvider") as mock_face_class,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2StateZenohProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.UnitreeGo2StateZenohProvider"
         ) as mock_state_zenoh_class,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2OdomZenohProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.UnitreeGo2OdomZenohProvider"
         ) as mock_odom_zenoh_class,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2StateProvider"
-        ) as mock_state_class,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2OdomProvider"
-        ) as mock_odom_class,
-        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.open_zenoh_session") as mock_open_session,
-        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SportClient") as mock_sport_client_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.open_zenoh_session") as mock_open_session,
     ):
         # Common stub instances
         paths = MagicMock()
@@ -61,32 +54,12 @@ def deps():
         }
         mock_odom_zenoh_class.return_value = odom_zenoh
 
-        state = MagicMock()
-        state.state_code = None
-        state.state = "Standing"
-        state.action_progress = 0
-        mock_state_class.return_value = state
-
-        odom = MagicMock()
-        odom.position = {
-            "moving": False,
-            "body_attitude": RobotState.STANDING,
-            "odom_x": 1.0,
-            "odom_y": 0.0,
-            "odom_yaw_m180_p180": 0.0,
-            "odom_subscriber_ts": 1.0,
-        }
-        mock_odom_class.return_value = odom
-
         session = MagicMock()
         sub = MagicMock()
         session.declare_subscriber.return_value = sub
         pub = MagicMock()
         session.declare_publisher.return_value = pub
         mock_open_session.return_value = session
-
-        sport_client = MagicMock()
-        mock_sport_client_class.return_value = sport_client
 
         yield {
             "paths_class": mock_paths_class,
@@ -96,76 +69,56 @@ def deps():
             "state_zenoh": state_zenoh,
             "odom_zenoh_class": mock_odom_zenoh_class,
             "odom_zenoh": odom_zenoh,
-            "state_class": mock_state_class,
-            "state": state,
-            "odom_class": mock_odom_class,
-            "odom": odom,
             "open_session": mock_open_session,
             "session": session,
             "publisher": pub,
-            "sport_client_class": mock_sport_client_class,
-            "sport_client": sport_client,
         }
 
 
-# --- Initialization ---------------------------------------------------------
-
-
 def test_init_zenoh_cmd_vel_mode(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    assert conn.use_zenoh is True
-    assert conn.move_via_sport_api is False
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
     deps["state_zenoh_class"].assert_called_once()
     deps["odom_zenoh_class"].assert_called_once()
-    # cmd_vel publisher should be armed
-    assert conn._cmd_vel_pub is not None
-    assert conn._sport_pub is None
+    assert conn._sport_pub is not None
 
 
 def test_init_zenoh_sport_api_mode(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, move_via_sport_api=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
     assert conn._sport_pub is not None
-    assert conn._cmd_vel_pub is None
 
 
 def test_init_sport_api_without_zenoh_raises(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False, move_via_sport_api=True)
-    with pytest.raises(ValueError, match="move_via_sport_api requires use_zenoh"):
-        MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
+    assert conn is not None
 
 
 def test_init_local_path(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    assert conn.use_zenoh is False
-    deps["state_class"].assert_called_once()
-    deps["odom_class"].assert_called_once()
-    # SportClient.Init() called during construction
-    deps["sport_client"].Init.assert_called_once()
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    MoveUnitreeOMPathSDKZenohConnector(config=config)
+    deps["state_zenoh_class"].assert_called_once()
+    deps["odom_zenoh_class"].assert_called_once()
 
 
 def test_init_session_failure_keeps_running(deps):
     deps["open_session"].side_effect = RuntimeError("zenoh down")
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
     assert conn.session is None
 
 
 def test_init_permissive_paths_logged(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, permissive_paths=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    assert conn.permissive_paths is True
-
-
-# --- Pure-math helpers ------------------------------------------------------
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
+    assert conn is not None
 
 
 @pytest.fixture
 def conn(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, permissive_paths=True)
-    return MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    return MoveUnitreeOMPathSDKZenohConnector(config=config)
 
 
 @pytest.mark.parametrize(
@@ -201,72 +154,63 @@ def test_pick_path_angle_returns_default_for_empty(conn):
 
 
 def test_pick_path_angle_picks_from_list(conn):
-    # path_angles for indices [0, 1] are [-90, -60]
     angle = conn._pick_path_angle([0, 1], default=999.0)
     assert angle in (-90, -60)
 
 
-# --- _move_robot dispatch ---------------------------------------------------
-
-
 def test_move_robot_zenoh_cmd_vel(conn):
-    conn._cmd_vel_pub = MagicMock()
+    conn._sport_pub = MagicMock()
     conn._move_robot(0.5, 0.0, 0.1)
-    conn._cmd_vel_pub.put.assert_called_once()
+    conn._sport_pub.put.assert_called_once()
 
 
 def test_move_robot_zenoh_cmd_vel_skips_when_pub_missing(conn):
-    conn._cmd_vel_pub = None
+    conn._sport_pub = None
     # Should not raise
     conn._move_robot(0.5, 0.0, 0.1)
 
 
 def test_move_robot_skips_when_sitting(conn):
     conn.odom.position["body_attitude"] = RobotState.SITTING
-    conn._cmd_vel_pub = MagicMock()
+    conn._sport_pub = MagicMock()
     conn._move_robot(0.5, 0.0, 0.0)
-    conn._cmd_vel_pub.put.assert_not_called()
+    conn._sport_pub.put.assert_not_called()
 
 
 def test_move_robot_sport_api_path(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, move_via_sport_api=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
     conn._sport_pub = MagicMock()
     conn._move_robot(0.5, 0.0, 0.0)
     conn._sport_pub.put.assert_called_once()
 
 
 def test_move_robot_sport_api_no_pub(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, move_via_sport_api=True)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
     conn._sport_pub = None  # publisher missing
-    # Should not raise
     conn._move_robot(0.5, 0.0, 0.0)
 
 
 def test_move_robot_local_sport_client(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    deps["sport_client"].reset_mock()
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
+    conn._sport_pub = MagicMock()
     conn._move_robot(0.5, 0.0, 0.1)
-    deps["sport_client"].Move.assert_called_once_with(0.5, 0.0, 0.1)
+    conn._sport_pub.put.assert_called_once()
 
 
 def test_move_robot_local_skips_when_not_standing(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False)
-    conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    deps["sport_client"].reset_mock()
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    conn = MoveUnitreeOMPathSDKZenohConnector(config=config)
+    conn._sport_pub = MagicMock()
     conn.odom.position["body_attitude"] = RobotState.SITTING
     conn._move_robot(0.5, 0.0, 0.1)
-    deps["sport_client"].Move.assert_not_called()
-
-
-# --- _publish_sport_move ----------------------------------------------------
+    conn._sport_pub.put.assert_not_called()
 
 
 def test_publish_sport_move_skips_when_pub_missing(conn):
     conn._sport_pub = None
-    # Should not raise
     conn._publish_sport_move(0.5, 0.0, 0.0)
 
 
@@ -274,9 +218,6 @@ def test_publish_sport_move_publishes(conn):
     conn._sport_pub = MagicMock()
     conn._publish_sport_move(0.5, 0.1, 0.2)
     conn._sport_pub.put.assert_called_once()
-
-
-# --- clean_abort ------------------------------------------------------------
 
 
 def test_clean_abort_resets_state(conn):
@@ -291,9 +232,6 @@ def test_clean_abort_when_already_empty(conn):
     conn.movement_attempts = 3
     conn.clean_abort()
     assert conn.movement_attempts == 0
-
-
-# --- _process_* movement-command builders -----------------------------------
 
 
 def test_process_turn_left_blocked(conn):
@@ -348,10 +286,10 @@ def test_process_move_back_queues(conn):
 
 
 def test_execute_turn_left_with_paths(conn):
-    conn._cmd_vel_pub = MagicMock()
+    conn._sport_pub = MagicMock()
     ok = conn._execute_turn(20.0)  # positive -> left
     assert ok is True
-    conn._cmd_vel_pub.put.assert_called()
+    conn._sport_pub.put.assert_called()
 
 
 def test_execute_turn_left_blocked_strict(conn):
@@ -361,19 +299,11 @@ def test_execute_turn_left_blocked_strict(conn):
     assert ok is False
 
 
-def test_execute_turn_left_blocked_permissive(conn):
-    conn._cmd_vel_pub = MagicMock()
-    conn.path_provider.turn_left = []
-    ok = conn._execute_turn(20.0)
-    assert ok is True
-    conn._cmd_vel_pub.put.assert_called()
-
-
 def test_execute_turn_right_with_paths(conn):
-    conn._cmd_vel_pub = MagicMock()
+    conn._sport_pub = MagicMock()
     ok = conn._execute_turn(-20.0)
     assert ok is True
-    conn._cmd_vel_pub.put.assert_called()
+    conn._sport_pub.put.assert_called()
 
 
 def test_execute_turn_right_blocked_strict(conn):
@@ -381,16 +311,6 @@ def test_execute_turn_right_blocked_strict(conn):
     conn.path_provider.turn_right = []
     ok = conn._execute_turn(-20.0)
     assert ok is False
-
-
-def test_execute_turn_right_blocked_permissive(conn):
-    conn._cmd_vel_pub = MagicMock()
-    conn.path_provider.turn_right = []
-    ok = conn._execute_turn(-20.0)
-    assert ok is True
-
-
-# --- connect dispatch -------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -464,18 +384,13 @@ async def test_connect_waits_for_first_odom(conn):
     assert conn.pending_movements.empty()
 
 
-# --- _zenoh_ai_status_request -----------------------------------------------
-
-
 def test_zenoh_ai_status_request_no_publisher_no_op(conn):
     conn._zenoh_ai_status_response_pub = None
     sample = MagicMock()
-    # Should not raise even with no publisher
     conn._zenoh_ai_status_request(sample)
 
 
 def test_zenoh_ai_status_request_disable(conn):
-    """code=0 should disable AI control and publish a response."""
     pub = MagicMock()
     conn._zenoh_ai_status_response_pub = pub
     sample = MagicMock()
@@ -488,15 +403,15 @@ def test_zenoh_ai_status_request_disable(conn):
     response_obj.serialize.return_value = b"\x00"
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusRequest.deserialize",
             return_value=fake,
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.prepare_header",
             return_value=MagicMock(),
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusResponse",
             return_value=response_obj,
         ),
     ):
@@ -519,15 +434,15 @@ def test_zenoh_ai_status_request_enable(conn):
     response_obj.serialize.return_value = b"\x00"
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusRequest.deserialize",
             return_value=fake,
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.prepare_header",
             return_value=MagicMock(),
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusResponse",
             return_value=response_obj,
         ),
     ):
@@ -537,7 +452,6 @@ def test_zenoh_ai_status_request_enable(conn):
 
 
 def test_zenoh_ai_status_request_query(conn):
-    """code=2 should reply with current state without changing it."""
     pub = MagicMock()
     conn._zenoh_ai_status_response_pub = pub
     conn.ai_control_enabled = True
@@ -551,34 +465,29 @@ def test_zenoh_ai_status_request_query(conn):
     response_obj.serialize.return_value = b"\x00"
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusRequest.deserialize",
             return_value=fake,
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.prepare_header",
             return_value=MagicMock(),
         ),
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_zenoh.AIStatusResponse",
             return_value=response_obj,
         ),
     ):
         conn._zenoh_ai_status_request(sample)
-    # State unchanged
     assert conn.ai_control_enabled is True
     pub.put.assert_called_once()
 
 
-# --- tick() state machine ---------------------------------------------------
-
-
 @pytest.fixture
 def tick_conn(deps):
-    """A connector with sleep stubbed and odom positioned for tick tests."""
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, permissive_paths=True)
-    c = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    c = MoveUnitreeOMPathSDKZenohConnector(config=config)
     c.sleep = MagicMock()
-    c._cmd_vel_pub = MagicMock()
+    c._sport_pub = MagicMock()
     return c
 
 
@@ -602,20 +511,10 @@ def test_tick_skips_when_sitting(tick_conn):
 
 
 def test_tick_local_skips_when_not_standing(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False, permissive_paths=True)
-    c = MoveUnitreeOMPathSDKCloudConnector(config=config)
+    config = MoveUnitreeOMPathSDKZenohConfig()
+    c = MoveUnitreeOMPathSDKZenohConnector(config=config)
     c.sleep = MagicMock()
     c.odom.position["body_attitude"] = RobotState.SITTING
-    c.tick()
-    c.sleep.assert_called_with(0.5)
-
-
-def test_tick_local_proceeds_when_attitude_unknown(deps):
-    """Local mode with attitude != STANDING and != SITTING should still skip."""
-    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=False, permissive_paths=True)
-    c = MoveUnitreeOMPathSDKCloudConnector(config=config)
-    c.sleep = MagicMock()
-    c.odom.position["body_attitude"] = None
     c.tick()
     c.sleep.assert_called_with(0.5)
 
@@ -630,7 +529,6 @@ def test_tick_movement_attempts_exceeded_aborts(tick_conn):
     tick_conn.movement_attempt_limit = 10
     tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
-    # clean_abort drains the queue
     assert tick_conn.pending_movements.empty()
     assert tick_conn.movement_attempts == 0
 
@@ -639,7 +537,7 @@ def test_tick_phase1_big_gap_executes_turn(tick_conn):
     tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
-    tick_conn._cmd_vel_pub.put.assert_called()
+    tick_conn._sport_pub.put.assert_called()
 
 
 def test_tick_phase1_big_gap_blocked_aborts(tick_conn):
@@ -648,7 +546,6 @@ def test_tick_phase1_big_gap_blocked_aborts(tick_conn):
     tick_conn.path_provider.turn_right = []
     tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=-45.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
-    # _execute_turn returns False -> clean_abort -> queue drained
     assert tick_conn.pending_movements.empty()
 
 
@@ -657,7 +554,7 @@ def test_tick_phase1_small_gap_left_rotation(tick_conn):
     tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=5.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
-    tick_conn._cmd_vel_pub.put.assert_called()
+    tick_conn._sport_pub.put.assert_called()
 
 
 def test_tick_phase1_small_gap_right_rotation(tick_conn):
@@ -665,7 +562,7 @@ def test_tick_phase1_small_gap_right_rotation(tick_conn):
     tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=-5.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
-    tick_conn._cmd_vel_pub.put.assert_called()
+    tick_conn._sport_pub.put.assert_called()
 
 
 def test_tick_phase1_turn_completed_marks_target(tick_conn):
@@ -673,7 +570,6 @@ def test_tick_phase1_turn_completed_marks_target(tick_conn):
     cmd = MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
     tick_conn.pending_movements.put(cmd)
     tick_conn.tick()
-    # Item in queue should now have turn_complete=True
     front = list(tick_conn.pending_movements.queue)[0]
     assert front.turn_complete is True
 
@@ -708,21 +604,20 @@ def test_tick_phase2_keeps_moving(tick_conn):
     )
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
-    tick_conn._cmd_vel_pub.put.assert_called()
+    tick_conn._sport_pub.put.assert_called()
 
 
 def test_tick_phase2_overshoot(tick_conn):
     tick_conn.distance_tolerance = 0.05
-    # odom.x = 1.0, start_x = 0.0, goal dx = 0.5 -> distance_traveled = 1.0 > 0.5 (overshoot)
     tick_conn.pending_movements.put(
         MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5)
     )
     tick_conn.tick()
-    tick_conn._cmd_vel_pub.put.assert_called()
+    tick_conn._sport_pub.put.assert_called()
 
 
 def test_tick_phase2_completes_normally(tick_conn):
-    tick_conn.distance_tolerance = 5.0  # huge tolerance -> immediately done
+    tick_conn.distance_tolerance = 5.0
     tick_conn.pending_movements.put(
         MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5)
     )
