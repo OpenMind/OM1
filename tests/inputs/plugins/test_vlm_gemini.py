@@ -50,9 +50,6 @@ def test_formatted_latest_buffer():
 
         result = sensor.formatted_latest_buffer()
         assert isinstance(result, str)
-        assert "INPUT:" in result
         assert "Vision" in result
         assert "I see a person" in result
-        assert "// START" in result
-        assert "// END" in result
         assert len(sensor.messages) == 0

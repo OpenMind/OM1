@@ -118,7 +118,7 @@ def test_state_zenoh_processor_subscribes(patches):
             return_value=None,
         ),
     ):
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]
+        _state_zenoh_processor(None, False, data_queue, control_queue)  # type: ignore[arg-type]
 
     session.declare_subscriber.assert_called_once()
     topic_arg = session.declare_subscriber.call_args[0][0]
@@ -135,4 +135,4 @@ def test_state_zenoh_processor_session_failure():
         ),
         patch("providers.unitree_go2_state_zenoh_provider.setup_logging"),
     ):
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]
+        _state_zenoh_processor(None, False, data_queue, control_queue)  # type: ignore[arg-type]

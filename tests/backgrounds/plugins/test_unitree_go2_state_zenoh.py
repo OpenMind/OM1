@@ -17,17 +17,17 @@ class TestUnitreeGo2StateZenoh:
 
             assert background.config is config
             assert background.unitree_go2_state_provider is mock_provider
-            mock_provider_class.assert_called_once_with(topic="sportmodestate")
+            mock_provider_class.assert_called_once_with(None, False)
 
     def test_initialization_custom_topic(self):
         with patch("backgrounds.plugins.unitree_go2_state_zenoh.UnitreeGo2StateZenohProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            config = UnitreeGo2StateZenohConfig()
+            config = UnitreeGo2StateZenohConfig(api_key="test_key", use_sim=True)
             background = UnitreeGo2StateZenoh(config)
 
-            mock_provider_class.assert_called_once_with()
+            mock_provider_class.assert_called_once_with("test_key", True)
             assert background.unitree_go2_state_provider is mock_provider
 
     def test_initialization_logging(self, caplog):
