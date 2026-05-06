@@ -13,7 +13,7 @@
 * **Modular Architecture**: Designed with Python for simplicity and seamless integration.
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
-* **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
+* **Web-Based Debugging Display**: Monitor runtime state in WebSim (available at http://localhost:8000/), including user input, and current move/speech/emotion outputs.
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
 ## Architecture Overview
@@ -21,26 +21,41 @@
 
 ## Getting Started
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech`, and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+If you are new to OM1, this is the fastest path to a successful first run using the `spot` agent.
 
-### Package Management and Virtual Environment
+Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs, which are visualized in WebSim for debugging.
 
-You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline and WebSim output. WebSim visualizes state updates and does not execute robot hardware actions.
 
-### Install Dependencies
+### Quick Start (5 Minutes)
 
-For macOS
+1. Install system dependencies.
+2. Clone the repository.
+3. Add your OpenMind API key.
+4. Launch OM1 and verify WebSim output.
+
+### Prerequisites
+
+- Python 3.10+
+- [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/)
+- Webcam access (recommended if configuring VLM)
+
+Install system packages:
+
+### 1. Install System Dependencies
+
+For macOS:
 ```bash
 brew install portaudio ffmpeg
 ```
 
-For Linux
+For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python3-dev ffmpeg
+sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
 ```
 
-### Clone the Repo
+### 2. Clone
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
@@ -49,31 +64,54 @@ git submodule update --init
 uv venv
 ```
 
-### Obtain an OpenMind API Key
+### 3. Configure API Key
 
 Get your API key from [OpenMind Portal](https://portal.openmind.com/).
-1. Create your account on OpenMind Portal if you haven't yet.
-2. Go to the dashboard and create a new API key.
-3. Copy the generated API key.
-4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Alternatively, configure it in the `.env` file by running `cp .env.example .env` and then adding your key to `.env`.
 
-Alternatively, you can set your API key in your shell profile:
+1. Sign in to OpenMind Portal.
+2. Open the dashboard and create a new API key.
+3. Copy the generated key.
 
-```bash
-vi ~/.bashrc # for Linux
-vi ~/.zshrc # for macOS
-```
-
-Add the following to the file
-
+Recommended (shell profile):
 ```bash
 export OM_API_KEY="<your_api_key>"
 ```
 
+Alternative (project-local):
 ```bash
-source ~/.bashrc # for Linux
-source ~/.zshrc # for macOS
+cp .env.example .env
 ```
+
+Then set:
+```bash
+OM_API_KEY=<your_api_key>
+```
+in `.env`.
+
+You can also verify or adjust the fallback key location in `config/spot.json5`.
+
+### 4. Launch Spot
+
+```bash
+uv run src/run.py spot
+```
+
+#### Verify It Is Working
+
+Open <http://localhost:8000/> in your browser.
+
+Your setup is successful if:
+
+- The terminal indicates that WebSim started.
+- The WebSim page loads at port `8000`.
+- You can see Spot state updates (inputs, move/speak/emotion outputs, and latency) in the WebSim UI.
+
+### Troubleshooting
+
+- `Authentication` errors: confirm `OM_API_KEY` is set and not expired.
+- `No module` errors: run the command with `uv run` from the repo root.
+- `Camera` access issues: grant terminal/IDE camera permissions in OS settings.
+- `Address already in use` on port `8000`: stop the conflicting process or free the port.
 
 ### OMCU
 
@@ -81,17 +119,9 @@ OMCU is the computational unit for billing on OpenMind's platform. The free plan
 
 Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
-### Launching OM1
+For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-Run
-```bash
-uv run src/run.py spot
-```
-
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
-
-> **Note:** This is just an example agent configuration.
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
+> **Note:** This quick start uses the Spot starter configuration. WebSim is a runtime visualization and debugging interface, not a hardware control endpoint. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
 
 ## What's Next?
 
@@ -144,6 +174,8 @@ OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The follow
 - **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
 
 For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
+
+The BrainPack is open-source and you can refer the guidelines to build your own [here](https://github.com/OpenMind/brainpack).
 
 ## Simulator Support
 
