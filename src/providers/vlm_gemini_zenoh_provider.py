@@ -35,10 +35,28 @@ class VLMGeminiZenohProvider:
             "Just the description — no explanation of your reasoning."
         ),
     ):
+        """
+        Initialize the VLM Provider.
+
+        Parameters
+        ----------
+        base_url : str
+            The base URL for the OM Gemini proxy.
+        api_key : str
+            The API key.
+        topic : str
+            The Zenoh topic to subscribe to for incoming frames.
+        decode_format : str
+            A hint for the incoming frame format; currently unused.
+        model : str
+            Gemini model id (e.g. "gemini-2.5-flash", "gemini-3.1-pro-preview").
+        max_tokens : int
+            The token budget for each VLM call.
+        prompt : str
+            The prompt to send with each frame to the Gemini model.
+        """
         self.running: bool = False
-        # AsyncOpenAI for auth/connection pooling; we bypass its response
-        # parser via `with_raw_response.create()` because openai==1.60.1
-        # rejects Gemini's `extra_content.google.thought_signature` field.
+
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model: str = model
         self.max_tokens: int = max_tokens
@@ -47,19 +65,12 @@ class VLMGeminiZenohProvider:
         self._inflight: int = 0
         self._max_inflight: int = 2  # back-pressure: at most N concurrent VLM calls
 
-        # VideoZenohStream's own self.loop is never started — its zenoh
-        # callback would enqueue our coroutine onto a dead loop. So we run
-        # our own loop in a dedicated thread and pass a synchronous
-        # frame_callback that schedules onto it.
         self._loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._loop_thread: threading.Thread = threading.Thread(
             target=self._run_loop, daemon=True, name="VLMGeminiZenohLoop"
         )
         self._loop_thread.start()
 
-        # VideoZenohStream subscribes via open_zenoh_session(); when
-        # OPENMIND_CLOUD_URL is set it uses the broker shim, so frames
-        # come through the same broker the rest of cloud_sim uses.
         self.video_stream: VideoZenohStream = VideoZenohStream(
             topic=topic,
             decode_format=decode_format,
@@ -67,22 +78,36 @@ class VLMGeminiZenohProvider:
         )
 
     def _run_loop(self):
+        """
+        Run the internal asyncio event loop in a dedicated thread.
+        """
         asyncio.set_event_loop(self._loop)
         self._loop.run_forever()
 
     def _dispatch_frame(self, frame: str):
-        """Sync entrypoint called from the zenoh callback thread. Drops
-        the frame if too many requests are already in flight (Gemini latency
-        is ~1-3s; at 12fps frames pile up otherwise).
+        """
+        Dispatch a new frame from the Zenoh topic to the asyncio processing method.
+
+        Parameters
+        ----------
+        frame : str
+            The incoming frame data as a string, expected to be a JSON-encoded object containing a base64-encoded image.
         """
         if self._inflight >= self._max_inflight:
             return
+
         self._inflight += 1
         asyncio.run_coroutine_threadsafe(self._process_frame(frame), self._loop)
 
     async def _process_frame(self, frame: str):
-        """Frame callback. ``frame`` is `{"timestamp":..., "frame":"<b64>"}` —
-        unwrap to bare base64 for the data: URL Gemini expects.
+        """
+        Process a video frame via the OM Gemini proxy.
+
+        Parameters
+        ----------
+        frame : str
+            JSON string emitted by `om1_vlm.VideoZenohStream`, shape:
+            `{"timestamp": <float>, "frame": "<base64-jpeg>"}`.
         """
         try:
             envelope = json.loads(frame)
@@ -110,11 +135,13 @@ class VLMGeminiZenohProvider:
             )
             data = json.loads(raw.text)
             content = data["choices"][0]["message"]["content"]
+
             logging.debug(
                 "Gemini VLM Zenoh latency=%.3fs content=%r",
                 time.perf_counter() - processing_start,
                 content[:200] if content else None,
             )
+
             if self.message_callback and content is not None:
                 self.message_callback(content)
         except Exception as e:
@@ -123,20 +150,38 @@ class VLMGeminiZenohProvider:
             self._inflight = max(0, self._inflight - 1)
 
     def register_message_callback(self, message_callback: Optional[Callable]):
-        """Register a callback invoked with each VLM response string."""
+        """
+        Register a callback for processing Gemini results.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            The callback function to process Gemini results.
+        """
         self.message_callback = message_callback
 
     def start(self):
-        """Start the underlying video stream (idempotent)."""
+        """
+        Start the Gemini provider.
+
+        Initializes and starts the video stream and processing thread
+        if not already running.
+        """
         if self.running:
             logging.warning("Gemini VLM Zenoh provider is already running")
             return
+
         self.running = True
         self.video_stream.start()
+
         logging.info("Gemini VLM Zenoh provider started")
 
     def stop(self):
-        """Stop the video stream and shut down the internal asyncio loop."""
+        """
+        Stop the Gemini provider.
+
+        Stops the video stream and processing thread.
+        """
         self.running = False
         self.video_stream.stop()
         self._loop.call_soon_threadsafe(self._loop.stop)

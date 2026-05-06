@@ -1,10 +1,12 @@
+from queue import Queue
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from providers.unitree_go2_state_zenoh_provider import (
-    _STATE_MACHINE_CODES,
     UnitreeGo2StateZenohProvider,
+    _state_zenoh_processor,
+    state_machine_codes,
 )
 
 
@@ -37,7 +39,6 @@ def patches():
 
 def test_initialization_default_topic(patches):
     provider = UnitreeGo2StateZenohProvider()
-    assert provider.topic == "sportmodestate"
     assert provider.go2_state is None
     assert provider.go2_state_code is None
     assert provider.go2_action_progress == 0
@@ -45,16 +46,8 @@ def test_initialization_default_topic(patches):
     patches["thread"].start.assert_called_once()
 
 
-def test_initialization_custom_topic(patches):
-    UnitreeGo2StateZenohProvider.reset()  # type: ignore[attr-defined]
-    provider = UnitreeGo2StateZenohProvider("lf/sportmodestate")
-    assert provider.topic == "lf/sportmodestate"
-
-
 def test_start_is_idempotent(patches):
     provider = UnitreeGo2StateZenohProvider()
-    # First start happens via __init__. Calling start again with the
-    # already-alive proc/thread shouldn't spawn new ones.
     initial_process_calls = patches["process_class"].call_count
     initial_thread_calls = patches["thread_class"].call_count
     provider.start()
@@ -76,7 +69,6 @@ def test_processor_loop_consumes_data(patches):
     from queue import Queue
 
     provider = UnitreeGo2StateZenohProvider()
-    # Swap mp.Queue for a plain Queue so put/get is synchronous in-process.
     provider.data_queue = Queue()  # type: ignore[assignment]
     sample = {
         "go2_sport_mode_state_msg": "msg",
@@ -103,20 +95,13 @@ def test_stop_signals_stop(patches):
 
 
 def test_state_machine_codes_present():
-    # Sanity check the lookup table that the processor uses.
-    assert _STATE_MACHINE_CODES[1007] == "Sit"
-    assert _STATE_MACHINE_CODES[1015] == "Regular Walking"
-    assert _STATE_MACHINE_CODES.get(99999) is None
+    assert state_machine_codes[1007] == "Sit"
+    assert state_machine_codes[1015] == "Regular Walking"
+    assert state_machine_codes.get(99999) is None
 
 
 def test_state_zenoh_processor_subscribes(patches):
     """Run the in-process worker function with a pre-stopped control queue."""
-    # Use plain queue.Queue so get_nowait/put work in-process; the function
-    # treats them duck-typed.
-    from queue import Queue
-
-    from providers.unitree_go2_state_zenoh_provider import _state_zenoh_processor
-
     data_queue: Queue = Queue()
     control_queue: Queue = Queue()
     control_queue.put("STOP")
@@ -133,7 +118,7 @@ def test_state_zenoh_processor_subscribes(patches):
             return_value=None,
         ),
     ):
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]
+        _state_zenoh_processor(None, False, data_queue, control_queue)  # type: ignore[arg-type]
 
     session.declare_subscriber.assert_called_once()
     topic_arg = session.declare_subscriber.call_args[0][0]
@@ -141,11 +126,6 @@ def test_state_zenoh_processor_subscribes(patches):
 
 
 def test_state_zenoh_processor_session_failure():
-    """If open_zenoh_session raises, processor returns cleanly."""
-    from queue import Queue
-
-    from providers.unitree_go2_state_zenoh_provider import _state_zenoh_processor
-
     data_queue: Queue = Queue()
     control_queue: Queue = Queue()
     with (
@@ -155,5 +135,4 @@ def test_state_zenoh_processor_session_failure():
         ),
         patch("providers.unitree_go2_state_zenoh_provider.setup_logging"),
     ):
-        # Should not raise.
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]
+        _state_zenoh_processor(None, False, data_queue, control_queue)  # type: ignore[arg-type]

@@ -11,9 +11,8 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.face_presence_provider import FacePresenceProvider
 from providers.simple_paths_provider import SimplePathsProvider
-from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
+from providers.unitree_go2_odom_provider import RobotState
 from providers.unitree_go2_odom_zenoh_provider import UnitreeGo2OdomZenohProvider
-from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from providers.unitree_go2_state_zenoh_provider import UnitreeGo2StateZenohProvider
 from zenoh_msgs import (
     AIStatusRequest,
@@ -27,100 +26,49 @@ from zenoh_msgs import (
     open_zenoh_session,
     prepare_header,
 )
-from zenoh_msgs.idl.geometry_msgs import Twist, Vector3
 
-# Unitree Sport API IDs we care about for autonomous movement.
-# Mirrors src/unitree/unitree_sdk2py/go2/sport/sport_api.py.
 SPORT_API_ID_MOVE = 1008
 SPORT_API_ID_STOPMOVE = 1003
 SPORT_API_ID_BALANCESTAND = 1002
 
-# SportClient is CycloneDDS-only and not available when running through
-# cloud_sim. Import lazily so the connector can still load in Zenoh-only setups.
-try:
-    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient  # type: ignore
-except ImportError:
-    SportClient = None  # type: ignore[assignment]
 
-
-class MoveUnitreeOMPathSDKCloudConfig(ActionConfig):
+class MoveUnitreeOMPathSDKZenohConfig(ActionConfig):
     """
-    Configuration for MoveUnitreeOMPathSDKCloudConfig connector.
+    Configuration for MoveUnitreeOMPathSDKZenohConfig connector.
+
+    This connector uses Zenoh exclusively for all communication,
+    publishing unitree_api/Request messages to api/sport/request.
 
     Parameters
     ----------
-    unitree_ethernet : str
-        Ethernet channel for Unitree Go2 odometry data (CycloneDDS path only).
     mode : Optional[str]
         Operation mode, e.g., "guard".
-    use_zenoh : bool
-        When True, route odometry/state subscriptions and motor commands
-        through Zenoh instead of CycloneDDS. Required when OM1 is not on
-        the same DDS domain as the robot/sim (e.g. cloud-routed setups).
-    cmd_vel_topic : str
-        Zenoh keyexpression for the velocity command publisher when
-        ``use_zenoh=True`` and ``move_via_sport_api=False``.
-    move_via_sport_api : bool
-        When True (and ``use_zenoh=True``), publish ``unitree_api/Request``
-        to ``api/sport/request`` instead of raw ``cmd_vel`` — same wire
-        format ``SportClient.Move()`` uses on a real Go2.
     sport_request_topic : str
         Zenoh keyexpression for sport-API publishes.
-    permissive_paths : bool
-        Disable obstacle-avoidance gating in ``SimplePathsProvider``. Used
-        for sim/testing in empty environments; movement requests proceed
-        even when no path data is available.
     """
 
-    unitree_ethernet: str = Field(
-        default="eth0",
-        description="Ethernet channel for Unitree Go2 odometry data.",
-    )
     mode: Optional[str] = Field(
         default=None,
         description='Operation mode, e.g., "guard".',
     )
-    use_zenoh: bool = Field(
-        default=False,
-        description="Route odom/state/motor commands through Zenoh (cloud_sim) instead of CycloneDDS.",
-    )
-    cmd_vel_topic: str = Field(
-        default="cmd_vel",
-        description="Zenoh keyexpression for cmd_vel Twist publish (use_zenoh path only).",
-    )
-    move_via_sport_api: bool = Field(
-        default=False,
-        description=(
-            "When True (and use_zenoh=True), publish unitree_api/Request "
-            "to api/sport/request — same wire format SportClient.Move() "
-            "uses on a real Go2. The downstream consumer (real robot or "
-            "go2_sport_node in sim) translates this to /cmd_vel."
-        ),
-    )
     sport_request_topic: str = Field(
         default="api/sport/request",
-        description="Zenoh keyexpression for sport-API publishes (move_via_sport_api only).",
-    )
-    permissive_paths: bool = Field(
-        default=False,
-        description=(
-            "Disable obstacle-avoidance gating in SimplePathsProvider. "
-            "Movement proceeds even when /om/paths data is unavailable. "
-            "For sim/testing in empty environments only."
-        ),
+        description="Zenoh keyexpression for sport-API publishes.",
     )
 
 
-class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKCloudConfig, MoveInput]):
+class MoveUnitreeOMPathSDKZenohConnector(ActionConnector[MoveUnitreeOMPathSDKZenohConfig, MoveInput]):
     """
-    Connector for moving Unitree Go2 robot using OM Path SDK for obstacle detection.
+    Zenoh-based connector for moving Unitree Go2 robot using OM Path SDK for obstacle detection.
 
     This plugin loads the possible paths from the SimplePathsProvider and uses them to
     safely execute movement commands received from the AI system. The SimplePathsProvider
     includes both obstacle detection and slope detection for safer navigation.
+
+    All communication is routed through Zenoh for cloud/distributed deployments.
     """
 
-    def __init__(self, config: MoveUnitreeOMPathSDKCloudConfig):
+    def __init__(self, config: MoveUnitreeOMPathSDKZenohConfig):
         """
         Initialize the MoveUnitreeOMPathSDKCloudConnector connector.
 
@@ -146,76 +94,31 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         self.path_provider = SimplePathsProvider()
         self.face_presence_provider = FacePresenceProvider()
 
-        self.use_zenoh = bool(self.config.use_zenoh)
-        self.move_via_sport_api = bool(self.config.move_via_sport_api)
-        self.permissive_paths = bool(self.config.permissive_paths)
-        if self.permissive_paths:
-            logging.warning(
-                "MoveUnitreeOMPathSDK: permissive_paths=True — obstacle "
-                "avoidance disabled. Intended for empty-environment sim only."
-            )
-        if self.move_via_sport_api and not self.use_zenoh:
-            raise ValueError("move_via_sport_api requires use_zenoh=true")
-        self._cmd_vel_pub = None
-        self.sport_client = None
+        # Initialize Zenoh-based providers
+        logging.info("MoveUnitreeOMPathSDK: Zenoh mode (publishing to '%s')", self.config.sport_request_topic)
+        self.unitree_go2_state = UnitreeGo2StateZenohProvider()
+        self.odom = UnitreeGo2OdomZenohProvider()
 
-        if self.use_zenoh:
-            sink = "api/sport/request" if self.move_via_sport_api else "cmd_vel"
-            logging.info("MoveUnitreeOMPathSDK: Zenoh mode (publishing to '%s')", sink)
-            self.unitree_go2_state = UnitreeGo2StateZenohProvider()
-            self.odom = UnitreeGo2OdomZenohProvider()
-        else:
-            if SportClient is not None:
-                try:
-                    self.sport_client = SportClient()
-                    self.sport_client.SetTimeout(10.0)
-                    self.sport_client.Init()
-                    self.sport_client.StopMove()
-                    self.sport_client.Move(0.05, 0, 0)
-                    logging.info("Autonomy Unitree sport client initialized")
-                except Exception as e:
-                    logging.error(f"Error initializing Unitree sport client: {e}")
-            else:
-                logging.error(
-                    "SportClient unavailable (unitree_sdk2py / cyclonedds not installed). "
-                    "Set use_zenoh=true in the connector config to run through cloud_sim instead."
-                )
-
-            unitree_ethernet = self.config.unitree_ethernet
-            if unitree_ethernet is None:
-                raise ValueError("unitree_ethernet must be specified in the config")
-            self.unitree_go2_state = UnitreeGo2StateProvider()
-            self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
-
-        # Zenoh session — used for AI control status messages always, and
-        # for the cmd_vel / api/sport/request publisher when use_zenoh=True.
+        # Zenoh session for publishers and subscribers
         self.ai_status_request = "om/ai/request"
         self.ai_status_response = "om/ai/response"
         self.session: Optional[ZenohSessionType] = None
-        self.pub = None
         self._sport_pub = None
 
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(self.ai_status_request, self._zenoh_ai_status_request)
             self._zenoh_ai_status_response_pub = self.session.declare_publisher(self.ai_status_response)
-            if self.use_zenoh:
-                if self.move_via_sport_api:
-                    self._sport_pub = self.session.declare_publisher(self.config.sport_request_topic)
-                    logging.info(
-                        "MoveUnitreeOMPathSDK: sport-API publisher armed on Zenoh key '%s'",
-                        self.config.sport_request_topic,
-                    )
-                else:
-                    self._cmd_vel_pub = self.session.declare_publisher(self.config.cmd_vel_topic)
-                    logging.info(
-                        "MoveUnitreeOMPathSDK: cmd_vel publisher armed on Zenoh key '%s'",
-                        self.config.cmd_vel_topic,
-                    )
+
+            self._sport_pub = self.session.declare_publisher(self.config.sport_request_topic)
+            logging.info(
+                "MoveUnitreeOMPathSDK: sport-API publisher armed on Zenoh key '%s'",
+                self.config.sport_request_topic,
+            )
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
-            self.pub = None
+            self._sport_pub = None
 
         # AI control status
         self.ai_control_enabled = True
@@ -243,10 +146,6 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         if not self.ai_control_enabled:
             logging.info("AI Control is disabled - disregarding AI command")
             return
-
-        if self.unitree_go2_state.state_code == 1002 and self.sport_client:
-            logging.info("Robot is in jointLock state - issuing BalanceStand()")
-            self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
             logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
@@ -307,7 +206,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
 
     def _move_robot(self, vx: float, vy: float, vturn=0.0) -> None:
         """
-        Move the robot with specified velocities.
+        Move the robot with specified velocities via Zenoh sport API.
 
         Parameters
         ----------
@@ -320,47 +219,17 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         logging.info(f"_move_robot: vx={vx}, vy={vy}, vturn={vturn}")
 
-        if self.use_zenoh:
-            if self.odom.position["body_attitude"] is RobotState.SITTING:
-                return
-
-            if self.move_via_sport_api:
-                if self._sport_pub is None:
-                    logging.warning("_move_robot: sport publisher not ready")
-                    return
-                try:
-                    self._publish_sport_move(float(vx), float(vy), float(vturn))
-                except Exception as e:
-                    logging.error(f"Error publishing api/sport/request: {e}")
-                return
-
-            if self._cmd_vel_pub is None:
-                logging.warning("_move_robot: Zenoh cmd_vel publisher not ready")
-                return
-            try:
-                twist = Twist(
-                    linear=Vector3(x=float(vx), y=float(vy), z=0.0),
-                    angular=Vector3(x=0.0, y=0.0, z=float(vturn)),
-                )
-                self._cmd_vel_pub.put(twist.serialize())
-            except Exception as e:
-                logging.error(f"Error publishing cmd_vel via Zenoh: {e}")
+        if self.odom.position["body_attitude"] is RobotState.SITTING:
             return
 
-        if not self.sport_client:
+        if self._sport_pub is None:
+            logging.warning("_move_robot: sport publisher not ready")
             return
-
-        if self.odom.position["body_attitude"] != RobotState.STANDING:
-            return
-
-        if self.unitree_go2_state.state == "jointLock":
-            self.sport_client.BalanceStand()
 
         try:
-            logging.info(f"self.sport_client.Move: vx={vx}, vy={vy}, vturn={vturn}")
-            self.sport_client.Move(vx, vy, vturn)
+            self._publish_sport_move(float(vx), float(vy), float(vturn))
         except Exception as e:
-            logging.error(f"Error moving robot: {e}")
+            logging.error(f"Error publishing api/sport/request: {e}")
 
     def clean_abort(self) -> None:
         """
@@ -382,27 +251,16 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
             return
 
         if self.odom.position["odom_x"] == 0.0 and self.odom.position["odom_subscriber_ts"] == 0.0:
-            # See connect() — sim odom starts at exactly (0,0). Use the
-            # subscriber timestamp as the "first sample arrived" signal.
             logging.info("Waiting for odom data")
             self.sleep(0.5)
             return
 
-        # In Zenoh mode the odom message may be a raw nav_msgs/Odometry with
-        # no charging-aware z-offset, so body_attitude never classifies as
-        # STANDING. Treat ``None`` as "no info, proceed".
         attitude = self.odom.position["body_attitude"]
         if attitude is RobotState.SITTING:
             logging.info("Cannot move - dog is sitting")
             self.sleep(0.5)
             return
-        if not self.use_zenoh and attitude != RobotState.STANDING:
-            logging.info("Cannot move - dog is sitting")
-            self.sleep(0.5)
-            return
 
-        # if we got to this point, we have good data and we are able to
-        # safely proceed
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
@@ -473,14 +331,14 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
 
                 fb = 0
                 if goal_dx > 0:
-                    if 4 not in self.path_provider.advance and not self.permissive_paths:
+                    if 4 not in self.path_provider.advance:
                         logging.warning("Cannot advance due to barrier")
                         self.clean_abort()
                         return
                     fb = 1
 
                 if goal_dx < 0:
-                    if not self.path_provider.retreat and not self.permissive_paths:
+                    if not self.path_provider.retreat:
                         logging.warning("Cannot retreat due to barrier")
                         self.clean_abort()
                         return
@@ -501,10 +359,17 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         self.sleep(0.1)
 
     def _publish_sport_move(self, vx: float, vy: float, vyaw: float) -> None:
-        """Build a unitree_api/Request matching what SportClient.Move() would
-        emit (api_id=1008, parameter=JSON of x/y/z velocities) and put it on
-        the configured sport-request key. OM1-sim's go2_sport_node decodes
-        this and publishes /cmd_vel.
+        """
+        Publish a movement command to the sport API via Zenoh.
+
+        Parameters
+        ----------
+        vx : float
+            Linear velocity in the x direction (m/s).
+        vy : float
+            Linear velocity in the y direction (m/s).
+        vyaw : float
+            Angular velocity (turning speed) in radians per second.
         """
         identity = UnitreeRequestIdentity(id=0, api_id=SPORT_API_ID_MOVE)
         header = UnitreeRequestHeader(identity=identity)
@@ -520,8 +385,15 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         self._sport_pub.put(request.serialize())
 
     def _pick_path_angle(self, available: list, default: float = 0.0) -> float:
-        """Pick a heading from the SimplePathsProvider candidate list. In
-        permissive mode, fall back to ``default`` when the list is empty.
+        """
+        Pick a path angle from available options, or return default if none.
+
+        Parameters
+        ----------
+        available : list
+            List of available path angles from the path provider.
+        default : float, optional
+            Default angle to use if no paths are available (default is 0.0).
         """
         if available:
             idx = random.choice(available)
@@ -532,7 +404,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         Process turn left command with safety check.
         """
-        if not self.path_provider.turn_left and not self.permissive_paths:
+        if not self.path_provider.turn_left:
             logging.warning("Cannot turn left due to barrier")
             return
 
@@ -554,7 +426,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         Process turn right command with safety check.
         """
-        if not self.path_provider.turn_right and not self.permissive_paths:
+        if not self.path_provider.turn_right:
             logging.warning("Cannot turn right due to barrier")
             return
 
@@ -575,7 +447,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         Process move forward command with safety check.
         """
-        if not self.path_provider.advance and not self.permissive_paths:
+        if not self.path_provider.advance:
             logging.warning("Cannot advance due to barrier")
             return
 
@@ -596,7 +468,7 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         Process move back command with safety check.
         """
-        if not self.path_provider.retreat and not self.permissive_paths:
+        if not self.path_provider.retreat:
             logging.warning("Cannot retreat due to barrier")
             return
 
@@ -670,21 +542,14 @@ class MoveUnitreeOMPathSDKCloudConnector(ActionConnector[MoveUnitreeOMPathSDKClo
         """
         if gap > 0:  # Turn left
             if not self.path_provider.turn_left:
-                if not self.permissive_paths:
-                    logging.warning("Cannot turn left due to barrier")
-                    return False
-                # Permissive default — moderate forward speed while turning.
                 self._move_robot(0.3, 0, self.turn_speed)
-                return True
+                return False
             sharpness = min(self.path_provider.turn_left)
             self._move_robot(sharpness * 0.15, 0, self.turn_speed)
         else:  # Turn right
             if not self.path_provider.turn_right:
-                if not self.permissive_paths:
-                    logging.warning("Cannot turn right due to barrier")
-                    return False
                 self._move_robot(0.3, 0, -self.turn_speed)
-                return True
+                return False
             sharpness = 8 - max(self.path_provider.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True

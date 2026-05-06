@@ -75,10 +75,9 @@ class VLMGeminiProvider:
         """
         try:
             envelope = json.loads(frame)
-            b64 = envelope["frame"]
+            base64_image = envelope["frame"]
         except (json.JSONDecodeError, KeyError, TypeError):
-            # Fallback
-            b64 = frame
+            base64_image = frame
 
         processing_start = time.perf_counter()
         try:
@@ -91,20 +90,24 @@ class VLMGeminiProvider:
                             {"type": "text", "text": self.prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "low"},
+                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}", "detail": "low"},
                             },
                         ],
                     }
                 ],
                 max_tokens=self.max_tokens,
             )
+
             data = json.loads(raw.text)
             content = data["choices"][0]["message"]["content"]
             processing_latency = time.perf_counter() - processing_start
+
             logging.debug(f"Processing latency: {processing_latency:.3f} seconds")
             logging.debug(f"Gemini VLM content: {content[:200]!r}")
+
             if self.message_callback and content is not None:
                 self.message_callback(content)
+
         except Exception as e:
             body = None
             resp = getattr(e, "response", None)

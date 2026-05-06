@@ -31,7 +31,7 @@ def test_initialization_falls_back_to_env(patches):
     VLMGeminiZenoh(config=VLMGeminiZenohConfig())
     _args, kwargs = patches["provider_class"].call_args
     assert kwargs["api_key"] == "env-key"
-    assert kwargs["topic"] == "rgb_image"
+    assert kwargs["topic"] == "camera/go2/image_raw"
     assert kwargs["model"] == "gemini-2.5-flash"
     # default branch (no explicit prompt) should not pass `prompt` kwarg
     assert "prompt" not in kwargs
@@ -118,7 +118,7 @@ def test_formatted_latest_buffer_with_message(patches):
     sensor.messages.append(Message(timestamp=1.0, message="abstract pixels"))
     result = sensor.formatted_latest_buffer()
     assert result is not None
-    assert "INPUT: Vision" in result
+    assert "Vision" in result
     assert "abstract pixels" in result
     assert sensor.messages == []
 

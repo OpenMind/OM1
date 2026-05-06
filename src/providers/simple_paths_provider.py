@@ -47,11 +47,12 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
-        logging.info(f"Received paths message from Zenoh.{msg.payload}")
         paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+
         msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
         current_time = time.time()
         latency = current_time - msg_time
+
         logging.debug(f"Received paths with latency: {latency:.6f} seconds")
         logging.info(f"Received paths: {paths.paths}")
 
@@ -68,9 +69,10 @@ def simple_paths_processor(
 
     try:
         load_session_config(api_key, use_sim)
-        logging.info(f"Opening Zenoh session for SimplePathsProvider {api_key}, use_sim={use_sim}")
-        session = open_zenoh_session("simple_paths_processor")
+        session = open_zenoh_session()
+
         session.declare_subscriber("om/paths", paths_callback)
+
         logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")

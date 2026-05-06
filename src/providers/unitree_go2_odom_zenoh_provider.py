@@ -5,7 +5,7 @@ from typing import Optional
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_msgs import ZenohSampleType, load_session_config, open_zenoh_session
-from zenoh_msgs.idl.nav_msgs import Odometry
+from zenoh_msgs.idl.geometry_msgs import PoseStamped
 
 from .odom_provider_base import OdomProviderBase, RobotState
 from .singleton import singleton
@@ -38,9 +38,9 @@ def _go2_odom_zenoh_processor(
 
     def on_sample(sample: ZenohSampleType) -> None:
         try:
-            msg = Odometry.deserialize(sample.payload.to_bytes())
+            msg = PoseStamped.deserialize(sample.payload.to_bytes())
         except Exception:
-            logging.exception(f"failed to decode Odometry on {topic}")
+            logging.exception(f"failed to decode PoseStamped on {topic}")
             return
         data_queue.put(msg)
 
@@ -118,7 +118,7 @@ class UnitreeGo2OdomZenohProvider(OdomProviderBase):
 
         Parameters
         ----------
-        pose : geometry_msgs/msg/PoseStamped or nav_msgs/msg/Odometry
+        pose : geometry_msgs/msg/PoseStamped
             The pose message containing the robot's position.
         """
         self.body_height_cm = round(pose.position.z * 100.0)
