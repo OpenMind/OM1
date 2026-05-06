@@ -62,7 +62,6 @@ class CloudZenohClient:
     def declare_subscriber(
         self,
         topic: str,
-        schema: str,
         callback: Union[PayloadCallback, BinaryCallback],
         binary: bool = False,
     ) -> str:
@@ -73,8 +72,6 @@ class CloudZenohClient:
         ----------
         topic : str
             The topic to subscribe to.
-        schema : str
-            The schema of the messages expected on the topic.
         callback : Callable
             The callback function to be called when a message is received on the topic.
         binary : bool, optional
@@ -88,13 +85,12 @@ class CloudZenohClient:
         sub_id = uuid.uuid4().hex[:12]
         self._subscriptions[sub_id] = callback
         self._subscription_is_binary[sub_id] = binary
-        self._subscription_specs[sub_id] = {"topic": topic, "schema": schema, "binary": binary}
+        self._subscription_specs[sub_id] = {"topic": topic, "binary": binary}
         self._send(
             {
                 "type": "subscribe",
                 "id": sub_id,
                 "topic": topic,
-                "schema": schema,
                 "binary": binary,
             }
         )
@@ -114,7 +110,7 @@ class CloudZenohClient:
         self._subscription_specs.pop(sub_id, None)
         self._send({"type": "unsubscribe", "id": sub_id})
 
-    def publish(self, topic: str, schema: str, payload: dict) -> None:
+    def publish(self, topic: str, payload: dict) -> None:
         """
         Publish a JSON payload; the server encodes it to CDR.
 
@@ -122,12 +118,10 @@ class CloudZenohClient:
         ----------
         topic : str
             The topic to publish to.
-        schema : str
-            The schema of the message being published.
         payload : dict
             The JSON-serializable payload to be published.
         """
-        self._send({"type": "publish", "topic": topic, "schema": schema, "payload": payload})
+        self._send({"type": "publish", "topic": topic, "payload": payload})
 
     def publish_binary(self, topic: str, encoded_message_bytes: bytes) -> None:
         """
@@ -223,7 +217,6 @@ class CloudZenohClient:
                                     "type": "subscribe",
                                     "id": sub_id,
                                     "topic": spec["topic"],
-                                    "schema": spec["schema"],
                                     "binary": spec["binary"],
                                 },
                                 separators=(",", ":"),
