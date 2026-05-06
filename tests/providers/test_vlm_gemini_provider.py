@@ -97,12 +97,8 @@ async def test_start(base_url, api_key, fps, mock_dependencies):
     # and then parses `raw.text` as JSON. Wire the mock to return that shape so the
     # callback path exercises end-to-end.
     raw_response = MagicMock()
-    raw_response.text = (
-        '{"choices": [{"message": {"content": "ok"}}]}'
-    )
-    mock_client_instance.chat.completions.with_raw_response.create = AsyncMock(
-        return_value=raw_response
-    )
+    raw_response.text = '{"choices": [{"message": {"content": "ok"}}]}'
+    mock_client_instance.chat.completions.with_raw_response.create = AsyncMock(return_value=raw_response)
 
     # Simulate processing a frame so the async API call is triggered.
     await provider._process_frame("fake_frame")
