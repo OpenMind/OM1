@@ -59,9 +59,7 @@ def test_publisher_undeclare_is_noop():
 @pytest.fixture
 def session():
     """Return a CloudSimZenohSession with the websocket client mocked out."""
-    with patch(
-        "zenoh_msgs.cloud_session.zenoh_adapter.CloudZenohClient"
-    ) as mock_client_class:
+    with patch("zenoh_msgs.cloud_session.zenoh_adapter.CloudZenohClient") as mock_client_class:
         client = MagicMock()
         mock_client_class.return_value = client
         topic_map = {

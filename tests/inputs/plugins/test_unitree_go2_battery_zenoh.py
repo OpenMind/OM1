@@ -12,12 +12,8 @@ from inputs.plugins.unitree_go2_battery_zenoh import (
 def patches():
     with (
         patch("inputs.plugins.unitree_go2_battery_zenoh.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_go2_battery_zenoh.TeleopsStatusProvider"
-        ) as mock_status,
-        patch(
-            "inputs.plugins.unitree_go2_battery_zenoh.open_zenoh_session"
-        ) as mock_open_session,
+        patch("inputs.plugins.unitree_go2_battery_zenoh.TeleopsStatusProvider") as mock_status,
+        patch("inputs.plugins.unitree_go2_battery_zenoh.open_zenoh_session") as mock_open_session,
     ):
         mock_session = MagicMock()
         mock_open_session.return_value = mock_session
@@ -129,9 +125,7 @@ async def test_poll_returns_snapshot(patches):
         _sleep.side_effect = None
         _sleep.return_value = None
         # Replace with proper AsyncMock
-        with patch(
-            "inputs.plugins.unitree_go2_battery_zenoh.asyncio.sleep", new=AsyncMock()
-        ):
+        with patch("inputs.plugins.unitree_go2_battery_zenoh.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
     assert result == [50.0, 12.0, -2.0]
 

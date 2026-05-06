@@ -15,15 +15,9 @@ def reset_singleton():
 @pytest.fixture
 def deps():
     with (
-        patch(
-            "providers.vlm_gemini_zenoh_provider.AsyncOpenAI"
-        ) as mock_openai_class,
-        patch(
-            "providers.vlm_gemini_zenoh_provider.VideoZenohStream"
-        ) as mock_video_class,
-        patch(
-            "providers.vlm_gemini_zenoh_provider.threading.Thread"
-        ) as mock_thread_class,
+        patch("providers.vlm_gemini_zenoh_provider.AsyncOpenAI") as mock_openai_class,
+        patch("providers.vlm_gemini_zenoh_provider.VideoZenohStream") as mock_video_class,
+        patch("providers.vlm_gemini_zenoh_provider.threading.Thread") as mock_thread_class,
     ):
         client = MagicMock()
         mock_openai_class.return_value = client
@@ -42,9 +36,7 @@ def deps():
 
 
 def test_initialization(deps):
-    provider = VLMGeminiZenohProvider(
-        base_url="http://x", api_key="k", topic="rgb_image"
-    )
+    provider = VLMGeminiZenohProvider(base_url="http://x", api_key="k", topic="rgb_image")
     assert provider.running is False
     assert provider.model == "gemini-2.5-flash"
     assert provider.max_tokens == 1024
@@ -100,9 +92,7 @@ def test_dispatch_frame_backpressure(deps):
     provider._loop = MagicMock()
     provider._max_inflight = 1
     provider._inflight = 1  # already at limit
-    with patch(
-        "providers.vlm_gemini_zenoh_provider.asyncio.run_coroutine_threadsafe"
-    ) as mock_schedule:
+    with patch("providers.vlm_gemini_zenoh_provider.asyncio.run_coroutine_threadsafe") as mock_schedule:
         provider._dispatch_frame("frame")
         mock_schedule.assert_not_called()
 
@@ -110,9 +100,7 @@ def test_dispatch_frame_backpressure(deps):
 def test_dispatch_frame_schedules(deps):
     provider = VLMGeminiZenohProvider("http://x", "k")
     provider._loop = MagicMock()
-    with patch(
-        "providers.vlm_gemini_zenoh_provider.asyncio.run_coroutine_threadsafe"
-    ) as mock_schedule:
+    with patch("providers.vlm_gemini_zenoh_provider.asyncio.run_coroutine_threadsafe") as mock_schedule:
         # Need to consume the awaitable created by _process_frame
         async def fake_process(_frame):
             return None
@@ -128,9 +116,7 @@ async def test_process_frame_success_calls_callback(deps):
     provider = VLMGeminiZenohProvider("http://x", "k")
     raw = MagicMock()
     raw.text = '{"choices": [{"message": {"content": "ok"}}]}'
-    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(
-        return_value=raw
-    )
+    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(return_value=raw)
     cb = MagicMock()
     provider.register_message_callback(cb)
     provider._inflight = 1
@@ -144,9 +130,7 @@ async def test_process_frame_handles_bare_b64(deps):
     provider = VLMGeminiZenohProvider("http://x", "k")
     raw = MagicMock()
     raw.text = '{"choices": [{"message": {"content": "fine"}}]}'
-    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(
-        return_value=raw
-    )
+    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(return_value=raw)
     cb = MagicMock()
     provider.register_message_callback(cb)
     provider._inflight = 1
@@ -157,9 +141,7 @@ async def test_process_frame_handles_bare_b64(deps):
 @pytest.mark.asyncio
 async def test_process_frame_swallows_api_errors(deps):
     provider = VLMGeminiZenohProvider("http://x", "k")
-    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(
-        side_effect=RuntimeError("fail")
-    )
+    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(side_effect=RuntimeError("fail"))
     cb = MagicMock()
     provider.register_message_callback(cb)
     provider._inflight = 1
@@ -173,9 +155,7 @@ async def test_process_frame_no_callback_no_crash(deps):
     provider = VLMGeminiZenohProvider("http://x", "k")
     raw = MagicMock()
     raw.text = '{"choices": [{"message": {"content": "ok"}}]}'
-    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(
-        return_value=raw
-    )
+    provider.api_client.chat.completions.with_raw_response.create = AsyncMock(return_value=raw)
     provider._inflight = 1
     # No callback registered — should not raise
     await provider._process_frame('{"frame": "x"}')

@@ -18,24 +18,20 @@ def reset_singleton():
 @pytest.fixture
 def patches():
     with (
-        patch(
-            "providers.unitree_go2_state_zenoh_provider.mp.Process"
-        ) as mock_process_class,
-        patch(
-            "providers.unitree_go2_state_zenoh_provider.threading.Thread"
-        ) as mock_thread_class,
+        patch("providers.unitree_go2_state_zenoh_provider.mp.Process") as mock_process_class,
+        patch("providers.unitree_go2_state_zenoh_provider.threading.Thread") as mock_thread_class,
     ):
         proc = MagicMock()
         proc.is_alive.return_value = True
         mock_process_class.return_value = proc
-        thr = MagicMock()
-        thr.is_alive.return_value = True
-        mock_thread_class.return_value = thr
+        the = MagicMock()
+        the.is_alive.return_value = True
+        mock_thread_class.return_value = the
         yield {
             "process_class": mock_process_class,
             "process": proc,
             "thread_class": mock_thread_class,
-            "thread": thr,
+            "thread": the,
         }
 
 
@@ -115,11 +111,11 @@ def test_state_machine_codes_present():
 
 def test_state_zenoh_processor_subscribes(patches):
     """Run the in-process worker function with a pre-stopped control queue."""
-    from providers.unitree_go2_state_zenoh_provider import _state_zenoh_processor
-
     # Use plain queue.Queue so get_nowait/put work in-process; the function
     # treats them duck-typed.
     from queue import Queue
+
+    from providers.unitree_go2_state_zenoh_provider import _state_zenoh_processor
 
     data_queue: Queue = Queue()
     control_queue: Queue = Queue()
@@ -157,9 +153,7 @@ def test_state_zenoh_processor_session_failure():
             "providers.unitree_go2_state_zenoh_provider.open_zenoh_session",
             side_effect=RuntimeError("fail"),
         ),
-        patch(
-            "providers.unitree_go2_state_zenoh_provider.setup_logging"
-        ),
+        patch("providers.unitree_go2_state_zenoh_provider.setup_logging"),
     ):
         # Should not raise.
         _state_zenoh_processor("sportmodestate", data_queue, control_queue)

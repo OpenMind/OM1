@@ -14,12 +14,8 @@ from providers.odom_provider_base import RobotState
 def deps():
     """Patch out everything that does I/O at construction time."""
     with (
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SimplePathsProvider"
-        ) as mock_paths_class,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.FacePresenceProvider"
-        ) as mock_face_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SimplePathsProvider") as mock_paths_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.FacePresenceProvider") as mock_face_class,
         patch(
             "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2StateZenohProvider"
         ) as mock_state_zenoh_class,
@@ -32,12 +28,8 @@ def deps():
         patch(
             "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.UnitreeGo2OdomProvider"
         ) as mock_odom_class,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.open_zenoh_session"
-        ) as mock_open_session,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SportClient"
-        ) as mock_sport_client_class,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.open_zenoh_session") as mock_open_session,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.SportClient") as mock_sport_client_class,
     ):
         # Common stub instances
         paths = MagicMock()
@@ -118,6 +110,7 @@ def deps():
 
 # --- Initialization ---------------------------------------------------------
 
+
 def test_init_zenoh_cmd_vel_mode(deps):
     config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True)
     conn = MoveUnitreeOMPathSDKCloudConnector(config=config)
@@ -171,9 +164,7 @@ def test_init_permissive_paths_logged(deps):
 
 @pytest.fixture
 def conn(deps):
-    config = MoveUnitreeOMPathSDKCloudConfig(
-        use_zenoh=True, permissive_paths=True
-    )
+    config = MoveUnitreeOMPathSDKCloudConfig(use_zenoh=True, permissive_paths=True)
     return MoveUnitreeOMPathSDKCloudConnector(config=config)
 
 
@@ -495,15 +486,19 @@ def test_zenoh_ai_status_request_disable(conn):
     fake.header.frame_id = "f"
     response_obj = MagicMock()
     response_obj.serialize.return_value = b"\x00"
-    with patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
-        return_value=fake,
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
-        return_value=MagicMock(),
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
-        return_value=response_obj,
+    with (
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            return_value=fake,
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            return_value=response_obj,
+        ),
     ):
         conn._zenoh_ai_status_request(sample)
     assert conn.ai_control_enabled is False
@@ -522,15 +517,19 @@ def test_zenoh_ai_status_request_enable(conn):
     fake.header.frame_id = "f"
     response_obj = MagicMock()
     response_obj.serialize.return_value = b"\x00"
-    with patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
-        return_value=fake,
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
-        return_value=MagicMock(),
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
-        return_value=response_obj,
+    with (
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            return_value=fake,
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            return_value=response_obj,
+        ),
     ):
         conn._zenoh_ai_status_request(sample)
     assert conn.ai_control_enabled is True
@@ -550,15 +549,19 @@ def test_zenoh_ai_status_request_query(conn):
     fake.header.frame_id = "f"
     response_obj = MagicMock()
     response_obj.serialize.return_value = b"\x00"
-    with patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
-        return_value=fake,
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
-        return_value=MagicMock(),
-    ), patch(
-        "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
-        return_value=response_obj,
+    with (
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusRequest.deserialize",
+            return_value=fake,
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.prepare_header",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk_cloud.AIStatusResponse",
+            return_value=response_obj,
+        ),
     ):
         conn._zenoh_ai_status_request(sample)
     # State unchanged
@@ -625,9 +628,7 @@ def test_tick_no_pending_just_sleeps(tick_conn):
 def test_tick_movement_attempts_exceeded_aborts(tick_conn):
     tick_conn.movement_attempts = 999
     tick_conn.movement_attempt_limit = 10
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     # clean_abort drains the queue
     assert tick_conn.pending_movements.empty()
@@ -635,9 +636,7 @@ def test_tick_movement_attempts_exceeded_aborts(tick_conn):
 
 
 def test_tick_phase1_big_gap_executes_turn(tick_conn):
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
     tick_conn._cmd_vel_pub.put.assert_called()
@@ -647,9 +646,7 @@ def test_tick_phase1_big_gap_blocked_aborts(tick_conn):
     tick_conn.permissive_paths = False
     tick_conn.path_provider.turn_left = []
     tick_conn.path_provider.turn_right = []
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=-45.0, start_x=0.0, start_y=0.0, turn_complete=False)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=-45.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     # _execute_turn returns False -> clean_abort -> queue drained
     assert tick_conn.pending_movements.empty()
@@ -657,9 +654,7 @@ def test_tick_phase1_big_gap_blocked_aborts(tick_conn):
 
 def test_tick_phase1_small_gap_left_rotation(tick_conn):
     tick_conn.angle_tolerance = 1.0
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=5.0, start_x=0.0, start_y=0.0, turn_complete=False)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=5.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
     tick_conn._cmd_vel_pub.put.assert_called()
@@ -667,9 +662,7 @@ def test_tick_phase1_small_gap_left_rotation(tick_conn):
 
 def test_tick_phase1_small_gap_right_rotation(tick_conn):
     tick_conn.angle_tolerance = 1.0
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=-5.0, start_x=0.0, start_y=0.0, turn_complete=False)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=-5.0, start_x=0.0, start_y=0.0, turn_complete=False))
     tick_conn.tick()
     assert tick_conn.movement_attempts == 1
     tick_conn._cmd_vel_pub.put.assert_called()
@@ -686,9 +679,7 @@ def test_tick_phase1_turn_completed_marks_target(tick_conn):
 
 
 def test_tick_phase2_zero_dx_aborts(tick_conn):
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=0.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=0.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True))
     tick_conn.tick()
     assert tick_conn.pending_movements.empty()
 
@@ -696,9 +687,7 @@ def test_tick_phase2_zero_dx_aborts(tick_conn):
 def test_tick_phase2_forward_blocked_aborts(tick_conn):
     tick_conn.permissive_paths = False
     tick_conn.path_provider.advance = []
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True))
     tick_conn.tick()
     assert tick_conn.pending_movements.empty()
 
@@ -706,9 +695,7 @@ def test_tick_phase2_forward_blocked_aborts(tick_conn):
 def test_tick_phase2_retreat_blocked_aborts(tick_conn):
     tick_conn.permissive_paths = False
     tick_conn.path_provider.retreat = False
-    tick_conn.pending_movements.put(
-        MoveCommand(dx=-1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True)
-    )
+    tick_conn.pending_movements.put(MoveCommand(dx=-1.0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True))
     tick_conn.tick()
     assert tick_conn.pending_movements.empty()
 

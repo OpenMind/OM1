@@ -11,9 +11,7 @@ def patches(monkeypatch):
     monkeypatch.setenv("OM_API_KEY", "env-key")
     with (
         patch("inputs.plugins.vlm_gemini_zenoh.IOProvider"),
-        patch(
-            "inputs.plugins.vlm_gemini_zenoh.VLMGeminiZenohProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.vlm_gemini_zenoh.VLMGeminiZenohProvider") as mock_provider_class,
     ):
         instance = MagicMock()
         mock_provider_class.return_value = instance
@@ -30,8 +28,8 @@ def test_initialization_with_explicit_api_key(patches, monkeypatch):
 
 
 def test_initialization_falls_back_to_env(patches):
-    sensor = VLMGeminiZenoh(config=VLMGeminiZenohConfig())
-    args, kwargs = patches["provider_class"].call_args
+    VLMGeminiZenoh(config=VLMGeminiZenohConfig())
+    _args, kwargs = patches["provider_class"].call_args
     assert kwargs["api_key"] == "env-key"
     assert kwargs["topic"] == "rgb_image"
     assert kwargs["model"] == "gemini-2.5-flash"

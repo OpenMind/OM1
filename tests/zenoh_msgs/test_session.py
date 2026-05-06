@@ -62,7 +62,6 @@ class TestOpenZenohSession:
         mock_zenoh_open.assert_has_calls(expected_calls_to_zenoh_open)
 
 
-
 class TestHybridZenohSession:
     """Tests for the HybridZenohSession that routes between cloud + local."""
 

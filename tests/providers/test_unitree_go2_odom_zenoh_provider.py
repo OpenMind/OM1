@@ -15,24 +15,20 @@ def reset_singleton():
 @pytest.fixture
 def patches():
     with (
-        patch(
-            "providers.unitree_go2_odom_zenoh_provider.mp.Process"
-        ) as mock_process_class,
-        patch(
-            "providers.unitree_go2_odom_zenoh_provider.threading.Thread"
-        ) as mock_thread_class,
+        patch("providers.unitree_go2_odom_zenoh_provider.mp.Process") as mock_process_class,
+        patch("providers.unitree_go2_odom_zenoh_provider.threading.Thread") as mock_thread_class,
     ):
         proc = MagicMock()
         proc.is_alive.return_value = True
         mock_process_class.return_value = proc
-        thr = MagicMock()
-        thr.is_alive.return_value = True
-        mock_thread_class.return_value = thr
+        the = MagicMock()
+        the.is_alive.return_value = True
+        mock_thread_class.return_value = the
         yield {
             "process_class": mock_process_class,
             "process": proc,
             "thread_class": mock_thread_class,
-            "thread": thr,
+            "thread": the,
         }
 
 
@@ -104,9 +100,7 @@ def test_processor_function_subscribes(monkeypatch):
         patch(
             "providers.unitree_go2_odom_zenoh_provider.setup_logging",
         ),
-        patch(
-            "providers.unitree_go2_odom_zenoh_provider.threading.Event"
-        ) as mock_event_cls,
+        patch("providers.unitree_go2_odom_zenoh_provider.threading.Event") as mock_event_cls,
     ):
         # threading.Event().wait() blocks forever; make it return immediately.
         mock_event = MagicMock()

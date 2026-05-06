@@ -14,9 +14,7 @@ from providers.odom_provider_base import RobotState
 def patches():
     with (
         patch("inputs.plugins.unitree_go2_odom_zenoh.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_go2_odom_zenoh.UnitreeGo2OdomZenohProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom_zenoh.UnitreeGo2OdomZenohProvider") as mock_provider_class,
     ):
         instance = MagicMock()
         instance.position = None
@@ -29,17 +27,13 @@ def test_initialization(patches):
     sensor = UnitreeGo2OdomZenoh(config=config)
     assert sensor.messages == []
     assert "location" in sensor.descriptor_for_LLM.lower()
-    patches["provider_class"].assert_called_once_with(
-        api_key=None, topic="utlidar/robot_pose", use_sim=False
-    )
+    patches["provider_class"].assert_called_once_with(api_key=None, topic="utlidar/robot_pose", use_sim=False)
 
 
 def test_initialization_custom_config(patches):
     config = UnitreeGo2OdomZenohConfig(api_key="k", topic="odom", use_sim=True)
     UnitreeGo2OdomZenoh(config=config)
-    patches["provider_class"].assert_called_once_with(
-        api_key="k", topic="odom", use_sim=True
-    )
+    patches["provider_class"].assert_called_once_with(api_key="k", topic="odom", use_sim=True)
 
 
 @pytest.mark.asyncio
@@ -47,9 +41,7 @@ async def test_poll_returns_position(patches):
     patches["provider"].position = {"moving": False, "body_attitude": RobotState.STANDING}
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
-    with patch(
-        "inputs.plugins.unitree_go2_odom_zenoh.asyncio.sleep", new=AsyncMock()
-    ):
+    with patch("inputs.plugins.unitree_go2_odom_zenoh.asyncio.sleep", new=AsyncMock()):
         result = await sensor._poll()
     assert result == {"moving": False, "body_attitude": RobotState.STANDING}
 
@@ -58,14 +50,10 @@ async def test_poll_returns_position(patches):
 async def test_poll_returns_none_when_empty(patches):
     from queue import Empty as QueueEmpty
 
-    type(patches["provider"]).position = property(
-        lambda _: (_ for _ in ()).throw(QueueEmpty())
-    )
+    type(patches["provider"]).position = property(lambda _: (_ for _ in ()).throw(QueueEmpty()))
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
-    with patch(
-        "inputs.plugins.unitree_go2_odom_zenoh.asyncio.sleep", new=AsyncMock()
-    ):
+    with patch("inputs.plugins.unitree_go2_odom_zenoh.asyncio.sleep", new=AsyncMock()):
         result = await sensor._poll()
     assert result is None
 
@@ -74,9 +62,7 @@ async def test_poll_returns_none_when_empty(patches):
 async def test_raw_to_text_sitting(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
-    msg = await sensor._raw_to_text(
-        {"moving": False, "body_attitude": RobotState.SITTING}
-    )
+    msg = await sensor._raw_to_text({"moving": False, "body_attitude": RobotState.SITTING})
     assert "sitting" in msg.message.lower()
 
 
@@ -84,9 +70,7 @@ async def test_raw_to_text_sitting(patches):
 async def test_raw_to_text_moving(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
-    msg = await sensor._raw_to_text(
-        {"moving": True, "body_attitude": RobotState.STANDING}
-    )
+    msg = await sensor._raw_to_text({"moving": True, "body_attitude": RobotState.STANDING})
     assert "moving" in msg.message.lower()
 
 
@@ -94,9 +78,7 @@ async def test_raw_to_text_moving(patches):
 async def test_raw_to_text_standing_still(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
-    msg = await sensor._raw_to_text(
-        {"moving": False, "body_attitude": RobotState.STANDING}
-    )
+    msg = await sensor._raw_to_text({"moving": False, "body_attitude": RobotState.STANDING})
     assert "standing still" in msg.message.lower()
 
 
