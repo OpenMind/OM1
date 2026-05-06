@@ -46,7 +46,7 @@ def test_initialization_default_topic(patches):
 
 
 def test_initialization_custom_topic(patches):
-    UnitreeGo2StateZenohProvider.reset()
+    UnitreeGo2StateZenohProvider.reset()  # type: ignore[attr-defined]
     provider = UnitreeGo2StateZenohProvider("lf/sportmodestate")
     assert provider.topic == "lf/sportmodestate"
 
@@ -77,7 +77,7 @@ def test_processor_loop_consumes_data(patches):
 
     provider = UnitreeGo2StateZenohProvider()
     # Swap mp.Queue for a plain Queue so put/get is synchronous in-process.
-    provider.data_queue = Queue()
+    provider.data_queue = Queue()  # type: ignore[assignment]
     sample = {
         "go2_sport_mode_state_msg": "msg",
         "go2_state_code": 1007,
@@ -133,7 +133,7 @@ def test_state_zenoh_processor_subscribes(patches):
             return_value=None,
         ),
     ):
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)
+        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]
 
     session.declare_subscriber.assert_called_once()
     topic_arg = session.declare_subscriber.call_args[0][0]
@@ -156,4 +156,4 @@ def test_state_zenoh_processor_session_failure():
         patch("providers.unitree_go2_state_zenoh_provider.setup_logging"),
     ):
         # Should not raise.
-        _state_zenoh_processor("sportmodestate", data_queue, control_queue)
+        _state_zenoh_processor("sportmodestate", data_queue, control_queue)  # type: ignore[arg-type]

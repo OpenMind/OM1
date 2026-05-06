@@ -42,7 +42,7 @@ def test_initialization(patches):
 
 
 def test_initialization_custom(patches):
-    UnitreeGo2OdomZenohProvider.reset()
+    UnitreeGo2OdomZenohProvider.reset()  # type: ignore[attr-defined]
     provider = UnitreeGo2OdomZenohProvider(api_key="k", topic="odom", use_sim=True)
     assert provider.topic == "odom"
     assert provider.api_key == "k"

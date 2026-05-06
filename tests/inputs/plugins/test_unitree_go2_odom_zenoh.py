@@ -63,6 +63,7 @@ async def test_raw_to_text_sitting(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
     msg = await sensor._raw_to_text({"moving": False, "body_attitude": RobotState.SITTING})
+    assert msg is not None
     assert "sitting" in msg.message.lower()
 
 
@@ -71,6 +72,7 @@ async def test_raw_to_text_moving(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
     msg = await sensor._raw_to_text({"moving": True, "body_attitude": RobotState.STANDING})
+    assert msg is not None
     assert "moving" in msg.message.lower()
 
 
@@ -79,6 +81,7 @@ async def test_raw_to_text_standing_still(patches):
     config = UnitreeGo2OdomZenohConfig()
     sensor = UnitreeGo2OdomZenoh(config=config)
     msg = await sensor._raw_to_text({"moving": False, "body_attitude": RobotState.STANDING})
+    assert msg is not None
     assert "standing still" in msg.message.lower()
 
 
