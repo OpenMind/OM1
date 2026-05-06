@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -93,11 +93,20 @@ async def test_start(base_url, api_key, fps, mock_dependencies):
     assert provider.running
     mock_video_stream_instance.start.assert_called_once()
 
+    # The provider unwraps the raw OpenAI HTTP response with `with_raw_response.create`
+    # and then parses `raw.text` as JSON. Wire the mock to return that shape so the
+    # callback path exercises end-to-end.
+    raw_response = MagicMock()
+    raw_response.text = (
+        '{"choices": [{"message": {"content": "ok"}}]}'
+    )
+    mock_client_instance.chat.completions.with_raw_response.create = AsyncMock(
+        return_value=raw_response
+    )
+
     # Simulate processing a frame so the async API call is triggered.
-    # (Using "fake_frame" as an example frame.)
     await provider._process_frame("fake_frame")
-    # Now assert the chat.completions.create was called.
-    mock_client_instance.chat.completions.create.assert_called_once()
+    mock_client_instance.chat.completions.with_raw_response.create.assert_called_once()
 
 
 def test_stop(base_url, api_key, fps, mock_dependencies):

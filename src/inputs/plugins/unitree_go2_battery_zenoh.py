@@ -168,7 +168,7 @@ class UnitreeGo2BatteryZenoh(FuserInput[UnitreeGo2BatteryZenohConfig, List[float
 
         return None
 
-    async def raw_to_text(self, raw_input: List[float]) -> None:
+    async def raw_to_text(self, raw_input: List[float]):
         """
         Convert raw battery data into text and update the message buffer with any relevant warnings.
 
