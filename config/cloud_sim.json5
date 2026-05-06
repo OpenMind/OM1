@@ -20,7 +20,7 @@
     {
       type: "VLMGeminiZenoh",
       config: {
-        topic: "camera/realsense2_camera_node/color/image_raw",
+        topic: "camera/go2/image_raw",
         model: "gemini-2.5-flash",
         max_tokens: 2048,
       },
