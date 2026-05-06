@@ -18,6 +18,7 @@ class UnitreeGo2LocationsProvider:
     def __init__(
         self,
         base_url: str = "http://localhost:5000/maps/locations/list",
+        api_key: str = "",
         timeout: int = 5,
         refresh_interval: int = 30,
     ):
@@ -34,6 +35,7 @@ class UnitreeGo2LocationsProvider:
             How often to refresh locations in seconds.
         """
         self.base_url = base_url
+        self.api_key = api_key
         self.timeout = timeout
         self.refresh_interval = refresh_interval
         self._locations: Dict[str, Dict] = {}
@@ -84,7 +86,7 @@ class UnitreeGo2LocationsProvider:
             return
 
         try:
-            resp = requests.get(self.base_url, timeout=self.timeout)
+            resp = requests.get(self.base_url, headers={"x-api-key": self.api_key}, timeout=self.timeout)
 
             if resp.status_code < 200 or resp.status_code >= 300:
                 logging.error(f"Location list API returned {resp.status_code}: {resp.text}")

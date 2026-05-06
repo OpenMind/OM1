@@ -261,7 +261,7 @@ class HybridZenohSession:
             logging.info("Closed standard Zenoh session")
 
 
-def open_zenoh_session(debug="") -> ZenohSessionType:
+def open_zenoh_session() -> ZenohSessionType:
     """
     Open a Zenoh session.
 
@@ -271,7 +271,6 @@ def open_zenoh_session(debug="") -> ZenohSessionType:
         A session object that can be used to interact with Zenoh topics.
     """
     if HybridZenohSession._use_sim:
-        logging.info(f"{debug} Opening hybrid session for cloud simulation")
         return HybridZenohSession()
 
     local_config = create_zenoh_config(network_discovery=False)

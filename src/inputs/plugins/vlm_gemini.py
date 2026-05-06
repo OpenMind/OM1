@@ -73,6 +73,11 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
 
         Sets up the required providers and buffers for handling VLM processing.
         Initializes connection to the VLM service and registers message handlers.
+
+        Parameters
+        ----------
+        config : VLMGeminiConfig
+            Configuration for the VLM input handler.
         """
         super().__init__(config)
 
@@ -219,10 +224,7 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{latest_message.message}
-// END
+{self.descriptor_for_LLM}: "{latest_message.message}"
 """
 
         self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
