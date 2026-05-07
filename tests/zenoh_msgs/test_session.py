@@ -6,6 +6,7 @@ import zenoh
 from zenoh_msgs.session import (
     HybridZenohSession,
     _create_zenoh_session,
+    _open_cloud_session,
     _ZenohSessionContextManager,
     create_zenoh_config,
     load_api_key,
@@ -23,6 +24,56 @@ class TestCreateZenohConfig:
     def test_create_config_with_network_discovery_disabled(self):
         config = create_zenoh_config(network_discovery=False)
         assert isinstance(config, zenoh.Config)
+
+    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "tcp/192.168.1.100:7447"})
+    def test_create_config_uses_custom_endpoint(self):
+        config = create_zenoh_config(network_discovery=False)
+        assert isinstance(config, zenoh.Config)
+
+    @patch.dict(
+        "os.environ",
+        {
+            "OM1_ZENOH_ENDPOINT": "wss/test-sim.openmind.com:8444",
+            "OM1_ZENOH_TLS_ROOT_CA": "/path/to/ca.pem",
+        },
+    )
+    def test_create_config_uses_tls_endpoint_and_ca(self):
+        config = create_zenoh_config(network_discovery=False)
+        assert isinstance(config, zenoh.Config)
+
+    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "tls/example.com:7447"})
+    def test_create_config_uses_tls_without_ca(self):
+        config = create_zenoh_config(network_discovery=False)
+        assert isinstance(config, zenoh.Config)
+
+    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "quic/example.com:7447"})
+    def test_create_config_uses_quic_protocol(self):
+        config = create_zenoh_config(network_discovery=False)
+        assert isinstance(config, zenoh.Config)
+
+
+class TestOpenCloudSession:
+    """Test the _open_cloud_session function."""
+
+    @patch("zenoh_msgs.session.CloudSimZenohSession")
+    def test_open_cloud_session_with_default_url(self, mock_cloud_session_class):
+        mock_session = MagicMock()
+        mock_cloud_session_class.return_value = mock_session
+
+        result = _open_cloud_session()
+
+        mock_cloud_session_class.assert_called_once_with("wss://api.openmind.com/api/core/simulation/zenoh", token=None)
+        assert result is mock_session
+
+    @patch("zenoh_msgs.session.CloudSimZenohSession")
+    def test_open_cloud_session_with_custom_url_and_token(self, mock_cloud_session_class):
+        mock_session = MagicMock()
+        mock_cloud_session_class.return_value = mock_session
+
+        result = _open_cloud_session(url="wss://custom.url:8444", token="my_token")
+
+        mock_cloud_session_class.assert_called_once_with("wss://custom.url:8444", token="my_token")
+        assert result is mock_session
 
 
 class TestOpenZenohSession:
