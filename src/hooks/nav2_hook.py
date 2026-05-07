@@ -27,6 +27,10 @@ class StartNav2HookContext(BaseModel):
         default="map",
         description="Name of the map to use for navigation",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -45,6 +49,10 @@ class StopNav2HookContext(BaseModel):
         default="http://localhost:5000",
         description="Base URL for the Nav2 system to send the stop command",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -61,6 +69,7 @@ async def start_nav2_hook(context: Dict[str, Any]):
     ctx = StartNav2HookContext(**context)
     base_url = ctx.base_url
     map_name = ctx.map_name
+    api_key = ctx.api_key
     nav2_url = f"{base_url}/start/nav2"
 
     elevenlabs_provider: ElevenLabsTTSProvider = ElevenLabsTTSProvider()
@@ -70,7 +79,7 @@ async def start_nav2_hook(context: Dict[str, Any]):
             async with session.post(
                 nav2_url,
                 json={"map_name": map_name},
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
 
@@ -107,13 +116,14 @@ async def stop_nav2_hook(context: Dict[str, Any]):
     """
     ctx = StopNav2HookContext(**context)
     base_url = ctx.base_url
+    api_key = ctx.api_key
     nav2_url = f"{base_url}/stop/nav2"
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 nav2_url,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
 
