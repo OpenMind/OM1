@@ -18,7 +18,7 @@ CLOUD_TOPICS: set[str] = {
     "camera/realsense2_camera_node/depth/image_rect_isaac_sim_raw",
     "camera/realsense2_camera_node/depth/camera_info",
     "rgb_image",
-    # Unitree topics
+    # Unitree
     "lowstate",
     "lf/lowstate",
     "sportmodestate",
