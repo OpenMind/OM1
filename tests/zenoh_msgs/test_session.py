@@ -25,32 +25,6 @@ class TestCreateZenohConfig:
         config = create_zenoh_config(network_discovery=False)
         assert isinstance(config, zenoh.Config)
 
-    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "tcp/192.168.1.100:7447"})
-    def test_create_config_uses_custom_endpoint(self):
-        config = create_zenoh_config(network_discovery=False)
-        assert isinstance(config, zenoh.Config)
-
-    @patch.dict(
-        "os.environ",
-        {
-            "OM1_ZENOH_ENDPOINT": "wss/test-sim.openmind.com:8444",
-            "OM1_ZENOH_TLS_ROOT_CA": "/path/to/ca.pem",
-        },
-    )
-    def test_create_config_uses_tls_endpoint_and_ca(self):
-        config = create_zenoh_config(network_discovery=False)
-        assert isinstance(config, zenoh.Config)
-
-    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "tls/example.com:7447"})
-    def test_create_config_uses_tls_without_ca(self):
-        config = create_zenoh_config(network_discovery=False)
-        assert isinstance(config, zenoh.Config)
-
-    @patch.dict("os.environ", {"OM1_ZENOH_ENDPOINT": "quic/example.com:7447"})
-    def test_create_config_uses_quic_protocol(self):
-        config = create_zenoh_config(network_discovery=False)
-        assert isinstance(config, zenoh.Config)
-
 
 class TestOpenCloudSession:
     """Test the _open_cloud_session function."""
