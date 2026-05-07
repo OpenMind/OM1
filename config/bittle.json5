@@ -1,0 +1,317 @@
+{
+  version: "v1.0.3",
+  hertz: 1,
+  name: "bittle",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are controlling a Petoi Bittle quadruped over Bluetooth LE. Use the specific Bittle action that matches the user's requested motion, posture, or skill. Only use calibration actions when the user explicitly asks to calibrate a servo. Calibration servo indexes are 0 and 8 through 15, and adjustment degrees must be an integer from -9 through 9.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Examples:\n\n1. If a person says 'walk forward', call bittle_walk_forward.\n\n2. If a person says 'sit', call bittle_sit.\n\n3. If a person says 'look around', call bittle_check_around.\n\n4. If a person explicitly says 'calibrate servo 8 down 3 degrees', call bittle_adjust_calibration with servo_index=8 and degrees=-3.",
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      type: "ConversationHistoryInput",
+      config: {
+        max_rounds: 3,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bittle",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "bittle",
+      llm_label: "bittle_walk_forward",
+      connector: "ble",
+      config: {
+        command: "kwkF",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_walk_left",
+      connector: "ble",
+      config: {
+        command: "kwkL",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_walk_right",
+      connector: "ble",
+      config: {
+        command: "kwkR",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_walk_backward",
+      connector: "ble",
+      config: {
+        command: "kbk",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_crawl_forward",
+      connector: "ble",
+      config: {
+        command: "kcrF",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_crawl_left",
+      connector: "ble",
+      config: {
+        command: "kcrL",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_crawl_right",
+      connector: "ble",
+      config: {
+        command: "kcrR",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_trot_forward",
+      connector: "ble",
+      config: {
+        command: "ktrF",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_trot_left",
+      connector: "ble",
+      config: {
+        command: "ktrL",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_trot_right",
+      connector: "ble",
+      config: {
+        command: "ktrR",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_balance",
+      connector: "ble",
+      config: {
+        command: "kbalance",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_butt_up",
+      connector: "ble",
+      config: {
+        command: "kbuttUp",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_check_around",
+      connector: "ble",
+      config: {
+        command: "kck",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_stretch",
+      connector: "ble",
+      config: {
+        command: "kstr",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_greeting",
+      connector: "ble",
+      config: {
+        command: "khi",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_pee_pose",
+      connector: "ble",
+      config: {
+        command: "kpee",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_push_up",
+      connector: "ble",
+      config: {
+        command: "kpu",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_rest",
+      connector: "ble",
+      config: {
+        command: "krest",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_step_in_place",
+      connector: "ble",
+      config: {
+        command: "kstp",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_back_flip",
+      connector: "ble",
+      config: {
+        command: "kbf",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_sit",
+      connector: "ble",
+      config: {
+        command: "ksit",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_bunny_jump",
+      connector: "ble",
+      config: {
+        command: "kbdF",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_vibrate",
+      connector: "ble",
+      config: {
+        command: "kvt",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_enter_calibration",
+      connector: "ble",
+      config: {
+        command: "c",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "adjust_bittle_calibration",
+      llm_label: "bittle_adjust_calibration",
+      connector: "ble",
+      config: {
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+    {
+      name: "bittle",
+      llm_label: "bittle_save_calibration",
+      connector: "ble",
+      config: {
+        command: "s",
+        device_address: "${BITTLE_BLE_ADDRESS:-}",
+        device_name: "${BITTLE_BLE_NAME:-BittleA6_SSP}",
+        simulate: "${BITTLE_SIMULATE:-false}",
+      },
+    },
+  ],
+}

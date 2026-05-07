@@ -56,3 +56,4 @@ logs/
 config/memory
 config/.runtime.json5
 config/cron_job/
+.envrc

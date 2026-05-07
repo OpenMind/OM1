@@ -326,6 +326,11 @@ class ActionOrchestrator:
         input_type = T.get_type_hints(agent_action.interface)["input"]
         input_type_hints = T.get_type_hints(input_type)
 
+        if not input_type_hints:
+            input_interface = input_type()
+            await agent_action.connector.connect(input_interface)
+            return input_interface
+
         converted_params = {}
         for key, value in input_params.items():
             if key in input_type_hints:
