@@ -5,6 +5,8 @@ import zenoh
 
 from zenoh_msgs.session import (
     HybridZenohSession,
+    _create_zenoh_session,
+    _ZenohSessionContextManager,
     create_zenoh_config,
     load_api_key,
     load_session_config,
@@ -24,42 +26,138 @@ class TestCreateZenohConfig:
 
 
 class TestOpenZenohSession:
+    """Test open_zenoh_session returns a context manager."""
+
+    def test_returns_context_manager(self):
+        result = open_zenoh_session()
+        assert isinstance(result, _ZenohSessionContextManager)
+
+
+class TestZenohSessionContextManager:
+    """Test the _ZenohSessionContextManager class."""
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_enter_creates_session(self, mock_create_session):
+        mock_session = MagicMock()
+        mock_create_session.return_value = mock_session
+
+        ctx_mgr = _ZenohSessionContextManager()
+        session = ctx_mgr.__enter__()
+
+        mock_create_session.assert_called_once()
+        assert session is mock_session
+        assert ctx_mgr._session is mock_session
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_exit_closes_session(self, mock_create_session):
+        mock_session = MagicMock()
+        mock_create_session.return_value = mock_session
+
+        ctx_mgr = _ZenohSessionContextManager()
+        ctx_mgr.__enter__()
+        ctx_mgr.__exit__(None, None, None)
+
+        mock_session.close.assert_called_once()
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_exit_handles_uninitialized_session(self, mock_create_session):
+        ctx_mgr = _ZenohSessionContextManager()
+        # Should not raise when session is None
+        ctx_mgr.__exit__(None, None, None)
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_getattr_creates_session_lazily(self, mock_create_session):
+        mock_session = MagicMock()
+        mock_session.some_attr = "value"
+        mock_create_session.return_value = mock_session
+
+        ctx_mgr = _ZenohSessionContextManager()
+        result = ctx_mgr.some_attr
+
+        mock_create_session.assert_called_once()
+        assert result == "value"
+        assert ctx_mgr._session is mock_session
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_getattr_uses_cached_session(self, mock_create_session):
+        mock_session = MagicMock()
+        mock_session.attr1 = "value1"
+        mock_session.attr2 = "value2"
+        mock_create_session.return_value = mock_session
+
+        ctx_mgr = _ZenohSessionContextManager()
+        result1 = ctx_mgr.attr1
+        result2 = ctx_mgr.attr2
+
+        # Should only create session once
+        mock_create_session.assert_called_once()
+        assert result1 == "value1"
+        assert result2 == "value2"
+
+    @patch("zenoh_msgs.session._create_zenoh_session")
+    def test_context_manager_with_statement(self, mock_create_session):
+        mock_session = MagicMock()
+        mock_create_session.return_value = mock_session
+
+        with open_zenoh_session() as session:
+            assert session is mock_session
+
+        mock_session.close.assert_called_once()
+
+
+class TestCreateZenohSession:
+    """Test the _create_zenoh_session function."""
+
+    @pytest.fixture(autouse=True)
+    def reset_hybrid_state(self):
+        """Reset HybridZenohSession state between tests."""
+        prev_use_sim = HybridZenohSession._use_sim
+        HybridZenohSession._use_sim = False
+        yield
+        HybridZenohSession._use_sim = prev_use_sim
+
+    def test_returns_hybrid_when_use_sim_true(self):
+        HybridZenohSession.set_use_sim(True)
+        session = _create_zenoh_session()
+        assert isinstance(session, HybridZenohSession)
+
     @patch.object(zenoh, "open")
-    def test_open_session_success_without_fallback(self, mock_zenoh_open):
+    def test_returns_zenoh_session_without_fallback(self, mock_zenoh_open):
         mock_session = MagicMock()
         mock_zenoh_open.return_value = mock_session
 
-        session = open_zenoh_session()
+        HybridZenohSession.set_use_sim(False)
+        session = _create_zenoh_session()
 
         mock_zenoh_open.assert_called_once()
         assert session is mock_session
 
     @patch.object(zenoh, "open")
-    def test_open_session_fallback_success(self, mock_zenoh_open):
+    def test_fallback_to_network_discovery(self, mock_zenoh_open):
         mock_session_fallback = MagicMock()
         mock_zenoh_open.side_effect = [
             Exception("Local connection failed"),
             mock_session_fallback,
         ]
 
-        session = open_zenoh_session()
+        HybridZenohSession.set_use_sim(False)
+        session = _create_zenoh_session()
 
         assert mock_zenoh_open.call_count == 2
         assert session is mock_session_fallback
 
     @patch.object(zenoh, "open")
-    def test_open_session_all_attempts_fail(self, mock_zenoh_open):
+    def test_raises_when_all_attempts_fail(self, mock_zenoh_open):
         mock_zenoh_open.side_effect = [
             Exception("Local failed"),
             Exception("Fallback failed"),
         ]
 
+        HybridZenohSession.set_use_sim(False)
         with pytest.raises(Exception, match="Failed to open Zenoh session"):
-            open_zenoh_session()
+            _create_zenoh_session()
 
         assert mock_zenoh_open.call_count == 2
-        expected_calls_to_zenoh_open = mock_zenoh_open.call_args_list
-        mock_zenoh_open.assert_has_calls(expected_calls_to_zenoh_open)
 
 
 class TestHybridZenohSession:
@@ -208,19 +306,6 @@ class TestHybridZenohSession:
         s = HybridZenohSession()
         # Both lazy sessions are None — should be a no-op, not raise
         s.close()
-
-
-class TestOpenZenohSessionSimMode:
-    """When use_sim is True, open_zenoh_session returns HybridZenohSession."""
-
-    def test_returns_hybrid_in_sim_mode(self):
-        prev = HybridZenohSession._use_sim
-        try:
-            HybridZenohSession.set_use_sim(True)
-            session = open_zenoh_session()
-            assert isinstance(session, HybridZenohSession)
-        finally:
-            HybridZenohSession.set_use_sim(prev)
 
 
 class TestLoaders:

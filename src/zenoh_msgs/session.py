@@ -13,7 +13,7 @@ from zenoh_msgs.cloud_session.zenoh_adapter import (
     _Subscriber,
 )
 
-ZenohSessionType = Union[zenoh.Session, CloudSimZenohSession, "HybridZenohSession"]
+ZenohSessionType = Union[zenoh.Session, CloudSimZenohSession, "HybridZenohSession", "_ZenohSessionContextManager"]
 ZenohSampleType = Union[zenoh.Sample, "_Sample"]
 
 
@@ -261,9 +261,85 @@ class HybridZenohSession:
             logging.info("Closed standard Zenoh session")
 
 
-def open_zenoh_session() -> ZenohSessionType:
+def open_zenoh_session() -> "_ZenohSessionContextManager":
     """
     Open a Zenoh session.
+
+    Returns
+    -------
+    _ZenohSessionContextManager
+        A context manager that yields a Zenoh session.
+    """
+    return _ZenohSessionContextManager()
+
+
+class _ZenohSessionContextManager:
+    """
+    Context manager wrapper for Zenoh sessions.
+
+    This class enables using open_zenoh_session() with the 'with' statement,
+    ensuring proper cleanup of resources. It also maintains backward compatibility
+    by allowing direct attribute access without using a context manager.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize the context manager without creating the session yet.
+        """
+        self._session: Optional[ZenohSessionType] = None
+
+    def __enter__(self) -> ZenohSessionType:
+        """
+        Open and return the Zenoh session.
+
+        Returns
+        -------
+        ZenohSessionType
+            The opened Zenoh session.
+        """
+        self._session = _create_zenoh_session()
+
+        return self._session
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """
+        Close the Zenoh session.
+
+        Parameters
+        ----------
+        exc_type : type, optional
+            The type of exception that occurred, if any.
+        exc_val : Exception, optional
+            The exception instance that occurred, if any.
+        exc_tb : traceback, optional
+            The traceback object, if any.
+        """
+        if self._session is not None:
+            self._session.close()
+            logging.info("Closed Zenoh session")
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        Forward attribute access to the underlying session.
+
+        Parameters
+        ----------
+        name : str
+            The name of the attribute to access.
+
+        Returns
+        -------
+        Any
+            The value of the requested attribute from the underlying session.
+        """
+        if self._session is None:
+            self._session = _create_zenoh_session()
+        return getattr(self._session, name)
+
+
+def _create_zenoh_session() -> ZenohSessionType:
+    """
+    Internal function to create a Zenoh session.
 
     Returns
     -------
