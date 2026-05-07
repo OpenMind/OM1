@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 from typing import Any, Callable, Optional, Union
 
 import zenoh
@@ -13,19 +11,13 @@ from zenoh_msgs.cloud_session.zenoh_adapter import (
     _Subscriber,
 )
 
-ZenohSessionType = Union[zenoh.Session, CloudSimZenohSession, "HybridZenohSession"]
+ZenohSessionType = Union[zenoh.Session, CloudSimZenohSession, "HybridZenohSession", "_ZenohSessionContextManager"]
 ZenohSampleType = Union[zenoh.Sample, "_Sample"]
 
 
 def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     """
     Create a Zenoh configuration for a client connecting to a Zenoh router.
-
-    The connect endpoint defaults to tcp/127.0.0.1:7447 (a local router on
-    the same host) but can be overridden via OM1_ZENOH_ENDPOINT — for example
-    "wss/test-sim.openmind.com:8444" to reach a remote Zenoh router over a
-    TLS-terminated WebSocket. For self-signed test deployments,
-    OM1_ZENOH_TLS_ROOT_CA can point at the trusted CA cert file path.
 
     Parameters
     ----------
@@ -39,17 +31,8 @@ def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     """
     config = zenoh.Config()
     if not network_discovery:
-        endpoint = os.environ.get("OM1_ZENOH_ENDPOINT", "tcp/127.0.0.1:7447")
         config.insert_json5("mode", '"client"')
-        config.insert_json5("connect/endpoints", json.dumps([endpoint]))
-
-        if endpoint.startswith(("wss/", "tls/", "quic/")):
-            ca_path = os.environ.get("OM1_ZENOH_TLS_ROOT_CA")
-            if ca_path:
-                config.insert_json5(
-                    "transport/link/tls/root_ca_certificate",
-                    json.dumps(ca_path),
-                )
+        config.insert_json5("connect/endpoints", '["tcp/127.0.0.1:7447"]')
 
     return config
 
@@ -261,9 +244,85 @@ class HybridZenohSession:
             logging.info("Closed standard Zenoh session")
 
 
-def open_zenoh_session() -> ZenohSessionType:
+def open_zenoh_session() -> "_ZenohSessionContextManager":
     """
     Open a Zenoh session.
+
+    Returns
+    -------
+    _ZenohSessionContextManager
+        A context manager that yields a Zenoh session.
+    """
+    return _ZenohSessionContextManager()
+
+
+class _ZenohSessionContextManager:
+    """
+    Context manager wrapper for Zenoh sessions.
+
+    This class enables using open_zenoh_session() with the 'with' statement,
+    ensuring proper cleanup of resources. It also maintains backward compatibility
+    by allowing direct attribute access without using a context manager.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize the context manager without creating the session yet.
+        """
+        self._session: Optional[ZenohSessionType] = None
+
+    def __enter__(self) -> ZenohSessionType:
+        """
+        Open and return the Zenoh session.
+
+        Returns
+        -------
+        ZenohSessionType
+            The opened Zenoh session.
+        """
+        self._session = _create_zenoh_session()
+
+        return self._session
+
+    def __exit__(self, _exc_type, _exc_val, _exc_tb) -> None:
+        """
+        Close the Zenoh session.
+
+        Parameters
+        ----------
+        _exc_type : type, optional
+            The type of exception that occurred, if any.
+        _exc_val : Exception, optional
+            The exception instance that occurred, if any.
+        _exc_tb : traceback, optional
+            The traceback object, if any.
+        """
+        if self._session is not None:
+            self._session.close()
+            logging.info("Closed Zenoh session")
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        Forward attribute access to the underlying session.
+
+        Parameters
+        ----------
+        name : str
+            The name of the attribute to access.
+
+        Returns
+        -------
+        Any
+            The value of the requested attribute from the underlying session.
+        """
+        if self._session is None:
+            self._session = _create_zenoh_session()
+        return getattr(self._session, name)
+
+
+def _create_zenoh_session() -> ZenohSessionType:
+    """
+    Internal function to create a Zenoh session.
 
     Returns
     -------
