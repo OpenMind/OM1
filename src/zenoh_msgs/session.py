@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 from typing import Any, Callable, Optional, Union
 
 import zenoh
@@ -21,12 +19,6 @@ def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     """
     Create a Zenoh configuration for a client connecting to a Zenoh router.
 
-    The connect endpoint defaults to tcp/127.0.0.1:7447 (a local router on
-    the same host) but can be overridden via OM1_ZENOH_ENDPOINT — for example
-    "wss/test-sim.openmind.com:8444" to reach a remote Zenoh router over a
-    TLS-terminated WebSocket. For self-signed test deployments,
-    OM1_ZENOH_TLS_ROOT_CA can point at the trusted CA cert file path.
-
     Parameters
     ----------
     network_discovery : bool, optional
@@ -39,17 +31,8 @@ def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     """
     config = zenoh.Config()
     if not network_discovery:
-        endpoint = os.environ.get("OM1_ZENOH_ENDPOINT", "tcp/127.0.0.1:7447")
         config.insert_json5("mode", '"client"')
-        config.insert_json5("connect/endpoints", json.dumps([endpoint]))
-
-        if endpoint.startswith(("wss/", "tls/", "quic/")):
-            ca_path = os.environ.get("OM1_ZENOH_TLS_ROOT_CA")
-            if ca_path:
-                config.insert_json5(
-                    "transport/link/tls/root_ca_certificate",
-                    json.dumps(ca_path),
-                )
+        config.insert_json5("connect/endpoints", '["tcp/127.0.0.1:7447"]')
 
     return config
 
