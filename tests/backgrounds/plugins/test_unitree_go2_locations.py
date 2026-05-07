@@ -59,6 +59,7 @@ class TestUnitreeGo2Locations:
         assert background.locations_provider == mock_provider
         mock_provider_class.assert_called_once_with(
             base_url="http://localhost:5000/maps/locations/list",
+            api_key="",
             timeout=5,
             refresh_interval=30,
         )
@@ -79,6 +80,7 @@ class TestUnitreeGo2Locations:
 
         mock_provider_class.assert_called_once_with(
             base_url="http://custom:8080/api",
+            api_key="",
             timeout=15,
             refresh_interval=120,
         )
