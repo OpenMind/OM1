@@ -284,17 +284,17 @@ class _ZenohSessionContextManager:
 
         return self._session
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, _exc_type, _exc_val, _exc_tb) -> None:
         """
         Close the Zenoh session.
 
         Parameters
         ----------
-        exc_type : type, optional
+        _exc_type : type, optional
             The type of exception that occurred, if any.
-        exc_val : Exception, optional
+        _exc_val : Exception, optional
             The exception instance that occurred, if any.
-        exc_tb : traceback, optional
+        _exc_tb : traceback, optional
             The traceback object, if any.
         """
         if self._session is not None:
