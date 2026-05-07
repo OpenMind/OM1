@@ -24,6 +24,10 @@ class UnitreeGo2LocationsConfig(BackgroundConfig):
         default="http://localhost:5000/maps/locations/list",
         description="Base URL for the locations API",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
     timeout: int = Field(default=5, description="Request timeout in seconds")
     refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
@@ -45,11 +49,13 @@ class UnitreeGo2Locations(Background[UnitreeGo2LocationsConfig]):
         super().__init__(config)
 
         base_url = self.config.base_url
+        api_key = self.config.api_key
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
         self.locations_provider = UnitreeGo2LocationsProvider(
             base_url=base_url,
+            api_key=api_key,
             timeout=timeout,
             refresh_interval=refresh_interval,
         )

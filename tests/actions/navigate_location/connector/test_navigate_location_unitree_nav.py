@@ -192,7 +192,7 @@ class TestUnitreeGo2NavConnectorInit:
             config = UnitreeGo2NavConfig()
             connector = UnitreeGo2NavConnector(config)
 
-            mock_loc.assert_called_once_with("http://localhost:5000/maps/locations/list", 5, 30)
+            mock_loc.assert_called_once_with("http://localhost:5000/maps/locations/list", "", 5, 30)
             mock_nav.assert_called_once()
             mock_io.assert_called_once()
             assert connector.location_provider == mock_loc.return_value

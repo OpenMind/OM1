@@ -21,6 +21,10 @@ class StartSlamHookContext(BaseModel):
         default="http://localhost:5000",
         description="Base URL for the SLAM system",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -45,6 +49,10 @@ class StopSlamHookContext(BaseModel):
         default="map",
         description="Name of the map to save before stopping SLAM",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -60,13 +68,14 @@ async def start_slam_hook(context: Dict[str, Any]):
     """
     ctx = StartSlamHookContext(**context)
     base_url = ctx.base_url
+    api_key = ctx.api_key
     slam_url = f"{base_url}/start/slam"
-
+    logging.info(f"Starting SLAM with URL: {slam_url} and API Key: {'***' if api_key else '(none)'}")
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 slam_url,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
 
@@ -103,7 +112,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
     ctx = StopSlamHookContext(**context)
     base_url = ctx.base_url
     map_name = ctx.map_name
-
+    api_key = ctx.api_key
     save_slam_map_url = f"{base_url}/maps/save"
     stop_slam_url = f"{base_url}/stop/slam"
 
@@ -115,7 +124,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
             async with session.post(
                 save_slam_map_url,
                 json={"map_name": map_name},
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as save_response:
 
@@ -134,7 +143,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
             # Stop the SLAM process
             async with session.post(
                 stop_slam_url,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
 

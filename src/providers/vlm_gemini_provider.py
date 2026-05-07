@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from typing import Callable, Optional
@@ -26,6 +27,12 @@ class VLMGeminiProvider:
         fps: int = 10,
         stream_url: Optional[str] = None,
         camera_index: int = 0,
+        model: str = "gemini-2.5-flash",
+        max_tokens: int = 1024,
+        prompt: str = (
+            "In one concise sentence, describe what you see in this image. "
+            "Just the description — no explanation of your reasoning."
+        ),
     ):
         """
         Initialize the VLM Provider.
@@ -33,18 +40,23 @@ class VLMGeminiProvider:
         Parameters
         ----------
         base_url : str
-            The base URL for the OM API.
+            The base URL for the OM Gemini proxy.
         api_key : str
-            The API key for the OM API.
+            The API key.
         fps : int
             The frames per second for the video stream.
         stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
+            The URL for the teleops video stream.
         camera_index : int
             The camera index for the video stream device. Defaults to 0.
+        model : str
+            Gemini model id (e.g. "gemini-2.5-flash", "gemini-3.1-pro-preview").
         """
         self.running: bool = False
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self.model: str = model
+        self.max_tokens: int = max_tokens
+        self.prompt: str = prompt
         self.stream_ws_client: Optional[ws.Client] = ws.Client(url=stream_url) if stream_url else None
         self.video_stream: VideoStream = VideoStream(
             frame_callback=self._process_frame, fps=fps, device_index=camera_index  # type: ignore
@@ -53,44 +65,58 @@ class VLMGeminiProvider:
 
     async def _process_frame(self, frame: str):
         """
-        Process a video frame using the Gemini API.
+        Process a video frame via the OM Gemini proxy.
 
         Parameters
         ----------
         frame : str
-            The base64 encoded video frame to process.
+            JSON string emitted by `om1_vlm.VideoStream`, shape:
+            `{"timestamp": <float>, "frame": "<base64-jpeg>"}`.
         """
+        try:
+            envelope = json.loads(frame)
+            base64_image = envelope["frame"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            base64_image = frame
+
         processing_start = time.perf_counter()
         try:
-            response = await self.api_client.chat.completions.create(
-                model="gemini-2.0-flash-exp",
+            raw = await self.api_client.chat.completions.with_raw_response.create(
+                model=self.model,
                 messages=[
                     {
                         "role": "user",
                         "content": [
-                            {
-                                "type": "text",
-                                "text": "What is the most interesting aspect in this series of images?",
-                            },
+                            {"type": "text", "text": self.prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{frame}",
-                                    "detail": "low",
-                                },
+                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}", "detail": "low"},
                             },
                         ],
                     }
                 ],
-                max_tokens=300,
+                max_tokens=self.max_tokens,
             )
+
+            data = json.loads(raw.text)
+            content = data["choices"][0]["message"]["content"]
             processing_latency = time.perf_counter() - processing_start
+
             logging.debug(f"Processing latency: {processing_latency:.3f} seconds")
-            logging.debug(f"Gemini LLM VLM Response: {response}")
-            if self.message_callback:
-                self.message_callback(response)
+            logging.debug(f"Gemini VLM content: {content[:200]!r}")
+
+            if self.message_callback and content is not None:
+                self.message_callback(content)
+
         except Exception as e:
-            logging.error(f"Error processing frame: {e}")
+            body = None
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                try:
+                    body = resp.text
+                except Exception:
+                    pass
+            logging.error("Error processing frame: %s | body=%s", e, body)
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """

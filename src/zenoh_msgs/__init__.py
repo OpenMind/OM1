@@ -12,6 +12,7 @@ from .idl import (
     AvatarFaceRequest,
     AvatarFaceResponse,
     BatteryState,
+    BmsState,
     BoosterApiReqMsg,
     BoosterApiRespMsg,
     CameraInfo,
@@ -32,9 +33,12 @@ from .idl import (
     HazardDetectionVector,
     Header,
     Image,
+    IMUState,
     LaserScan,
+    LowState,
     ModeStatusRequest,
     ModeStatusResponse,
+    MotorState,
     Nav2Status,
     NavSatFix,
     NavSatStatus,
@@ -56,8 +60,10 @@ from .idl import (
     RemoteControllerState,
     RpcServiceRequest,
     RpcServiceResponse,
+    SportModeState,
     String,
     Time,
+    TimeSpec,
     TTSStatusRequest,
     TTSStatusResponse,
     Twist,
@@ -75,7 +81,16 @@ from .idl import (
     status_msgs,
     std_msgs,
 )
-from .session import create_zenoh_config, open_zenoh_session
+from .session import (
+    HybridZenohSession,
+    ZenohSampleType,
+    ZenohSessionType,
+    create_zenoh_config,
+    load_api_key,
+    load_session_config,
+    load_use_sim,
+    open_zenoh_session,
+)
 
 __all__ = [
     # std_msgs
@@ -154,9 +169,22 @@ __all__ = [
     "UnitreeRequest",
     "UnitreeRequestHeader",
     "UnitreeRequestIdentity",
+    # unitree_go
+    "TimeSpec",
+    "IMUState",
+    "MotorState",
+    "BmsState",
+    "LowState",
+    "SportModeState",
     # session
     "create_zenoh_config",
     "open_zenoh_session",
+    "load_api_key",
+    "load_use_sim",
+    "load_session_config",
+    "HybridZenohSession",
+    "ZenohSessionType",
+    "ZenohSampleType",
     # modules
     "session",
     # idl submodules
