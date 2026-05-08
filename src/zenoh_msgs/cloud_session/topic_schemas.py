@@ -40,6 +40,7 @@ topic_schemas = [
     ("om/asr/text", "om_api/msg/OMASRText"),
     ("om/avatar/request", "om_api/msg/OMAvatarFaceRequest"),
     ("om/avatar/response", "om_api/msg/OMAvatarFaceResponse"),
+    ("om/localization_pose", "nav_msgs/msg/LidarLocalization"),
     ("image", "sensor_msgs/msg/Image"),
 ]
 

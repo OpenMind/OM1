@@ -91,7 +91,7 @@
       display_name: "SLAM Exploration",
       description: "Autonomous navigation and mapping mode",
       system_prompt_base: "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language. If you encounter people detected by the Face Presence Sensor (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them by name once (e.g., 'Hi wendy and bob!').\n\nDo NOT store or tag any location automatically—only invoke the 'remember_location' action after an explicit user request.",
-      hertz: 1,
+      hertz: 0.001,
       agent_inputs: [
         {
           type: "UnitreeGo2OdomZenoh",
@@ -133,6 +133,9 @@
           name: "remember_location",
           llm_label: "remember_location",
           connector: "unitree_go2_location",
+          config: {
+            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam",
+          },
         },
       ],
       backgrounds: [
@@ -292,7 +295,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_om_path_sdk",
+          connector: "unitree_om_path_sdk_zenoh",
         },
         {
           name: "navigate_location",

@@ -28,6 +28,10 @@ class UnitreeGo2RememberLocationConfig(ActionConfig):
         default="http://localhost:5000/maps/locations/add/slam",
         description="The base URL for the remember location API.",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind API authentication",
+    )
     timeout: int = Field(
         default=5,
         description="Timeout for the HTTP requests in seconds.",
@@ -55,6 +59,7 @@ class UnitreeGo2RememberLocationConnector(ActionConnector[UnitreeGo2RememberLoca
         super().__init__(config)
 
         self.base_url = self.config.base_url
+        self.api_key = self.config.api_key
         self.timeout = self.config.timeout
         self.map_name = self.config.map_name
 
@@ -79,7 +84,7 @@ class UnitreeGo2RememberLocationConnector(ActionConnector[UnitreeGo2RememberLoca
             "description": getattr(output_interface, "description", ""),
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", "x-api-key": self.api_key}
 
         try:
             async with aiohttp.ClientSession() as session:
