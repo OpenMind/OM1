@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from zenoh_msgs.cloud_session.topic_schemas import TopicSchemas
 from zenoh_msgs.cloud_session.zenoh_adapter import (
     CloudSimZenohSession,
     _Payload,
@@ -32,16 +31,14 @@ def test_subscriber_undeclare_calls_session():
 
 def test_publisher_put_with_bytes():
     session = MagicMock()
-    spec = TopicSchemas(topic="cmd_vel", schema="geometry_msgs/msg/Twist")
-    pub = _Publisher(session, "cmd_vel", spec)
+    pub = _Publisher(session, "cmd_vel")
     pub.put(b"\x01\x02")
     session._publish_binary.assert_called_once_with("cmd_vel", b"\x01\x02")
 
 
 def test_publisher_put_converts_zbytes_like():
     session = MagicMock()
-    spec = TopicSchemas(topic="cmd_vel", schema="schema")
-    pub = _Publisher(session, "cmd_vel", spec)
+    pub = _Publisher(session, "cmd_vel")
     zbytes = MagicMock()
     zbytes.to_bytes.return_value = b"\xaa\xbb"
     pub.put(zbytes)
@@ -50,8 +47,7 @@ def test_publisher_put_converts_zbytes_like():
 
 def test_publisher_undeclare_is_noop():
     session = MagicMock()
-    spec = TopicSchemas(topic="cmd_vel", schema="schema")
-    pub = _Publisher(session, "cmd_vel", spec)
+    pub = _Publisher(session, "cmd_vel")
     # No exception, no call to session.
     pub.undeclare()
 
@@ -62,29 +58,10 @@ def session():
     with patch("zenoh_msgs.cloud_session.zenoh_adapter.CloudZenohClient") as mock_client_class:
         client = MagicMock()
         mock_client_class.return_value = client
-        topic_map = {
-            "odom": TopicSchemas(topic="odom", schema="nav_msgs/msg/Odometry"),
-            "cmd_vel": TopicSchemas(topic="cmd_vel", schema="geometry_msgs/msg/Twist"),
-        }
-        s = CloudSimZenohSession("wss://x.com", token="tok", topic_map=topic_map)
+        s = CloudSimZenohSession("wss://x.com", token="tok")
         # expose for assertions
         s._mock_client = client  # type: ignore[attr-defined]
         yield s
-
-
-def test_resolve_returns_spec(session):
-    spec = session._resolve("odom")
-    assert spec is not None
-    assert spec.topic == "odom"
-
-
-def test_resolve_unknown_returns_none(session):
-    assert session._resolve("missing") is None
-
-
-def test_declare_subscriber_unknown_topic_returns_none(session):
-    sub = session.declare_subscriber("missing", lambda _s: None)
-    assert sub is None
 
 
 def test_declare_subscriber_returns_subscriber(session):
@@ -129,19 +106,9 @@ def test_subscriber_callback_none_handler_noop(session):
     inner_cb(b"\x00")
 
 
-def test_declare_publisher_unknown_returns_none(session):
-    assert session.declare_publisher("missing") is None
-
-
 def test_declare_publisher_returns_publisher(session):
     pub = session.declare_publisher("cmd_vel")
     assert isinstance(pub, _Publisher)
-
-
-def test_put_unknown_topic_logs(session):
-    # No publish happens
-    session.put("missing", b"\x00")
-    session._mock_client.publish_binary.assert_not_called()
 
 
 def test_put_publishes_bytes(session):
