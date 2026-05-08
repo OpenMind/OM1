@@ -60,10 +60,7 @@ class LiteLLM(LLM[R]):
         try:
             import litellm as _litellm  # noqa: F401
         except ImportError:
-            raise ImportError(
-                "litellm is required for this plugin. "
-                "Install with: pip install litellm"
-            )
+            raise ImportError("litellm is required for this plugin. " "Install with: pip install litellm")
 
         import openai
 
@@ -109,8 +106,7 @@ class LiteLLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 
