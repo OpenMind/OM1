@@ -4,7 +4,6 @@ from typing import Any, Callable, Optional, Union
 from zenoh import ZBytes
 
 from zenoh_msgs.cloud_session.client import CloudZenohClient
-from zenoh_msgs.cloud_session.topic_schemas import TopicSchemas, topic_map
 
 
 class _Payload:
@@ -88,9 +87,9 @@ class _Publisher:
     Provides a publish interface to a broker topic, mimicking the Zenoh Publisher API.
     """
 
-    def __init__(self, session: "CloudSimZenohSession", topic: str, spec: TopicSchemas) -> None:
+    def __init__(self, session: "CloudSimZenohSession", topic: str) -> None:
         """
-        Initialize a publisher with the session, topic, and topic specification.
+        Initialize a publisher with the session and topic.
 
         Parameters
         ----------
@@ -98,12 +97,9 @@ class _Publisher:
             The Zenoh session this publisher belongs to.
         topic : str
             The topic this publisher is associated with.
-        spec : TopicSchemas
-            The topic specification containing the broker topic and schema.
         """
         self._session = session
         self._topic = topic
-        self._schemas = spec
 
     def put(self, payload: Union[bytes, "ZBytes"]) -> None:  # type: ignore
         """
@@ -117,7 +113,7 @@ class _Publisher:
         # Convert ZBytes to bytes if needed
         if not isinstance(payload, bytes):
             payload = payload.to_bytes()  # type: ignore
-        self._session._publish_binary(self._schemas.topic, payload)
+        self._session._publish_binary(self._topic, payload)
 
     def undeclare(self) -> None:
         """
@@ -138,7 +134,6 @@ class CloudSimZenohSession:
         self,
         url: str,
         token: Optional[str] = None,
-        topic_map: dict[str, TopicSchemas] = topic_map,
     ) -> None:
         """
         Initialize the CloudSimZenohSession.
@@ -146,31 +141,12 @@ class CloudSimZenohSession:
         Parameters
         ----------
         url : str
-            The WebSocket URL for the cloud broker
-        topic_map : dict[str, TopicSchemas]
-            A mapping from OM1 key expressions to broker topic specifications.
+            The WebSocket URL for the cloud broker.
         token : Optional[str]
             Optional authentication token for the broker. If not provided, the session will attempt unauthenticated access.
         """
         self._client = CloudZenohClient(url, token)
-        self._topic_map = dict(topic_map)
         self._subscription_topics: dict[str, str] = {}
-
-    def _resolve(self, topic: str) -> Optional[TopicSchemas]:
-        """
-        Resolve an topic to its corresponding TopicSchemas using the topic map.
-
-        Parameters
-        ----------
-        topic : str
-            The topic to be resolved, e.g. "odom" or "image".
-        """
-        topic_schema = self._topic_map.get(topic)
-
-        if topic_schema is None:
-            return
-
-        return topic_schema
 
     def declare_subscriber(
         self,
@@ -192,34 +168,17 @@ class CloudSimZenohSession:
         Optional[_Subscriber]
             A subscriber object, or None if the topic is not mapped.
         """
-        topic_schema = self._resolve(topic)
-
-        if topic_schema is None:
-            logging.warning(f"subscribe to unmapped topic: {topic}")
-            return None
 
         def _on_cdr(cdr: bytes, _topic=topic) -> None:
-            """
-            On receiving a message from the broker, wrap it in a _Sample and pass to the handler.
-
-            Parameters
-            ----------
-            cdr : bytes
-                The raw bytes payload from the broker.
-            _topic : str
-                The topic this message was published to (captured from the outer scope).
-            """
             if handler is None:
                 return
-
             try:
                 handler(_Sample(_topic, cdr))
             except Exception:
                 logging.exception(f"CloudSimZenohSession handler raised on {_topic}")
 
         sub_id = self._client.declare_subscriber(
-            topic=topic_schema.topic,
-            schema=topic_schema.schema,
+            topic=topic,
             callback=_on_cdr,
             binary=True,
         )
@@ -227,7 +186,7 @@ class CloudSimZenohSession:
 
         return _Subscriber(self, topic, sub_id)
 
-    def declare_publisher(self, topic: str) -> Optional[_Publisher]:
+    def declare_publisher(self, topic: str) -> _Publisher:
         """
         Return a publisher object whose `.put(bytes)` forwards to the broker.
 
@@ -238,16 +197,10 @@ class CloudSimZenohSession:
 
         Returns
         -------
-        Optional[_Publisher]
+        _Publisher
             A publisher object, or None if the topic is not mapped.
         """
-        topic_schema = self._resolve(topic)
-
-        if topic_schema is None:
-            logging.warning(f"publisher on unmapped topic {topic_schema}")
-            return None
-
-        return _Publisher(self, topic, topic_schema)
+        return _Publisher(self, topic)
 
     def put(self, topic: str, payload: Union[bytes, ZBytes]) -> None:
         """
@@ -263,16 +216,9 @@ class CloudSimZenohSession:
         payload : bytes or ZBytes
             The raw bytes payload to publish.
         """
-        topic_schema = self._resolve(topic)
-
-        if topic_schema is None:
-            logging.warning(f"put() called on unmapped topic: {topic}")
-            return
-
         if not isinstance(payload, bytes):
             payload = payload.to_bytes()
-
-        self._publish_binary(topic_schema.topic, payload)
+        self._publish_binary(topic, payload)
 
     def close(self) -> None:
         """Close the underlying broker connection."""

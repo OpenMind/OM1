@@ -3,7 +3,7 @@ from typing import Any, Callable, Optional, Union
 
 import zenoh
 
-from zenoh_msgs.cloud_session.topic_schemas import topic_map
+from zenoh_msgs.cloud_session.topic_schemas import CLOUD_TOPICS
 from zenoh_msgs.cloud_session.zenoh_adapter import (
     CloudSimZenohSession,
     _Publisher,
@@ -42,7 +42,7 @@ class HybridZenohSession:
     A session wrapper that routes subscriptions and publications to either a cloud
     simulation session or a standard Zenoh session based on the topic.
 
-    Topics in topic_map are routed to the cloud session, while all other topics
+    Topics in CLOUD_TOPICS are routed to the cloud session, while all other topics
     are routed to the standard Zenoh session.
     """
 
@@ -101,7 +101,7 @@ class HybridZenohSession:
         Returns
         -------
         CloudSimZenohSession
-            The cloud simulation session for topics in topic_map.
+            The cloud simulation session for topics in CLOUD_TOPICS.
         """
         if self._cloud_session is None:
             self._cloud_session = _open_cloud_session(token=self._api_key)
@@ -153,7 +153,7 @@ class HybridZenohSession:
         Optional[Union[_Subscriber, zenoh.Subscriber]]
             A subscriber object from the appropriate session.
         """
-        if topic in topic_map:
+        if topic in CLOUD_TOPICS:
             logging.debug(f"Routing topic '{topic}' to cloud session")
             return self._get_cloud_session().declare_subscriber(topic, handler)
         else:
@@ -174,7 +174,7 @@ class HybridZenohSession:
         Optional[Union[_Publisher, zenoh.Publisher]]
             A publisher object from the appropriate session.
         """
-        if topic in topic_map:
+        if topic in CLOUD_TOPICS:
             logging.debug(f"Routing topic '{topic}' to cloud session")
             return self._get_cloud_session().declare_publisher(topic)
         else:
@@ -202,7 +202,7 @@ class HybridZenohSession:
         Any
             The result from the underlying session's get operation.
         """
-        if topic in topic_map:
+        if topic in CLOUD_TOPICS:
             logging.warning(
                 f"Query/response (get) not supported for cloud topic '{topic}', "
                 "falling back to standard Zenoh session"
@@ -225,7 +225,7 @@ class HybridZenohSession:
         **kwargs : Any
             Additional keyword arguments to pass to the underlying session.
         """
-        if topic in topic_map:
+        if topic in CLOUD_TOPICS:
             logging.debug(f"Routing put for topic '{topic}' to cloud session")
             self._get_cloud_session().put(topic, payload, *args, **kwargs)
         else:
@@ -364,7 +364,7 @@ def load_api_key(api_key: Optional[str]):
     Load the API key for cloud session authentication.
 
     This function sets the API key for all HybridZenohSession instances, allowing
-    them to authenticate with the cloud broker when routing topics in topic_map.
+    them to authenticate with the cloud broker when routing topics in CLOUD_TOPICS.
 
     Parameters
     ----------
@@ -382,7 +382,7 @@ def load_use_sim(use_sim: bool):
     Load the simulation mode setting.
 
     This function sets the simulation mode for all HybridZenohSession instances,
-    allowing them to route topics in topic_map to the cloud session when use_sim is True.
+    allowing them to route topics in CLOUD_TOPICS to the cloud session when use_sim is True.
 
     Parameters
     ----------

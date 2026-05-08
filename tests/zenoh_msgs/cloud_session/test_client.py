@@ -38,7 +38,7 @@ def test_init_with_token_appends_query(stop_thread):
 def test_declare_subscriber_returns_id_and_sends(stop_thread):
     c = CloudZenohClient("wss://x.com")
     cb = MagicMock()
-    sub_id = c.declare_subscriber("odom", "nav_msgs/msg/Odometry", cb, binary=True)
+    sub_id = c.declare_subscriber("odom", cb, binary=True)
     assert isinstance(sub_id, str) and len(sub_id) == 12
     assert c._subscriptions[sub_id] is cb
     assert c._subscription_is_binary[sub_id] is True
@@ -47,7 +47,7 @@ def test_declare_subscriber_returns_id_and_sends(stop_thread):
 
 def test_undeclare_subscriber_removes(stop_thread):
     c = CloudZenohClient("wss://x.com")
-    sub_id = c.declare_subscriber("odom", "schema", MagicMock(), binary=False)
+    sub_id = c.declare_subscriber("odom", MagicMock(), binary=False)
     c.undeclare_subscriber(sub_id)
     assert sub_id not in c._subscriptions
     assert sub_id not in c._subscription_is_binary
@@ -57,7 +57,7 @@ def test_undeclare_subscriber_removes(stop_thread):
 def test_publish_emits_message(stop_thread):
     c = CloudZenohClient("wss://x.com")
     with patch.object(c, "_send") as mock_send:
-        c.publish("cmd_vel", "geometry_msgs/msg/Twist", {"linear": {}})
+        c.publish("cmd_vel", {"linear": {}})
         mock_send.assert_called_once()
         msg = mock_send.call_args[0][0]
         assert msg["type"] == "publish"
@@ -110,7 +110,7 @@ def test_send_bytes_raises_when_websocket_none(stop_thread):
 def test_dispatch_json_sample_calls_callback(stop_thread):
     c = CloudZenohClient("wss://x.com")
     cb = MagicMock()
-    sub_id = c.declare_subscriber("odom", "schema", cb, binary=False)
+    sub_id = c.declare_subscriber("odom", cb, binary=False)
     c._dispatch_json({"type": "sample", "subId": sub_id, "payload": {"x": 1}})
     cb.assert_called_once_with({"x": 1})
 
@@ -118,7 +118,7 @@ def test_dispatch_json_sample_calls_callback(stop_thread):
 def test_dispatch_json_sample_callback_exception_doesnt_propagate(stop_thread):
     c = CloudZenohClient("wss://x.com")
     cb = MagicMock(side_effect=RuntimeError("boom"))
-    sub_id = c.declare_subscriber("odom", "schema", cb, binary=False)
+    sub_id = c.declare_subscriber("odom", cb, binary=False)
     # Should not raise
     c._dispatch_json({"type": "sample", "subId": sub_id, "payload": {}})
 
@@ -141,7 +141,7 @@ def test_dispatch_json_other_types(stop_thread):
 def test_dispatch_binary_dispatches_to_callback(stop_thread):
     c = CloudZenohClient("wss://x.com")
     cb = MagicMock()
-    sub_id = c.declare_subscriber("odom", "schema", cb, binary=True)
+    sub_id = c.declare_subscriber("odom", cb, binary=True)
     sub_b = sub_id.encode("utf-8")
     payload = b"\xab\xcd"
     frame = bytes([0x10]) + len(sub_b).to_bytes(2, "big") + sub_b + payload
@@ -165,7 +165,7 @@ def test_dispatch_binary_malformed_length(stop_thread):
 def test_dispatch_binary_callback_exception_caught(stop_thread):
     c = CloudZenohClient("wss://x.com")
     cb = MagicMock(side_effect=RuntimeError("boom"))
-    sub_id = c.declare_subscriber("odom", "schema", cb, binary=True)
+    sub_id = c.declare_subscriber("odom", cb, binary=True)
     sub_b = sub_id.encode("utf-8")
     frame = bytes([0x10]) + len(sub_b).to_bytes(2, "big") + sub_b + b"data"
     # Should not raise
