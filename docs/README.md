@@ -43,9 +43,9 @@ icon: book-open
     <tr>
       <td><strong>MCP Integration</strong></td>
       <td>Connect OM1 with MCP tools</td>
-      <td><a href=".gitbook/assets/mcp-integration.png">mcp-integration.png</a></td>
+      <td><a href=".gitbook/assets/mcp_w_.png">mcp-integration.png</a></td>
       <td><a href="developing/mcp-integration.md">mcp-integration.md</a></td>
-      <td><a href=".gitbook/assets/mcp-integration.png">mcp-integration.png</a></td>
+      <td><a href=".gitbook/assets/mcp_w_.png">mcp-integration.png</a></td>
     </tr>
   </tbody>
 </table>
