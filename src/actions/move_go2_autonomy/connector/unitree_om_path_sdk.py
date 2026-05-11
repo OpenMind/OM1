@@ -1,8 +1,9 @@
+import json
 import logging
 import math
 import random
 from queue import Queue
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import Field
 
@@ -11,17 +12,26 @@ from actions.move_go2_autonomy.interface import MoveInput
 from providers.face_presence_provider import FacePresenceProvider
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
+from providers.unitree_go2_odom_zenoh_provider import UnitreeGo2OdomZenohProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from providers.unitree_go2_state_zenoh_provider import UnitreeGo2StateZenohProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
     String,
+    UnitreeRequest,
+    UnitreeRequestHeader,
+    UnitreeRequestIdentity,
     ZenohSampleType,
     ZenohSessionType,
     open_zenoh_session,
     prepare_header,
 )
+
+SPORT_API_ID_MOVE = 1008
+SPORT_API_ID_STOPMOVE = 1003
+SPORT_API_ID_BALANCESTAND = 1002
 
 
 class MoveUnitreeOMPathSDKConfig(ActionConfig):
@@ -34,6 +44,10 @@ class MoveUnitreeOMPathSDKConfig(ActionConfig):
         Ethernet channel for Unitree Go2 odometry data.
     mode : Optional[str]
         Operation mode, e.g., "guard".
+    sport_request_topic : str
+        Unitree sport API Zenoh topic for receiving movement requests.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     """
 
     unitree_ethernet: str = Field(
@@ -43,6 +57,14 @@ class MoveUnitreeOMPathSDKConfig(ActionConfig):
     mode: Optional[str] = Field(
         default=None,
         description='Operation mode, e.g., "guard".',
+    )
+    sport_request_topic: str = Field(
+        default="api/sport/request",
+        description="Unitree sport API Zenoh topic for receiving movement requests.",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
 
 
@@ -79,40 +101,50 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
         self.gap_previous = 0
 
         self.path_provider = SimplePathsProvider()
-        self.unitree_go2_state = UnitreeGo2StateProvider()
         self.face_presence_provider = FacePresenceProvider()
 
         # create sport client
         self.sport_client = None
-        try:
-            self.sport_client = SportClient()
-            self.sport_client.SetTimeout(10.0)
-            self.sport_client.Init()
-            self.sport_client.StopMove()
-            self.sport_client.Move(0.05, 0, 0)
-            logging.info("Autonomy Unitree sport client initialized")
-        except Exception as e:
-            logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = self.config.unitree_ethernet
-        if unitree_ethernet is None:
-            raise ValueError("unitree_ethernet must be specified in the config")
-        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
+        if self.config.use_sim:
+            self.odom = UnitreeGo2OdomZenohProvider()
+            self.unitree_go2_state = UnitreeGo2StateZenohProvider()
+        else:
+            try:
+                self.sport_client = SportClient()
+                self.sport_client.SetTimeout(10.0)
+                self.sport_client.Init()
+                self.sport_client.StopMove()
+                self.sport_client.Move(0.05, 0, 0)
+                logging.info("Autonomy Unitree sport client initialized")
+            except Exception as e:
+                logging.error(f"Error initializing Unitree sport client: {e}")
+
+            unitree_ethernet = self.config.unitree_ethernet
+            if unitree_ethernet is None:
+                raise ValueError("unitree_ethernet must be specified in the config")
+
+            self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
+            self.unitree_go2_state = UnitreeGo2StateProvider()
 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
         self.ai_status_response = "om/ai/response"
         self.session: Optional[ZenohSessionType] = None
-        self.pub = None
+        self.session_sport_pub: Optional[Any] = None
 
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(self.ai_status_request, self._zenoh_ai_status_request)
             self._zenoh_ai_status_response_pub = self.session.declare_publisher(self.ai_status_response)
+
+            if self.config.use_sim:
+                logging.info("MoveUnitreeOMPathSDKConnector initialized in simulator mode")
+                self.session_sport_pub = self.session.declare_publisher(self.config.sport_request_topic)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
-            self.pub = None
+            self.session_sport_pub = None
 
         # AI control status
         self.ai_control_enabled = True
@@ -141,7 +173,7 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
             logging.info("AI Control is disabled - disregarding AI command")
             return
 
-        if self.unitree_go2_state.state_code == 1002 and self.sport_client:
+        if self.unitree_go2_state.state_code == 1002 and self.sport_client and not self.config.use_sim:
             logging.info("Robot is in jointLock state - issuing BalanceStand()")
             self.sport_client.BalanceStand()
 
@@ -216,10 +248,24 @@ class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, 
         """
         logging.info(f"_move_robot: vx={vx}, vy={vy}, vturn={vturn}")
 
-        if not self.sport_client:
+        if self.odom.position["body_attitude"] != RobotState.STANDING:
             return
 
-        if self.odom.position["body_attitude"] != RobotState.STANDING:
+        if self.config.use_sim:
+            request = UnitreeRequest(
+                header=UnitreeRequestHeader(identity=UnitreeRequestIdentity(id=0, api_id=SPORT_API_ID_MOVE)),
+                parameter=json.dumps({"x": vx, "y": vy, "z": vturn}),
+            )
+
+            if self.session_sport_pub is None:
+                logging.warning("session_sport_pub: zenoh session sport publisher not ready")
+                return
+
+            self.session_sport_pub.put(request.serialize())
+
+            return
+
+        if not self.sport_client:
             return
 
         if self.unitree_go2_state.state == "jointLock":

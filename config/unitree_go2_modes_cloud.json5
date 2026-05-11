@@ -66,7 +66,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
       ],
       lifecycle_hooks: [
@@ -137,7 +137,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -283,7 +283,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_om_path_sdk_zenoh",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "navigate_location",
@@ -293,7 +293,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -406,7 +406,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
