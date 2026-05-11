@@ -29,6 +29,7 @@ from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator
+from zenoh_msgs.session import load_session_config
 
 
 def _load_schema(schema_file: str) -> dict:
@@ -165,6 +166,7 @@ def add_meta(
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
     g_mode: Optional[str] = None,
+    g_use_sim: Optional[bool] = None,
 ) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
@@ -183,13 +185,14 @@ def add_meta(
         The Robot IP address.
     g_mode : Optional[str]
         The mode of operation.
+    g_use_sim : Optional[bool]
+        Whether simulation mode is enabled.
 
     Returns
     -------
     dict
         The updated runtime configuration.
     """
-    # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
     if "unitree_ethernet" not in config and g_ut_eth is not None:
@@ -200,6 +203,8 @@ def add_meta(
         config["robot_ip"] = g_robot_ip
     if "mode" not in config and g_mode is not None:
         config["mode"] = g_mode
+    if "use_sim" not in config and g_use_sim is not None:
+        config["use_sim"] = g_use_sim
     return config
 
 
@@ -468,6 +473,8 @@ class ModeSystemConfig:
         Mapping of mode names to their configurations. Defaults to empty dict.
     transition_rules : List[TransitionRule], optional
         List of rules for transitioning between modes. Defaults to empty list.
+    use_sim: bool
+        Whether the system is running in simulation mode. Defaults to False.
     """
 
     # Global settings
@@ -499,6 +506,9 @@ class ModeSystemConfig:
     # Modes and transition rules
     modes: Dict[str, ModeConfig] = field(default_factory=dict)
     transition_rules: List[TransitionRule] = field(default_factory=list)
+
+    # Simulation
+    use_sim: bool = False
 
     async def execute_global_lifecycle_hooks(
         self, hook_type: LifecycleHookType, context: Optional[Dict[str, Any]] = None
@@ -567,8 +577,10 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
     g_api_key = raw_config.get("api_key")
     g_URID = raw_config.get("URID")
     g_ut_eth = raw_config.get("unitree_ethernet")
+    g_use_sim = raw_config.get("use_sim", False)
 
     load_unitree(g_ut_eth)
+    load_session_config(g_api_key, g_use_sim)
 
     mode_system_config = ModeSystemConfig(
         version=config_version,
@@ -581,6 +593,7 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
         robot_ip=g_robot_ip,
         URID=g_URID,
         unitree_ethernet=g_ut_eth,
+        use_sim=g_use_sim,
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         knowledge_base=raw_config.get("knowledge_base"),
@@ -646,6 +659,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     g_URID = system_config.URID
     g_robot_ip = system_config.robot_ip
     g_mode = mode_config.name
+    g_use_sim = system_config.use_sim
 
     # Load inputs
     mode_config.agent_inputs = [
@@ -659,6 +673,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -677,6 +692,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -695,6 +711,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -713,6 +730,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -732,6 +750,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             },
             available_actions=mode_config.agent_actions,

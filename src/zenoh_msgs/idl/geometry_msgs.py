@@ -121,3 +121,20 @@ class AccelWithCovarianceStamped(IdlStruct, typename="AccelWithCovarianceStamped
 
     header: Header
     accel: AccelWithCovariance
+
+
+@dataclass
+class Transform(IdlStruct, typename="Transform"):
+    """Transform message."""
+
+    translation: Vector3
+    rotation: Quaternion
+
+
+@dataclass
+class TransformStamped(IdlStruct, typename="TransformStamped"):
+    """TransformStamped message — used inside tf2_msgs/TFMessage."""
+
+    header: Header
+    child_frame_id: str
+    transform: Transform

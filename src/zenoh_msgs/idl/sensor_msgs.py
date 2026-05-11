@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 
 from pycdr2 import IdlStruct
-from pycdr2.types import array, float32, float64, int8, sequence, uint8, uint16, uint32
+from pycdr2.types import array, float32, float64, int8, int32, sequence, uint8, uint16, uint32
 
 from .geometry_msgs import Point32, Quaternion, Vector3
 from .std_msgs import Header, String
@@ -47,7 +47,7 @@ class Image(IdlStruct, typename="Image"):
     encoding: str
     is_bigendian: uint8
     step: uint32
-    data: sequence[uint8]
+    data: bytes
 
 
 @dataclass
@@ -254,3 +254,12 @@ class Paths(IdlStruct, typename="Paths"):
     paths: List[uint32]
     blocked_by_obstacle_idx: List[uint32]
     blocked_by_hazard_idx: List[uint32]
+
+
+@dataclass
+class Joy(IdlStruct, typename="Joy"):
+    """Joy message."""
+
+    header: Header
+    axes: List[float32]
+    buttons: List[int32]

@@ -23,6 +23,7 @@
         "name": {"type": "string"},
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
+        "use_sim": {"type": "boolean"},
         "unitree_ethernet": {"type": "string"},
         "system_prompt_base": {"type": "string"},
         "system_governance": {"type": "string"},

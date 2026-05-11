@@ -109,6 +109,10 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
+        if self._zenoh_tts_status_response_pub is None:
+            logging.error("TTS status response publisher is not initialized")
+            return
+
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
         logging.debug(f"Received TTS Control Status message: {tts_status}")
 

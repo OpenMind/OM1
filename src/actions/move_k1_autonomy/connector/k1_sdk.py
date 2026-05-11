@@ -149,7 +149,8 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             # Serialize for Zenoh bridge
             serialized_request = request.serialize()
             service_name = self.rpc_service_name
-            replies = self.session.get(
+            # TODO: Add support for cloud sim for the service call
+            replies = self.session.get(  # type: ignore
                 service_name,
                 payload=serialized_request,
                 timeout=5.0,
