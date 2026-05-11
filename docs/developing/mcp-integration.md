@@ -12,7 +12,7 @@ MCP is an open standard that lets AI agents discover and use tools dynamically. 
 
 ## Architecture
 
-![ ](../assets/mcp-integration.png)
+![ ](../../.gitbook/assets/mcp-integration.png)
 
 ### Key Components
 

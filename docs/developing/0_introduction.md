@@ -3,7 +3,7 @@ title: Introduction
 description: "OpenMind builds open-source software that helps machines think, learn, and collaborate"
 icon: brain
 ---
-![ ](../assets/banner_white.png)
+![ ](../../.gitbook/assets/banner_white.png)
 
 ## What is OM1?
 
