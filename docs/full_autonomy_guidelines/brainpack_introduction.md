@@ -47,9 +47,4 @@ Each BrainPack comes with:
 
 ## Next Steps
 
-We'll shortly be releasing:
-
-- **Bill of Materials (BOM)** — Complete parts list to build your own BrainPack
-- **DIY Guidelines** — Step-by-step assembly instructions
-
-Stay tuned!
+The BrainPack is open-source and you can refer to the guidelines to build your own [here](https://github.com/OpenMind/brainpack).
