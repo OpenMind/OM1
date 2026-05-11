@@ -18,6 +18,10 @@ CLOUD_TOPICS: set[str] = {
     "camera/realsense2_camera_node/depth/image_rect_isaac_sim_raw",
     "camera/realsense2_camera_node/depth/camera_info",
     "rgb_image",
+    # Navigation
+    "goal_pose",
+    "navigate_to_pose/_action/status",
+    "navigate_to_pose/_action/cancel_goal",
     # Unitree
     "lowstate",
     "lf/lowstate",
@@ -39,5 +43,6 @@ CLOUD_TOPICS: set[str] = {
     "om/asr/text",
     "om/avatar/request",
     "om/avatar/response",
+    "om/localization_pose",
     "image",
 }
