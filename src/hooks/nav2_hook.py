@@ -47,7 +47,7 @@ class StartNav2HookContext(BaseModel):
 
         Returns
         -------
-        StartSlamHookContext
+        StartNav2HookContext
             The validated context with base_url set if it was None.
         """
         if self.base_url is None:
