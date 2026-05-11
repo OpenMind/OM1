@@ -22,13 +22,13 @@ icon: book-open
     <tr>
       <td><strong>Get started</strong></td>
       <td>with OpenMind’s OM1</td>
-      <td><a href=".gitbook/assets/favicon.png">favicon.png</a></td>
+      <td><a href="../.gitbook/assets/favicon.png">favicon.png</a></td>
       <td><a href="developing/0_introduction.md">0_introduction.md</a></td>
     </tr>
     <tr>
       <td><strong>OM1 API Reference</strong></td>
       <td>Our technical APIs</td>
-      <td><a href=".gitbook/assets/favicon.png">favicon.png</a></td>
+      <td><a href="../.gitbook/assets/favicon.png">favicon.png</a></td>
       <td><a href="api-reference/introduction.md">introduction.md</a></td>
     </tr>
   </tbody>
