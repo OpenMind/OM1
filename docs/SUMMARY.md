@@ -66,6 +66,7 @@
 
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
+* [Cloud Isaac Sim](simulators/cloud-isaac-sim.md)
 * [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
