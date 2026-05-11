@@ -47,17 +47,14 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            logging.info(
-                "Received lidar localization message with payload size: %d bytes", len(data.payload.to_bytes())
-            )
             message: nav_msgs.LidarLocalization = nav_msgs.LidarLocalization.deserialize(data.payload.to_bytes())
-            logging.info("Received Lidar Localization message: %s", message)
+            logging.debug("Received Lidar Localization message: %s", message)
 
             quality_percent = message.quality_percent
             self.localization_status = quality_percent >= self.quality_tolerance
             self.localization_pose = message.pose
 
-            logging.info(
+            logging.debug(
                 "Localization Status: %s, Pose: %s",
                 self.localization_status,
                 self.localization_pose,
