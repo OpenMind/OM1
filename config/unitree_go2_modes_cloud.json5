@@ -133,9 +133,6 @@
           name: "remember_location",
           llm_label: "remember_location",
           connector: "unitree_go2_location",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam",
-          },
         },
       ],
       backgrounds: [
@@ -150,9 +147,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
         {
           type: "UnitreeGo2FrontierExploration",
@@ -165,7 +159,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "start_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -183,7 +176,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "start_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -201,7 +193,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "stop_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           timeout_seconds: 15,
           priority: 1,
@@ -249,9 +240,6 @@
       agent_inputs: [
         {
           type: "UnitreeGo2LocationsInput",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
         {
           type: "LidarLocalizationInput",
@@ -315,9 +303,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
       ],
       lifecycle_hooks: [
@@ -327,7 +312,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "start_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -345,7 +329,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "start_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -363,7 +346,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "stop_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -434,9 +416,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
       ],
       lifecycle_hooks: [

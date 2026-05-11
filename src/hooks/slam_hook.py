@@ -1,8 +1,8 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import aiohttp
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
@@ -13,13 +13,21 @@ class StartSlamHookContext(BaseModel):
 
     Parameters
     ----------
-    base_url : str
-        Base URL for the SLAM system.
+    base_url : Optional[str]
+        Base URL for the SLAM system. If None, determined by use_sim flag.
+    use_sim : bool
+        Whether to run the connector in the simulator.
+    api_key : str
+        API key for OpenMind cloud system authentication.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000",
-        description="Base URL for the SLAM system",
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the SLAM system. If None, determined by use_sim flag.",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
     api_key: str = Field(
         default="",
@@ -28,6 +36,24 @@ class StartSlamHookContext(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    @model_validator(mode="after")
+    def set_base_url(self) -> "StartSlamHookContext":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        StartSlamHookContext
+            The validated context with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator"
+            else:
+                self.base_url = "http://localhost:5000"
+
+        return self
+
 
 class StopSlamHookContext(BaseModel):
     """
@@ -35,15 +61,23 @@ class StopSlamHookContext(BaseModel):
 
     Parameters
     ----------
-    base_url : str
+    base_url : Optional[str]
         Base URL for the SLAM system to send the stop command.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     map_name : str
         Name of the map to save before stopping SLAM.
+    api_key : str
+        API key for OpenMind cloud system authentication.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000",
+    base_url: Optional[str] = Field(
+        default=None,
         description="Base URL for the SLAM system to send the stop command",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
     map_name: str = Field(
         default="map",
@@ -55,6 +89,24 @@ class StopSlamHookContext(BaseModel):
     )
 
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def set_base_url(self) -> "StopSlamHookContext":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        StopSlamHookContext
+            The validated context with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator"
+            else:
+                self.base_url = "http://localhost:5000"
+
+        return self
 
 
 async def start_slam_hook(context: Dict[str, Any]):
