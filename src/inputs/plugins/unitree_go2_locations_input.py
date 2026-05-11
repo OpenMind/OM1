@@ -19,6 +19,8 @@ class UnitreeGo2LocationsSensorConfig(SensorConfig):
     ----------
     base_url : Optional[str]
         Base URL for the locations service. If None, determined by use_sim flag.
+    api_key: str
+        API key for OpenMind cloud system.
     use_sim : bool
         Whether to run the connector in the simulator.
     timeout : int
@@ -31,11 +33,11 @@ class UnitreeGo2LocationsSensorConfig(SensorConfig):
         default=None,
         description="Base URL for the locations service. If None, determined by use_sim flag.",
     )
-    use_sim: bool = Field(default=False, description="Whether to run the connector in the simulator.")
     api_key: str = Field(
         default="",
         description="API key for OpenMind cloud system",
     )
+    use_sim: bool = Field(default=False, description="Whether to run the connector in the simulator.")
     timeout: int = Field(default=5, description="Timeout in seconds")
     refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
