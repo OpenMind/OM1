@@ -15,7 +15,7 @@
       type: "GoogleASRInput",
     },
     {
-      type: "VLMGeminiZenoh",
+      type: "VLMGemini",
     },
     {
       type: "SimplePaths",

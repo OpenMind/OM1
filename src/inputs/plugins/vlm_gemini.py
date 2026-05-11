@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from queue import Empty, Queue
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import Field
 
@@ -10,6 +10,7 @@ from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_gemini_provider import VLMGeminiProvider
+from providers.vlm_gemini_zenoh_provider import VLMGeminiZenohProvider
 
 
 class VLMGeminiConfig(SensorConfig):
@@ -19,13 +20,19 @@ class VLMGeminiConfig(SensorConfig):
     Parameters
     ----------
     api_key : Optional[str]
-        API Key.
+        OM portal key. If unset, falls back to env $OM_API_KEY.
     base_url : str
-        Base URL for the Gemini service.
-    stream_base_url : Optional[str]
-        Stream Base URL.
-    camera_index : int
-        Index of the camera device.
+        OM Gemini proxy URL (HTTP, not WS).
+    topic : str
+        Zenoh topic carrying sensor_msgs/Image frames.
+    decode_format : str
+        Stored on the VideoZenohStream but unused by it; safe to leave default.
+    model : str
+        Gemini model id.
+    max_tokens : int
+        Token budget. Reasoning models burn through this — bump if cut off.
+    prompt : Optional[str]
+        Prompt sent with each frame. Defaults to a one-sentence scene-description prompt; override for task-specific use.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
@@ -35,6 +42,11 @@ class VLMGeminiConfig(SensorConfig):
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     camera_index: int = Field(default=0, description="Index of the camera device")
+
+    topic: str = Field(default="camera/go2/image_raw", description="Zenoh topic for the image stream")
+    decode_format: str = Field(default="RAW", description="Image decode format hint")
+    use_sim: bool = Field(default=False, description="Whether to use the simulation stream endpoint")
+
     model: str = Field(
         default="gemini-2.5-flash",
         description="Gemini model id; supported (server-side): "
@@ -102,25 +114,31 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         )
         camera_index = self.config.camera_index
 
+        provider_kwargs = {
+            "model": self.config.model,
+            "max_tokens": self.config.max_tokens,
+        }
+
         if self.config.prompt is not None:
-            self.vlm: VLMGeminiProvider = VLMGeminiProvider(
-                base_url=base_url,
+            provider_kwargs["prompt"] = self.config.prompt
+
+        if self.config.use_sim:
+            self.vlm: Union[VLMGeminiZenohProvider, VLMGeminiProvider] = VLMGeminiZenohProvider(
+                base_url=self.config.base_url,
                 api_key=api_key,
-                stream_url=stream_base_url,
-                camera_index=camera_index,
-                model=self.config.model,
-                max_tokens=self.config.max_tokens,
-                prompt=self.config.prompt,
+                topic=self.config.topic,
+                decode_format=self.config.decode_format,
+                **provider_kwargs,
             )
         else:
-            self.vlm: VLMGeminiProvider = VLMGeminiProvider(
+            self.vlm = VLMGeminiProvider(
                 base_url=base_url,
                 api_key=api_key,
                 stream_url=stream_base_url,
                 camera_index=camera_index,
-                model=self.config.model,
-                max_tokens=self.config.max_tokens,
+                **provider_kwargs,
             )
+
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
@@ -237,4 +255,5 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         Stop the VLM input.
         """
         if self.vlm:
+            self.vlm.deregister_message_callback()
             self.vlm.stop()
