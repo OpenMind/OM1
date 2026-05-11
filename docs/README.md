@@ -33,5 +33,19 @@ icon: book-open
       <td><a href="api-reference/introduction.md">introduction.md</a></td>
       <td><a href="../.gitbook/assets/openmind-intro-cover.png">OpenMind</a></td>
     </tr>
+    <tr>
+      <td><strong>Full Autonomy</strong></td>
+      <td>Set up and understand full autonomy workflow</td>
+      <td><a href="../.gitbook/assets/dog_brainpack_line.png">dog_brainpack_line.png</a></td>
+      <td><a href="full_autonomy_guidelines/architecture_overview.md">architecture_overview.md</a></td>
+      <td><a href="../.gitbook/assets/dog_brainpack_line.png">dog_brainpack_line.png</a></td>
+    </tr>
+    <tr>
+      <td><strong>MCP Integration</strong></td>
+      <td>Connect OM1 with MCP tools</td>
+      <td><a href="../.gitbook/assets/mcp-integration.png">mcp-integration.png</a></td>
+      <td><a href="developing/mcp-integration.md">mcp-integration.md</a></td>
+      <td><a href="../.gitbook/assets/mcp-integration.png">mcp-integration.png</a></td>
+    </tr>
   </tbody>
 </table>

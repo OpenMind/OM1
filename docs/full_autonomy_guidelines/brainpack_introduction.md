@@ -12,7 +12,7 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 > The BrainPack makes your robot smarter — a system that **learns, moves, and builds with you.**
 
-![ ](../../.gitbook/assets/brainpack.png)
+![ ](../../.gitbook/assets/dog_brainpack_line.png)
 
 ## Key Features
 
@@ -34,8 +34,6 @@ Each BrainPack comes with:
 - Multiple connectivity options (Ethernet, USB)
 - Flexible power input options
 - Mounting hardware for Unitree robots
-
-![ ](../../.gitbook/assets/brainpack_2.png)
 
 ## Supported Robots
 
