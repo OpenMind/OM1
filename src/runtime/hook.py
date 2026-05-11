@@ -565,7 +565,9 @@ def create_hook_handler(hook: LifecycleHook) -> Optional[LifecycleHookHandler]:
         return None
 
 
-def parse_lifecycle_hooks(raw_hooks: List[Dict], api_key: Optional[str] = None) -> List[LifecycleHook]:
+def parse_lifecycle_hooks(
+    raw_hooks: List[Dict], api_key: Optional[str] = None, use_sim: Optional[bool] = None
+) -> List[LifecycleHook]:
     """
     Parse raw lifecycle hooks configuration into LifecycleHook objects.
 
@@ -575,6 +577,8 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict], api_key: Optional[str] = None) 
         Raw hook configuration data
     api_key : Optional[str]
         Global API key to inject into message hooks if not specified
+    use_sim : Optional[bool]
+        Whether to run in simulation mode. Injected into handler config if not specified.
 
     Returns
     -------
@@ -588,6 +592,9 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict], api_key: Optional[str] = None) 
 
             if api_key is not None and "api_key" not in handler_config:
                 handler_config["api_key"] = api_key
+
+            if use_sim is not None and "use_sim" not in handler_config:
+                handler_config["use_sim"] = use_sim
 
             hook = LifecycleHook(
                 hook_type=LifecycleHookType(hook_data["hook_type"]),

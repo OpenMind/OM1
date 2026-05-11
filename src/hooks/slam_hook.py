@@ -122,7 +122,7 @@ async def start_slam_hook(context: Dict[str, Any]):
     base_url = ctx.base_url
     api_key = ctx.api_key
     slam_url = f"{base_url}/start/slam"
-    logging.info(f"Starting SLAM with URL: {slam_url} and API Key: {'***' if api_key else '(none)'}")
+
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -130,7 +130,6 @@ async def start_slam_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
                     logging.info(f"SLAM started successfully: {result.get('message', 'Success')}")
