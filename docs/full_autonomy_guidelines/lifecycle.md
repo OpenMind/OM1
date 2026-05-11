@@ -10,7 +10,7 @@ A lifecycle defines the operational boundaries of a mode, from its activation to
 
 A mode represents a functional state of the robot, such as Guard, SLAM, or Navigation, and each mode runs within a lifecycle that determines how and when it starts, executes, and ends.
 
-![ ](../../.gitbook/assets/lifecycle.png)
+![ ](../.gitbook/assets/lifecycle.png)
 
 ## Conceptual Model
 

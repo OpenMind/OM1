@@ -149,7 +149,7 @@ python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own pol
 
 You'll now be able to see Isaac Sim running on your system.
 
-![ ](../../.gitbook/assets/isaac-sim.png)
+![ ](../.gitbook/assets/isaac-sim.png)
 
 > **Note**: You can skio Step 6 to Step 8 if you don't have Enterprise Plan Subscription. SLAM and Navigation are only supported as Premium features.
 

@@ -98,26 +98,26 @@ Example config to setup time based transition type for transitioning into guard 
 
 2. Login to your OM1 portal and head over to **Machine Teleops** on the left navigation bar.
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/machine_teleops.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/machine_teleops.png)
 
 3. Once connected, you'll see your machine listed as **Online** at the top of the screen.
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/online_machine.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/online_machine.png)
 
 4. Scroll down to access the **Mode Selection** section. From here, choose the mode you want your robot to switch to.
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/portal_mode_selection.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/portal_mode_selection.png)
 
 5. In **SLAM Mode**, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/slam_map.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/slam_map.png)
 
 6. Once the map is saved, switch to **Navigation Mode** to make the robot move autonomously between locations. Use the dropdown menu to select a destination.
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
 
 7. You can also monitor three live camera streams directly from the portal.
 
-   ![ ](../../.gitbook/assets/full-autonomy-assets/video_streams.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/video_streams.png)
 
 These steps and exploration methods provide a structured approach to understanding and managing OM1’s modes.
