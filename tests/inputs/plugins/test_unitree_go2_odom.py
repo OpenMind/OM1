@@ -8,9 +8,10 @@ from providers.unitree_go2_odom_provider import RobotState
 
 
 def test_initialization():
-    """Test basic initialization."""
+    """Test basic initialization with default use_sim=False."""
     with (
-        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_cyclone_provider,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider") as mock_zenoh_provider,
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
@@ -18,25 +19,50 @@ def test_initialization():
 
         assert sensor.messages == []
         assert "location" in sensor.descriptor_for_LLM.lower() or "pose" in sensor.descriptor_for_LLM.lower()
+        mock_cyclone_provider.assert_called_once_with(None)
+        mock_zenoh_provider.assert_not_called()
+
+
+def test_initialization_with_use_sim_true():
+    """Test initialization with use_sim=True uses Zenoh provider."""
+    with (
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_cyclone_provider,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider") as mock_zenoh_provider,
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
+    ):
+        config = UnitreeGo2OdomConfig(use_sim=True, api_key="test_key", topic="test/topic")
+        sensor = UnitreeGo2Odom(config=config)
+
+        assert sensor.messages == []
+        mock_zenoh_provider.assert_called_once_with(
+            api_key="test_key",
+            topic="test/topic",
+            use_sim=True,
+        )
+        mock_cyclone_provider.assert_not_called()
 
 
 def test_initialization_with_unitree_ethernet():
-    """Test initialization with Unitree ethernet channel."""
+    """Test initialization with Unitree ethernet channel uses CycloneDDS provider."""
     with (
-        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_cyclone_provider,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider") as mock_zenoh_provider,
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig(unitree_ethernet="eth0")
         UnitreeGo2Odom(config=config)
 
-        mock_provider.assert_called_once_with("eth0")
+        # Should use CycloneDDS provider when use_sim=False (default)
+        mock_cyclone_provider.assert_called_once_with("eth0")
+        mock_zenoh_provider.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_poll_with_position_data():
-    """Test _poll with position data available."""
+    """Test _poll with position data available using CycloneDDS provider."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -57,6 +83,7 @@ async def test_poll_with_no_data():
     """Test _poll when no position data available."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -77,6 +104,7 @@ async def test_raw_to_text_with_valid_input():
     """Test _raw_to_text with valid position data."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
@@ -97,6 +125,7 @@ async def test_raw_to_text_with_none():
     """Test _raw_to_text with None input."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
 
@@ -111,6 +140,7 @@ def test_formatted_latest_buffer_with_messages():
     """Test formatted_latest_buffer with messages."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
@@ -133,6 +163,7 @@ def test_formatted_latest_buffer_empty():
     """Test formatted_latest_buffer with empty buffer."""
     with (
         patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
@@ -140,3 +171,66 @@ def test_formatted_latest_buffer_empty():
 
         result = sensor.formatted_latest_buffer()
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_poll_with_zenoh_provider():
+    """Test _poll with Zenoh provider when use_sim=True."""
+    with (
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider") as mock_zenoh_class,
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
+    ):
+        mock_zenoh = MagicMock()
+        mock_zenoh.position = {"x": 5.0, "y": 10.0, "z": 0.5}
+        mock_zenoh_class.return_value = mock_zenoh
+
+        config = UnitreeGo2OdomConfig(use_sim=True, api_key="test_key")
+        sensor = UnitreeGo2Odom(config=config)
+
+        with patch("inputs.plugins.unitree_go2_odom.asyncio.sleep", new=AsyncMock()):
+            result = await sensor._poll()
+
+        assert result == {"x": 5.0, "y": 10.0, "z": 0.5}
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_sitting():
+    """Test _raw_to_text when robot is sitting."""
+    with (
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
+    ):
+        config = UnitreeGo2OdomConfig()
+        sensor = UnitreeGo2Odom(config=config)
+
+        position_data = {"moving": False, "body_attitude": RobotState.SITTING}
+
+        with patch("inputs.plugins.unitree_go2_odom.time.time", return_value=1234.0):
+            result = await sensor._raw_to_text(position_data)
+
+        assert result is not None
+        assert "sitting" in result.message.lower()
+        assert "do not generate new movement" in result.message.lower()
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_moving():
+    """Test _raw_to_text when robot is moving."""
+    with (
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomZenohProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
+    ):
+        config = UnitreeGo2OdomConfig()
+        sensor = UnitreeGo2Odom(config=config)
+
+        position_data = {"moving": True, "body_attitude": RobotState.STANDING}
+
+        with patch("inputs.plugins.unitree_go2_odom.time.time", return_value=1234.0):
+            result = await sensor._raw_to_text(position_data)
+
+        assert result is not None
+        assert "moving" in result.message.lower()
+        assert "do not generate new movement" in result.message.lower()

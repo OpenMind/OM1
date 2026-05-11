@@ -30,7 +30,7 @@
       hertz: 0.01,
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
@@ -94,7 +94,7 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
@@ -245,7 +245,7 @@
           type: "LidarLocalizationInput",
         },
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
@@ -376,7 +376,7 @@
       action_execution_mode: "concurrent",
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
