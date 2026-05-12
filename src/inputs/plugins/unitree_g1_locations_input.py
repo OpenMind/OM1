@@ -3,7 +3,7 @@ import logging
 import time
 from typing import List, Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -17,17 +17,47 @@ class UnitreeG1LocationsSensorConfig(SensorConfig):
 
     Parameters
     ----------
-    base_url : str
-        Base URL for the locations service.
+    base_url : Optional[str]
+        Base URL for the locations service. If None, determined by use_sim flag.
+    api_key: str
+        API key for OpenMind cloud system.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     timeout : int
         Timeout in seconds.
     refresh_interval : int
         Refresh interval in seconds.
     """
 
-    base_url: str = Field(default="http://localhost:5000/maps/locations/list", description="Base URL")
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the locations service. If None, determined by use_sim flag.",
+    )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
+    use_sim: bool = Field(default=False, description="Whether to run the connector in the simulator.")
     timeout: int = Field(default=5, description="Timeout")
     refresh_interval: int = Field(default=30, description="Refresh Interval")
+
+    @model_validator(mode="after")
+    def set_base_url(self) -> "UnitreeG1LocationsSensorConfig":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        UnitreeG1LocationsSensorConfig
+            The validated configuration with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list"
+            else:
+                self.base_url = "http://localhost:5000/maps/locations/list"
+
+        return self
 
 
 class UnitreeG1LocationsInput(FuserInput[UnitreeG1LocationsSensorConfig, Optional[str]]):
@@ -51,6 +81,10 @@ class UnitreeG1LocationsInput(FuserInput[UnitreeG1LocationsSensorConfig, Optiona
         base_url = self.config.base_url
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
+
+        if not base_url:
+            logging.error("UnitreeG1LocationsInput requires a base_url to be set in the configuration")
+            return
 
         self.locations_provider = UnitreeG1LocationsProvider(base_url, timeout, refresh_interval)
         self.io_provider = IOProvider()

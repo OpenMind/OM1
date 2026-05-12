@@ -5,7 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from aiohttp import ClientError, ClientTimeout
 
-from hooks.slam_hook import start_slam_hook, stop_slam_hook
+from hooks.slam_hook import (
+    StartSlamHookContext,
+    StopSlamHookContext,
+    start_slam_hook,
+    stop_slam_hook,
+)
 
 
 def create_mock_response(status, json_data=None, json_error=None):
@@ -32,6 +37,89 @@ def mock_elevenlabs_provider():
         provider_instance.add_pending_message = Mock()
         mock.return_value = provider_instance
         yield provider_instance
+
+
+class TestStartSlamHookContext:
+    """Tests for StartSlamHookContext model validator."""
+
+    def test_default_context(self):
+        """Test default context values."""
+        context = StartSlamHookContext()
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        context = StartSlamHookContext(use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+        assert context.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        context = StartSlamHookContext(use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        context = StartSlamHookContext(
+            base_url="http://custom:8080",
+            use_sim=True,
+        )
+        assert context.base_url == "http://custom:8080"
+        assert context.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        context = StartSlamHookContext(base_url=None, use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        context = StartSlamHookContext(base_url=None, use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+
+
+class TestStopSlamHookContext:
+    """Tests for StopSlamHookContext model validator."""
+
+    def test_default_context(self):
+        """Test default context values."""
+        context = StopSlamHookContext()
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+        assert context.map_name == "map"
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        context = StopSlamHookContext(use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+        assert context.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        context = StopSlamHookContext(use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        context = StopSlamHookContext(
+            base_url="http://custom:9090",
+            use_sim=True,
+        )
+        assert context.base_url == "http://custom:9090"
+        assert context.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        context = StopSlamHookContext(base_url=None, use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        context = StopSlamHookContext(base_url=None, use_sim=False)
+        assert context.base_url == "http://localhost:5000"
 
 
 class TestStartSlamHook:

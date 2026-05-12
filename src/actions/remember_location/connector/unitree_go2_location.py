@@ -1,9 +1,9 @@
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from actions.base import ActionConfig, ActionConnector
 from actions.remember_location.interface import RememberLocationInput
@@ -16,21 +16,29 @@ class UnitreeGo2RememberLocationConfig(ActionConfig):
 
     Parameters
     ----------
-    base_url : str
-        The base URL for the remember location API.
+    base_url : Optional[str]
+        Base URL for the remember location API. If None, automatically determined by use_sim flag.
+    api_key : str
+        API key for OpenMind API authentication.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     timeout : int
         Timeout for the HTTP requests in seconds.
     map_name : str
         The name of the map to use when remembering locations.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000/maps/locations/add/slam",
-        description="The base URL for the remember location API.",
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the remember location API. If None, determined by use_sim flag.",
     )
     api_key: str = Field(
         default="",
         description="API key for OpenMind API authentication",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
     timeout: int = Field(
         default=5,
@@ -40,6 +48,24 @@ class UnitreeGo2RememberLocationConfig(ActionConfig):
         default="map",
         description="The name of the map to use when remembering locations.",
     )
+
+    @model_validator(mode="after")
+    def set_base_url(self) -> "UnitreeGo2RememberLocationConfig":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        UnitreeGo2RememberLocationConfig
+            The validated configuration with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+            else:
+                self.base_url = "http://localhost:5000/maps/locations/add/slam"
+
+        return self
 
 
 class UnitreeGo2RememberLocationConnector(ActionConnector[UnitreeGo2RememberLocationConfig, RememberLocationInput]):

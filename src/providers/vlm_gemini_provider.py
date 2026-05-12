@@ -129,6 +129,12 @@ class VLMGeminiProvider:
         """
         self.message_callback = message_callback
 
+    def deregister_message_callback(self):
+        """
+        Deregister the message callback.
+        """
+        self.message_callback = None
+
     def start(self):
         """
         Start the Gemini provider.
