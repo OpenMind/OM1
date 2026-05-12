@@ -130,9 +130,9 @@ class OpenAILLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            om1_llm_latency.labels(model=str(self._config.model or OpenAIModel.GPT_5), endpoint=str(self.base_url)).observe(
-                time.time() - llm_start_time
-            )
+            om1_llm_latency.labels(
+                model=str(self._config.model or OpenAIModel.GPT_5), endpoint=str(self.base_url)
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")
