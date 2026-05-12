@@ -179,7 +179,6 @@ class TestModeCortexRuntime:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
@@ -444,7 +443,6 @@ class TestMCPModeTransition:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
@@ -496,7 +494,6 @@ class TestMCPModeTransition:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
@@ -520,7 +517,6 @@ class TestMCPModeTransition:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
@@ -557,7 +553,6 @@ class TestMCPModeTransition:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
@@ -596,7 +591,6 @@ class TestMCPModeTransition:
         with (
             patch("runtime.cortex.Fuser"),
             patch("runtime.cortex.ActionOrchestrator"),
-            patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):

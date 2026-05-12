@@ -154,12 +154,6 @@ def test_set_llm_prompt_method(io_provider):
     assert io_provider.llm_prompt == prompt
 
 
-def test_set_llm_start_time_method(io_provider):
-    start_time = time.time()
-    io_provider.set_llm_start_time(start_time)
-    assert io_provider.llm_start_time == start_time
-
-
 def test_dynamic_variables(io_provider):
     io_provider.add_dynamic_variable("var1", "value1")
     io_provider.add_dynamic_variable("var2", 42)
