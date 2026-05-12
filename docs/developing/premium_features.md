@@ -12,21 +12,24 @@ OM1 and Simulation environment are fully open source and publicly accessible. Yo
 All other features beyond the core framework are available exclusively through our **Enterprise Plan**. This includes:
 
 - Advanced robotics integrations
-- Specialized hardware support
 - Extended simulation capabilities
 - SLAM map generation and Navigation
 - Face detection and Anonymization
+- Person following
+- Obstacle avoidance
+- Remote control for the robots
+- Auto charging
 - Custom feature development
 
 ## Simulation Limitations
 
-The open source simulation environment does not include autonomy features:
+The open source simulation environment does not include the following features:
 
 - **Navigation** - Autonomous path planning and movement
 - **SLAM** - Simultaneous Localization and Mapping
-- **Auto Charging** - Automated battery charging and docking
+- **Obstacle Avoidance**
 
-Full autonomy capabilities are available exclusively with the Enterprise Plan.
+These capabilities are available exclusively with the Builder Plan and above.
 
 ## Students & Researchers
 

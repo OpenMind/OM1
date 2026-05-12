@@ -12,7 +12,7 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 > The BrainPack makes your robot smarter — a system that **learns, moves, and builds with you.**
 
-![ ](../assets/brainpack.png)
+![ ](../.gitbook/assets/dog_brainpack_line.png)
 
 ## Key Features
 
@@ -35,8 +35,6 @@ Each BrainPack comes with:
 - Flexible power input options
 - Mounting hardware for Unitree robots
 
-![ ](../assets/brainpack_2.png)
-
 ## Supported Robots
 
 | Robot | Support Level |
@@ -47,9 +45,4 @@ Each BrainPack comes with:
 
 ## Next Steps
 
-We'll shortly be releasing:
-
-- **Bill of Materials (BOM)** — Complete parts list to build your own BrainPack
-- **DIY Guidelines** — Step-by-step assembly instructions
-
-Stay tuned!
+The BrainPack is open-source and you can refer to the guidelines to build your own [here](https://github.com/OpenMind/brainpack).
