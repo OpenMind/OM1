@@ -27,7 +27,7 @@ OM1 is a modular robotics intelligence platform that connects perception, langua
 
 The full autonomy stack is built from modular, containerized services that communicate through well-defined interfaces. Each service has a single responsibility and can be updated, restarted, or replaced independently without affecting the rest of the system.
 
-![ ](../assets/full-autonomy-assets/full_autonomy_architecture.png)
+![ ](../.gitbook/assets/full-autonomy-assets/full_autonomy_architecture.png)
 
 At a high level, sensor data flows from hardware into the ROS2 SDK, which publishes it as structured topics. OM1 consumes those topics alongside user input, runs them through the LLM, and emits action commands back to the robot. The video processor handles media as a parallel pipeline, and the avatar renders robot state on the display throughout.
 
