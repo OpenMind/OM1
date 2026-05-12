@@ -130,7 +130,7 @@ class OpenAILLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            om1_llm_latency.labels(model=str(self.base_url or OpenAIModel.GPT_5), endpoint=str(self.base_url)).observe(
+            om1_llm_latency.labels(model=str(self._config.model or OpenAIModel.GPT_5), endpoint=str(self.base_url)).observe(
                 time.time() - llm_start_time
             )
 
