@@ -77,8 +77,7 @@ Run OM1 on your local machine and connect to the cloud simulator:
 
 1. Copy your **API Key** from the portal
 2. Open `config/cloud_sim.json5` in your local OM1 repo
-3. Update with your cloud instance details
-4. Run the config:
+3. Run the config:
 
 ```bash
 uv run src/run.py cloud_sim
