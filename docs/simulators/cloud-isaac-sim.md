@@ -4,7 +4,7 @@ description: "Learn how to run cloud Isaac Sim integrated with OM1"
 icon: robot
 ---
 
-# Cloud Isaac Sim Developer Walkthrough
+## Cloud Isaac Sim Developer Walkthrough
 
 Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastructure, fully integrated with OM1. This guide walks you through launching an instance and connecting your OM1 setup.
 
