@@ -4,7 +4,10 @@ import os
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from providers.safety_sandbox_provider import SafetySandboxProvider
 
 import json5
 from jsonschema import ValidationError, validate
@@ -54,7 +57,9 @@ def _load_schema(schema_file: str) -> dict:
     schema_path = Path(__file__).parent / "../../config/schema" / schema_file
 
     if not schema_path.exists():
-        raise FileNotFoundError(f"Schema file not found: {schema_path}. Cannot validate configuration.")
+        raise FileNotFoundError(
+            f"Schema file not found: {schema_path}. Cannot validate configuration."
+        )
 
     with open(schema_path, "r") as f:
         return json.load(f)
@@ -131,8 +136,12 @@ class RuntimeConfig:
         Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
     action_dependencies : Optional[Dict[str, List[str]]]
         Optional mapping of action dependencies.
+    safety_sandbox : Optional["SafetySandboxProvider"]
+        Optional safety sandbox provider instance.
     knowledge_base : Optional[Dict[str, Any]]
         Optional knowledge base configuration for document retrieval.
+    mcp_servers : Optional[Any]
+        Optional MCP servers configuration.
     """
 
     version: str
@@ -155,6 +164,7 @@ class RuntimeConfig:
     unitree_ethernet: Optional[str] = None
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    safety_sandbox: Optional["SafetySandboxProvider"] = None
     knowledge_base: Optional[Dict[str, Any]] = None
     mcp_servers: Optional[Any] = None
 
@@ -300,6 +310,12 @@ class ModeConfig:
         Execution mode for actions (e.g., "concurrent", "sequential", "dependencies"). Defaults to concurrent.
     action_dependencies : Optional[Dict[str, List[str]]], optional
         Dependencies between actions for execution order. Defaults to None.
+    safety_sandbox_config : Optional[Dict], optional
+        Raw configuration for safety sandbox.
+    safety_sandbox : Optional["SafetySandboxProvider"], optional
+        Instantiated safety sandbox provider.
+    _raw_safety_sandbox : Optional[Dict], optional
+        Raw safety sandbox configuration before loading.
     _raw_inputs : List[Dict], optional
         Raw input configurations before loading. Defaults to empty list.
     _raw_llm : Optional[Dict], optional
@@ -310,6 +326,8 @@ class ModeConfig:
         Raw action configurations before loading. Defaults to empty list.
     _raw_backgrounds : List[Dict], optional
         Raw background configurations before loading. Defaults to empty list.
+    _raw_mcp_servers : List[Dict], optional
+        Raw MCP server configurations before loading. Defaults to empty list.
     """
 
     version: str
@@ -335,6 +353,9 @@ class ModeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    safety_sandbox_config: Optional[Dict] = None
+    safety_sandbox: Optional["SafetySandboxProvider"] = None
+    _raw_safety_sandbox: Optional[Dict] = field(default_factory=dict)
     mcp_servers: Optional[Any] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
@@ -380,6 +401,7 @@ class ModeConfig:
             unitree_ethernet=global_config.unitree_ethernet,
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
+            safety_sandbox=self.safety_sandbox,
             knowledge_base=global_config.knowledge_base,
             mcp_servers=self.mcp_servers,
         )
@@ -533,10 +555,14 @@ class ModeSystemConfig:
 
         context.update({"system_name": self.name, "is_global_hook": True})
 
-        return await execute_lifecycle_hooks(self.global_lifecycle_hooks, hook_type, context)
+        return await execute_lifecycle_hooks(
+            self.global_lifecycle_hooks, hook_type, context
+        )
 
 
-def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -> ModeSystemConfig:
+def load_mode_config(
+    config_name: str, mode_source_path: Optional[str] = None
+) -> ModeSystemConfig:
     """
     Load a mode-aware configuration from a JSON5 file.
 
@@ -563,7 +589,9 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
         try:
             raw_config = json5.load(f)
         except Exception as e:
-            raise ValueError(f"Failed to parse configuration file '{config_path}': {e}") from e
+            raise ValueError(
+                f"Failed to parse configuration file '{config_path}': {e}"
+            ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
@@ -598,11 +626,17 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         knowledge_base=raw_config.get("knowledge_base"),
         global_cortex_llm=raw_config.get("cortex_llm"),
-        global_lifecycle_hooks=parse_lifecycle_hooks(raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key),
+        global_lifecycle_hooks=parse_lifecycle_hooks(
+            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
+        ),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
+        logging.info(f"mode_data keys for {mode_name}: {list(mode_data.keys())}")
+        # Read safety_sandbox config if present
+        safety_sandbox_config = mode_data.get("safety_sandbox", {})
+
         mode_config = ModeConfig(
             version=mode_data.get("version", "1.0.1"),
             name=mode_name,
@@ -610,12 +644,15 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", []), api_key=g_api_key),
+            lifecycle_hooks=parse_lifecycle_hooks(
+                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
+            ),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
             action_execution_mode=mode_data.get("action_execution_mode"),
             action_dependencies=mode_data.get("action_dependencies"),
+            _raw_safety_sandbox=safety_sandbox_config,
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
             _raw_simulators=mode_data.get("simulators", []),
@@ -758,6 +795,72 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     else:
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
 
+    # Initialize safety sandbox provider if configured
+    logging.info(f"Safety sandbox raw config: {mode_config._raw_safety_sandbox}")
+    if mode_config._raw_safety_sandbox:
+        try:
+            from providers.safety_sandbox_provider import SafetySandboxProvider
+
+            mode_config.safety_sandbox = SafetySandboxProvider(
+                mode_config._raw_safety_sandbox
+            )
+            logging.info(f"Safety sandbox loaded for mode {mode_config.name}")
+        except Exception as e:
+            logging.error(
+                f"Failed to load safety sandbox for mode {mode_config.name}: {e}"
+            )
+            mode_config.safety_sandbox = None
+
+    # Initialize RobotStateProvider and EnvironmentModelProvider if safety sandbox is enabled
+    if mode_config.safety_sandbox and mode_config.safety_sandbox.enabled:
+        try:
+            from providers.environment_model_provider import EnvironmentModelProvider
+            from providers.robot_state_provider import RobotStateProvider
+            from providers.teleops_status_provider import TeleopsStatusProvider
+            from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
+            from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
+
+            robot_state_provider = RobotStateProvider()
+            odom_provider = None
+            state_provider = None
+            amcl_provider = None
+            lidar_provider = None
+            teleops_provider = TeleopsStatusProvider()
+
+            for bg in mode_config.backgrounds:
+                if hasattr(bg, "unitree_go2_odom_provider"):
+                    odom_provider = bg.unitree_go2_odom_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_state_provider"):
+                    state_provider = bg.unitree_go2_state_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_amcl_provider"):
+                    amcl_provider = bg.unitree_go2_amcl_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_rplidar_provider"):
+                    lidar_provider = bg.unitree_go2_rplidar_provider  # type: ignore
+
+            for inp in mode_config.agent_inputs:
+                if hasattr(inp, "odom") and isinstance(inp.odom, UnitreeGo2OdomProvider):  # type: ignore
+                    odom_provider = inp.odom  # type: ignore
+                if hasattr(inp, "lidar") and isinstance(inp.lidar, UnitreeGo2RPLidarProvider):  # type: ignore
+                    lidar_provider = inp.lidar  # type: ignore
+
+            robot_state_provider.register_providers(
+                odom=odom_provider,
+                state_prov=state_provider,
+                amcl=amcl_provider,
+                lidar=lidar_provider,
+                teleops=teleops_provider,
+            )
+            robot_state_provider.start()
+
+            # Initialize EnvironmentModelProvider
+            env_provider = EnvironmentModelProvider()
+            env_provider.register_providers(lidar=lidar_provider, amcl=amcl_provider)
+            env_provider.start()
+            logging.info("EnvironmentModelProvider initialized and started")
+            logging.info("RobotStateProvider initialized and started")
+        except Exception as e:
+            logging.error(f"Failed to initialize RobotStateProvider: {e}")
+
     # Load MCP servers
     mode_config.mcp_servers = load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
 
@@ -794,6 +897,8 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
                 "agent_actions": mode_config._raw_actions,
                 "backgrounds": mode_config._raw_backgrounds,
                 "lifecycle_hooks": mode_config._raw_lifecycle_hooks,
+                # Include safety_sandbox config for serialization
+                "safety_sandbox": mode_config._raw_safety_sandbox,
             }
 
         transition_rules = []
