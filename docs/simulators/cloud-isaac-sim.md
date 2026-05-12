@@ -19,7 +19,7 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 1. Log in to the [OpenMind Portal](https://portal.openmind.com)
 2. Navigate to **Cloud Simulator** from the sidebar
 
-![ ](../assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
 
 ### Instance Types
 
@@ -29,6 +29,8 @@ Choose based on your simulation workload:
 |---|---|---|---|---|
 | **Standard** | 8 | 32 GB | Development & testing | 42000 OMCU |
 | **Performance** | 16 | 64 GB | Heavy compute, multi-robot scenarios | 60000 OMCU |
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/select_instance.png)
 
 ### Supported Robots
 
@@ -44,17 +46,17 @@ Expect **4-5 minutes** for your instance to fully initialize.
 
 Once you initiate the launch, the system begins setting up your cloud environment.
 
-![ ](../assets/cloud-isaac-sim-assets/env%20config.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/env%20config.png)
 
-![ ](../assets/cloud-isaac-sim-assets/finalising.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/finalising.png)
 
 The instance is ready when the status changes to **Running**.
 
 ## Step 3: Access your Active Cloud Isaac Sim Session
 
-View your running session and logs from the portal dashboard.
+View your running session from the portal dashboard.
 
-![ ](../assets/cloud-isaac-sim-assets/session.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/session.png)
 
 ## Step 4: Run OM1 with Cloud Simulator
 
@@ -64,7 +66,7 @@ Two options are available once your instance is running:
 
 Access a full VS Code environment running in the cloud with OM1 pre-configured.
 
-![ ](../assets/cloud-isaac-sim-assets/cloud-vscode.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud-vscode.png)
 
 From here, you can:
 - Edit and run OM1 code directly in the cloud
@@ -90,6 +92,6 @@ When you're finished with your simulation:
 1. Return to the Cloud Simulator dashboard
 2. Click **Delete Instance**
 
-![ ](../assets/cloud-isaac-sim-assets/delete-instance.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/delete-instance.png)
 
 3. Confirm the deletion — this stops billing and frees cloud resources
