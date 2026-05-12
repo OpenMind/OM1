@@ -20,6 +20,7 @@ from runtime.config import (
 )
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+from skills.orchestrator import SkillOrchestrator
 
 
 class ModeCortexRuntime:
@@ -92,6 +93,7 @@ class ModeCortexRuntime:
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
         self.mcp_orchestrator: Optional[MCPOrchestrator] = None
+        self.skill_orchestrator: Optional[SkillOrchestrator] = None
 
         # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
@@ -150,6 +152,17 @@ class ModeCortexRuntime:
 
         if self.current_config.mcp_servers:
             self.mcp_orchestrator = MCPOrchestrator(self.current_config)
+
+        if self.current_config.skills:
+            self.skill_orchestrator = SkillOrchestrator(self.current_config.skills)
+            schema = self.skill_orchestrator.get_tool_schema()
+            if schema:
+                base_schemas = [
+                    s
+                    for s in self.current_config.cortex_llm.function_schemas
+                    if s.get("function", {}).get("name") != "read_skill"
+                ]
+                self.current_config.cortex_llm.function_schemas = base_schemas + [schema]
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -235,8 +248,11 @@ class ModeCortexRuntime:
             self.background_orchestrator.stop()
 
         if self.simulator_orchestrator:
-            logging.debug("Stopping simulator orchestrator")
             self.simulator_orchestrator.stop()
+
+        if self.skill_orchestrator:
+            logging.debug("Clearing skill orchestrator")
+            self.skill_orchestrator = None
 
         if self.action_orchestrator:
             logging.debug("Stopping action orchestrator")
@@ -588,7 +604,64 @@ class ModeCortexRuntime:
                     logging.info(f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping")
                     return
 
-                if self.mcp_orchestrator:
+                # Skill round: read_skill tool calls inject instructions before MCP
+                if self.skill_orchestrator and output is not None:
+                    skill_actions = [a for a in output.actions if a.type == "read_skill"]
+                    if skill_actions:
+                        succeeded_skill_calls = set()
+                        skill_prompt = prompt
+
+                        for skill_round_idx in range(3):
+                            current_skill_actions = [a for a in output.actions if a.type == "read_skill"]
+                            if not current_skill_actions:
+                                break
+
+                            # Dispatch OM1 actions immediately before skill recall
+                            om1_pre_skill = [
+                                a for a in output.actions if a.type != "read_skill" and not a.type.startswith("mcp_")
+                            ]
+                            if om1_pre_skill:
+                                await self.action_orchestrator.promise(om1_pre_skill)
+
+                            skill_results = self.skill_orchestrator.execute_read_skills(
+                                current_skill_actions, succeeded_skill_calls
+                            )
+                            if not skill_results:
+                                break
+
+                            skill_recall_prompt = self.skill_orchestrator.build_skill_recall_prompt(
+                                skill_prompt, skill_results
+                            )
+                            skill_prompt = skill_recall_prompt
+
+                            # Update the original prompt so MCP rounds inherit skill context
+                            prompt = skill_prompt
+
+                            if not self._is_generation_valid(cortex_generation, "skill recall prompt"):
+                                return
+
+                            try:
+                                skill_streamed_output = None
+                                async for skill_stream_output in self.current_config.cortex_llm.ask_stream(
+                                    skill_recall_prompt
+                                ):
+                                    if not self._is_generation_valid(cortex_generation, "skill streaming"):
+                                        return
+                                    if skill_stream_output is None:
+                                        continue
+                                    if skill_streamed_output is None:
+                                        skill_streamed_output = skill_stream_output
+                                    else:
+                                        skill_streamed_output.actions.extend(skill_stream_output.actions)
+                                output = skill_streamed_output
+                            except asyncio.CancelledError:
+                                logging.info("Skill recall LLM call cancelled")
+                                raise
+
+                            if output is None:
+                                break
+
+                if self.mcp_orchestrator and output is not None:
                     succeeded_calls = set()
                     original_prompt = prompt
 
