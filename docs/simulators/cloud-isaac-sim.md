@@ -25,10 +25,10 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 
 Choose based on your simulation workload:
 
-| Instance Type | vCPUs | RAM | Best For |
-|---|---|---|---|
-| **Standard** | 8 | 32 GB | Development & testing |
-| **Performance** | 16 | 64 GB | Heavy compute, multi-robot scenarios |
+| Instance Type | vCPUs | RAM | Best For | Price (Per Hour) |
+|---|---|---|---|---|
+| **Standard** | 8 | 32 GB | Development & testing | 42000 OMCU |
+| **Performance** | 16 | 64 GB | Heavy compute, multi-robot scenarios | 60000 OMCU |
 
 ### Supported Robots
 
