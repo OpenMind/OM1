@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -87,8 +88,9 @@ class FunctionGemmaLLM(LLM[R]):
         if not config.model:
             self._config.model = FunctionGemmaModel.MULTILINGUAL
 
+        self.base_url = config.base_url or "http://localhost:8200/v1"
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "http://localhost:8200/v1",
+            base_url=self.base_url,
             api_key=config.api_key,
         )
 
@@ -117,7 +119,7 @@ class FunctionGemmaLLM(LLM[R]):
         try:
             logging.info(f"FunctionGemma input: {prompt}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             # FunctionGemma expects messages in a specific format, so we wrap the prompt accordingly
@@ -137,7 +139,10 @@ class FunctionGemmaLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(
+                model=str(self._config.model or FunctionGemmaModel.MULTILINGUAL),
+                endpoint=str(self.base_url),
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")

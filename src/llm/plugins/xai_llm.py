@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -66,8 +67,9 @@ class XAILLM(LLM[R]):
         if not config.model:
             self._config.model = "grok-4-latest"
 
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/xai"
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.com/api/core/xai",
+            base_url=self.base_url,
             api_key=config.api_key,
         )
 
@@ -99,7 +101,7 @@ class XAILLM(LLM[R]):
             logging.debug(f"XAI LLM input: {prompt}")
             logging.debug(f"XAI LLM messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
@@ -108,7 +110,7 @@ class XAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "grok-4-latest",
+                model=self._config.model or XAIModel.GROK_4,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -120,7 +122,9 @@ class XAILLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(
+                model=str(self._config.model or XAIModel.GROK_4), endpoint=str(self.base_url)
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")

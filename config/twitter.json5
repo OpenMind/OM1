@@ -29,5 +29,4 @@
       connector: "twitterAPI",
     },
   ],
-  simulators: [],
 }

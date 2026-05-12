@@ -27,8 +27,6 @@ from runtime.hook import (
 )
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
-from simulators import load_simulator
-from simulators.base import Simulator
 from zenoh_msgs.session import load_session_config
 
 
@@ -111,8 +109,6 @@ class RuntimeConfig:
         List of agent input sensors.
     cortex_llm : LLM
         The main LLM for the agent.
-    simulators : List[Simulator]
-        List of simulators.
     agent_actions : List[AgentAction]
         List of agent actions.
     backgrounds : List[Background]
@@ -144,7 +140,6 @@ class RuntimeConfig:
 
     agent_inputs: List[Sensor]
     cortex_llm: LLM
-    simulators: List[Simulator]
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
@@ -290,8 +285,6 @@ class ModeConfig:
         List of input sensors for the mode. Defaults to empty list.
     cortex_llm : Optional[LLM], optional
         The LLM used for the mode. Defaults to None.
-    simulators : List[Simulator], optional
-        List of simulators used in the mode. Defaults to empty list.
     agent_actions : List[AgentAction], optional
         List of actions available to the agent in this mode. Defaults to empty list.
     backgrounds : List[Background], optional
@@ -304,8 +297,6 @@ class ModeConfig:
         Raw input configurations before loading. Defaults to empty list.
     _raw_llm : Optional[Dict], optional
         Raw LLM configuration before loading. Defaults to None.
-    _raw_simulators : List[Dict], optional
-        Raw simulator configurations before loading. Defaults to empty list.
     _raw_actions : List[Dict], optional
         Raw action configurations before loading. Defaults to empty list.
     _raw_backgrounds : List[Dict], optional
@@ -329,7 +320,6 @@ class ModeConfig:
 
     agent_inputs: List[Sensor] = field(default_factory=list)
     cortex_llm: Optional[LLM] = None
-    simulators: List[Simulator] = field(default_factory=list)
     agent_actions: List[AgentAction] = field(default_factory=list)
     backgrounds: List[Background] = field(default_factory=list)
 
@@ -339,7 +329,6 @@ class ModeConfig:
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
-    _raw_simulators: List[Dict] = field(default_factory=list)
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
     _raw_mcp_servers: List[Dict] = field(default_factory=list)
@@ -371,7 +360,6 @@ class ModeConfig:
             system_prompt_examples=global_config.system_prompt_examples,
             agent_inputs=self.agent_inputs,
             cortex_llm=self.cortex_llm,
-            simulators=self.simulators,
             agent_actions=self.agent_actions,
             backgrounds=self.backgrounds,
             robot_ip=global_config.robot_ip,
@@ -622,7 +610,6 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
             action_dependencies=mode_data.get("action_dependencies"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
-            _raw_simulators=mode_data.get("simulators", []),
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
@@ -682,25 +669,6 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             }
         )
         for inp in mode_config._raw_inputs
-    ]
-
-    # Load simulators
-    mode_config.simulators = [
-        load_simulator(
-            {
-                **sim,
-                "config": add_meta(
-                    sim.get("config", {}),
-                    g_api_key,
-                    g_ut_eth,
-                    g_URID,
-                    g_robot_ip,
-                    g_mode,
-                    g_use_sim,
-                ),
-            }
-        )
-        for sim in mode_config._raw_simulators
     ]
 
     # Load actions
@@ -794,7 +762,6 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
                 "save_interactions": mode_config.save_interactions,
                 "agent_inputs": mode_config._raw_inputs,
                 "cortex_llm": mode_config._raw_llm,
-                "simulators": mode_config._raw_simulators,
                 "agent_actions": mode_config._raw_actions,
                 "backgrounds": mode_config._raw_backgrounds,
                 "lifecycle_hooks": mode_config._raw_lifecycle_hooks,

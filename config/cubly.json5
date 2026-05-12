@@ -17,11 +17,6 @@
       type: "SerialReader",
     },
   ],
-  simulators: [
-    {
-      type: "WebSim",
-    },
-  ],
   cortex_llm: {
     type: "OpenAILLM",
     config: {
