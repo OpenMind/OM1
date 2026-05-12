@@ -58,11 +58,6 @@
           llm_label: "emotion",
           connector: "avatar",
         },
-        {
-          name: "move_go2_action",
-          llm_label: "unitree_go2_action",
-          connector: "unitree_sdk",
-        },
       ],
       backgrounds: [
         {
