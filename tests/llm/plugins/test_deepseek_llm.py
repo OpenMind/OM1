@@ -146,19 +146,3 @@ async def test_ask_api_error(llm):
 
         result = await llm.ask("test prompt")
         assert result is None
-
-
-@pytest.mark.asyncio
-async def test_io_provider_timing(llm, mock_response):
-    """Test timing metrics collection"""
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.chat.completions,
-            "create",
-            AsyncMock(return_value=mock_response),
-        )
-
-        await llm.ask("test prompt")
-        assert llm.io_provider.llm_start_time is not None
-        assert llm.io_provider.llm_end_time is not None
-        assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time

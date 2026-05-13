@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -145,7 +146,7 @@ class QwenLLM(LLM[R]):
             logging.info(f"Qwen input: {prompt}")
             logging.info(f"Qwen messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted = [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
@@ -170,7 +171,9 @@ class QwenLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(model=str(self._model), endpoint=str(self._base_url)).observe(
+                time.time() - llm_start_time
+            )
 
             tool_calls = list(message.tool_calls or [])
             if not tool_calls and isinstance(message.content, str) and "<tool_call>" in message.content:

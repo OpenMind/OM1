@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -130,7 +131,7 @@ class OllamaLLM(LLM[R]):
             logging.info(f"Ollama input: {prompt}")
             logging.debug(f"Ollama messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
@@ -164,7 +165,9 @@ class OllamaLLM(LLM[R]):
                 return None
 
             result = response.json()
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(model=str(self._config.model), endpoint=str(self._base_url)).observe(
+                time.time() - llm_start_time
+            )
 
             logging.debug(f"Ollama response: {json.dumps(result, indent=2)}")
 

@@ -65,7 +65,6 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
         hertz=config.get("hertz", 1),
         _raw_inputs=config.get("agent_inputs", []),
         _raw_llm=config.get("cortex_llm"),
-        _raw_simulators=config.get("simulators", []),
         _raw_actions=config.get("agent_actions", []),
         _raw_backgrounds=config.get("backgrounds", []),
         _raw_mcp_servers=config.get("mcp_servers", []),
@@ -111,7 +110,6 @@ def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
             timeout_seconds=mode_data.get("timeout_seconds"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
-            _raw_simulators=mode_data.get("simulators", []),
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
         )
@@ -600,20 +598,8 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
 
-    # Capture output from simulators and actions
+    # Capture output from actions
     original_action_promise = cortex.action_orchestrator.promise
-
-    # Mock the simulator and action promises to capture outputs
-    if cortex.simulator_orchestrator:
-        original_simulator_promise = cortex.simulator_orchestrator.promise
-
-        async def mock_simulator_promise(actions):
-            output_results["actions"] = actions
-            logging.info(f"Simulator received commands: {actions}")
-            return await original_simulator_promise(actions)
-
-        # Replace the original method with our mocked version
-        cortex.simulator_orchestrator.promise = mock_simulator_promise
 
     async def mock_action_promise(actions):
         output_results["actions"] = actions
