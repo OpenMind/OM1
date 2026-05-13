@@ -622,3 +622,215 @@ def test_initialization_default_api_version_is_v2():
 
         call_kwargs = mock_asr.call_args[1]
         assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+
+
+def test_handle_asr_message_speech_start_sets_timer():
+    """speech_start event sets _speech_start_time."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.time.time", return_value=100.0),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+        assert sensor._speech_start_time is None
+
+        sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
+
+        assert sensor._speech_start_time == 100.0
+
+
+def test_handle_asr_message_speech_end_records_duration_metrics():
+    """speech_end event records speech duration histogram and gauge."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration_last") as mock_gauge,
+        patch("inputs.plugins.google_asr.time.time", return_value=105.0),
+    ):
+        config = GoogleASRSensorConfig(language="english", api_version="v2")
+        sensor = GoogleASRInput(config=config)
+        sensor._speech_start_time = 100.0
+
+        sensor._handle_asr_message(json.dumps({"type": "speech_end"}))
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(5.0)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(5.0)
+
+
+def test_handle_asr_message_speech_end_no_op_without_start_time():
+    """speech_end event is ignored when _speech_start_time is None."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration_last") as mock_gauge,
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+        # _speech_start_time defaults to None
+
+        sensor._handle_asr_message(json.dumps({"type": "speech_end"}))
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_end_of_utterance_records_latency_metrics():
+    """end_of_utterance event records utterance latency histogram and gauge."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency_last") as mock_gauge,
+        patch("inputs.plugins.google_asr.time.time", return_value=103.5),
+    ):
+        config = GoogleASRSensorConfig(language="english", api_version="v2")
+        sensor = GoogleASRInput(config=config)
+        sensor._speech_start_time = 100.0
+
+        sensor._handle_asr_message(json.dumps({"type": "end_of_utterance"}))
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(3.5)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(3.5)
+
+
+def test_handle_asr_message_end_of_utterance_no_op_without_start_time():
+    """end_of_utterance event is ignored when _speech_start_time is None."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency_last") as mock_gauge,
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        sensor._handle_asr_message(json.dumps({"type": "end_of_utterance"}))
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_asr_reply_records_latency_and_resets_timer():
+    """asr_reply with speech_start set records ASR latency and resets _speech_start_time."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_latency") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_gauge,
+        patch("inputs.plugins.google_asr.time.time", return_value=102.0),
+    ):
+        config = GoogleASRSensorConfig(language="english", api_version="v2")
+        sensor = GoogleASRInput(config=config)
+        sensor._speech_start_time = 100.0
+
+        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(2.0)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(2.0)
+        assert sensor._speech_start_time is None
+
+
+def test_handle_asr_message_asr_reply_no_latency_without_start_time():
+    """asr_reply without prior speech_start does not record latency metrics."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_latency") as mock_hist,
+        patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_gauge,
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+        # _speech_start_time is None
+
+        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_full_sequence_records_all_metrics():
+    """Full speech_start -> speech_end -> asr_reply sequence records all three metric pairs."""
+    times = iter([100.0, 104.0, 106.0])
+
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration") as mock_dur_hist,
+        patch("inputs.plugins.google_asr.om1_asr_speech_duration_last") as mock_dur_gauge,
+        patch("inputs.plugins.google_asr.om1_asr_latency") as mock_lat_hist,
+        patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_lat_gauge,
+        patch("inputs.plugins.google_asr.time.time", side_effect=times),
+    ):
+        config = GoogleASRSensorConfig(language="english", api_version="v2")
+        sensor = GoogleASRInput(config=config)
+
+        # speech_start — time() == 100.0
+        sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
+        assert sensor._speech_start_time == 100.0
+
+        # speech_end — time() == 104.0  =>  duration = 4.0
+        sensor._handle_asr_message(json.dumps({"type": "speech_end"}))
+        mock_dur_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(4.0)
+        mock_dur_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(4.0)
+
+        # asr_reply — time() == 106.0  =>  latency = 6.0
+        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+        mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(6.0)
+        mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(6.0)
+        assert sensor._speech_start_time is None
+
+
+def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence():
+    """speech_start -> end_of_utterance -> asr_reply sequence records utterance and ASR latency."""
+    times = iter([100.0, 101.5, 103.0])
+
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency") as mock_utt_hist,
+        patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency_last") as mock_utt_gauge,
+        patch("inputs.plugins.google_asr.om1_asr_latency") as mock_lat_hist,
+        patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_lat_gauge,
+        patch("inputs.plugins.google_asr.time.time", side_effect=times),
+    ):
+        config = GoogleASRSensorConfig(language="english", api_version="v2")
+        sensor = GoogleASRInput(config=config)
+
+        sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
+        sensor._handle_asr_message(json.dumps({"type": "end_of_utterance"}))
+        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+
+        mock_utt_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(1.5)
+        mock_utt_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(1.5)
+        mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(3.0)
+        mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(3.0)
