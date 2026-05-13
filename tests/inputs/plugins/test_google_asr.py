@@ -774,8 +774,6 @@ def test_handle_asr_message_asr_reply_no_latency_without_start_time():
 
 def test_handle_asr_message_full_sequence_records_all_metrics():
     """Full speech_start -> speech_end -> asr_reply sequence records all three metric pairs."""
-    times = iter([100.0, 104.0, 106.0])
-
     with (
         patch("inputs.plugins.google_asr.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
@@ -786,22 +784,25 @@ def test_handle_asr_message_full_sequence_records_all_metrics():
         patch("inputs.plugins.google_asr.om1_asr_speech_duration_last") as mock_dur_gauge,
         patch("inputs.plugins.google_asr.om1_asr_latency") as mock_lat_hist,
         patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_lat_gauge,
-        patch("inputs.plugins.google_asr.time.time", side_effect=times),
     ):
         config = GoogleASRSensorConfig(language="english", api_version="v2")
         sensor = GoogleASRInput(config=config)
+        sensor._speech_start_time = None
 
         # speech_start — time() == 100.0
-        sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=100.0):
+            sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
         assert sensor._speech_start_time == 100.0
 
         # speech_end — time() == 104.0  =>  duration = 4.0
-        sensor._handle_asr_message(json.dumps({"type": "speech_end"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=104.0):
+            sensor._handle_asr_message(json.dumps({"type": "speech_end"}))
         mock_dur_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(4.0)
         mock_dur_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(4.0)
 
         # asr_reply — time() == 106.0  =>  latency = 6.0
-        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=106.0):
+            sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
         mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(6.0)
         mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(6.0)
         assert sensor._speech_start_time is None
@@ -809,8 +810,6 @@ def test_handle_asr_message_full_sequence_records_all_metrics():
 
 def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence():
     """speech_start -> end_of_utterance -> asr_reply sequence records utterance and ASR latency."""
-    times = iter([100.0, 101.5, 103.0])
-
     with (
         patch("inputs.plugins.google_asr.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
@@ -821,14 +820,17 @@ def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence():
         patch("inputs.plugins.google_asr.om1_asr_utterance_end_latency_last") as mock_utt_gauge,
         patch("inputs.plugins.google_asr.om1_asr_latency") as mock_lat_hist,
         patch("inputs.plugins.google_asr.om1_asr_latency_last") as mock_lat_gauge,
-        patch("inputs.plugins.google_asr.time.time", side_effect=times),
     ):
         config = GoogleASRSensorConfig(language="english", api_version="v2")
         sensor = GoogleASRInput(config=config)
+        sensor._speech_start_time = None
 
-        sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
-        sensor._handle_asr_message(json.dumps({"type": "end_of_utterance"}))
-        sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=100.0):
+            sensor._handle_asr_message(json.dumps({"type": "speech_start"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=101.5):
+            sensor._handle_asr_message(json.dumps({"type": "end_of_utterance"}))
+        with patch("inputs.plugins.google_asr.time.time", return_value=103.0):
+            sensor._handle_asr_message(json.dumps({"asr_reply": "hello world"}))
 
         mock_utt_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(1.5)
         mock_utt_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(1.5)

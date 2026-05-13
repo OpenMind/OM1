@@ -1657,8 +1657,6 @@ def test_handle_asr_message_full_sequence_records_all_metrics(
     _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
     _, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
-    times = iter([100.0, 104.0, 106.0])
-
     config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
     with (
         patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
@@ -1682,18 +1680,21 @@ def test_handle_asr_message_full_sequence_records_all_metrics(
         patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration_last") as mock_dur_gauge,
         patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_lat_hist,
         patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_lat_gauge,
-        patch("inputs.plugins.google_asr_rtsp.time.time", side_effect=times),
     ):
         instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = None
 
-        instance._handle_asr_message('{"type": "speech_start"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=100.0):
+            instance._handle_asr_message('{"type": "speech_start"}')
         assert instance._speech_start_time == 100.0
 
-        instance._handle_asr_message('{"type": "speech_end"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=104.0):
+            instance._handle_asr_message('{"type": "speech_end"}')
         mock_dur_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(4.0)
         mock_dur_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(4.0)
 
-        instance._handle_asr_message('{"asr_reply": "hello world"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=106.0):
+            instance._handle_asr_message('{"asr_reply": "hello world"}')
         mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(6.0)
         mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(6.0)
         assert instance._speech_start_time is None
@@ -1710,8 +1711,6 @@ def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence(
     _, mock_asr_instance = mock_asr_provider
     _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
     _, mock_teleops_conv_instance = mock_teleops_conversation_provider
-
-    times = iter([100.0, 101.5, 103.0])
 
     config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
     with (
@@ -1736,13 +1735,16 @@ def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence(
         patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency_last") as mock_utt_gauge,
         patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_lat_hist,
         patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_lat_gauge,
-        patch("inputs.plugins.google_asr_rtsp.time.time", side_effect=times),
     ):
         instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = None
 
-        instance._handle_asr_message('{"type": "speech_start"}')
-        instance._handle_asr_message('{"type": "end_of_utterance"}')
-        instance._handle_asr_message('{"asr_reply": "hello world"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=100.0):
+            instance._handle_asr_message('{"type": "speech_start"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=101.5):
+            instance._handle_asr_message('{"type": "end_of_utterance"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=103.0):
+            instance._handle_asr_message('{"asr_reply": "hello world"}')
 
         mock_utt_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(1.5)
         mock_utt_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(1.5)
