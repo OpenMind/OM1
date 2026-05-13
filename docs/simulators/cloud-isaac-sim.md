@@ -19,8 +19,6 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 1. Log in to the [OpenMind Portal](https://portal.openmind.com)
 2. Navigate to **Cloud Simulator** from the sidebar
 
-![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
-
 ### Instance Types
 
 Choose based on your simulation workload:
@@ -57,6 +55,10 @@ The instance is ready when the status changes to **Running**.
 View your running session from the portal dashboard.
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/session.png)
+
+Click on Open Session:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
 
 ## Step 4: Run OM1 with Cloud Simulator
 
