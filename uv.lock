@@ -2353,7 +2353,7 @@ requires-dist = [
     { name = "mcp", specifier = "==1.26.0" },
     { name = "nest-asyncio", specifier = "==1.6.0" },
     { name = "numpy", specifier = "==1.26.4" },
-    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=3c2b4a63ae3bd6b01ddae7623a24f5715d4b2b41" },
+    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=5a8a633d08c3538f62ceba3dd36d5200c9eb0ca2" },
     { name = "openai", specifier = "==1.60.1" },
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "osascript", marker = "extra == 'macos'" },
@@ -2395,18 +2395,21 @@ dev = [
 [[package]]
 name = "om1-modules"
 version = "0.1.0"
-source = { git = "https://github.com/OpenMind/om1-modules.git?rev=3c2b4a63ae3bd6b01ddae7623a24f5715d4b2b41#3c2b4a63ae3bd6b01ddae7623a24f5715d4b2b41" }
+source = { git = "https://github.com/OpenMind/om1-modules.git?rev=5a8a633d08c3538f62ceba3dd36d5200c9eb0ca2#5a8a633d08c3538f62ceba3dd36d5200c9eb0ca2" }
 dependencies = [
     { name = "av" },
     { name = "eclipse-zenoh" },
+    { name = "filelock" },
     { name = "google" },
     { name = "numpy" },
     { name = "openai" },
     { name = "opencv-python" },
+    { name = "prometheus-client" },
     { name = "protobuf" },
     { name = "pyaudio" },
     { name = "pycdr2" },
     { name = "requests" },
+    { name = "urllib3" },
     { name = "vulture" },
     { name = "websockets" },
 ]
