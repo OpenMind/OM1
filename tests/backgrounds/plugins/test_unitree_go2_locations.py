@@ -15,6 +15,7 @@ class TestUnitreeGo2LocationsConfig:
         assert config.base_url == "http://localhost:5000/maps/locations/list"
         assert config.timeout == 5
         assert config.refresh_interval == 30
+        assert config.use_sim is False
 
     def test_custom_base_url(self):
         """Test custom base_url configuration."""
@@ -41,6 +42,37 @@ class TestUnitreeGo2LocationsConfig:
         assert config.base_url == "http://custom:8080/api"
         assert config.timeout == 15
         assert config.refresh_interval == 120
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        config = UnitreeGo2LocationsConfig(use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list"
+        assert config.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        config = UnitreeGo2LocationsConfig(use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/list"
+        assert config.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        config = UnitreeGo2LocationsConfig(
+            base_url="http://custom:8080/api",
+            use_sim=True,
+        )
+        assert config.base_url == "http://custom:8080/api"
+        assert config.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        config = UnitreeGo2LocationsConfig(base_url=None, use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        config = UnitreeGo2LocationsConfig(base_url=None, use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/list"
 
 
 class TestUnitreeGo2Locations:

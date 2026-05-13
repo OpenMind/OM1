@@ -30,13 +30,13 @@
       hertz: 0.01,
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
         },
         {
-          type: "VLMGeminiZenoh",
+          type: "VLMGemini",
         },
         {
           type: "SimplePaths",
@@ -58,15 +58,10 @@
           llm_label: "emotion",
           connector: "avatar",
         },
-        {
-          name: "move_go2_action",
-          llm_label: "unitree_go2_action",
-          connector: "unitree_sdk",
-        },
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
       ],
       lifecycle_hooks: [
@@ -94,13 +89,13 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
         },
         {
-          type: "VLMGeminiZenoh",
+          type: "VLMGemini",
         },
         {
           type: "SimplePaths",
@@ -133,14 +128,11 @@
           name: "remember_location",
           llm_label: "remember_location",
           connector: "unitree_go2_location",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam",
-          },
         },
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -150,9 +142,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
         {
           type: "UnitreeGo2FrontierExploration",
@@ -165,7 +154,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "start_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -183,7 +171,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "start_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -201,7 +188,6 @@
           handler_config: {
             module_name: "slam_hook",
             function: "stop_slam_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           timeout_seconds: 15,
           priority: 1,
@@ -249,21 +235,18 @@
       agent_inputs: [
         {
           type: "UnitreeGo2LocationsInput",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
         {
           type: "LidarLocalizationInput",
         },
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
         },
         {
-          type: "VLMGeminiZenoh",
+          type: "VLMGemini",
         },
         {
           type: "SimplePaths",
@@ -295,7 +278,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_om_path_sdk_zenoh",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "navigate_location",
@@ -305,7 +288,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -315,9 +298,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
       ],
       lifecycle_hooks: [
@@ -327,7 +307,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "start_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -345,7 +324,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "start_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -363,7 +341,6 @@
           handler_config: {
             module_name: "nav2_hook",
             function: "stop_nav2_hook",
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator",
           },
           priority: 1,
         },
@@ -394,13 +371,13 @@
       action_execution_mode: "concurrent",
       agent_inputs: [
         {
-          type: "UnitreeGo2OdomZenoh",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "GoogleASRInput",
         },
         {
-          type: "VLMGeminiZenoh",
+          type: "VLMGemini",
         },
         {
           type: "SimplePaths",
@@ -424,7 +401,7 @@
       ],
       backgrounds: [
         {
-          type: "UnitreeGo2StateZenoh",
+          type: "UnitreeGo2State",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -434,9 +411,6 @@
         },
         {
           type: "UnitreeGo2Locations",
-          config: {
-            base_url: "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list",
-          },
         },
       ],
       lifecycle_hooks: [
