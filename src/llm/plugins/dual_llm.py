@@ -12,6 +12,7 @@ import openai
 from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig, get_llm_class
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -291,7 +292,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         if messages is None:
             messages = []
         try:
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             voice_input = _extract_voice_input(prompt)
@@ -351,7 +352,9 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                     results = [t.result() for t in tasks.values()]
                     chosen = min(results, key=lambda x: x["time"])
 
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(model=str("dual_llm"), endpoint=str("dual_selection")).observe(
+                time.time() - llm_start_time
+            )
 
             if chosen and chosen["result"]:
                 return T.cast(R, chosen["result"])

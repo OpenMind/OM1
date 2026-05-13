@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -62,10 +63,11 @@ class DeepSeekLLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "deepseek-chat"
+            self._config.model = DeepSeekModel.DEEPSEEK_CHAT
 
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/deepseek"
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.com/api/core/deepseek",
+            base_url=self.base_url,
             api_key=config.api_key,
         )
 
@@ -97,7 +99,7 @@ class DeepSeekLLM(LLM[R]):
             logging.debug(f"DeepSeek LLM input: {prompt}")
             logging.debug(f"DeepSeek LLM messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
@@ -106,7 +108,7 @@ class DeepSeekLLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "deepseek-chat",
+                model=self._config.model or DeepSeekModel.DEEPSEEK_CHAT,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -118,7 +120,10 @@ class DeepSeekLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(
+                model=str(self._config.model or DeepSeekModel.DEEPSEEK_CHAT),
+                endpoint=str(self.base_url),
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")

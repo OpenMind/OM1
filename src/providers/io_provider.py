@@ -50,8 +50,6 @@ class IOProvider:
         self._fuser_end_time: Optional[float] = None
 
         self._llm_prompt: Optional[str] = None
-        self._llm_start_time: Optional[float] = None
-        self._llm_end_time: Optional[float] = None
 
         self._mode_transition_input: Optional[str] = None
 
@@ -327,60 +325,6 @@ class IOProvider:
         """Clear the LLM prompt."""
         with self._lock:
             self._llm_prompt = None
-
-    @property
-    def llm_start_time(self) -> Optional[float]:
-        """
-        Get the LLM processing start time.
-        """
-        with self._lock:
-            return self._llm_start_time
-
-    @llm_start_time.setter
-    def llm_start_time(self, value: Optional[float]) -> None:
-        """
-        Set the LLM processing start time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM start time value to set.
-        """
-        with self._lock:
-            self._llm_start_time = value
-
-    def set_llm_start_time(self, value: Optional[float]) -> None:
-        """
-        Alternative method to set LLM start time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM start time value to set.
-        """
-        with self._lock:
-            self._llm_start_time = value
-
-    @property
-    def llm_end_time(self) -> Optional[float]:
-        """
-        Get the LLM processing end time.
-        """
-        with self._lock:
-            return self._llm_end_time
-
-    @llm_end_time.setter
-    def llm_end_time(self, value: Optional[float]) -> None:
-        """
-        Set the LLM processing end time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM end time value to set.
-        """
-        with self._lock:
-            self._llm_end_time = value
 
     def add_dynamic_variable(self, key: str, value: Any) -> None:
         """

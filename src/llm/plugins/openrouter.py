@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -73,8 +74,9 @@ class OpenRouter(LLM[R]):
         if not config.model:
             self._config.model = "meta-llama/llama-3.3-70b-instruct"
 
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/openrouter"
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.com/api/core/openrouter",
+            base_url=self.base_url,
             api_key=config.api_key,
         )
 
@@ -106,7 +108,7 @@ class OpenRouter(LLM[R]):
             logging.info(f"OpenRouter input: {prompt}")
             logging.info(f"OpenRouter messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
@@ -115,7 +117,7 @@ class OpenRouter(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "meta-llama/llama-3.3-70b-instruct",
+                model=self._config.model or OpenRouterModel.LLAMA_3_3_70B,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -127,7 +129,10 @@ class OpenRouter(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(
+                model=str(self._config.model or OpenRouterModel.LLAMA_3_3_70B),
+                endpoint=str(self.base_url),
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")

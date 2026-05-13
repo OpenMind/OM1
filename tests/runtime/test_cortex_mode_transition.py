@@ -212,8 +212,6 @@ def cortex_runtime_with_mode_transition(mock_system_config, mock_io_provider, mo
         runtime.action_orchestrator = Mock()
         runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], None))
         runtime.action_orchestrator.promise = AsyncMock()
-        runtime.simulator_orchestrator = Mock()
-        runtime.simulator_orchestrator.promise = AsyncMock()
         runtime.mcp_orchestrator = Mock()
         runtime.mcp_orchestrator.max_rounds = 3
         runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
@@ -260,7 +258,6 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
         runtime.action_orchestrator = Mock()
         runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], None))
         runtime.action_orchestrator.promise = AsyncMock()
-        runtime.simulator_orchestrator = None
         runtime.mcp_orchestrator = Mock()
         runtime.mcp_orchestrator.max_rounds = 3
         runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
@@ -640,37 +637,6 @@ async def test_mode_transition_during_reload_is_ignored(
     assert runtime._pending_mode_transition is None
     runtime._mode_transition_event.set.assert_not_called()
     mocks["mode_manager"].process_tick.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_mode_transition_with_simulator_orchestrator(
-    cortex_runtime_with_mode_transition,
-):
-    """Test mode transition works correctly when simulator orchestrator is present."""
-    runtime, mocks = cortex_runtime_with_mode_transition
-
-    mocks["io_provider"].add_mode_transition_input("switch to advanced mode")
-
-    runtime.simulator_orchestrator = Mock()
-    runtime.simulator_orchestrator.promise = AsyncMock()
-
-    mock_output = Mock()
-    mock_output.actions = ["action1", "action2"]
-    runtime.current_config.cortex_llm.ask.return_value = mock_output
-    runtime.current_config.cortex_llm.ask_stream = Mock(return_value=_mock_ask_stream_generator(mock_output))
-
-    runtime._pending_mode_transition = None
-    runtime._mode_transition_event = Mock()
-    runtime._mode_transition_event.set = Mock()
-
-    await runtime._tick(runtime._cortex_loop_generation)
-
-    assert runtime._pending_mode_transition == "advanced"
-
-    if runtime._pending_mode_transition:
-        pass
-    else:
-        runtime.simulator_orchestrator.promise.assert_called_once_with(mock_output.actions)
 
 
 @pytest.mark.asyncio

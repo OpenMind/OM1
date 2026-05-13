@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -74,8 +75,9 @@ class OpenAILLM(LLM[R]):
         if not config.model:
             self._config.model = "gpt-4.1-mini"
 
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/openai"
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.com/api/core/openai",
+            base_url=self.base_url,
             api_key=config.api_key,
         )
 
@@ -107,7 +109,7 @@ class OpenAILLM(LLM[R]):
             logging.info(f"OpenAI input: {prompt}")
             logging.info(f"OpenAI messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
@@ -116,7 +118,7 @@ class OpenAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-5",
+                model=self._config.model or OpenAIModel.GPT_5,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -128,7 +130,9 @@ class OpenAILLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            om1_llm_latency.labels(
+                model=str(self._config.model or OpenAIModel.GPT_5), endpoint=str(self.base_url)
+            ).observe(time.time() - llm_start_time)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")
