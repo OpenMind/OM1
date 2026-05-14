@@ -11,8 +11,8 @@ from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
-from runtime.recorder import RuntimeRecorder
 from providers.sleep_ticker_provider import SleepTickerProvider
+from runtime.recorder import RuntimeRecorder
 from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
