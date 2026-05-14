@@ -1522,7 +1522,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "1 - (rate(om1_llm_latency_seconds_bucket{le=\"2.5\"}[5m]) / ignoring(le) rate(om1_llm_latency_seconds_count[5m]))",
+          "expr": "1 - (sum(rate(om1_llm_latency_seconds_bucket{le=\"2.5\"}[5m])) / sum(rate(om1_llm_latency_seconds_count[5m])))",
           "legendFormat": "LLM > 2.5s",
           "refId": "A"
         }
