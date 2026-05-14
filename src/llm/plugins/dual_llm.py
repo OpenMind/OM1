@@ -12,7 +12,7 @@ import openai
 from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig, get_llm_class
-from prometheus import om1_llm_latency
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -352,9 +352,9 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                     results = [t.result() for t in tasks.values()]
                     chosen = min(results, key=lambda x: x["time"])
 
-            om1_llm_latency.labels(model=str("dual_llm"), endpoint=str("dual_selection")).observe(
-                time.time() - llm_start_time
-            )
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(model=str("dual_llm"), endpoint=str("dual_selection")).observe(latency)
+            om1_llm_latency_last.labels(model=str("dual_llm"), endpoint=str("dual_selection")).set(latency)
 
             if chosen and chosen["result"]:
                 return T.cast(R, chosen["result"])

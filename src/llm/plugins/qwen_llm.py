@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
-from prometheus import om1_llm_latency
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -171,9 +171,9 @@ class QwenLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            om1_llm_latency.labels(model=str(self._model), endpoint=str(self._base_url)).observe(
-                time.time() - llm_start_time
-            )
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(model=str(self._model), endpoint=str(self._base_url)).observe(latency)
+            om1_llm_latency_last.labels(model=str(self._model), endpoint=str(self._base_url)).set(latency)
 
             tool_calls = list(message.tool_calls or [])
             if not tool_calls and isinstance(message.content, str) and "<tool_call>" in message.content:

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
-from prometheus import om1_llm_latency
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -125,10 +125,15 @@ class GeminiLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
+            latency = time.time() - llm_start_time
             om1_llm_latency.labels(
                 model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW),
                 endpoint=str(self.base_url),
-            ).observe(time.time() - llm_start_time)
+            ).observe(latency)
+            om1_llm_latency_last.labels(
+                model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW),
+                endpoint=str(self.base_url),
+            ).set(latency)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")
