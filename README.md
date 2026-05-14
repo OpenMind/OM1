@@ -15,6 +15,7 @@
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Web-Based Debugging Display**: Monitor runtime state in WebSim (available at http://localhost:8000/), including user input, and current move/speech/emotion outputs.
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* **Metrics & Observability**: Includes a pre-configured Prometheus and Grafana stack to monitor real-time AI pipeline metrics like LLM and ASR latencies.
 
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
@@ -105,6 +106,16 @@ Your setup is successful if:
 - The terminal indicates that WebSim started.
 - The WebSim page loads at port `8000`.
 - You can see Spot state updates (inputs, move/speak/emotion outputs, and latency) in the WebSim UI.
+
+### 5. Monitor with Grafana (Optional)
+
+If you have Docker installed, you can launch the included Prometheus and Grafana stack to monitor real-time AI pipeline metrics such as LLM and ASR latencies:
+
+```bash
+docker-compose up -d grafana prometheus
+```
+
+Navigate to <http://localhost:3000> in your browser (default login: `admin`/`admin`). The **OM1 Latency Monitoring** dashboard is automatically provisioned and ready to use.
 
 ### Troubleshooting
 
