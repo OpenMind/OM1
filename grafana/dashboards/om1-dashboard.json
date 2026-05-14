@@ -1547,7 +1547,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OM1 AI Pipeline Monitoring",
+  "title": "OM1 Latency Monitoring",
   "uid": "om1-overview",
   "version": 1,
   "weekStart": ""
