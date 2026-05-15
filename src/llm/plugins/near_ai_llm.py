@@ -10,6 +10,7 @@ from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from prometheus import om1_llm_latency, om1_llm_latency_last
+import recorder
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -153,9 +154,14 @@ class NearAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
+                recorder.record(
+                    llm_input=prompt,
+                    llm_output=[{"type": a.type, "value": a.value} for a in actions],
+                )
                 logging.info(f"NearAI LLM function call output: {result}")
                 return T.cast(R, result)
 
+            recorder.record(llm_input=prompt, llm_output=[])
             return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")

@@ -96,17 +96,6 @@ class TestConvertToMultiMode:
         assert result["system_governance"] == "Be safe."
         assert result["system_prompt_examples"] == "Example 1."
 
-    def test_recorder_passthrough(self):
-        config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        config["recorder"] = True
-        result = convert_to_multi_mode(config)
-        assert result["recorder"] is True
-
-    def test_recorder_absent_is_none(self):
-        config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = convert_to_multi_mode(config)
-        assert result["recorder"] is None
-
     def test_mode_fields_nested(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
         result = convert_to_multi_mode(config)

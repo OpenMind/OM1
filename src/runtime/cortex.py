@@ -12,7 +12,7 @@ from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from runtime.recorder import RuntimeRecorder
+import recorder
 from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -82,9 +82,6 @@ class ModeCortexRuntime:
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
-
-        # Runtime recorder
-        self.recorder: Optional[RuntimeRecorder] = None
 
         # Current runtime components
         self.current_config: Optional[RuntimeConfig] = None
@@ -393,10 +390,6 @@ class ModeCortexRuntime:
         # Stop ConfigProvider
         self.config_provider.stop()
 
-        # Stop RuntimeRecorder
-        if self.recorder:
-            self.recorder.stop()
-
         logging.debug("Tasks cleaned up successfully")
 
     async def run(self) -> None:
@@ -428,9 +421,6 @@ class ModeCortexRuntime:
                 await initial_mode_config.execute_lifecycle_hooks(LifecycleHookType.ON_STARTUP, startup_context)
 
             await self._start_orchestrators()
-
-            if self.mode_config.recorder:
-                self.recorder = RuntimeRecorder()
 
             if self.hot_reload and self.config_path:
                 self.config_watcher_task = asyncio.create_task(self._check_config_changes())
@@ -534,6 +524,7 @@ class ModeCortexRuntime:
             return
 
         tick_num = self.io_provider.increment_tick()
+        recorder.generation = cortex_generation
         logging.debug(f"Processing tick #{tick_num}")
 
         finished_promises, _ = await self.action_orchestrator.flush_promises()
@@ -653,19 +644,6 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
-        # Record tick data
-        if self.recorder and output is not None:
-            voice_input = self.io_provider.get_input("Voice")
-            asr_text = voice_input.input if voice_input and voice_input.input else None
-            actions_dicts = [{"type": a.type, "value": a.value} for a in output.actions]
-            self.recorder.record_tick(
-                tick_num=tick_num,
-                mode=self.mode_manager.current_mode_name,
-                asr_input=asr_text,
-                llm_input=prompt,
-                llm_output=actions_dicts,
-                actions_executed=actions_dicts,
-            )
 
     def get_mode_info(self) -> dict:
         """

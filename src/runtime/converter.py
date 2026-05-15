@@ -80,7 +80,6 @@ class ConfigConverter:
             "system_governance": raw_config.get("system_governance", ""),
             "system_prompt_examples": raw_config.get("system_prompt_examples", ""),
             "knowledge_base": raw_config.get("knowledge_base"),
-            "recorder": raw_config.get("recorder"),
             "cortex_llm": raw_config.get("cortex_llm"),
             "use_sim": raw_config.get("use_sim", False),
         }
