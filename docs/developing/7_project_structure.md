@@ -17,7 +17,6 @@ icon: diagram-project
 │   ├── llm/              # LLM integration
 │   ├── providers/        # Background tasks
 │   ├── runtime/          # Core runtime system
-│   ├── simulators/       # Virtual endpoints such as `WebSim`
 │   ├── zenoh_msgs/       # Zenoh's Interface Definition Language (IDL)
 │   └── run.py            # CLI entry point
 ```
