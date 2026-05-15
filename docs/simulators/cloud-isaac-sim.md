@@ -25,10 +25,10 @@ Choose based on your simulation workload:
 
 | Instance Type | vCPUs | RAM | Best For | Price (Per Hour) |
 |---|---|---|---|---|
-| **Standard** | 8 | 32 GB | Development & testing | 42000 OMCU |
-| **Performance** | 16 | 64 GB | Heavy compute, multi-robot scenarios | 60000 OMCU |
+| **Standard** | 8 | 32 GB | Development & testing | 4800 OMCU |
+| **Performance** | 16 | 64 GB | Heavy compute, multi-robot scenarios | 7200 OMCU |
 
-![ ](../.gitbook/assets/cloud-isaac-sim-assets/select_instance.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/select_instance_and_env.png)
 
 ### Supported Robots
 
@@ -44,7 +44,7 @@ Expect **4-5 minutes** for your instance to fully initialize.
 
 Once you initiate the launch, the system begins setting up your cloud environment.
 
-![ ](../.gitbook/assets/cloud-isaac-sim-assets/env%20config.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/provisioning_instance.png)
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/finalising.png)
 
