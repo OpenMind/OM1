@@ -644,7 +644,6 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
-
     def get_mode_info(self) -> dict:
         """
         Get information about the current mode and available transitions.
