@@ -191,6 +191,18 @@ uv run src/run.py conversation
 
 Go to [http://localhost:8000](http://localhost:8000) to see real time logs along with the input and output in the terminal. For easy debugging, add `--debug` to see additional logging information.
 
+### Prometheus and Grafana Monitoring
+
+If you have Docker installed, you can use the included Docker Compose configuration to spin up Grafana and Prometheus to monitor real-time AI pipeline metrics (such as LLM response times and ASR latencies).
+
+Run the following command:
+
+```bash
+docker-compose up -d grafana prometheus
+```
+
+Then navigate to [http://localhost:3000](http://localhost:3000) (default login: `admin`/`admin`). The **OM1 Latency Monitoring** dashboard is automatically provisioned and will display your latency metrics as you interact with the agent.
+
 ### Understanding the Log Data
 
 The log data provide insight into how the `spot` agent makes sense of its environment and decides on its next actions.
