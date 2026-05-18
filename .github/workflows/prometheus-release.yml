@@ -1,4 +1,4 @@
-name: "OM1 Release Workflow"
+name: "Prometheus Release Workflow"
 
 on:
   push:
@@ -19,15 +19,6 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
-          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
-          sudo docker system prune -af
-          sudo apt-get clean
-          df -h
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -49,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: public.ecr.aws/b8k9c8n5/openmind/om1
+          images: public.ecr.aws/b8k9c8n5/openmind/prometheus
           tags: |
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
@@ -62,6 +53,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: grafana/Dockerfile.prometheus
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
@@ -76,15 +68,6 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
-          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
-          sudo docker system prune -af
-          sudo apt-get clean
-          df -h
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -106,7 +89,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: public.ecr.aws/b8k9c8n5/openmind/om1
+          images: public.ecr.aws/b8k9c8n5/openmind/prometheus
           tags: |
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
@@ -119,6 +102,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: grafana/Dockerfile.prometheus
           push: true
           platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -133,7 +117,7 @@ jobs:
     needs: [ build-amd64, build-arm64 ]
     environment:
       name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
-      url: https://gallery.ecr.aws/b8k9c8n5/openmind/om1
+      url: https://gallery.ecr.aws/b8k9c8n5/openmind/prometheus
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -170,6 +154,6 @@ jobs:
 
             docker buildx imagetools create \
               --tag $tag \
-              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-amd64.outputs.image-digest }} \
-              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-arm64.outputs.image-digest }}
+              public.ecr.aws/b8k9c8n5/openmind/prometheus@${{ needs.build-amd64.outputs.image-digest }} \
+              public.ecr.aws/b8k9c8n5/openmind/prometheus@${{ needs.build-arm64.outputs.image-digest }}
           done
