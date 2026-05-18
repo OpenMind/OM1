@@ -1,4 +1,4 @@
-name: "Grafana Release Workflow"
+name: "Prometheus Release Workflow"
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: grafana/Dockerfile.grafana
+          file: grafana/Dockerfile.prometheus
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
@@ -89,7 +89,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: public.ecr.aws/b8k9c8n5/openmind/grafana
+          images: public.ecr.aws/b8k9c8n5/openmind/prometheus
           tags: |
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
@@ -102,7 +102,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: grafana/Dockerfile.grafana
+          file: grafana/Dockerfile.prometheus
           push: true
           platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
