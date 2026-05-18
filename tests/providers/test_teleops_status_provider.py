@@ -249,9 +249,7 @@ def test_teleops_status_with_heartbeat():
     """Test TeleopsStatus creation and serialization with om1_heartbeat."""
     status = TeleopsStatus(
         update_time="1700000000",
-        battery_status=BatteryStatus(
-            battery_level=0.0, temperature=0.0, voltage=0.0, timestamp=""
-        ),
+        battery_status=BatteryStatus(battery_level=0.0, temperature=0.0, voltage=0.0, timestamp=""),
         machine_name="robot-hb",
         om1_heartbeat="1700000000",
     )
