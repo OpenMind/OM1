@@ -77,9 +77,20 @@ View your running session from the portal dashboard.
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/session.png)
 
-Click on Open Session:
+Click on Open Session. The simulator view will reflect the robot you selected when launching the instance:
 
-![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
+Unitree Go2:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_go2.png)
+
+Unitree G1:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_g1.png)
+
+
+LimX Tron:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_tron.png)
 
 ## Step 3: Run OM1 with Cloud Simulator
 
