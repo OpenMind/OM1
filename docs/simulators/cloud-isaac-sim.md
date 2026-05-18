@@ -10,9 +10,15 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 
 ## Prerequisites
 
-- OpenMind Portal account on **Builder plan** or higher
+- OpenMind Portal account on **Builder plan** or higher (required for Cloud Simulator access)
 - API key (found in your portal)
 - OM1 codebase with `uv` environment configured
+
+## Cost & Billing
+
+Cloud Simulator usage is billed in OMCU (OpenMind Compute Units). Billing begins as soon as an instance is **allocated** and stops only when the instance is deleted. Ensure your account has sufficient balance before launching.
+
+A **Builder plan** or higher is required to access the Cloud Simulator. Check your OMCU balance and plan in the [OpenMind Portal](https://portal.openmind.com) dashboard before starting.
 
 ## Step 1: Launch a Cloud Simulator Instance
 
@@ -36,21 +42,36 @@ Choose based on your simulation workload:
 - Unitree G1
 - LimX Tron
 
+### Available Environments
+
+- Warehouse
+- Apartment
+
 ### Launch Time
 
-Expect **4-5 minutes** for your instance to fully initialize.
+The instance goes through the following stages before it is ready:
 
-## Step 2: Wait for Instance Finalization
+1. Allocating Instance
+2. Load Robot Configuration
+3. Launching Simulator
+4. Render Environment
+5. Finalizing Simulator Setup
+
+> **Note**: Expect **10-15 minutes** for your instance to fully initialize.
 
 Once you initiate the launch, the system begins setting up your cloud environment.
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/provisioning_instance.png)
 
-![ ](../.gitbook/assets/cloud-isaac-sim-assets/finalising.png)
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/processing.png)
 
 The instance is ready when the status changes to **Running**.
 
-## Step 3: Access your Active Cloud Isaac Sim Session
+> **Note**: If the requested GPU is not available, you will see the error below. Wait a few minutes and try again, or switch to a different instance type.
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/gpu_unavailable.png)
+
+## Step 2: Access your Active Cloud Isaac Sim Session
 
 View your running session from the portal dashboard.
 
@@ -60,7 +81,7 @@ Click on Open Session:
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim.png)
 
-## Step 4: Run OM1 with Cloud Simulator
+## Step 3: Run OM1 with Cloud Simulator
 
 Two options are available once your instance is running:
 
@@ -79,8 +100,8 @@ From here, you can:
 
 Run OM1 on your local machine and connect to the cloud simulator:
 
-1. Copy your **API Key** from the portal
-2. Open `config/cloud_sim.json5` in your local OM1 repo
+1. Copy your **API Key** from the portal and ensure `OM_API_KEY` is set in your environment or `.env` file.
+2. Open `config/cloud_sim.json5` in your local OM1 repo. This config targets a Unitree Go2 in the cloud simulator with voice input, VLM, and autonomous movement. You can adjust the `system_prompt_base`, robot inputs, and actions to match your use case.
 3. Run the config:
 
 ```bash
@@ -97,3 +118,8 @@ When you're finished with your simulation:
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/delete-instance.png)
 
 3. Confirm the deletion — this stops billing and frees cloud resources
+
+## What's Next?
+
+- Explore [unitree_go2_modes_cloud config](https://github.com/OpenMind/OM1/blob/main/config/unitree_go2_modes_cloud.json5) to try multi modes in cloud sim
+- Read the [Configuration Guide](../developing/3_configuration.md) to modify inputs, actions, and prompts in `cloud_sim.json5`
