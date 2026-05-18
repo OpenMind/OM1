@@ -72,8 +72,8 @@
 ## API References <a href="#api-reference" id="api-reference"></a>
 
 * [API Reference](api-reference/introduction.md)
-    * [Google ASR](api-reference/endpoints/google_asr.md)
     * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
+    * [Google ASR](api-reference/endpoints/google_asr.md)
     * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
     * [LLM](api-reference/endpoints/llm.md)
     * [Riva](api-reference/endpoints/riva.md)
