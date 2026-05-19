@@ -250,25 +250,6 @@ You can directly access other OpenAI style endpoints by specifying a custom API 
 
 You can implement your own LLM endpoints or use more sophisticated approaches such as multiLLM robotics-focused endpoints by following the [LLM Guide](5_llms.md).
 
-## Simulators (`simulators`)
-
-Lists the simulation modules used by the agent. Here is an example configuration for the `simulators` section:
-
-```python
-  simulators: [
-    {
-      type: "WebSim",
-      config: {
-        host: "0.0.0.0",
-        port: 8000,
-        tick_rate: 100,
-        auto_reconnect: true,
-        debug_mode: false
-      }
-    }
-  ]
-```
-
 ## Agent Actions (`agent_actions`)
 
 Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them. Here is an example configuration for the `agent_actions` section:

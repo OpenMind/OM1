@@ -13,7 +13,6 @@
 * **Modular Architecture**: Designed with Python for simplicity and seamless integration.
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
-* **Web-Based Debugging Display**: Monitor runtime state in WebSim (available at http://localhost:8000/), including user input, and current move/speech/emotion outputs.
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 * **Metrics & Observability**: Includes a pre-configured Prometheus and Grafana stack to monitor real-time AI pipeline metrics like LLM and ASR latencies.
 
@@ -24,16 +23,16 @@
 
 If you are new to OM1, this is the fastest path to a successful first run using the `spot` agent.
 
-Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs, which are visualized in WebSim for debugging.
+Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs as logs and API responses.
 
-Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline and WebSim output. WebSim visualizes state updates and does not execute robot hardware actions.
+Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and does not execute robot hardware actions.
 
 ### Quick Start (5 Minutes)
 
 1. Install system dependencies.
 2. Clone the repository.
 3. Add your OpenMind API key.
-4. Launch OM1 and verify WebSim output.
+4. Launch OM1 and verify it is running.
 
 ### Prerequisites
 
@@ -99,13 +98,11 @@ uv run src/run.py spot
 
 #### Verify It Is Working
 
-Open <http://localhost:8000/> in your browser.
-
 Your setup is successful if:
 
-- The terminal indicates that WebSim started.
-- The WebSim page loads at port `8000`.
-- You can see Spot state updates (inputs, move/speak/emotion outputs, and latency) in the WebSim UI.
+- The terminal shows the Spot agent has started successfully.
+- You see input processing and LLM responses logged in the terminal.
+- The agent responds to camera input and generates appropriate outputs.
 
 ### 5. Monitor with Grafana (Optional)
 
@@ -132,7 +129,7 @@ Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
 For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-> **Note:** This quick start uses the Spot starter configuration. WebSim is a runtime visualization and debugging interface, not a hardware control endpoint. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
+> **Note:** This quick start uses the Spot starter configuration. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
 
 ## What's Next?
 

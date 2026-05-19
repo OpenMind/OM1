@@ -187,10 +187,6 @@ To run a different agent (for example, the conversation agent), specify the conf
 uv run src/run.py conversation
 ```
 
-### WebSim to check input and output
-
-Go to [http://localhost:8000](http://localhost:8000) to see real time logs along with the input and output in the terminal. For easy debugging, add `--debug` to see additional logging information.
-
 ### Prometheus and Grafana Monitoring
 
 If you have Docker installed, you can use the included Docker Compose configuration to spin up Grafana and Prometheus to monitor real-time AI pipeline metrics (such as LLM response times and ASR latencies).
