@@ -120,3 +120,4 @@ We will support more models in the future. Contact us if you have any questions 
 | Service              | Price (per 1 minute) |
 |----------------------|----------------------|
 | Google ASR           | 50 OMCU              |
+| ElevenLabs ASR       | 35 OMCU              |
