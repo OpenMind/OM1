@@ -161,6 +161,7 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
             TeleopsStatus(
                 machine_name="UnitreeGo2",
                 update_time=str(time.time()),
+                om1_heartbeat=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_t,
