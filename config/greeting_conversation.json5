@@ -33,7 +33,7 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "{ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
             enable_tts_interrupt: false,
@@ -63,7 +63,7 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "{ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
             enable_tts_interrupt: false,
@@ -153,7 +153,7 @@ Visa reference: Sarthak - Senior Director, Visa; previously Visa and Gojek; 8+ y
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "{ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
             enable_tts_interrupt: false,
