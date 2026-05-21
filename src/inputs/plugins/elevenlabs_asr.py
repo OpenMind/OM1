@@ -12,10 +12,6 @@ from inputs.base.loop import FuserInput
 from prometheus import (
     om1_asr_latency,
     om1_asr_latency_last,
-    om1_asr_speech_duration,
-    om1_asr_speech_duration_last,
-    om1_asr_utterance_end_latency,
-    om1_asr_utterance_end_latency_last,
 )
 from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
@@ -24,30 +20,30 @@ from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
 LANGUAGE_CODE_MAP: dict = {
-    "english": "en-US",
-    "chinese": "cmn-Hans-CN",
-    "german": "de-DE",
-    "french": "fr-FR",
-    "japanese": "ja-JP",
-    "korean": "ko-KR",
-    "spanish": "es-ES",
-    "italian": "it-IT",
-    "portuguese": "pt-BR",
-    "russian": "ru-RU",
-    "arabic": "ar-SA",
+    "auto": "auto",
+    "english": "en",
+    "spanish": "es",
+    "french": "fr",
+    "german": "de",
+    "italian": "it",
+    "portuguese": "pt",
+    "japanese": "ja",
+    "korean": "ko",
+    "chinese": "zh",
+    "dutch": "nl",
+    "polish": "pl",
+    "russian": "ru",
 }
 
 
-class GoogleASRSensorConfig(SensorConfig):
+class ElevenLabsASRSensorConfig(SensorConfig):
     """
-    Configuration for Google ASR Sensor.
+    Configuration for ElevenLabs ASR Sensor.
 
     Parameters
     ----------
     api_key : Optional[str]
         API Key.
-    api_version : str
-        API version to use for the ASR service.
     rate : int
         Sampling rate.
     chunk : int
@@ -59,7 +55,7 @@ class GoogleASRSensorConfig(SensorConfig):
     microphone_name : Optional[str]
         Microphone Name.
     language : str
-        Language for speech recognition.
+        Language for speech recognition (supports BCP-47 codes or auto-detection).
     alternative_languages : Optional[List[str]]
         List of alternative languages for multilingual speech recognition. If None (default), no alternative languages will be used.
     remote_input : bool
@@ -67,17 +63,12 @@ class GoogleASRSensorConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    api_version: str = Field(default="v2", description="API version to use for the ASR service")
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=4800, description="Chunk size")
     base_url: Optional[str] = Field(default=None, description="Base URL for the ASR service")
     microphone_device_id: Optional[int] = Field(default=None, description="Microphone Device ID")
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    language: str = Field(default="english", description="Language for speech recognition")
-    alternative_languages: Optional[List[str]] = Field(
-        default=None,
-        description="List of alternative languages for multilingual speech recognition",
-    )
+    language: str = Field(default="auto", description="Language for speech recognition")
     remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
         default=False,
@@ -85,22 +76,22 @@ class GoogleASRSensorConfig(SensorConfig):
     )
 
 
-class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
+class ElevenLabsASRInput(FuserInput[ElevenLabsASRSensorConfig, Optional[str]]):
     """
-    Google Automatic Speech Recognition (ASR) input handler.
+    ElevenLabs Automatic Speech Recognition (ASR) input handler.
 
     This class manages the input stream from an ASR service, buffering messages
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: GoogleASRSensorConfig):
+    def __init__(self, config: ElevenLabsASRSensorConfig):
         """
-        Initialize GoogleASRInput instance.
+        Initialize ElevenLabsASRInput instance.
 
         Parameters
         ----------
-        config : GoogleASRSensorConfig
-            Configuration for the Google ASR input
+        config : ElevenLabsASRSensorConfig
+            Configuration for the ElevenLabs ASR input
         """
         super().__init__(config)
 
@@ -119,12 +110,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         rate = self.config.rate
         chunk = self.config.chunk
 
-        api_version = self.config.api_version.strip().lower()
-        if api_version not in ["v1", "v2"]:
-            logging.warning(f"API version {api_version} not recognized. Defaulting to v2.")
-            api_version = "v2"
-
-        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/google/asr/{api_version}?api_key={api_key}"
+        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/elevenlabs/asr?api_key={api_key}"
 
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -133,29 +119,12 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
         if language not in LANGUAGE_CODE_MAP:
             logging.error(
-                f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to English"
+                f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to auto"
             )
-            language = "english"
+            language = "auto"
 
-        language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
-        logging.info(f"Using language code {language_code} for Google ASR")
-
-        alternative_languages = self.config.alternative_languages or []
-        alternative_language_codes = []
-
-        if api_version == "v1" and len(alternative_languages) > 0:
-            for alt_lang in alternative_languages:
-                alt_lang = alt_lang.strip().lower()
-                if alt_lang in LANGUAGE_CODE_MAP:
-                    alt_code = LANGUAGE_CODE_MAP[alt_lang]
-                    alternative_language_codes.append(alt_code)
-                    logging.info(f"Adding alternative language code {alt_code} for language {alt_lang}")
-                else:
-                    logging.warning(f"Alternative language {alt_lang} not supported. Skipping.")
-        elif api_version == "v2" and len(alternative_languages) > 0:
-            logging.warning(
-                "Alternative languages are not supported in API version v2. Ignoring alternative languages."
-            )
+        language_code = LANGUAGE_CODE_MAP.get(language, "auto")
+        logging.info(f"Using language code {language_code} for ElevenLabs ASR")
 
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
@@ -167,7 +136,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             language_code=language_code,
-            alternative_language_codes=alternative_language_codes,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
         )
@@ -200,7 +168,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         # Timing variable to measure latency from speech start to final transcript or end of utterance
         self._speech_start_time: Optional[float] = None
         self._language = language
-        self._api_version = api_version
 
     def _handle_asr_message(self, raw_message: str):
         """
@@ -218,45 +185,25 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             json_message: Dict = json.loads(raw_message)
 
             msg_type = json_message.get("type")
-            if msg_type == "speech_start":
+            if msg_type == "partial":
                 self._speech_start_time = time.time()
 
-            elif msg_type == "speech_end":
-                if self._speech_start_time is not None:
-                    duration = time.time() - self._speech_start_time
-                    om1_asr_speech_duration.labels(
-                        model="google", language=self._language, api_version=self._api_version
-                    ).observe(duration)
-                    om1_asr_speech_duration_last.labels(
-                        model="google", language=self._language, api_version=self._api_version
-                    ).set(duration)
-
-            elif msg_type == "end_of_utterance":
-                if self._speech_start_time is not None:
-                    latency = time.time() - self._speech_start_time
-                    om1_asr_utterance_end_latency.labels(
-                        model="google", language=self._language, api_version=self._api_version
-                    ).observe(latency)
-                    om1_asr_utterance_end_latency_last.labels(
-                        model="google", language=self._language, api_version=self._api_version
-                    ).set(latency)
-
-            if "asr_reply" in json_message:
+            if "asr_reply" in json_message and msg_type == "committed":
                 asr_reply = json_message["asr_reply"]
                 if len(asr_reply.split()) > 1:
-                    # Observe ASR latency from speech start to final transcript
                     if self._speech_start_time is not None:
                         latency = time.time() - self._speech_start_time
-                        om1_asr_latency.labels(
-                            model="google", language=self._language, api_version=self._api_version
-                        ).observe(latency)
-                        om1_asr_latency_last.labels(
-                            model="google", language=self._language, api_version=self._api_version
-                        ).set(latency)
+                        om1_asr_latency.labels(model="elevenlabs", language=self._language, api_version="v1").observe(
+                            latency
+                        )
+                        om1_asr_latency_last.labels(model="elevenlabs", language=self._language, api_version="v1").set(
+                            latency
+                        )
 
                         self._speech_start_time = None
                     self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
+
         except json.JSONDecodeError:
             pass
 
@@ -307,7 +254,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is None:
             if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
@@ -356,7 +302,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         """
         Stop the ASR input.
         """
-        logging.info("Stopping GoogleASRInput, disabling callback")
+        logging.info("Stopping ElevenLabsASRInput, disabling callback")
 
         self._stopped = True
 
