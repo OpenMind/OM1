@@ -251,7 +251,6 @@ def test_handle_asr_message_cjk_chinese_accepted():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # 3 Chinese characters -> accepted (len > 2)
         raw_message = json.dumps({"asr_reply": "你好吗"})
         sensor._handle_asr_message(raw_message)
 
@@ -271,7 +270,6 @@ def test_handle_asr_message_cjk_chinese_too_short_rejected():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # 2 Chinese characters -> rejected (len not > 2)
         raw_message = json.dumps({"asr_reply": "你好"})
         sensor._handle_asr_message(raw_message)
 
@@ -290,7 +288,6 @@ def test_handle_asr_message_cjk_japanese_hiragana_accepted():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # Japanese hiragana: "こんにちは" (5 chars) -> accepted
         raw_message = json.dumps({"asr_reply": "こんにちは"})
         sensor._handle_asr_message(raw_message)
 
@@ -310,7 +307,6 @@ def test_handle_asr_message_cjk_korean_accepted():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # Korean: "안녕하세요" (5 chars) -> accepted
         raw_message = json.dumps({"asr_reply": "안녕하세요"})
         sensor._handle_asr_message(raw_message)
 
@@ -348,7 +344,6 @@ def test_handle_asr_message_cjk_mixed_with_latin_accepted():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # Mixed CJK + Latin with total len > 2 -> uses CJK path, accepted
         raw_message = json.dumps({"asr_reply": "hello你好"})
         sensor._handle_asr_message(raw_message)
 

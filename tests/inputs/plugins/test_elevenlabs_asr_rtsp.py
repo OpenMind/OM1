@@ -441,7 +441,6 @@ def test_handle_asr_message_committed_cjk_chinese_too_short_rejected(
         mock_zenoh,
     )
 
-    # 2 Chinese characters -> rejected (len not > 2)
     raw = json.dumps({"type": "committed", "asr_reply": "你好"})
     sensor._handle_asr_message(raw)
 
