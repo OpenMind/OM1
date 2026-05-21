@@ -369,6 +369,172 @@ def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
     assert final_size == initial_size
 
 
+def test_handle_asr_message_cjk_chinese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Chinese text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你好吗"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "你好吗"
+
+
+def test_handle_asr_message_cjk_chinese_too_short_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Chinese text with 2 or fewer characters is rejected."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你好"}')
+
+    assert instance.message_buffer.qsize() == 0
+
+
+def test_handle_asr_message_cjk_japanese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Japanese hiragana text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "こんにちは"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "こんにちは"
+
+
+def test_handle_asr_message_cjk_korean_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Korean hangul text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "안녕하세요"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "안녕하세요"
+
+
+def test_handle_asr_message_cjk_single_char_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that a single CJK character is rejected."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你"}')
+
+    assert instance.message_buffer.qsize() == 0
+
+
+def test_handle_asr_message_cjk_mixed_with_latin_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that mixed CJK and Latin text longer than 2 chars is accepted via CJK path."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "hello你好"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "hello你好"
+
+
 def test_handle_asr_message_ignores_invalid_json(
     mock_io_provider,
     mock_asr_provider,

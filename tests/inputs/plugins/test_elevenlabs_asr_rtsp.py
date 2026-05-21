@@ -400,6 +400,148 @@ def test_handle_asr_message_no_asr_reply_field(
     assert sensor.message_buffer.empty()
 
 
+def test_handle_asr_message_committed_cjk_chinese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with Chinese text longer than 2 chars is accepted."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "你好吗"})
+    sensor._handle_asr_message(raw)
+
+    assert not sensor.message_buffer.empty()
+    assert sensor.message_buffer.get_nowait() == "你好吗"
+
+
+def test_handle_asr_message_committed_cjk_chinese_too_short_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with 2 or fewer Chinese characters is rejected."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "你好"})
+    sensor._handle_asr_message(raw)
+
+    assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_committed_cjk_japanese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with Japanese hiragana text longer than 2 chars is accepted."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "こんにちは"})
+    sensor._handle_asr_message(raw)
+
+    assert not sensor.message_buffer.empty()
+    assert sensor.message_buffer.get_nowait() == "こんにちは"
+
+
+def test_handle_asr_message_committed_cjk_korean_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with Korean hangul text longer than 2 chars is accepted."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "안녕하세요"})
+    sensor._handle_asr_message(raw)
+
+    assert not sensor.message_buffer.empty()
+    assert sensor.message_buffer.get_nowait() == "안녕하세요"
+
+
+def test_handle_asr_message_committed_cjk_single_char_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with a single CJK character is rejected."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "你"})
+    sensor._handle_asr_message(raw)
+
+    assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_committed_cjk_mixed_with_latin_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """committed message with mixed CJK and Latin text longer than 2 chars is accepted via CJK path."""
+    sensor = _build_sensor(
+        ElevenLabsASRRTSPSensorConfig(),
+        mock_io_provider,
+        mock_asr_provider,
+        mock_sleep_ticker_provider,
+        mock_teleops_conversation_provider,
+        mock_zenoh,
+    )
+
+    raw = json.dumps({"type": "committed", "asr_reply": "hello你好"})
+    sensor._handle_asr_message(raw)
+
+    assert not sensor.message_buffer.empty()
+    assert sensor.message_buffer.get_nowait() == "hello你好"
+
+
 @pytest.mark.asyncio
 async def test_poll_returns_message_when_available(
     mock_io_provider,
