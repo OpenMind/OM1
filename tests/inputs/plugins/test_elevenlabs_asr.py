@@ -288,6 +288,119 @@ def test_handle_asr_message_no_asr_reply_field():
         assert sensor.message_buffer.empty()
 
 
+def test_handle_asr_message_committed_cjk_chinese_accepted():
+    """committed message with Chinese text longer than 2 chars is accepted."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        raw = json.dumps({"type": "committed", "asr_reply": "你好吗"})
+        sensor._handle_asr_message(raw)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "你好吗"
+
+
+def test_handle_asr_message_committed_cjk_chinese_too_short_rejected():
+    """committed message with 2 or fewer Chinese characters is rejected."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        raw = json.dumps({"type": "committed", "asr_reply": "你好"})
+        sensor._handle_asr_message(raw)
+
+        assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_committed_cjk_japanese_accepted():
+    """committed message with Japanese hiragana text longer than 2 chars is accepted."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        # Japanese hiragana: "こんにちは" (5 chars) -> accepted
+        raw = json.dumps({"type": "committed", "asr_reply": "こんにちは"})
+        sensor._handle_asr_message(raw)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "こんにちは"
+
+
+def test_handle_asr_message_committed_cjk_korean_accepted():
+    """committed message with Korean hangul text longer than 2 chars is accepted."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        raw = json.dumps({"type": "committed", "asr_reply": "안녕하세요"})
+        sensor._handle_asr_message(raw)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "안녕하세요"
+
+
+def test_handle_asr_message_committed_cjk_single_char_rejected():
+    """committed message with a single CJK character is rejected."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        raw = json.dumps({"type": "committed", "asr_reply": "你"})
+        sensor._handle_asr_message(raw)
+
+        assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_committed_cjk_mixed_with_latin_accepted():
+    """committed message with mixed CJK and Latin text longer than 2 chars is accepted via CJK path."""
+    with (
+        patch("inputs.plugins.elevenlabs_asr.IOProvider"),
+        patch("inputs.plugins.elevenlabs_asr.ASRProvider"),
+        patch("inputs.plugins.elevenlabs_asr.SleepTickerProvider"),
+        patch("inputs.plugins.elevenlabs_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.elevenlabs_asr.open_zenoh_session"),
+    ):
+        config = ElevenLabsASRSensorConfig()
+        sensor = ElevenLabsASRInput(config=config)
+
+        raw = json.dumps({"type": "committed", "asr_reply": "hello你好"})
+        sensor._handle_asr_message(raw)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "hello你好"
+
+
 def test_handle_asr_message_no_speech_start_time_skips_latency():
     """committed message with no prior partial does not call latency metrics."""
     with (
