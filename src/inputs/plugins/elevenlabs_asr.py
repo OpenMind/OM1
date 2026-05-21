@@ -111,7 +111,7 @@ class ElevenLabsASRInput(FuserInput[ElevenLabsASRSensorConfig, Optional[str]]):
         rate = self.config.rate
         chunk = self.config.chunk
 
-        base_url = self.config.base_url or f"ws://10.1.10.251:3000/api/core/elevenlabs/asr?api_key={api_key}"
+        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/elevenlabs/asr?api_key={api_key}"
 
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
