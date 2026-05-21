@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -110,7 +111,7 @@ class ElevenLabsASRInput(FuserInput[ElevenLabsASRSensorConfig, Optional[str]]):
         rate = self.config.rate
         chunk = self.config.chunk
 
-        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/elevenlabs/asr?api_key={api_key}"
+        base_url = self.config.base_url or f"ws://10.1.10.251:3000/api/core/elevenlabs/asr?api_key={api_key}"
 
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -190,7 +191,9 @@ class ElevenLabsASRInput(FuserInput[ElevenLabsASRSensorConfig, Optional[str]]):
 
             if "asr_reply" in json_message and msg_type == "committed":
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                _has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (_has_cjk and len(asr_reply) > 2) or (not _has_cjk and len(asr_reply.split()) > 1):
                     if self._speech_start_time is not None:
                         latency = time.time() - self._speech_start_time
                         om1_asr_latency.labels(model="elevenlabs", language=self._language, api_version="v1").observe(

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -243,7 +244,9 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (has_cjk and len(asr_reply) > 2) or (not has_cjk and len(asr_reply.split()) > 1):
                     # Observe ASR latency from speech start to final transcript
                     if self._speech_start_time is not None:
                         latency = time.time() - self._speech_start_time
