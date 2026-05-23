@@ -37,7 +37,7 @@ def get_httpx_event_hooks() -> dict[str, list]:
         start_time = response.request.extensions.get("start_time", 0)
         elapsed = (time.perf_counter() - start_time) * 1000
         http_version = response.http_version
-        proxy_parse_total_time = response.extensions.get("x-proxy-parse-ms", "?")
+        proxy_parse_total_time = response.headers.get("x-proxy-parse-ms", "?")
         upstream_total_time = response.headers.get("x-upstream-total-ms", "?")
         upstream_ttfb_time = response.headers.get("x-upstream-ttfb-ms", "?")
         proxy_total_time = response.headers.get("x-proxy-total-ms", "?")
