@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig, get_llm_class
 from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -127,7 +128,9 @@ class DualLLM(LLM[R]):
         self._local_llm._skip_state_management = True
         self._cloud_llm._skip_state_management = True
 
-        self._eval_client = openai.AsyncClient(base_url="http://127.0.0.1:8860/v1", api_key="local")
+        self._eval_client = openai.AsyncClient(
+            base_url="http://127.0.0.1:8860/v1", api_key="local", http_client=get_async_httpx_client()
+        )
         self._eval_model = local_cfg.get("model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16")
 
         self.history_manager = LLMHistoryManager(self._config, self._eval_client)

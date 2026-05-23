@@ -15,6 +15,7 @@ from llm import LLM, LLMConfig, get_llm_class
 from llm.output_model import Action, CortexOutputModel
 from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -185,6 +186,7 @@ class ParallelLLM(LLM[R]):
             client = openai.AsyncClient(
                 api_key=self._config.api_key or "dummy",
                 base_url="http://localhost:8860/v1",
+                http_client=get_async_httpx_client(),
             )
 
         self.history_manager = LLMHistoryManager(self._config, client)

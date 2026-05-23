@@ -34,7 +34,7 @@ dependencies = [
     "fastapi==0.135.3",
     "uvicorn==0.34.0",
     "websockets==13.1",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@5a8a633d08c3538f62ceba3dd36d5200c9eb0ca2",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@eb0c0248be881ed0f55a53f6a3b931401c0db2dd",
     "aiohttp==3.13.4",
     "pynput==1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
@@ -43,6 +43,7 @@ dependencies = [
     "faiss-cpu==1.13.2",
     "mcp==1.26.0",
     "prometheus-client==0.25.0",
+    "httpx[http2]==0.28.1",
 ]
 
 [project.optional-dependencies]
