@@ -53,10 +53,9 @@ For developer walkthrough and support reach out to: support@openmind.com
 
 | Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
 |---------------------------------------|-----------------------------|------------------------------|
+| Gemini 3.5 Flash                      | 12500 OMCU                  | 90000 OMCU                   |
 | Gemini 3.1 Pro Preview                | 40000 OMCU                  | 180000 OMCU                  |
-| Gemini 3.1 Flash Lite Preview         | 2500 OMCU                   | 15000 OMCU                   |
-| Gemini 3 Pro Preview                  | 40000 OMCU                  | 180000 OMCU                  |
-| Gemini 3 Flash Preview                | 10000 OMCU                  | 30000 OMCU                   |
+| Gemini 3.1 Flash Lite                 | 2500 OMCU                   | 15000 OMCU                   |
 | Gemini 2.5 Flash                      | 3000 OMCU                   | 25000 OMCU                   |
 | Gemini 2.5 Flash Lite                 | 1000 OMCU                   | 4000 OMCU                    |
 | Gemini 2.5 Pro                        | 25000 OMCU                  | 150000 OMCU                  |

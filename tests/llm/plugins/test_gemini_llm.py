@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.gemini_llm import GeminiConfig, GeminiLLM
+from llm.plugins.gemini_llm import GeminiConfig, GeminiLLM, GeminiModel
 
 
 class DummyOutputModel(BaseModel):
@@ -152,7 +152,7 @@ async def test_init_without_model():
     """When the test model is None, use the default value"""
     config = GeminiConfig(api_key="test_key", model=None)
     llm = GeminiLLM(config)
-    assert llm._config.model == "gemini-3.1-flash-lite-preview"
+    assert llm._config.model == GeminiModel.GEMINI_3_1_FLASH_LITE
 
 
 @pytest.mark.asyncio
