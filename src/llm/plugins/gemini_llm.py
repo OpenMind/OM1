@@ -68,10 +68,9 @@ class GeminiLLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW
+            self._config.model = GeminiModel.GEMINI_3_1_FLASH_LITE
 
-        # self.base_url = config.base_url or "https://api.openmind.com/api/core/gemini"
-        self.base_url = "http://localhost:3000/api/core/gemini"
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/gemini"
         self._client = openai.AsyncOpenAI(
             base_url=self.base_url,
             api_key=config.api_key,
