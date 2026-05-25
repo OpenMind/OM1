@@ -51,8 +51,8 @@ class VLMGeminiConfig(SensorConfig):
         default="gemini-2.5-flash",
         description="Gemini model id; supported (server-side): "
         "gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, "
-        "gemini-3-flash-preview, gemini-3-pro-preview, "
-        "gemini-3.1-flash-lite-preview, gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite, gemini-3.1-pro-preview"
+        "gemini-3.5-flash",
     )
     max_tokens: int = Field(
         default=1024,

@@ -23,10 +23,9 @@ class GeminiModel(str, Enum):
     GEMINI_2_5_FLASH = "gemini-2.5-flash"
     GEMINI_2_5_FLASH_LITE = "gemini-2.5-flash-lite"
     GEMINI_2_5_PRO = "gemini-2.5-pro"
-    GEMINI_3_PRO_PREVIEW = "gemini-3-pro-preview"
-    GEMINI_3_FLASH_PREVIEW = "gemini-3-flash-preview"
     GEMINI_3_1_PRO_PREVIEW = "gemini-3.1-pro-preview"
-    GEMINI_3_1_FLASH_LITE_PREVIEW = "gemini-3.1-flash-lite-preview"
+    GEMINI_3_1_FLASH_LITE = "gemini-3.1-flash-lite"
+    GEMINI_3_5_FLASH = "gemini-3.5-flash"
 
 
 class GeminiConfig(LLMConfig):
@@ -37,7 +36,7 @@ class GeminiConfig(LLMConfig):
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
-        default=GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
+        default=GeminiModel.GEMINI_3_1_FLASH_LITE,
         description="Gemini model to use",
     )
 
@@ -71,7 +70,8 @@ class GeminiLLM(LLM[R]):
         if not config.model:
             self._config.model = GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW
 
-        self.base_url = config.base_url or "https://api.openmind.com/api/core/gemini"
+        # self.base_url = config.base_url or "https://api.openmind.com/api/core/gemini"
+        self.base_url = "http://localhost:3000/api/core/gemini"
         self._client = openai.AsyncOpenAI(
             base_url=self.base_url,
             api_key=config.api_key,
@@ -115,7 +115,7 @@ class GeminiLLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
+                model=self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -129,11 +129,11 @@ class GeminiLLM(LLM[R]):
             message = response.choices[0].message
             latency = time.time() - llm_start_time
             om1_llm_latency.labels(
-                model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW),
+                model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE),
                 endpoint=str(self.base_url),
             ).observe(latency)
             om1_llm_latency_last.labels(
-                model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW),
+                model=str(self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE),
                 endpoint=str(self.base_url),
             ).set(latency)
 
