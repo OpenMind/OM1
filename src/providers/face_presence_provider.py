@@ -256,7 +256,7 @@ class FacePresenceProvider:
                 self._emit(text)
             except Exception as e:
                 logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
-                time.sleep(1.0)
+                time.sleep(2.0)
 
             next_time += self.period
             if next_time < time.time() - self.period:
