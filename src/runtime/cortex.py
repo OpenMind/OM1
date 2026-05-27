@@ -11,8 +11,8 @@ from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
+from providers.recorder import Recorder
 from providers.sleep_ticker_provider import SleepTickerProvider
-import recorder
 from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -66,6 +66,7 @@ class ModeCortexRuntime:
         self.mode_config_name = mode_config_name
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
+        self.recorder = Recorder()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
 
@@ -524,7 +525,8 @@ class ModeCortexRuntime:
             return
 
         tick_num = self.io_provider.increment_tick()
-        recorder.generation = cortex_generation
+        self.recorder.set_generation(cortex_generation)
+
         logging.debug(f"Processing tick #{tick_num}")
 
         finished_promises, _ = await self.action_orchestrator.flush_promises()
