@@ -10,7 +10,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ```python
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   default_mode: "welcome",
   allow_manual_switching: true,
   mode_memory_enabled: true,
@@ -169,7 +169,7 @@ The runtime/version.py module handles:
 
 ### Available versions
 
-  - `v1.0.3` (latest)
+  - `v1.0.5` (latest)
 
     Adds support for global custom environment variables in the configuration file, allowing users to use `yaml` syntax to define environment variables throughout their configuration. This enables more flexible and dynamic configurations, such as securely referencing API keys or adjusting settings based on the deployment environment.
 

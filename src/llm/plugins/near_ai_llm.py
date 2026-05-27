@@ -155,9 +155,14 @@ class NearAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
+                self.tracer.gauge(
+                    llm_input=prompt,
+                    llm_output=[{"type": a.type, "value": a.value} for a in actions],
+                )
                 logging.info(f"NearAI LLM function call output: {result}")
                 return T.cast(R, result)
 
+            self.tracer.gauge(llm_input=prompt, llm_output=[])
             return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")
