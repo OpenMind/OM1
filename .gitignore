@@ -51,6 +51,7 @@ logs/
 *.jpg
 /zenohdb
 /locations
+/traces
 
 # Mode system state files
 config/memory
