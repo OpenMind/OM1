@@ -129,8 +129,6 @@ class RuntimeConfig:
         Optional mapping of action dependencies.
     knowledge_base : Optional[Dict[str, Any]]
         Optional knowledge base configuration for document retrieval.
-    tracing: bool
-        Whether to enable tracing of interactions and decisions for debugging purposes. Defaults to False.
     """
 
     version: str
@@ -154,8 +152,6 @@ class RuntimeConfig:
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
     mcp_servers: Optional[Any] = None
-
-    tracing: bool = False
 
 
 def add_meta(
@@ -467,7 +463,7 @@ class ModeSystemConfig:
         List of rules for transitioning between modes. Defaults to empty list.
     use_sim: bool
         Whether the system is running in simulation mode. Defaults to False.
-    tracing: bool
+    use_tracer: bool
         Whether to enable tracing of interactions and decisions for debugging purposes. Defaults to False.
     """
 
@@ -504,8 +500,8 @@ class ModeSystemConfig:
     # Simulation
     use_sim: bool = False
 
-    # Tracing and debugging
-    tracing: bool = False
+    # Tracing
+    use_tracer: bool = False
 
     async def execute_global_lifecycle_hooks(
         self, hook_type: LifecycleHookType, context: Optional[Dict[str, Any]] = None
@@ -575,7 +571,7 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
     g_URID = raw_config.get("URID")
     g_ut_eth = raw_config.get("unitree_ethernet")
     g_use_sim = raw_config.get("use_sim", False)
-    g_tracing = raw_config.get("tracing", False)
+    g_use_tracer = raw_config.get("use_tracer", False)
 
     load_unitree(g_ut_eth)
     load_session_config(g_api_key, g_use_sim)
@@ -592,7 +588,7 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
         URID=g_URID,
         unitree_ethernet=g_ut_eth,
         use_sim=g_use_sim,
-        tracing=g_tracing,
+        use_tracer=g_use_tracer,
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         knowledge_base=raw_config.get("knowledge_base"),

@@ -117,7 +117,7 @@ class ModeCortexRuntime:
         self._pending_transition_reason: Optional[str] = None
 
         # Trace logging
-        if self.mode_config.tracing:
+        if self.mode_config.use_tracer:
             self.tracer.enable()
 
     async def _initialize_mode(self, mode_name: str):
