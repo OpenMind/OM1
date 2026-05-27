@@ -28,8 +28,8 @@ CUSTOM_ACTION_MAP = {
     "show_hand1": "show_hand1",
     "show_hand2": "show_hand2",
     "my_gesture": "my_gesture",
-    "do_payment": "do_payment",
-    "down_payment": "down_payment",
+    # "do_payment": "do_payment",
+    # "down_payment": "down_payment",
 }
 
 
