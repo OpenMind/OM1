@@ -45,7 +45,7 @@ class TestGetHttpxEventHooks:
 
         mock_request = MagicMock(spec=httpx.Request)
         mock_request.method = "GET"
-        mock_request.url = "https://example.com/api"
+        mock_request.url = httpx.URL("https://example.com/api")
         mock_request.extensions = {"start_time": time.perf_counter() - 0.1}
 
         response = MagicMock(spec=httpx.Response)
@@ -70,7 +70,7 @@ class TestGetHttpxEventHooks:
 
         mock_request = MagicMock(spec=httpx.Request)
         mock_request.method = "POST"
-        mock_request.url = "https://example.com/data"
+        mock_request.url = httpx.URL("https://example.com/data")
         mock_request.extensions = {"start_time": time.perf_counter()}
 
         response = MagicMock(spec=httpx.Response)
@@ -99,7 +99,7 @@ class TestGetHttpxEventHooks:
 
         mock_request = MagicMock(spec=httpx.Request)
         mock_request.method = "GET"
-        mock_request.url = "https://example.com"
+        mock_request.url = httpx.URL("https://example.com")
         mock_request.extensions = {}  # no start_time
 
         response = MagicMock(spec=httpx.Response)
@@ -120,7 +120,7 @@ class TestGetHttpxEventHooks:
 
         mock_request = MagicMock(spec=httpx.Request)
         mock_request.method = "GET"
-        mock_request.url = "https://example.com"
+        mock_request.url = httpx.URL("https://example.com")
         mock_request.extensions = {}
 
         response = MagicMock(spec=httpx.Response)

@@ -51,3 +51,51 @@ om1_asr_utterance_end_latency_last = Gauge(
     "Most recent latency from speech activity start to end_of_utterance detection in seconds",
     ["model", "language", "api_version"],
 )
+
+om1_http_request_duration_seconds = Histogram(
+    "om1_http_request_duration_seconds",
+    "Total HTTP request duration (client-side) in seconds",
+    ["method", "status_code", "url"],
+)
+
+om1_http_upstream_total_seconds = Histogram(
+    "om1_http_upstream_total_seconds",
+    "Upstream total time in seconds (from x-upstream-total-ms header)",
+    ["method", "status_code", "url"],
+)
+
+om1_http_upstream_ttfb_seconds = Histogram(
+    "om1_http_upstream_ttfb_seconds",
+    "Upstream TTFB in seconds (from x-upstream-ttfb-ms header)",
+    ["method", "status_code", "url"],
+)
+
+om1_http_proxy_total_seconds = Histogram(
+    "om1_http_proxy_total_seconds",
+    "Proxy total time in seconds (from x-proxy-total-ms header)",
+    ["method", "status_code", "url"],
+)
+
+om1_http_request_duration_last_seconds = Gauge(
+    "om1_http_request_duration_last_seconds",
+    "Most recent HTTP request duration (client-side) in seconds",
+    ["method", "status_code", "url"],
+)
+
+om1_http_upstream_total_last_seconds = Gauge(
+    "om1_http_upstream_total_last_seconds",
+    "Most recent upstream total time in seconds",
+    ["method", "status_code", "url"],
+)
+
+om1_http_upstream_ttfb_last_seconds = Gauge(
+    "om1_http_upstream_ttfb_last_seconds",
+    "Most recent upstream TTFB in seconds",
+    ["method", "status_code", "url"],
+)
+
+om1_http_proxy_total_last_seconds = Gauge(
+    "om1_http_proxy_total_last_seconds",
+    "Most recent proxy total time in seconds",
+    ["method", "status_code", "url"],
+)
