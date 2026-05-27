@@ -1,5 +1,5 @@
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   hertz: 1,
   name: "openrouter",
   api_key: "${OM_API_KEY:-openmind_free}",
