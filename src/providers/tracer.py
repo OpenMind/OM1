@@ -9,19 +9,19 @@ from providers.singleton import singleton
 
 
 @singleton
-class Recorder:
+class Tracer:
     """
-    Recorder for LLM interactions. Writes one JSONL line per record, with a daily rotation.
+    Tracer for LLM interactions. Writes one JSONL line per record, with a daily rotation.
     """
 
-    def __init__(self, output_dir: str = "recordings") -> None:
+    def __init__(self, output_dir: str = "traces") -> None:
         """
-        Initialize the Recorder.
+        Initialize the Tracer.
 
         Parameters
         ----------
         output_dir : str
-            Directory where recordings will be saved (default: "recordings").
+            Directory where traces will be saved (default: "traces").
         """
         self.output_dir = output_dir
         self._enabled = False
@@ -36,14 +36,14 @@ class Recorder:
 
     def enable(self) -> None:
         """
-        Enable recording and ensure the output directory exists.
+        Enable tracing and ensure the output directory exists.
         """
         self._enabled = True
         os.makedirs(self.output_dir, exist_ok=True)
 
     def disable(self) -> None:
         """
-        Disable recording and close any open file handle.
+        Disable tracing and close any open file handle.
         """
         self._enabled = False
         self.stop()
@@ -51,11 +51,11 @@ class Recorder:
     @property
     def enabled(self) -> bool:
         """
-        Return whether recording is currently enabled.
+        Return whether tracing is currently enabled.
         """
         return self._enabled
 
-    def record(self, llm_input: str, llm_output: list[dict[str, Any]]) -> None:
+    def gauge(self, llm_input: str, llm_output: list[dict[str, Any]]) -> None:
         """
         Record an LLM interaction with the given input and output.
 
@@ -79,7 +79,7 @@ class Recorder:
             }
             self._write(json.dumps(data, ensure_ascii=False))
         except Exception:
-            logging.exception("recorder: failed to write record")
+            logging.exception("tracer: failed to write record")
 
     def stop(self) -> None:
         """
@@ -116,7 +116,7 @@ class Recorder:
 
     def set_generation(self, generation: int) -> None:
         """
-        Set the current generation number for recording.
+        Set the current generation number for tracing.
 
         Parameters
         ----------

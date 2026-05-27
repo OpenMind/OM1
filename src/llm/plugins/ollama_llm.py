@@ -196,13 +196,13 @@ class OllamaLLM(LLM[R]):
 
                 actions = convert_function_calls_to_actions(function_call_data)
                 result_model = CortexOutputModel(actions=actions)
-                self.recorder.record(
+                self.tracer.gauge(
                     llm_input=prompt,
                     llm_output=[{"type": a.type, "value": a.value} for a in actions],
                 )
                 return T.cast(R, result_model)
 
-            self.recorder.record(llm_input=prompt, llm_output=[])
+            self.tracer.gauge(llm_input=prompt, llm_output=[])
             return None
 
         except httpx.ConnectError as e:

@@ -11,8 +11,8 @@ from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
-from providers.recorder import Recorder
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.tracer import Tracer
 from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -66,7 +66,7 @@ class ModeCortexRuntime:
         self.mode_config_name = mode_config_name
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
-        self.recorder = Recorder()
+        self.tracer = Tracer()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
 
@@ -115,6 +115,10 @@ class ModeCortexRuntime:
         self._mode_transition_event = asyncio.Event()
         self._pending_mode_transition: Optional[str] = None
         self._pending_transition_reason: Optional[str] = None
+
+        # Trace logging
+        if self.mode_config.tracing:
+            self.tracer.enable()
 
     async def _initialize_mode(self, mode_name: str):
         """
@@ -525,7 +529,7 @@ class ModeCortexRuntime:
             return
 
         tick_num = self.io_provider.increment_tick()
-        self.recorder.set_generation(cortex_generation)
+        self.tracer.set_generation(cortex_generation)
 
         logging.debug(f"Processing tick #{tick_num}")
 
