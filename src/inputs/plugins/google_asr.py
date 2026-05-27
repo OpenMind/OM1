@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -224,31 +225,37 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             elif msg_type == "speech_end":
                 if self._speech_start_time is not None:
                     duration = time.time() - self._speech_start_time
-                    om1_asr_speech_duration.labels(language=self._language, api_version=self._api_version).observe(
-                        duration
-                    )
-                    om1_asr_speech_duration_last.labels(language=self._language, api_version=self._api_version).set(
-                        duration
-                    )
+                    om1_asr_speech_duration.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).observe(duration)
+                    om1_asr_speech_duration_last.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).set(duration)
 
             elif msg_type == "end_of_utterance":
                 if self._speech_start_time is not None:
                     latency = time.time() - self._speech_start_time
                     om1_asr_utterance_end_latency.labels(
-                        language=self._language, api_version=self._api_version
+                        model="google", language=self._language, api_version=self._api_version
                     ).observe(latency)
                     om1_asr_utterance_end_latency_last.labels(
-                        language=self._language, api_version=self._api_version
+                        model="google", language=self._language, api_version=self._api_version
                     ).set(latency)
 
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (has_cjk and len(asr_reply) > 2) or (not has_cjk and len(asr_reply.split()) > 1):
                     # Observe ASR latency from speech start to final transcript
                     if self._speech_start_time is not None:
                         latency = time.time() - self._speech_start_time
-                        om1_asr_latency.labels(language=self._language, api_version=self._api_version).observe(latency)
-                        om1_asr_latency_last.labels(language=self._language, api_version=self._api_version).set(latency)
+                        om1_asr_latency.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).observe(latency)
+                        om1_asr_latency_last.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).set(latency)
 
                         self._speech_start_time = None
                     self.message_buffer.put_nowait(asr_reply)

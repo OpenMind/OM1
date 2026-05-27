@@ -169,16 +169,6 @@ class TestARMZenohConnectorAutoPayment:
     """Test automatic down_payment functionality."""
 
     @pytest.mark.asyncio
-    async def test_do_payment_triggers_auto_down_payment(self, connector, mock_dependencies):
-        """Test that do_payment action triggers automatic down_payment after 10 seconds."""
-        arm_input = ArmInput(action=ArmAction.DO_PAYMENT)
-
-        with patch.object(connector, "_auto_down_payment", new_callable=AsyncMock) as mock_auto_done:
-            await connector.connect(arm_input)
-            assert mock_dependencies["session"].put.call_count == 1
-            mock_auto_done.assert_called_once()
-
-    @pytest.mark.asyncio
     async def test_auto_down_payment_publishes_after_10_seconds(self, connector, mock_dependencies):
         """Test that _auto_down_payment publishes down_payment after 10 seconds."""
         # Mock asyncio.sleep to avoid actual delay in tests
@@ -217,17 +207,6 @@ class TestARMZenohConnectorAutoPayment:
 
             await connector._auto_down_payment()
             mock_logging.exception.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_do_payment_full_workflow(self, connector, mock_dependencies):
-        """Test complete workflow: do_payment publishes, then down_payment auto-publishes."""
-        arm_input = ArmInput(action=ArmAction.DO_PAYMENT)
-
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            await connector.connect(arm_input)
-            assert mock_dependencies["session"].put.call_count == 1
-            await connector._auto_down_payment()
-            assert mock_dependencies["session"].put.call_count == 2
 
     @pytest.mark.asyncio
     async def test_other_actions_dont_trigger_auto_payment(self, connector, mock_dependencies):

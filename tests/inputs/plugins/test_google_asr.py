@@ -239,6 +239,118 @@ def test_handle_asr_message_no_asr_reply():
         assert sensor.message_buffer.empty()
 
 
+def test_handle_asr_message_cjk_chinese_accepted():
+    """Test _handle_asr_message accepts Chinese text with more than 2 characters."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "你好吗"})
+        sensor._handle_asr_message(raw_message)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "你好吗"
+
+
+def test_handle_asr_message_cjk_chinese_too_short_rejected():
+    """Test _handle_asr_message rejects Chinese text with 2 or fewer characters."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "你好"})
+        sensor._handle_asr_message(raw_message)
+
+        assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_cjk_japanese_hiragana_accepted():
+    """Test _handle_asr_message accepts Japanese hiragana text with more than 2 characters."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "こんにちは"})
+        sensor._handle_asr_message(raw_message)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "こんにちは"
+
+
+def test_handle_asr_message_cjk_korean_accepted():
+    """Test _handle_asr_message accepts Korean hangul text with more than 2 characters."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "안녕하세요"})
+        sensor._handle_asr_message(raw_message)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "안녕하세요"
+
+
+def test_handle_asr_message_cjk_single_char_rejected():
+    """Test _handle_asr_message rejects CJK text with exactly 1 character."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "你"})
+        sensor._handle_asr_message(raw_message)
+
+        assert sensor.message_buffer.empty()
+
+
+def test_handle_asr_message_cjk_mixed_with_latin_accepted():
+    """Test _handle_asr_message accepts mixed CJK and Latin text longer than 2 chars."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        raw_message = json.dumps({"asr_reply": "hello你好"})
+        sensor._handle_asr_message(raw_message)
+
+        assert not sensor.message_buffer.empty()
+        assert sensor.message_buffer.get_nowait() == "hello你好"
+
+
 @pytest.mark.asyncio
 async def test_raw_to_text_none():
     """Test _raw_to_text with None."""

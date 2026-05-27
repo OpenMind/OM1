@@ -11,6 +11,7 @@ from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -71,6 +72,7 @@ class XAILLM(LLM[R]):
         self._client = openai.AsyncOpenAI(
             base_url=self.base_url,
             api_key=config.api_key,
+            http_client=get_async_httpx_client(),
         )
 
         # Initialize history manager
