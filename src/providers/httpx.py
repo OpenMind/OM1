@@ -45,7 +45,13 @@ def get_httpx_event_hooks() -> dict[str, list]:
         response : httpx.Response
             The HTTP response object to log.
         """
-        start_time = response.request.extensions.get("start_time", 0)
+        start_time = response.request.extensions.get("start_time", None)
+        if start_time is None:
+            logging.warning(
+                f"HTTP {response.request.method} {response.request.url} - " "No start_time recorded, skipping metrics"
+            )
+            return
+
         elapsed = (time.perf_counter() - start_time) * 1000
         http_version = response.http_version
         proxy_parse_total_time = response.headers.get("x-proxy-parse-ms", "?")
@@ -65,33 +71,50 @@ def get_httpx_event_hooks() -> dict[str, list]:
 
         method = response.request.method
         status_code = str(response.status_code)
-        url = str(response.request.url.host)
+        host = str(response.request.url.host)
+        path = str(response.request.url.path)
         elapsed_s = elapsed / 1000.0
 
-        om1_http_request_duration_seconds.labels(method=method, status_code=status_code, url=url).observe(elapsed_s)
-        om1_http_request_duration_last_seconds.labels(method=method, status_code=status_code, url=url).set(elapsed_s)
+        om1_http_request_duration_seconds.labels(host=host, path=path, method=method, status_code=status_code).observe(
+            elapsed_s
+        )
+        om1_http_request_duration_last_seconds.labels(host=host, path=path, method=method, status_code=status_code).set(
+            elapsed_s
+        )
 
         if upstream_total_time != "?":
             try:
                 val = float(upstream_total_time) / 1000.0
-                om1_http_upstream_total_seconds.labels(method=method, status_code=status_code, url=url).observe(val)
-                om1_http_upstream_total_last_seconds.labels(method=method, status_code=status_code, url=url).set(val)
+                om1_http_upstream_total_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).observe(val)
+                om1_http_upstream_total_last_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).set(val)
             except ValueError:
                 pass
 
         if upstream_ttfb_time != "?":
             try:
                 val = float(upstream_ttfb_time) / 1000.0
-                om1_http_upstream_ttfb_seconds.labels(method=method, status_code=status_code, url=url).observe(val)
-                om1_http_upstream_ttfb_last_seconds.labels(method=method, status_code=status_code, url=url).set(val)
+                om1_http_upstream_ttfb_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).observe(val)
+                om1_http_upstream_ttfb_last_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).set(val)
             except ValueError:
                 pass
 
         if proxy_total_time != "?":
             try:
                 val = float(proxy_total_time) / 1000.0
-                om1_http_proxy_total_seconds.labels(method=method, status_code=status_code, url=url).observe(val)
-                om1_http_proxy_total_last_seconds.labels(method=method, status_code=status_code, url=url).set(val)
+                om1_http_proxy_total_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).observe(val)
+                om1_http_proxy_total_last_seconds.labels(
+                    host=host, path=path, method=method, status_code=status_code
+                ).set(val)
             except ValueError:
                 pass
 
