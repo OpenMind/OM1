@@ -2,8 +2,7 @@ import logging
 import time
 
 import httpx
-
-from prometheus import (
+from om1_utils.prometheus import (
     om1_http_proxy_total_last_seconds,
     om1_http_proxy_total_seconds,
     om1_http_request_duration_last_seconds,
