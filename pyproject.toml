@@ -34,7 +34,7 @@ dependencies = [
     "fastapi==0.135.3",
     "uvicorn==0.34.0",
     "websockets==13.1",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@c6007316fd39fc385d6313bdd5526a3e7940c087",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@4ee799e25843b8c0984cc2bd008fab23ebded343",
     "aiohttp==3.13.4",
     "pynput==1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
