@@ -100,7 +100,7 @@ class TestGetHttpxEventHooks:
         mock_request = MagicMock(spec=httpx.Request)
         mock_request.method = "GET"
         mock_request.url = httpx.URL("https://example.com")
-        mock_request.extensions = {}  # no start_time
+        mock_request.extensions = {"start_time": time.perf_counter()}
 
         response = MagicMock(spec=httpx.Response)
         response.request = mock_request
@@ -114,7 +114,7 @@ class TestGetHttpxEventHooks:
             assert "?" in log_msg
 
     @pytest.mark.asyncio
-    async def test_log_response_elapsed_uses_zero_when_no_start_time(self):
+    async def test_log_response_warns_and_skips_when_no_start_time(self):
         hooks = get_httpx_event_hooks()
         log_response = hooks["response"][0]
 
@@ -129,9 +129,15 @@ class TestGetHttpxEventHooks:
         response.http_version = "HTTP/1.1"
         response.headers = {}
 
-        with patch("providers.httpx.logging.info") as mock_log:
+        with (
+            patch("providers.httpx.logging.warning") as mock_warning,
+            patch("providers.httpx.logging.info") as mock_info,
+        ):
             await log_response(response)
-            mock_log.assert_called_once()
+            mock_warning.assert_called_once()
+            mock_info.assert_not_called()
+            warning_msg = mock_warning.call_args[0][0]
+            assert "No start_time recorded" in warning_msg
 
 
 class TestGetAsyncHttpxClient:
