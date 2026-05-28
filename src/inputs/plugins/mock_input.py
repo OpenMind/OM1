@@ -244,7 +244,7 @@ class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
         result = f"""
 INPUT: {self.descriptor_for_LLM}
 // START
-{self.messages[-1]}
+{self.messages[-1].message}
 // END
 """
         self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1].message, time.time())
