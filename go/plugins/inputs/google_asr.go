@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 )
 
@@ -341,6 +342,10 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context) {
 
 		if err := s.paStream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
+		}
+
+		if providers.Speaking.Load() {
+			continue
 		}
 
 		pcm := make([]byte, len(s.audioChunk)*2)

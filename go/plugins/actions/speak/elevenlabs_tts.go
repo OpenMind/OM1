@@ -17,6 +17,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/httpclient"
+	"github.com/openmind/om1/internal/providers"
 )
 
 type SpeakInput struct {
@@ -156,8 +157,6 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
-	e.log.Info("speak/elevenlabs_tts: enqueueing text", zap.String("text", text))
-
 	select {
 	case e.queue <- TTSRequest{text: text, voiceID: e.cfg.VoiceID}:
 	default:
@@ -184,10 +183,12 @@ func (e *ElevenLabsConnector) processAudio() {
 			// Silence prefix warms up Bluetooth link before audio starts.
 			e.streamChunk(silenceBytes(e.cfg.Rate, 10))
 
+			providers.Speaking.Store(true)
 			if err := e.synthesize(req); err != nil && e.ctx.Err() == nil {
 				e.log.Error("speak/elevenlabs_tts: synthesis failed", zap.Error(err))
 			}
 			e.finishPlayback()
+			providers.Speaking.Store(false)
 		}
 	}
 }
