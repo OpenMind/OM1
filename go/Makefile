@@ -91,12 +91,12 @@ build: download-zenohc
 .PHONY: run
 run: build
 	@echo "Running $(BINARY_NAME) with config: $(CONFIG)"
-	$(BUILD_DIR)/$(BINARY_NAME) -config ../config/$(CONFIG).json5
+	$(BUILD_DIR)/$(BINARY_NAME) -config ./config/$(CONFIG).json5
 
 .PHONY: dev
 dev: download-zenohc
 	@echo "Running in dev mode with config: $(CONFIG)"
-	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ../config/$(CONFIG).json5
+	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ./config/$(CONFIG).json5
 
 .PHONY: lint
 lint: download-zenohc
@@ -159,4 +159,4 @@ check: fmt vet lint test
 .PHONY: list-configs
 list-configs:
 	@echo "Available configurations:"
-	@ls -1 ../config/*.json5 | xargs -n 1 basename | sed 's/\.json5//'
+	@ls -1 ./config/*.json5 | xargs -n 1 basename | sed 's/\.json5//'
