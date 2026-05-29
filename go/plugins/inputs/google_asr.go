@@ -256,18 +256,21 @@ func (s *GoogleASRSensor) FormattedLatestBuffer() string {
 
 func (s *GoogleASRSensor) Stop() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.stopped {
+		s.mu.Unlock()
 		return
 	}
 
 	s.stopped = true
+	paStream := s.paStream
+	s.paStream = nil
+	s.mu.Unlock()
+
 	s.log.Info("GoogleASRInput: stopping sensor")
 
-	if s.paStream != nil {
-		_ = s.paStream.Stop()
-		_ = s.paStream.Close()
+	if paStream != nil {
+		_ = paStream.Stop()
+		_ = paStream.Close()
 	}
 
 	if s.wsClient != nil {

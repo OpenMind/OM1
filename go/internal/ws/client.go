@@ -1,8 +1,8 @@
-// Package ws provides a reconnecting binary WebSocket client for audio streaming.
-// It mirrors the Sender/readLoop/sendLoop pattern from the test_asr reference implementation.
+// Package ws provides a reconnecting binary WebSocket client.
 package ws
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -11,13 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Config holds the connection settings for a Client.
+// Config holds connection settings for a Client.
 type Config struct {
 	URL              string
 	HandshakeTimeout time.Duration // default 10s
 	WriteTimeout     time.Duration // default 5s
-	SendBufferSize   int           // channel depth; default 256
-	Reconnect        bool          // auto-reconnect on send failure
+	SendBufferSize   int           // default 256
+	Reconnect        bool
 }
 
 // Client is a reconnecting WebSocket client for binary streaming.
@@ -29,11 +29,11 @@ type Client struct {
 	connMu sync.Mutex
 	conn   *websocket.Conn
 
-	sendCh chan []byte
-	stopCh chan struct{}
-	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 
-	reconnect bool
+	sendCh chan []byte
+	wg     sync.WaitGroup
 }
 
 // New creates a Client. onMessage is called for every message received from the server.
@@ -47,13 +47,14 @@ func New(cfg Config, log *zap.Logger, onMessage func(messageType int, data []byt
 	if cfg.SendBufferSize == 0 {
 		cfg.SendBufferSize = 256
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Client{
 		cfg:       cfg,
 		log:       log,
 		onMessage: onMessage,
+		ctx:       ctx,
+		cancel:    cancel,
 		sendCh:    make(chan []byte, cfg.SendBufferSize),
-		stopCh:    make(chan struct{}),
-		reconnect: cfg.Reconnect,
 	}
 }
 
@@ -80,7 +81,7 @@ func (c *Client) Send(data []byte) error {
 
 // Close performs a graceful shutdown and waits for all goroutines to exit.
 func (c *Client) Close() {
-	close(c.stopCh)
+	c.cancel()
 
 	c.connMu.Lock()
 	if c.conn != nil {
@@ -94,12 +95,11 @@ func (c *Client) Close() {
 	c.wg.Wait()
 }
 
-// dial opens a new WebSocket connection.
 func (c *Client) dial() error {
 	dialer := websocket.Dialer{HandshakeTimeout: c.cfg.HandshakeTimeout}
 	c.log.Info("ws: connecting", zap.String("url", c.cfg.URL))
 
-	conn, resp, err := dialer.Dial(c.cfg.URL, nil)
+	conn, resp, err := dialer.DialContext(c.ctx, c.cfg.URL, nil)
 	if err != nil {
 		if resp != nil {
 			return fmt.Errorf("ws: connect failed (status %d): %w", resp.StatusCode, err)
@@ -113,7 +113,6 @@ func (c *Client) dial() error {
 	return nil
 }
 
-// redial closes the current connection and opens a fresh one, then restarts readLoop.
 func (c *Client) redial() error {
 	c.connMu.Lock()
 	if c.conn != nil {
@@ -130,13 +129,12 @@ func (c *Client) redial() error {
 	return nil
 }
 
-// sendLoop reads from sendCh and writes binary messages to the WebSocket.
-// Mirrors sender.go sendLoop / sendAudioData.
 func (c *Client) sendLoop() {
 	defer c.wg.Done()
+
 	for {
 		select {
-		case <-c.stopCh:
+		case <-c.ctx.Done():
 			c.log.Info("ws: send loop stopped")
 			return
 		case data, ok := <-c.sendCh:
@@ -145,8 +143,7 @@ func (c *Client) sendLoop() {
 			}
 			if err := c.writeMessage(data); err != nil {
 				c.log.Warn("ws: send failed", zap.Error(err))
-
-				if c.reconnect {
+				if c.cfg.Reconnect {
 					c.log.Info("ws: reconnecting...")
 					if rerr := c.redial(); rerr != nil {
 						c.log.Error("ws: reconnect failed", zap.Error(rerr))
@@ -157,11 +154,17 @@ func (c *Client) sendLoop() {
 	}
 }
 
-// readLoop reads messages from the WebSocket and calls onMessage.
-// Mirrors sender.go readLoop.
 func (c *Client) readLoop() {
 	defer c.wg.Done()
+
 	for {
+		select {
+		case <-c.ctx.Done():
+			c.log.Info("ws: read loop stopped")
+			return
+		default:
+		}
+
 		c.connMu.Lock()
 		conn := c.conn
 		c.connMu.Unlock()
@@ -171,15 +174,18 @@ func (c *Client) readLoop() {
 
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if c.ctx.Err() == nil && websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure) {
 				c.log.Warn("ws: read error", zap.Error(err))
 			}
 			return
 		}
+
 		c.log.Debug("ws: message received",
 			zap.String("type", messageTypeName(msgType)),
 			zap.Int("bytes", len(msg)),
 		)
+
 		if c.onMessage != nil {
 			c.onMessage(msgType, msg)
 		}
@@ -188,15 +194,15 @@ func (c *Client) readLoop() {
 
 func (c *Client) writeMessage(data []byte) error {
 	c.connMu.Lock()
-	conn := c.conn
-	c.connMu.Unlock()
-	if conn == nil {
+	defer c.connMu.Unlock()
+
+	if c.conn == nil {
 		return fmt.Errorf("ws: not connected")
 	}
-	if err := conn.SetWriteDeadline(time.Now().Add(c.cfg.WriteTimeout)); err != nil {
+	if err := c.conn.SetWriteDeadline(time.Now().Add(c.cfg.WriteTimeout)); err != nil {
 		return fmt.Errorf("ws: set deadline: %w", err)
 	}
-	return conn.WriteMessage(websocket.BinaryMessage, data)
+	return c.conn.WriteMessage(websocket.BinaryMessage, data)
 }
 
 func messageTypeName(t int) string {
