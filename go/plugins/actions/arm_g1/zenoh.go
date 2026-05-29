@@ -3,7 +3,6 @@ package arm_g1
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"go.uber.org/zap"
@@ -60,21 +59,34 @@ func init() {
 }
 
 type zenohConnector struct {
-	log     *zap.Logger
-	session *zenohsession.Session
+	log       *zap.Logger
+	session   *zenohsession.Session
+	publisher *zenohsession.Publisher
 }
 
 func newZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get()
 
-	sess, err := zenohsession.Open()
-	if err != nil {
-		log.Error("arm_g1/zenoh: failed to open zenoh session", zap.Error(err))
-		return &zenohConnector{log: log, session: nil}, nil
+	var endpoint string
+	if ep, ok := cfg["zenoh_endpoint"].(string); ok {
+		endpoint = ep
 	}
-	log.Info("arm_g1/zenoh: zenoh session opened")
 
-	return &zenohConnector{log: log, session: sess}, nil
+	sess, err := zenohsession.Open(endpoint)
+	if err != nil {
+		log.Warn("arm_g1/zenoh: zenoh unavailable, arm gestures disabled", zap.Error(err))
+		return &zenohConnector{log: log}, nil
+	}
+
+	pub, err := sess.DeclarePublisher(sportRequestTopic)
+	if err != nil {
+		sess.Close()
+		log.Warn("arm_g1/zenoh: failed to declare publisher, arm gestures disabled", zap.Error(err))
+		return &zenohConnector{log: log}, nil
+	}
+
+	log.Info("arm_g1/zenoh: zenoh session opened")
+	return &zenohConnector{log: log, session: sess, publisher: pub}, nil
 }
 
 func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
@@ -93,18 +105,14 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 		return nil, nil
 	}
 
-	if z.session == nil {
-		z.log.Error("arm_g1/zenoh: no zenoh session available")
+	if z.publisher == nil {
 		return nil, nil
 	}
 
-	parameter, err := json.Marshal(map[string]string{"action": actionName})
-	if err != nil {
-		return nil, fmt.Errorf("arm_g1/zenoh: marshal parameter: %w", err)
-	}
-
-	payload := serializeUnitreeRequest(customAPIID, string(parameter))
-	if err := z.session.Put(sportRequestTopic, payload); err != nil {
+	// Use the same JSON format as the Python connector (space after colon).
+	parameter := fmt.Sprintf(`{"action": "%s"}`, actionName)
+	payload := serializeUnitreeRequest(customAPIID, parameter)
+	if err := z.publisher.Put(payload); err != nil {
 		z.log.Error("arm_g1/zenoh: put failed", zap.Error(err))
 		return nil, err
 	}
@@ -113,45 +121,53 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 	return nil, nil
 }
 
-func (z *zenohConnector) Tick(_ context.Context) {}
+func (z *zenohConnector) Tick(ctx context.Context) {
+	<-ctx.Done()
+}
 
 func (z *zenohConnector) Stop() {
+	if z.publisher != nil {
+		z.publisher.Drop()
+		z.publisher = nil
+		z.log.Info("arm_g1/zenoh: publisher dropped")
+	}
+
 	if z.session != nil {
 		z.session.Close()
 		z.session = nil
 		z.log.Info("arm_g1/zenoh: zenoh session closed")
 	}
+
 }
 
 // serializeUnitreeRequest encodes a Unitree API request in CDR little-endian format.
 //
-// Wire layout (offsets from start of buffer):
+// CDR alignment is measured from the start of the data payload (byte 4, after
+// the 4-byte encapsulation header), so data offset 0 is already 8-byte aligned.
+//
+// Wire layout (absolute offsets from start of buffer):
 //
 //	[0]  CDR encapsulation header: 0x00 0x01 0x00 0x00
-//	[4]  padding (align int64 to offset 8)
-//	[8]  identity.id     int64 LE = 0
-//	[16] identity.api_id int64 LE
-//	[24] lease.id        int64 LE = 0
-//	[32] policy.priority int32 LE = 0
-//	[36] policy.noreply  bool    = 0
-//	[37] padding (align uint32 to offset 40)
-//	[40] parameter length uint32 LE (includes null terminator)
-//	[44] parameter bytes  (null-terminated UTF-8)
-//	[..] padding to 4-byte boundary
+//	[4]  identity.id     int64 LE = 0   (data offset 0, already 8-byte aligned)
+//	[12] identity.api_id int64 LE
+//	[20] lease.id        int64 LE = 0
+//	[28] policy.priority int32 LE = 0
+//	[32] policy.noreply  bool    = 0
+//	[33] padding (3 bytes, align uint32 to data offset 32)
+//	[36] parameter length uint32 LE (includes null terminator)
+//	[40] parameter bytes  (null-terminated UTF-8)
+//	[..] padding to 4-byte (data) boundary
 //	[..] binary length    uint32 LE = 0
 func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	paramBytes := append([]byte(parameter), 0x00) // null-terminated
 	paramLen := uint32(len(paramBytes))
 
-	buf := make([]byte, 0, 80+len(paramBytes))
+	buf := make([]byte, 0, 76+len(paramBytes))
 
 	// CDR encapsulation header (little-endian)
 	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
 
-	// 4 bytes padding to align first int64 to offset 8
-	buf = append(buf, 0x00, 0x00, 0x00, 0x00)
-
-	// identity.id = 0
+	// identity.id = 0 (data offset 0, already 8-byte aligned)
 	buf = appendInt64LE(buf, 0)
 
 	// identity.api_id
@@ -166,7 +182,7 @@ func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	// policy.noreply = false
 	buf = append(buf, 0x00)
 
-	// 3 bytes padding to align uint32 (parameter length) to offset 40
+	// 3 bytes padding to align uint32 (parameter length) to data offset 32
 	buf = append(buf, 0x00, 0x00, 0x00)
 
 	// parameter length (including null terminator)
@@ -175,8 +191,9 @@ func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	// parameter string bytes
 	buf = append(buf, paramBytes...)
 
-	// padding to 4-byte boundary for binary sequence length
-	if pad := (4 - len(buf)%4) % 4; pad > 0 {
+	// padding to 4-byte (data) boundary for binary sequence length
+	dataLen := len(buf) - 4 // subtract 4-byte CDR header
+	if pad := (4 - dataLen%4) % 4; pad > 0 {
 		buf = append(buf, make([]byte, pad)...)
 	}
 

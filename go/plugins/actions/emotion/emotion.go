@@ -53,5 +53,5 @@ func (c *logConnector) Connect(_ context.Context, input actions.Input) (actions.
 	return nil, nil
 }
 
-func (c *logConnector) Tick(_ context.Context) {}
-func (c *logConnector) Stop()                  {}
+func (c *logConnector) Tick(ctx context.Context) { <-ctx.Done() }
+func (c *logConnector) Stop()                    {}

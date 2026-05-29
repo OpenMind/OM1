@@ -373,10 +373,7 @@ func (e *ElevenLabsConnector) synthesize(req TTSRequest) error {
 }
 
 func (e *ElevenLabsConnector) Tick(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-	case <-time.After(60 * time.Second):
-	}
+	<-ctx.Done()
 }
 
 func (e *ElevenLabsConnector) Stop() {
