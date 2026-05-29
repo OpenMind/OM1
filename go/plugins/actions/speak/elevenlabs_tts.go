@@ -17,6 +17,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/httpclient"
+	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -101,11 +102,10 @@ func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	log, _ := zap.NewProduction()
 
 	c := &ElevenLabsConnector{
 		cfg:           cfg,
-		log:           log,
+		log:           logger.Get(),
 		ctx:           ctx,
 		cancel:        cancel,
 		queue:         make(chan TTSRequest, ttsQueueDepth),
@@ -156,6 +156,8 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	}
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
+
+	e.log.Info("speak/elevenlabs_tts: enqueueing text", zap.String("text", text))
 
 	select {
 	case e.queue <- TTSRequest{text: text, voiceID: e.cfg.VoiceID}:

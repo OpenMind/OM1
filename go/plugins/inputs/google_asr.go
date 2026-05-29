@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 )
@@ -144,7 +145,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 			apiVersion, cfg.APIKey)
 	}
 
-	log, _ := zap.NewProduction()
+	log := logger.Get()
 	log.Info("GoogleASRInput: initializing",
 		zap.String("language", language),
 		zap.String("language_code", languageCode),
@@ -162,6 +163,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 		audioChunk:   make([]int16, cfg.Chunk),
 		transcriptCh: make(chan string, 32),
 	}
+
 	s.wsClient = ws.New(ws.Config{URL: wsURL, Reconnect: true}, log, s.onWSMessage)
 	return s, nil
 }

@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/runtime"
 
 	_ "github.com/openmind/om1/plugins/actions"
@@ -33,24 +34,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := buildLogger(*logLevel)
-	defer func() { _ = logger.Sync() }()
+	log := buildLogger(*logLevel)
+	logger.Set(log)
+	defer func() { _ = log.Sync() }()
 
 	cfg, err := config.Load(*configName)
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		log.Fatal("failed to load config", zap.Error(err))
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	rt := runtime.New(cfg, logger, runtime.Options{
+	rt := runtime.New(cfg, log, runtime.Options{
 		HotReload:     *hotReload,
 		CheckInterval: *checkSecs,
 	})
 
 	if err := rt.Run(ctx); err != nil && err != context.Canceled {
-		logger.Fatal("runtime exited with error", zap.Error(err))
+		log.Fatal("runtime exited with error", zap.Error(err))
 	}
 }
 

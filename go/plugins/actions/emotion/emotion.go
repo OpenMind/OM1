@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/actions"
+	"github.com/openmind/om1/internal/logger"
 )
 
 // EmotionAction is a string enum of supported facial expressions.
@@ -39,8 +40,7 @@ type logConnector struct {
 }
 
 func newLogConnector(_ map[string]any) (actions.Connector, error) {
-	log, _ := zap.NewProduction()
-	return &logConnector{log: log}, nil
+	return &logConnector{log: logger.Get()}, nil
 }
 
 func (c *logConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
