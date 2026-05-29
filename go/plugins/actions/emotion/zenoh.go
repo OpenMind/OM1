@@ -126,16 +126,16 @@ func (z *zenohConnector) Stop() {
 //	[0]  CDR encapsulation header: 0x00 0x01 0x00 0x00
 //	[4]  stamp.sec        int32  LE  (data offset 0)
 //	[8]  stamp.nanosec    uint32 LE  (data offset 4)
-//	[12] header.frame_id  CDR string (data offset 8, 4-byte aligned)
-//	[..] request_id.data  CDR string (4-byte aligned after frame_id)
+//	[12] header.frame_id  CDR string (data offset 8) + padding to 4-byte
+//	[..] request_id.data  CDR string — NO trailing padding (next field is int8)
 //	[..] code             int8 = 0 (SWITCH_FACE)
-//	[..] padding to 4-byte data boundary
-//	[..] face_text.data   CDR string
+//	[..] padding to 4-byte data boundary (before face_text uint32 length)
+//	[..] face_text.data   CDR string — no trailing padding (last field)
 func serializeAvatarRequest(faceText string) []byte {
 	now := time.Now()
 	requestID := uuid.New().String()
 
-	buf := make([]byte, 0, 128)
+	buf := make([]byte, 0, 200)
 
 	// CDR encapsulation header (little-endian)
 	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
@@ -146,22 +146,24 @@ func serializeAvatarRequest(faceText string) []byte {
 	// stamp.nanosec (uint32 LE, data offset 4)
 	buf = zenohsession.AppendUint32LE(buf, uint32(now.Nanosecond()))
 
-	// header.frame_id CDR string (data offset 8, 4-byte aligned)
+	// header.frame_id CDR string
 	buf = zenohsession.AppendCDRString(buf, requestID)
 
-	// request_id.data CDR string (4-byte aligned after frame_id padding)
-	buf = zenohsession.AppendCDRString(buf, requestID)
+	// request_id.data
+	reqBytes := append([]byte(requestID), 0x00)
+	buf = zenohsession.AppendUint32LE(buf, uint32(len(reqBytes)))
+	buf = append(buf, reqBytes...)
 
-	// code = 0 (SWITCH_FACE)
+	// code = 0 (SWITCH_FACE), int8
 	buf = append(buf, switchFaceCode)
 
-	// pad to 4-byte data boundary before face_text's uint32 length
+	// Pad to 4-byte data boundary before face_text's uint32 length field.
 	dataLen := len(buf) - 4
 	if pad := (4 - dataLen%4) % 4; pad > 0 {
 		buf = append(buf, make([]byte, pad)...)
 	}
 
-	// face_text.data CDR string
+	// face_text.data
 	faceBytes := append([]byte(faceText), 0x00)
 	buf = zenohsession.AppendUint32LE(buf, uint32(len(faceBytes)))
 	buf = append(buf, faceBytes...)

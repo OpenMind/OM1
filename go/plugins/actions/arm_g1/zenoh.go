@@ -106,7 +106,6 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 		return nil, nil
 	}
 
-	// Use the same JSON format as the Python connector (space after colon).
 	parameter := fmt.Sprintf(`{"action": "%s"}`, actionName)
 	payload := serializeUnitreeRequest(customAPIID, parameter)
 	if err := z.publisher.Put(payload); err != nil {
@@ -139,13 +138,10 @@ func (z *zenohConnector) Stop() {
 
 // serializeUnitreeRequest encodes a Unitree API request in CDR little-endian format.
 //
-// CDR alignment is measured from the start of the data payload (byte 4, after
-// the 4-byte encapsulation header), so data offset 0 is already 8-byte aligned.
-//
 // Wire layout (absolute offsets from start of buffer):
 //
 //	[0]  CDR encapsulation header: 0x00 0x01 0x00 0x00
-//	[4]  identity.id     int64 LE = 0   (data offset 0, already 8-byte aligned)
+//	[4]  identity.id     int64 LE = 0
 //	[12] identity.api_id int64 LE
 //	[20] lease.id        int64 LE = 0
 //	[28] policy.priority int32 LE = 0
@@ -156,7 +152,7 @@ func (z *zenohConnector) Stop() {
 //	[..] padding to 4-byte (data) boundary
 //	[..] binary length    uint32 LE = 0
 func serializeUnitreeRequest(apiID int64, parameter string) []byte {
-	paramBytes := append([]byte(parameter), 0x00) // null-terminated
+	paramBytes := append([]byte(parameter), 0x00)
 	paramLen := uint32(len(paramBytes))
 
 	buf := make([]byte, 0, 76+len(paramBytes))
