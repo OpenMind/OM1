@@ -54,4 +54,4 @@ func (c *logConnector) Connect(_ context.Context, input actions.Input) (actions.
 }
 
 func (c *logConnector) Tick(_ context.Context) {}
-func (c *logConnector) Stop()                   {}
+func (c *logConnector) Stop()                  {}

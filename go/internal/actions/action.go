@@ -20,24 +20,21 @@ type Connector interface {
 	Stop()
 }
 
-// AgentAction bundles the metadata, auto-generated schema, and connector for
-// one action type.  Schema is populated automatically by Load from the
-// interface registered via RegisterInterface.
+// Factory creates a Connector from a decoded config map.
 type AgentAction struct {
-	// Name is the action's package/directory name (e.g. "move").
+	// Name is the unique identifier for this action.
 	Name string
 
-	// LLMLabel is the function name exposed to the LLM (e.g. "move").
+	// LLMLabel is the string used in the LLM prompt to refer to this action.
 	LLMLabel string
 
-	// Schema is the OpenAI-compatible JSON Schema, built automatically from
-	// the input struct registered via RegisterInterface.
+	// Schema is the OpenAI-compatible JSON Schema.
 	Schema map[string]any
 
-	// ExcludeFromPrompt omits this action from the function schema list sent
-	// to the LLM.
+	// ExcludeFromPrompt, if true, indicates that this action should not be included in the LLM prompt.
 	ExcludeFromPrompt bool
 
+	// Connector is the implementation of this action.
 	Connector Connector
 }
 
@@ -46,20 +43,16 @@ type Factory func(cfg map[string]any) (Connector, error)
 
 var connectorRegistry = map[string]Factory{}
 
-// Register adds a connector factory.  connectorKey is "action/connector"
-// (e.g. "move/ros2").  Called from plugin init() functions.
+// Register adds a connector factory to the registry under the given key.
 func Register(connectorKey string, factory Factory) {
 	connectorRegistry[connectorKey] = factory
 }
 
-// Load instantiates the connector for actionName with the given connectorType
-// and config map, and returns a fully-formed AgentAction with an auto-generated
-// schema.
+// Load creates a Connector for the given action and connector types, using the provided config.
 func Load(actionName, connectorType, llmLabel string, connectorConfig map[string]any) (*AgentAction, error) {
 	key := actionName + "/" + connectorType
 	factory, ok := connectorRegistry[key]
 	if !ok {
-		// Fall back to connector-type-only key for generic connectors.
 		factory, ok = connectorRegistry[connectorType]
 		if !ok {
 			return nil, &UnknownPluginError{Kind: "action connector", Name: key}

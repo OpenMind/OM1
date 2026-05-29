@@ -75,8 +75,10 @@ func (o *Orchestrator) runSensor(ctx context.Context, sensorIndex int, sensor Se
 
 func (o *Orchestrator) Buffers() []string {
 	snapshot := make([]string, len(o.sensors))
+
 	for i, sensor := range o.sensors {
 		snapshot[i] = sensor.FormattedLatestBuffer()
 	}
+
 	return snapshot
 }

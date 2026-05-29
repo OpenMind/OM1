@@ -32,7 +32,7 @@ type Orchestrator struct {
 	mode    ExecMode
 	deps    map[string][]string
 	log     *zap.Logger
-	wg      sync.WaitGroup // tracks live ticker goroutines; Stop() waits on it
+	wg      sync.WaitGroup
 }
 
 func NewOrchestrator(
@@ -63,11 +63,7 @@ func (o *Orchestrator) Submit(ctx context.Context, calls []Call) []Result {
 	}
 }
 
-// Start launches one goroutine per connector that calls Tick(ctx) in a
-// continuous loop, mirroring Python's ThreadPoolExecutor-per-connector model.
-// Goroutines exit when ctx is cancelled and then call connector.Stop() for cleanup.
-// Returns a channel that closes when all ticker goroutines have exited, mirroring
-// Python's ActionOrchestrator.start() which returns an asyncio.Future.
+// Start runs the Tick loop for all connectors and waits for them to finish when the context is canceled.
 func (o *Orchestrator) Start(ctx context.Context) <-chan struct{} {
 	done := make(chan struct{})
 

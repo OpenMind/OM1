@@ -390,8 +390,6 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
-	fmt.Printf("LLM response: %+v\n", response) //nolint:forbidigo
-
 	if len(response.ToolCalls) > 0 {
 		calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(response.ToolCalls))
 		if err != nil {

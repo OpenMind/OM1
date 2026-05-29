@@ -55,6 +55,7 @@ type GoogleASRConfig struct {
 type ASRMessage struct {
 	Type     string `json:"type"`
 	ASRReply string `json:"asr_reply"`
+	Time     int64  `json:"time"`
 }
 
 type AudioMetadata struct {
@@ -174,11 +175,13 @@ func (s *GoogleASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 			s.log.Error("GoogleASRInput: portaudio init failed", zap.Error(err))
 			return
 		}
+
 		if err := s.wsClient.Connect(); err != nil {
 			portaudio.Terminate()
 			s.log.Error("GoogleASRInput: ws connect failed", zap.Error(err))
 			return
 		}
+
 		if err := s.openMic(ctx); err != nil {
 			s.wsClient.Close()
 			portaudio.Terminate()
@@ -313,10 +316,12 @@ func (s *GoogleASRSensor) openMic(ctx context.Context) error {
 		SampleRate:      float64(s.cfg.Rate),
 		FramesPerBuffer: s.cfg.Chunk,
 	}
+
 	stream, err := portaudio.OpenStream(params, s.audioChunk)
 	if err != nil {
 		return fmt.Errorf("GoogleASRInput: open stream: %w", err)
 	}
+
 	if err := stream.Start(); err != nil {
 		_ = stream.Close()
 		return fmt.Errorf("GoogleASRInput: start stream: %w", err)
@@ -358,6 +363,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context) {
 			s.log.Warn("GoogleASRInput: package error", zap.Error(err))
 			continue
 		}
+
 		if err := s.wsClient.Send(packet); err != nil {
 			s.log.Warn("GoogleASRInput: send error", zap.Error(err))
 			s.stats.mu.Lock()
@@ -374,7 +380,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context) {
 }
 
 func (s *GoogleASRSensor) statsLoop(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -395,6 +401,7 @@ func (s *GoogleASRSensor) packageAudio(pcm []byte) ([]byte, error) {
 		AlternativeLanguageCodes: s.altCodes,
 		Timestamp:                time.Now().UnixMilli(),
 	}
+
 	headerBytes, err := json.Marshal(meta)
 	if err != nil {
 		return nil, err
@@ -402,8 +409,10 @@ func (s *GoogleASRSensor) packageAudio(pcm []byte) ([]byte, error) {
 	hLen := len(headerBytes)
 	packet := make([]byte, 4+hLen+len(pcm))
 	binary.BigEndian.PutUint32(packet[0:4], uint32(hLen))
+
 	copy(packet[4:4+hLen], headerBytes)
 	copy(packet[4+hLen:], pcm)
+
 	return packet, nil
 }
 
@@ -427,16 +436,23 @@ func (s *GoogleASRSensor) onWSMessage(msgType int, data []byte) {
 	case "speech_start":
 		s.speechStartTime = time.Now()
 		s.speechStarted = true
-		s.log.Info("GoogleASRInput: speech start", zap.Time("time", s.speechStartTime))
+		s.log.Debug("GoogleASRInput: speech start",
+			zap.Time("receive time", s.speechStartTime),
+			zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
+		)
 	case "speech_end":
 		if s.speechStarted {
-			s.log.Info("GoogleASRInput: speech end",
-				zap.Duration("duration", time.Since(s.speechStartTime)))
+			s.log.Debug("GoogleASRInput: speech end",
+				zap.Duration("latency", time.Since(s.speechStartTime)),
+				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
+			)
 		}
 	case "end_of_utterance":
 		if s.speechStarted {
-			s.log.Info("GoogleASRInput: end of utterance",
-				zap.Duration("latency", time.Since(s.speechStartTime)))
+			s.log.Debug("GoogleASRInput: end of utterance",
+				zap.Duration("latency", time.Since(s.speechStartTime)),
+				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
+			)
 		}
 	}
 

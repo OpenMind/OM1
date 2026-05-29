@@ -5,54 +5,38 @@ import (
 	"strings"
 )
 
-// Enumer is implemented by action input field types that have a fixed set of
-// valid string values (i.e. string enums).
-//
-// Example:
-//
-//	type MovementAction string
-//
-//	func (MovementAction) EnumValues() []string {
-//	    return []string{"stand still", "sit", "walk", "run"}
-//	}
+// Enumer is an interface for input fields that should be treated as enums.
 type Enumer interface {
 	EnumValues() []string
 }
 
-// interfaceSpec holds what a plugin registered for one action name.
-type interfaceSpec struct {
+// InterfaceSpec holds the description and input example for an action interface
+type InterfaceSpec struct {
 	description  string
-	inputExample any // zero-value instance of the input struct
+	inputExample any
 }
 
-var interfaceRegistry = map[string]interfaceSpec{}
+var InterfaceRegistry = map[string]InterfaceSpec{}
 
-// RegisterInterface declares the input type and human-readable description for
-// an action.  actionName must match the "name" field used in config files
-// (e.g. "move").  inputExample should be a zero-value instance of the input
-// struct (e.g. MoveInput{}).
-//
-// Call this once per action name, typically from an init() function alongside
-// the connector Register calls.
+// RegisterInterface registers an action interface with a name, description, and input example struct.
 func RegisterInterface(actionName, description string, inputExample any) {
-	interfaceRegistry[actionName] = interfaceSpec{
+	InterfaceRegistry[actionName] = InterfaceSpec{
 		description:  description,
 		inputExample: inputExample,
 	}
 }
 
-// BuildSchemaForAction looks up the registered interface for actionName and
-// returns the OpenAI-compatible function schema.  Returns nil, false when no
-// interface has been registered for that name.
+// BuildSchemaForAction looks up the input struct for the given actionName and llmLabel.
 func BuildSchemaForAction(actionName, llmLabel string) (map[string]any, bool) {
-	spec, ok := interfaceRegistry[actionName]
+	spec, ok := InterfaceRegistry[actionName]
 	if !ok {
 		return nil, false
 	}
-	return buildSchema(llmLabel, spec.description, spec.inputExample), true
+
+	return BuildSchema(llmLabel, spec.description, spec.inputExample), true
 }
 
-// buildSchema generates an OpenAI function schema by reflecting over the fields
+// BuildSchema generates an OpenAI function schema by reflecting over the fields
 // of inputExample.  It mirrors the Python generate_function_schema_from_action:
 //   - fields whose type implements Enumer → {"type":"string","enum":[...]}
 //   - string  → {"type":"string"}
@@ -63,7 +47,7 @@ func BuildSchemaForAction(actionName, llmLabel string) (map[string]any, bool) {
 //
 // The "json" struct tag is used for the property name; the "description" struct
 // tag overrides the auto-generated description.
-func buildSchema(llmLabel, description string, inputExample any) map[string]any {
+func BuildSchema(llmLabel, description string, inputExample any) map[string]any {
 	inputType := reflect.TypeOf(inputExample)
 	if inputType.Kind() == reflect.Ptr {
 		inputType = inputType.Elem()
@@ -75,20 +59,18 @@ func buildSchema(llmLabel, description string, inputExample any) map[string]any 
 	for i := 0; i < inputType.NumField(); i++ {
 		field := inputType.Field(i)
 
-		// Derive JSON property name from the "json" tag.
 		propertyName := field.Tag.Get("json")
 		if propertyName == "" {
 			propertyName = strings.ToLower(field.Name)
 		}
-		propertyName = strings.Split(propertyName, ",")[0] // strip omitempty etc.
+		propertyName = strings.Split(propertyName, ",")[0]
 
-		// Prefer an explicit "description" tag; fall back to a generated one.
 		fieldDescription := field.Tag.Get("description")
 		if fieldDescription == "" {
 			fieldDescription = "The " + propertyName + " parameter"
 		}
 
-		properties[propertyName] = buildPropertySchema(field.Type, fieldDescription)
+		properties[propertyName] = BuildPropertySchema(field.Type, fieldDescription)
 		required = append(required, propertyName)
 	}
 
@@ -108,9 +90,8 @@ func buildSchema(llmLabel, description string, inputExample any) map[string]any 
 	}
 }
 
-// buildPropertySchema returns the JSON-schema fragment for one input field.
-func buildPropertySchema(fieldType reflect.Type, description string) map[string]any {
-	// Check if a zero value of this type implements Enumer.
+// BuildPropertySchema returns the JSON-schema fragment for one input field.
+func BuildPropertySchema(fieldType reflect.Type, description string) map[string]any {
 	zeroValue := reflect.Zero(fieldType)
 	if enumer, ok := zeroValue.Interface().(Enumer); ok {
 		values := enumer.EnumValues()
@@ -122,13 +103,13 @@ func buildPropertySchema(fieldType reflect.Type, description string) map[string]
 	}
 
 	return map[string]any{
-		"type":        kindToJSONType(fieldType.Kind()),
+		"type":        KindToJSONType(fieldType.Kind()),
 		"description": description,
 	}
 }
 
-// kindToJSONType maps a Go reflect.Kind to the corresponding JSON Schema type.
-func kindToJSONType(kind reflect.Kind) string {
+// KindToJSONType maps a Go reflect.Kind to the corresponding JSON Schema type.
+func KindToJSONType(kind reflect.Kind) string {
 	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:

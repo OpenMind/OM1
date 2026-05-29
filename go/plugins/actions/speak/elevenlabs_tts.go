@@ -239,6 +239,7 @@ func (e *ElevenLabsConnector) initFFPlay() bool {
 		e.log.Error("speak/elevenlabs_tts: ffplay stdin pipe", zap.Error(err))
 		return false
 	}
+
 	if err := cmd.Start(); err != nil {
 		e.log.Error("speak/elevenlabs_tts: ffplay start", zap.Error(err))
 		return false
@@ -254,14 +255,17 @@ func (e *ElevenLabsConnector) initFFPlay() bool {
 func (e *ElevenLabsConnector) streamChunk(chunk []byte) {
 	e.ffplayMu.Lock()
 	defer e.ffplayMu.Unlock()
+
 	if e.ffplayIn == nil {
 		return
 	}
+
 	if _, err := e.ffplayIn.Write(chunk); err != nil {
 		e.log.Warn("speak/elevenlabs_tts: ffplay write failed, reinitializing", zap.Error(err))
 		e.cleanupFFPlayLocked()
 		return
 	}
+
 	e.lastAudioMu.Lock()
 	e.lastAudioTime = time.Now()
 	e.lastAudioMu.Unlock()
@@ -271,18 +275,22 @@ func (e *ElevenLabsConnector) streamChunk(chunk []byte) {
 func (e *ElevenLabsConnector) finishPlayback() {
 	e.ffplayMu.Lock()
 	defer e.ffplayMu.Unlock()
+
 	if e.ffplay == nil {
 		return
 	}
+
 	if e.ffplayIn != nil {
 		_ = e.ffplayIn.Close()
 		e.ffplayIn = nil
 	}
+
 	waitDone := make(chan struct{})
 	go func() {
 		_ = e.ffplay.Wait()
 		close(waitDone)
 	}()
+
 	select {
 	case <-waitDone:
 		e.log.Debug("speak/elevenlabs_tts: ffplay finished")
@@ -291,6 +299,7 @@ func (e *ElevenLabsConnector) finishPlayback() {
 		_ = e.ffplay.Process.Kill()
 		<-waitDone
 	}
+
 	e.ffplay = nil
 }
 
@@ -316,6 +325,7 @@ func (e *ElevenLabsConnector) synthesize(req TTSRequest) error {
 		"response_format": e.cfg.OutputFormat,
 		"input":           req.text,
 	}
+
 	if e.cfg.ElevenLabsAPIKey != "" {
 		body["elevenlabs_api_key"] = e.cfg.ElevenLabsAPIKey
 	}
