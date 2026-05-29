@@ -60,13 +60,27 @@ func New(cfg Config, log *zap.Logger, onMessage func(messageType int, data []byt
 
 // Connect dials the server and starts the send/read goroutines.
 func (c *Client) Connect() error {
-	if err := c.dial(); err != nil {
-		return err
+	if !c.cfg.Reconnect {
+		return c.dial()
 	}
-	c.wg.Add(2)
-	go c.sendLoop()
-	go c.readLoop()
-	return nil
+
+	for {
+		err := c.dial()
+		if err == nil {
+			c.wg.Add(2)
+			go c.sendLoop()
+			go c.readLoop()
+			return nil
+		}
+		c.log.Warn("ws: initial connect failed, retrying",
+			zap.Error(err),
+		)
+		select {
+		case <-c.ctx.Done():
+			return fmt.Errorf("ws: connect cancelled: %w", c.ctx.Err())
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
 
 // Send enqueues data for delivery. Returns an error if the queue is full.

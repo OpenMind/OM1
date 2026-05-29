@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/gordonklaus/portaudio"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
+	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
 func init() {
@@ -51,6 +53,7 @@ type GoogleASRConfig struct {
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
+	ZenohEndpoint        string   `json:"zenoh_endpoint"` // optional, default "tcp/127.0.0.1:7447"
 }
 
 type ASRMessage struct {
@@ -73,6 +76,8 @@ type ASRStatistics struct {
 	LastSendTime    time.Time
 	mu              sync.RWMutex
 }
+
+const asrZenohTopic = "om/asr/text"
 
 type GoogleASRSensor struct {
 	cfg          GoogleASRConfig
@@ -97,6 +102,9 @@ type GoogleASRSensor struct {
 	speechStarted   bool
 
 	stats ASRStatistics
+
+	zenohSession   *zenohsession.Session
+	zenohPublisher *zenohsession.Publisher
 }
 
 func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
@@ -165,6 +173,22 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s.wsClient = ws.New(ws.Config{URL: wsURL, Reconnect: true}, log, s.onWSMessage)
+
+	sess, err := zenohsession.Open(cfg.ZenohEndpoint)
+	if err != nil {
+		log.Warn("GoogleASRInput: zenoh unavailable, ASR broadcast disabled", zap.Error(err))
+	} else {
+		pub, err := sess.DeclarePublisher(asrZenohTopic)
+		if err != nil {
+			sess.Close()
+			log.Warn("GoogleASRInput: failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
+		} else {
+			s.zenohSession = sess
+			s.zenohPublisher = pub
+			log.Info("GoogleASRInput: zenoh publisher initialized", zap.String("topic", asrZenohTopic))
+		}
+	}
+
 	return s, nil
 }
 
@@ -251,6 +275,15 @@ func (s *GoogleASRSensor) FormattedLatestBuffer() string {
 	s.log.Info("GoogleASRInput: flushing buffer", zap.String("text", latest))
 	s.messages = nil
 
+	if s.zenohPublisher != nil {
+		payload := serializeASRText(latest)
+		if err := s.zenohPublisher.Put(payload); err != nil {
+			s.log.Warn("GoogleASRInput: zenoh publish failed", zap.Error(err))
+		} else {
+			s.log.Info("GoogleASRInput: published ASR to zenoh", zap.String("text", latest))
+		}
+	}
+
 	return result
 }
 
@@ -278,6 +311,17 @@ func (s *GoogleASRSensor) Stop() {
 	}
 
 	portaudio.Terminate()
+
+	if s.zenohPublisher != nil {
+		s.zenohPublisher.Drop()
+		s.zenohPublisher = nil
+		s.log.Info("GoogleASRInput: zenoh publisher dropped")
+	}
+	if s.zenohSession != nil {
+		s.zenohSession.Close()
+		s.zenohSession = nil
+		s.log.Info("GoogleASRInput: zenoh session closed")
+	}
 
 	s.log.Info("GoogleASRInput: sensor stopped")
 }
@@ -489,6 +533,40 @@ func (s *GoogleASRSensor) acceptTranscript(text string) bool {
 	}
 
 	return len(strings.Fields(text)) > 1
+}
+
+// serializeASRText encodes an ASRText message in CDR little-endian format,
+// matching the pycdr2 serialization used by the Python google_asr plugin.
+//
+// Wire layout (offsets from start of buffer):
+//
+//	[0]   CDR encapsulation header: 0x00 0x01 0x00 0x00
+//	[4]   stamp.sec:    int32 LE   (data offset 0)
+//	[8]   stamp.nanosec: uint32 LE (data offset 4)
+//	[12]  frame_id:     CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
+//	[...]  text:         CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
+func serializeASRText(text string) []byte {
+	now := time.Now()
+	frameID := uuid.New().String()
+
+	var buf []byte
+
+	// CDR encapsulation header (little-endian)
+	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
+
+	// stamp.sec (int32 LE)
+	buf = zenohsession.AppendInt32LE(buf, int32(now.Unix()))
+
+	// stamp.nanosec (uint32 LE)
+	buf = zenohsession.AppendUint32LE(buf, uint32(now.Nanosecond()))
+
+	// frame_id CDR string
+	buf = zenohsession.AppendCDRString(buf, frameID)
+
+	// text CDR string
+	buf = zenohsession.AppendCDRString(buf, text)
+
+	return buf
 }
 
 func (s *GoogleASRSensor) PrintStatistics() {

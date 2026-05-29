@@ -2,7 +2,6 @@ package arm_g1
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"go.uber.org/zap"
@@ -168,16 +167,16 @@ func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
 
 	// identity.id = 0 (data offset 0, already 8-byte aligned)
-	buf = appendInt64LE(buf, 0)
+	buf = zenohsession.AppendInt64LE(buf, 0)
 
 	// identity.api_id
-	buf = appendInt64LE(buf, apiID)
+	buf = zenohsession.AppendInt64LE(buf, apiID)
 
 	// lease.id = 0
-	buf = appendInt64LE(buf, 0)
+	buf = zenohsession.AppendInt64LE(buf, 0)
 
 	// policy.priority = 0
-	buf = appendUint32LE(buf, 0)
+	buf = zenohsession.AppendUint32LE(buf, 0)
 
 	// policy.noreply = false
 	buf = append(buf, 0x00)
@@ -186,7 +185,7 @@ func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	buf = append(buf, 0x00, 0x00, 0x00)
 
 	// parameter length (including null terminator)
-	buf = appendUint32LE(buf, paramLen)
+	buf = zenohsession.AppendUint32LE(buf, paramLen)
 
 	// parameter string bytes
 	buf = append(buf, paramBytes...)
@@ -198,19 +197,7 @@ func serializeUnitreeRequest(apiID int64, parameter string) []byte {
 	}
 
 	// binary sequence length = 0
-	buf = appendUint32LE(buf, 0)
+	buf = zenohsession.AppendUint32LE(buf, 0)
 
 	return buf
-}
-
-func appendInt64LE(buf []byte, v int64) []byte {
-	var b [8]byte
-	binary.LittleEndian.PutUint64(b[:], uint64(v))
-	return append(buf, b[:]...)
-}
-
-func appendUint32LE(buf []byte, v uint32) []byte {
-	var b [4]byte
-	binary.LittleEndian.PutUint32(b[:], v)
-	return append(buf, b[:]...)
 }
