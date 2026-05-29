@@ -26,7 +26,6 @@ var customActionMap = map[string]string{
 	"show_hand":   "show_hand",
 }
 
-// ArmAction is the enum of supported arm gestures.
 type ArmAction string
 
 func (ArmAction) EnumValues() []string {
@@ -41,7 +40,6 @@ func (ArmAction) EnumValues() []string {
 	}
 }
 
-// ArmInput is the LLM-facing input struct for the arm action.
 type ArmInput struct {
 	Action ArmAction `json:"action" description:"The arm gesture to perform"`
 }

@@ -13,14 +13,38 @@ import (
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
+type Emotion string
+
+func (Emotion) EnumValues() []string {
+	return []string{
+		"happy",
+		"confused",
+		"curious",
+		"excited",
+		"sad",
+		"think",
+	}
+}
+
+type EmotionInput struct {
+	Action Emotion `json:"action" description:"The facial expression to display"`
+}
+
+func init() {
+	actions.RegisterInterface(
+		"emotion",
+		"Action interface for robot facial expression control. "+
+			"Publishes avatar emotion commands via Zenoh. "+
+			"Supported expressions: happy, confused, curious, excited, sad, think.",
+		EmotionInput{},
+	)
+	actions.Register("emotion/zenoh", NewZenohConnector)
+}
+
 const (
 	avatarRequestTopic = "om/avatar/request"
 	switchFaceCode     = byte(0x00)
 )
-
-func init() {
-	actions.Register("emotion/zenoh", newZenohConnector)
-}
 
 type zenohConnector struct {
 	log       *zap.Logger
@@ -28,7 +52,7 @@ type zenohConnector struct {
 	publisher *zenohsession.Publisher
 }
 
-func newZenohConnector(cfg map[string]any) (actions.Connector, error) {
+func NewZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get()
 
 	var endpoint string
