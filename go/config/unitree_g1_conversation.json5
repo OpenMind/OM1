@@ -86,7 +86,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
         {
           name: "emotion",
           llm_label: "emotion",
-          connector: "log",
+          connector: "zenoh",
         },
         {
           name: "arm_g1",

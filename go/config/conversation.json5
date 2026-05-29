@@ -36,7 +36,7 @@
     {
       name: "emotion",
       llm_label: "emotion",
-      connector: "log",
+      connector: "zenoh",
     },
   ],
 }
