@@ -43,6 +43,7 @@ func Avatar(endpoint string) *AvatarProvider {
 	return avatarInstance
 }
 
+// NewAvatarProvider initializes the AvatarProvider by setting up a zenoh session, publishers, and subscriber.
 func NewAvatarProvider(endpoint string) *AvatarProvider {
 	p := &AvatarProvider{log: logger.Get()}
 
@@ -93,8 +94,7 @@ func NewAvatarProvider(endpoint string) *AvatarProvider {
 	return p
 }
 
-// handleRequest processes incoming avatar requests. It replies to STATUS (health
-// check) requests; SWITCH_FACE requests are ignored here (they are self-published).
+// handleRequest processes incoming avatar requests.
 func (p *AvatarProvider) handleRequest(data []byte) {
 	code, requestID, _, err := deserializeAvatarRequest(data)
 	if err != nil {
@@ -106,8 +106,6 @@ func (p *AvatarProvider) handleRequest(data []byte) {
 		return
 	}
 
-	p.log.Debug("avatar: received health check request")
-
 	if p.responsePublisher == nil {
 		return
 	}
@@ -117,8 +115,6 @@ func (p *AvatarProvider) handleRequest(data []byte) {
 		p.log.Error("avatar: failed to publish health check response", zap.Error(err))
 		return
 	}
-
-	p.log.Debug("avatar: sent health check response")
 }
 
 // SendAvatarCommand publishes a SWITCH_FACE request for the given face expression.
@@ -135,7 +131,6 @@ func (p *AvatarProvider) SendAvatarCommand(command string) error {
 	p.log.Info("avatar: published command", zap.String("command", command))
 	return nil
 }
-
 
 // serializeAvatarRequest encodes an AvatarFaceRequest (SWITCH_FACE) in CDR
 // little-endian format, matching the Python pycdr2 wire layout.
