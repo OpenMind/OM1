@@ -138,7 +138,9 @@ func serializeAvatarRequest(faceText string) []byte {
 	}
 
 	// face_text.data CDR string
-	buf = zenohsession.AppendCDRString(buf, faceText)
+	faceBytes := append([]byte(faceText), 0x00)
+	buf = zenohsession.AppendUint32LE(buf, uint32(len(faceBytes)))
+	buf = append(buf, faceBytes...)
 
 	return buf
 }
