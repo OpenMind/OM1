@@ -96,7 +96,7 @@ run: build
 .PHONY: dev
 dev: download-zenohc
 	@echo "Running in dev mode with config: $(CONFIG)"
-	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ./config/$(CONFIG).json5
+	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ./config/$(CONFIG).json5 -log-level debug
 
 .PHONY: lint
 lint: download-zenohc

@@ -14,19 +14,18 @@ import (
 )
 
 const (
-	customAPIID        = 9001
-	sportRequestTopic  = "api/sport/request"
-	defaultEndpoint    = "tcp/127.0.0.1:7447"
+	customAPIID       = 9001
+	sportRequestTopic = "api/sport/request"
 )
 
 // customActionMap translates ArmAction enum values to the action name sent to the ROS2 node.
 var customActionMap = map[string]string{
-	"shake_hand": "shake_hand",
-	"face_wave":  "face_wave",
-	"hands_up":   "hands_up",
+	"shake_hand":  "shake_hand",
+	"face_wave":   "face_wave",
+	"hands_up":    "hands_up",
 	"stand_still": "stand_still",
-	"wave":       "face_wave",
-	"show_hand":  "show_hand",
+	"wave":        "face_wave",
+	"show_hand":   "show_hand",
 }
 
 // ArmAction is the enum of supported arm gestures.
@@ -60,33 +59,21 @@ func init() {
 	actions.Register("arm_g1/zenoh", newZenohConnector)
 }
 
-// Config holds optional connector settings.
-type Config struct {
-	Endpoint string `json:"endpoint"`
-}
-
 type zenohConnector struct {
 	log     *zap.Logger
 	session *zenohsession.Session
 }
 
 func newZenohConnector(cfg map[string]any) (actions.Connector, error) {
-	var c Config
-	if b, err := json.Marshal(cfg); err == nil {
-		_ = json.Unmarshal(b, &c)
-	}
-	if c.Endpoint == "" {
-		c.Endpoint = defaultEndpoint
-	}
-
 	log := logger.Get()
 
-	sess, err := zenohsession.Open(c.Endpoint)
+	sess, err := zenohsession.Open()
 	if err != nil {
 		log.Error("arm_g1/zenoh: failed to open zenoh session", zap.Error(err))
 		return &zenohConnector{log: log, session: nil}, nil
 	}
-	log.Info("arm_g1/zenoh: zenoh session opened", zap.String("endpoint", c.Endpoint))
+	log.Info("arm_g1/zenoh: zenoh session opened")
+
 	return &zenohConnector{log: log, session: sess}, nil
 }
 
