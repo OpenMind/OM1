@@ -3,23 +3,21 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 )
 
-// Orchestrator wraps an LLM and manages conversation history automatically,
-// mirroring Python's LLMHistoryManager.update_history() decorator on ask().
-// When maxLen is 0, history is disabled and calls are delegated directly.
+// Orchestrator manages conversation history and delegates calls to an inner LLM.
 type Orchestrator struct {
-	inner  LLM
+	llm    LLM
 	mu     sync.Mutex
 	msgs   []Message
 	maxLen int
 }
 
-// NewOrchestrator creates an Orchestrator that wraps the given LLM with
-// history management and schema configuration.
-func NewOrchestrator(inner LLM, config map[string]any, schemas []map[string]any) *Orchestrator {
+// NewOrchestrator creates an Orchestrator with the given inner LLM, config, and schemas.
+func NewOrchestrator(llm LLM, config map[string]any, schemas []map[string]any) *Orchestrator {
 	historyLen := 0
 	if config != nil {
 		if v, ok := config["history_length"]; ok {
@@ -28,22 +26,25 @@ func NewOrchestrator(inner LLM, config map[string]any, schemas []map[string]any)
 			}
 		}
 	}
-	o := &Orchestrator{inner: inner, maxLen: historyLen}
+
+	orchestrator := &Orchestrator{llm: llm, maxLen: historyLen}
+
+	fmt.Println("schemas are: ", schemas)
+
 	if len(schemas) > 0 {
-		o.inner.SetSchemas(schemas)
+		orchestrator.llm.SetSchemas(schemas)
 	}
-	return o
+
+	return orchestrator
 }
 
-func (o *Orchestrator) SetSchemas(schemas []map[string]any) { o.inner.SetSchemas(schemas) }
-func (o *Orchestrator) FunctionSchemas() []map[string]any   { return o.inner.FunctionSchemas() }
+func (o *Orchestrator) SetSchemas(schemas []map[string]any) { o.llm.SetSchemas(schemas) }
+func (o *Orchestrator) FunctionSchemas() []map[string]any   { return o.llm.FunctionSchemas() }
 
-// Call injects the accumulated history into the inner LLM call, then records
-// the new user prompt and assistant response. On error the turn is not recorded,
-// mirroring Python's behaviour of popping an unpaired user message on failure.
+// Call implements the LLM interface. It manages conversation history based on maxLen.
 func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*Response, error) {
 	if o.maxLen == 0 {
-		return o.inner.Call(ctx, prompt, nil)
+		return o.llm.Call(ctx, prompt, nil)
 	}
 
 	o.mu.Lock()
@@ -51,7 +52,7 @@ func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*R
 	copy(snapshot, o.msgs)
 	o.mu.Unlock()
 
-	resp, err := o.inner.Call(ctx, prompt, snapshot)
+	resp, err := o.llm.Call(ctx, prompt, snapshot)
 	if err != nil {
 		return nil, err
 	}

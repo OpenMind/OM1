@@ -13,8 +13,7 @@ import (
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/runtime"
 
-	_ "github.com/openmind/om1/plugins/actions/move"
-	_ "github.com/openmind/om1/plugins/actions/speak"
+	_ "github.com/openmind/om1/plugins/actions"
 	_ "github.com/openmind/om1/plugins/inputs"
 	_ "github.com/openmind/om1/plugins/llm"
 )

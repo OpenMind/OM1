@@ -9,8 +9,6 @@ import (
 
 type Orchestrator struct {
 	sensors []Sensor
-	mu      sync.RWMutex
-	buffers map[int]string
 	tickNow chan struct{}
 	log     *zap.Logger
 }
@@ -18,7 +16,6 @@ type Orchestrator struct {
 func NewOrchestrator(sensors []Sensor, log *zap.Logger) *Orchestrator {
 	return &Orchestrator{
 		sensors: sensors,
-		buffers: make(map[int]string, len(sensors)),
 		tickNow: make(chan struct{}, 1),
 		log:     log,
 	}
@@ -59,13 +56,12 @@ func (o *Orchestrator) runSensor(ctx context.Context, sensorIndex int, sensor Se
 			if !ok {
 				return
 			}
+
 			message, err := sensor.RawToText(ctx, rawReading)
 			if err != nil || message == nil {
 				continue
 			}
-			o.mu.Lock()
-			o.buffers[sensorIndex] = message.Text
-			o.mu.Unlock()
+
 			select {
 			case o.tickNow <- struct{}{}:
 			default:
@@ -78,11 +74,9 @@ func (o *Orchestrator) runSensor(ctx context.Context, sensorIndex int, sensor Se
 }
 
 func (o *Orchestrator) Buffers() []string {
-	o.mu.RLock()
-	defer o.mu.RUnlock()
 	snapshot := make([]string, len(o.sensors))
-	for i := range o.sensors {
-		snapshot[i] = o.buffers[i]
+	for i, sensor := range o.sensors {
+		snapshot[i] = sensor.FormattedLatestBuffer()
 	}
 	return snapshot
 }

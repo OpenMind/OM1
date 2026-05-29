@@ -70,13 +70,10 @@ func (g *geminiLLM) Call(ctx context.Context, prompt string, history []llm.Messa
 		"model":    g.config.Model,
 		"messages": messages,
 	}
+
 	if len(g.schemas) > 0 {
-		tools := make([]map[string]any, len(g.schemas))
-		for i, schema := range g.schemas {
-			tools[i] = map[string]any{"type": "function", "function": schema}
-		}
-		requestBody["tools"] = tools
-		requestBody["tool_choice"] = "auto"
+		requestBody["tools"] = g.schemas
+		requestBody["tool_choice"] = "required"
 	}
 
 	requestBytes, err := json.Marshal(requestBody)
@@ -89,6 +86,7 @@ func (g *geminiLLM) Call(ctx context.Context, prompt string, history []llm.Messa
 	if err != nil {
 		return nil, fmt.Errorf("GeminiLLM: build request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+g.config.APIKey)
 

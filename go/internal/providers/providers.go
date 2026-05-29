@@ -13,7 +13,6 @@ import (
 type IOProvider struct {
 	mu            sync.Mutex
 	lastTickStart time.Time
-	lastLLMMs     int64
 	totalTicks    int64
 }
 
@@ -25,11 +24,10 @@ func IO() *IOProvider {
 	return ioInstance
 }
 
-func (p *IOProvider) RecordTick(start time.Time, llmUsage llm.Usage, llmMs int64) {
+func (p *IOProvider) RecordTick(start time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.lastTickStart = start
-	p.lastLLMMs = llmMs
 	p.totalTicks++
 }
 

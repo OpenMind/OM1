@@ -6,7 +6,6 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
-	"github.com/openmind/om1/internal/inputs"
 )
 
 type Fuser struct {
@@ -23,7 +22,7 @@ func New(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentActio
 	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase}
 }
 
-func (f *Fuser) Fuse(ctx context.Context, inputOrchestrator *inputs.Orchestrator) (string, error) {
+func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error) {
 	var builder strings.Builder
 
 	// 1. System persona + governance.
@@ -36,7 +35,6 @@ func (f *Fuser) Fuse(ctx context.Context, inputOrchestrator *inputs.Orchestrator
 	}
 
 	// 2. Sensory inputs.
-	sensorBuffers := inputOrchestrator.Buffers()
 	hasObservations := false
 	for _, buffer := range sensorBuffers {
 		if buffer != "" {

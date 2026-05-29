@@ -360,20 +360,19 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
-	// Check for mode transitions — mirrors Python's process_tick / mode_manager check.
-	nextMode := rt.manager.CheckTransitions(current.inputOrchestrator.Buffers())
+	sensorBuffers := current.inputOrchestrator.Buffers()
+
+	nextMode := rt.manager.CheckTransitions(sensorBuffers)
 	if nextMode != "" {
 		select {
 		case rt.modeTransitionCh <- nextMode:
 			rt.log.Info("mode transition scheduled", zap.String("to", nextMode))
 		default:
-			// A transition is already queued; this one is dropped.
 		}
 		return
 	}
 
-	// Fuse a prompt from current sensor buffers.
-	prompt, err := current.promptFuser.Fuse(ctx, current.inputOrchestrator)
+	prompt, err := current.promptFuser.Fuse(ctx, sensorBuffers)
 	if err != nil {
 		rt.log.Warn("fuse failed", zap.Error(err))
 		return
@@ -383,17 +382,16 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
-	// Call the LLM. History is managed internally by the Orchestrator,
-	// mirroring Python's LLMHistoryManager.update_history() decorator on ask().
-	llmStart := time.Now()
+	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
+
 	response, err := current.cortexLLM.Call(ctx, prompt, nil)
-	llmLatencyMs := time.Since(llmStart).Milliseconds()
 	if err != nil {
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return
 	}
 
-	// Execute tool calls returned by the LLM.
+	fmt.Printf("LLM response: %+v\n", response) //nolint:forbidigo
+
 	if len(response.ToolCalls) > 0 {
 		calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(response.ToolCalls))
 		if err != nil {
@@ -410,8 +408,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		}
 	}
 
-	// Record telemetry.
-	rt.ioProvider.RecordTick(tickStart, response.Usage, llmLatencyMs)
+	rt.ioProvider.RecordTick(tickStart)
 }
 
 // watchConfig polls the config file and logs a warning when it changes.

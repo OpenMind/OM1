@@ -90,6 +90,9 @@ func stripJSON5(src []byte) ([]byte, error) {
 	trailingComma := regexp.MustCompile(`,(\s*[}\]])`)
 	text = trailingComma.ReplaceAllString(text, "$1")
 
+	unquotedKey := regexp.MustCompile(`([{\[,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:`)
+	text = unquotedKey.ReplaceAllString(text, `$1"$2":`)
+
 	return []byte(text), nil
 }
 

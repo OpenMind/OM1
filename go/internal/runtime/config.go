@@ -141,11 +141,13 @@ func addMeta(cfg map[string]any, meta map[string]string) map[string]any {
 // Mirrors Python's schema collection logic.
 func collectSchemas(agentActions []*actions.AgentAction) []map[string]any {
 	schemas := make([]map[string]any, 0, len(agentActions))
+
 	for _, agentAction := range agentActions {
 		if !agentAction.ExcludeFromPrompt && agentAction.Schema != nil {
 			schemas = append(schemas, agentAction.Schema)
 		}
 	}
+
 	return schemas
 }
 

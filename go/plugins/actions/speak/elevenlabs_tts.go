@@ -19,8 +19,17 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
+type SpeakInput struct {
+	Action string `json:"action" description:"The text to be spoken"`
+}
+
 func init() {
-	actions.Register("speak/elevenlabs", newElevenLabs)
+	actions.RegisterInterface(
+		"speak",
+		"Action interface for text-to-speech output. Makes the robot speak the provided text.",
+		SpeakInput{},
+	)
+	actions.Register("speak/elevenlabs_tts", NewElevenLabsTTS)
 }
 
 const (
@@ -33,7 +42,7 @@ const (
 	keepaliveInterval   = 60 * time.Second
 )
 
-type elevenLabsConfig struct {
+type ElevenLabsConfig struct {
 	APIKey           string `json:"api_key"`
 	ElevenLabsAPIKey string `json:"elevenlabs_api_key"`
 	VoiceID          string `json:"voice_id"`
@@ -43,18 +52,18 @@ type elevenLabsConfig struct {
 	SilenceRate      int    `json:"silence_rate"`
 }
 
-type ttsRequest struct {
+type TTSRequest struct {
 	text    string
 	voiceID string
 }
 
-type elevenLabsConnector struct {
-	cfg    elevenLabsConfig
+type ElevenLabsConnector struct {
+	cfg    ElevenLabsConfig
 	log    *zap.Logger
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	queue chan ttsRequest
+	queue chan TTSRequest
 	wg    sync.WaitGroup
 
 	ffplayMu sync.Mutex
@@ -69,13 +78,13 @@ type elevenLabsConnector struct {
 	silenceCounter int
 }
 
-func newElevenLabs(configMap map[string]any) (actions.Connector, error) {
-	var cfg elevenLabsConfig
+func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
+	var cfg ElevenLabsConfig
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.APIKey == "" {
-		return nil, fmt.Errorf("speak/elevenlabs: api_key required")
+		return nil, fmt.Errorf("speak/elevenlabs_tts: api_key required")
 	}
 	if cfg.VoiceID == "" {
 		cfg.VoiceID = defaultVoiceID
@@ -93,12 +102,12 @@ func newElevenLabs(configMap map[string]any) (actions.Connector, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	log, _ := zap.NewProduction()
 
-	c := &elevenLabsConnector{
+	c := &ElevenLabsConnector{
 		cfg:           cfg,
 		log:           log,
 		ctx:           ctx,
 		cancel:        cancel,
-		queue:         make(chan ttsRequest, ttsQueueDepth),
+		queue:         make(chan TTSRequest, ttsQueueDepth),
 		lastAudioTime: time.Now(),
 	}
 	c.silenceAudio = silenceBytes(cfg.Rate, 50)
@@ -127,10 +136,10 @@ func silenceBytes(rate, ms int) []byte {
 }
 
 // Connect enqueues the spoken text without blocking the action pipeline.
-func (e *elevenLabsConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
+func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	arguments, ok := input.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("speak/elevenlabs: unexpected input type %T", input)
+		return nil, fmt.Errorf("speak/elevenlabs_tts: unexpected input type %T", input)
 	}
 	text, _ := arguments["action"].(string)
 	if text == "" {
@@ -141,22 +150,24 @@ func (e *elevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	if e.cfg.SilenceRate > 0 && e.silenceCounter < e.cfg.SilenceRate {
 		e.silenceCounter++
 		e.silenceMu.Unlock()
-		e.log.Info("speak/elevenlabs: skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
+		e.log.Info("speak/elevenlabs_tts: skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
 		return nil, nil
 	}
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
+	e.log.Info("speak/elevenlabs_tts: enqueueing text", zap.String("text", text))
+
 	select {
-	case e.queue <- ttsRequest{text: text, voiceID: e.cfg.VoiceID}:
+	case e.queue <- TTSRequest{text: text, voiceID: e.cfg.VoiceID}:
 	default:
-		e.log.Warn("speak/elevenlabs: queue full, dropping", zap.String("text", text))
+		e.log.Warn("speak/elevenlabs_tts: queue full, dropping", zap.String("text", text))
 	}
 	return nil, nil
 }
 
 // processAudio serialises synthesis so only one utterance plays at a time.
-func (e *elevenLabsConnector) processAudio() {
+func (e *ElevenLabsConnector) processAudio() {
 	defer e.wg.Done()
 	for {
 		select {
@@ -167,14 +178,14 @@ func (e *elevenLabsConnector) processAudio() {
 				return
 			}
 			if !e.initFFPlay() {
-				e.log.Error("speak/elevenlabs: ffplay unavailable")
+				e.log.Error("speak/elevenlabs_tts: ffplay unavailable")
 				continue
 			}
 			// Silence prefix warms up Bluetooth link before audio starts.
 			e.streamChunk(silenceBytes(e.cfg.Rate, 10))
 
 			if err := e.synthesize(req); err != nil && e.ctx.Err() == nil {
-				e.log.Error("speak/elevenlabs: synthesis failed", zap.Error(err))
+				e.log.Error("speak/elevenlabs_tts: synthesis failed", zap.Error(err))
 			}
 			e.finishPlayback()
 		}
@@ -182,7 +193,7 @@ func (e *elevenLabsConnector) processAudio() {
 }
 
 // keepalive plays silence every 60 s to prevent Bluetooth disconnection.
-func (e *elevenLabsConnector) keepalive() {
+func (e *ElevenLabsConnector) keepalive() {
 	defer e.wg.Done()
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -207,7 +218,7 @@ func (e *elevenLabsConnector) keepalive() {
 }
 
 // initFFPlay starts a new ffplay process if one is not already running.
-func (e *elevenLabsConnector) initFFPlay() bool {
+func (e *ElevenLabsConnector) initFFPlay() bool {
 	e.ffplayMu.Lock()
 	defer e.ffplayMu.Unlock()
 
@@ -224,29 +235,29 @@ func (e *elevenLabsConnector) initFFPlay() bool {
 	cmd := exec.CommandContext(e.ctx, "ffplay", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		e.log.Error("speak/elevenlabs: ffplay stdin pipe", zap.Error(err))
+		e.log.Error("speak/elevenlabs_tts: ffplay stdin pipe", zap.Error(err))
 		return false
 	}
 	if err := cmd.Start(); err != nil {
-		e.log.Error("speak/elevenlabs: ffplay start", zap.Error(err))
+		e.log.Error("speak/elevenlabs_tts: ffplay start", zap.Error(err))
 		return false
 	}
 
 	e.ffplay = cmd
 	e.ffplayIn = stdin
-	e.log.Debug("speak/elevenlabs: ffplay started")
+	e.log.Debug("speak/elevenlabs_tts: ffplay started")
 	return true
 }
 
 // streamChunk writes a chunk of audio to the ffplay stdin pipe.
-func (e *elevenLabsConnector) streamChunk(chunk []byte) {
+func (e *ElevenLabsConnector) streamChunk(chunk []byte) {
 	e.ffplayMu.Lock()
 	defer e.ffplayMu.Unlock()
 	if e.ffplayIn == nil {
 		return
 	}
 	if _, err := e.ffplayIn.Write(chunk); err != nil {
-		e.log.Warn("speak/elevenlabs: ffplay write failed, reinitializing", zap.Error(err))
+		e.log.Warn("speak/elevenlabs_tts: ffplay write failed, reinitializing", zap.Error(err))
 		e.cleanupFFPlayLocked()
 		return
 	}
@@ -256,7 +267,7 @@ func (e *elevenLabsConnector) streamChunk(chunk []byte) {
 }
 
 // finishPlayback closes stdin and waits for ffplay to drain and exit.
-func (e *elevenLabsConnector) finishPlayback() {
+func (e *ElevenLabsConnector) finishPlayback() {
 	e.ffplayMu.Lock()
 	defer e.ffplayMu.Unlock()
 	if e.ffplay == nil {
@@ -273,9 +284,9 @@ func (e *elevenLabsConnector) finishPlayback() {
 	}()
 	select {
 	case <-waitDone:
-		e.log.Debug("speak/elevenlabs: ffplay finished")
+		e.log.Debug("speak/elevenlabs_tts: ffplay finished")
 	case <-time.After(10 * time.Second):
-		e.log.Warn("speak/elevenlabs: ffplay timeout, killing")
+		e.log.Warn("speak/elevenlabs_tts: ffplay timeout, killing")
 		_ = e.ffplay.Process.Kill()
 		<-waitDone
 	}
@@ -283,7 +294,7 @@ func (e *elevenLabsConnector) finishPlayback() {
 }
 
 // cleanupFFPlayLocked force-terminates ffplay. Must be called with ffplayMu held.
-func (e *elevenLabsConnector) cleanupFFPlayLocked() {
+func (e *ElevenLabsConnector) cleanupFFPlayLocked() {
 	if e.ffplayIn != nil {
 		_ = e.ffplayIn.Close()
 		e.ffplayIn = nil
@@ -297,7 +308,7 @@ func (e *elevenLabsConnector) cleanupFFPlayLocked() {
 
 // synthesize posts the text to the OpenAI-compatible speech endpoint and streams
 // the response body in 1024-byte chunks to ffplay.
-func (e *elevenLabsConnector) synthesize(req ttsRequest) error {
+func (e *ElevenLabsConnector) synthesize(req TTSRequest) error {
 	body := map[string]any{
 		"model":           e.cfg.ModelID,
 		"voice":           req.voiceID,
@@ -348,14 +359,14 @@ func (e *elevenLabsConnector) synthesize(req ttsRequest) error {
 	return nil
 }
 
-func (e *elevenLabsConnector) Tick(ctx context.Context) {
+func (e *ElevenLabsConnector) Tick(ctx context.Context) {
 	select {
 	case <-ctx.Done():
 	case <-time.After(60 * time.Second):
 	}
 }
 
-func (e *elevenLabsConnector) Stop() {
+func (e *ElevenLabsConnector) Stop() {
 	e.cancel()
 	e.wg.Wait()
 	e.cleanupFFPlayLocked()

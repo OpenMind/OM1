@@ -2,20 +2,36 @@ package inputs
 
 import (
 	"context"
+	"time"
 )
 
 type Message struct {
-	Text    string
-	RawText any
+	Timestamp float64
+	Message   string
 }
 
-type Sensor interface {
-	RawToText(ctx context.Context, rawText any) (*Message, error)
+func NewMessage(text string) *Message {
+	return &Message{
+		Timestamp: float64(time.Now().UnixNano()) / 1e9,
+		Message:   text,
+	}
+}
 
+// Sensor is the base interface for all input sensors.
+type Sensor interface {
+	// Listen creates a channel that continuously yields raw input events.
 	Listen(ctx context.Context) (<-chan any, error)
 
-	LatestBuffer() string
+	// Poll retrieves a single raw input event.
+	Poll(ctx context.Context) (any, error)
 
+	// RawToText converts raw input data into Message format.
+	RawToText(ctx context.Context, rawInput any) (*Message, error)
+
+	// FormattedLatestBuffer returns the formatted buffer string.
+	FormattedLatestBuffer() string
+
+	// Stop signals the sensor to stop listening and clean up resources.
 	Stop()
 }
 
