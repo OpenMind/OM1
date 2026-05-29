@@ -57,3 +57,6 @@ logs/
 config/memory
 config/.runtime.json5
 config/cron_job/
+
+# Zenoh
+go/.zenoh-c/
