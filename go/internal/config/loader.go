@@ -77,7 +77,9 @@ func expandEnv(text string) string {
 }
 
 func stripJSON5(src []byte) ([]byte, error) {
-	lines := strings.Split(string(src), "\n")
+	text := strings.ReplaceAll(string(src), "\\\n", "")
+	lines := strings.Split(text, "\n")
+
 	var stripped []string
 	for _, line := range lines {
 		if commentStart := commentIndex(line); commentStart >= 0 {
@@ -85,7 +87,8 @@ func stripJSON5(src []byte) ([]byte, error) {
 		}
 		stripped = append(stripped, line)
 	}
-	text := strings.Join(stripped, "\n")
+
+	text = strings.Join(stripped, "\n")
 
 	trailingComma := regexp.MustCompile(`,(\s*[}\]])`)
 	text = trailingComma.ReplaceAllString(text, "$1")

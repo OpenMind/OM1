@@ -1,4 +1,4 @@
-package arm_g1_zenoh
+package arm_g1
 
 import (
 	"context"
