@@ -10,9 +10,12 @@ type Session struct {
 	session zenoh.Session
 }
 
-// Publisher wraps a zenoh Publisher for repeated puts on a fixed key.
 type Publisher struct {
 	publisher zenoh.Publisher
+}
+
+type Subscriber struct {
+	subscriber zenoh.Subscriber
 }
 
 // Open creates a new zenoh session. Optionally accepts a custom endpoint.
@@ -77,6 +80,26 @@ func (s *Session) Put(key string, data []byte) error {
 	}
 
 	return nil
+}
+
+// DeclareSubscriber creates a Subscriber for the given key expression.
+func (s *Session) DeclareSubscriber(key string, handler func([]byte)) (*Subscriber, error) {
+	keyExpr, err := zenoh.NewKeyExpr(key)
+	if err != nil {
+		return nil, fmt.Errorf("zenoh keyexpr: %w", err)
+	}
+	sub, err := s.session.DeclareSubscriber(keyExpr, zenoh.Closure[zenoh.Sample]{
+		Call: func(sample zenoh.Sample) { handler(sample.Payload().Bytes()) },
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("zenoh declare subscriber: %w", err)
+	}
+	return &Subscriber{subscriber: sub}, nil
+}
+
+// Drop undeclares the subscriber.
+func (sub *Subscriber) Drop() {
+	sub.subscriber.Drop()
 }
 
 // Close properly closes the zenoh session and notifies the router.
