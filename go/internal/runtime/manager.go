@@ -14,6 +14,7 @@ import (
 	"github.com/openmind/om1/internal/hooks"
 )
 
+// ModeState represents the current state of the system's mode.
 type ModeState struct {
 	CurrentMode       string    `json:"current_mode"`
 	PreviousMode      string    `json:"previous_mode"`
@@ -21,6 +22,7 @@ type ModeState struct {
 	TransitionHistory []string  `json:"transition_history"`
 }
 
+// ModeManager manages the current mode of the system.
 type ModeManager struct {
 	mu           sync.RWMutex
 	state        ModeState
@@ -31,6 +33,7 @@ type ModeManager struct {
 	globalHooks  *hooks.Runner
 }
 
+// NewModeManager creates a new ModeManager with the given system configuration and logger.
 func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeManager {
 	manager := &ModeManager{
 		systemConfig: systemConfig,

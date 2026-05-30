@@ -1,4 +1,3 @@
-// Package ws provides a reconnecting binary WebSocket client.
 package ws
 
 import (

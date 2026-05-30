@@ -127,7 +127,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		return fmt.Errorf("mode %q not found in config", modeName)
 	}
 
-	modeConfig := newModeSetup(modeCfg, rt.systemConfig)
+	modeConfig := NewModeSetup(modeCfg, rt.systemConfig)
 
 	if err := modeConfig.loadComponents(); err != nil {
 		return err

@@ -36,7 +36,7 @@ func init() {
 			"Supported expressions: happy, confused, curious, excited, sad, think.",
 		EmotionInput{},
 	)
-	actions.Register("emotion/zenoh", NewZenohConnector)
+	actions.Register("emotion/zenoh", NewEmotionZenohConnector)
 }
 
 type zenohConnector struct {
@@ -44,7 +44,8 @@ type zenohConnector struct {
 	provider *providers.AvatarProvider
 }
 
-func NewZenohConnector(cfg map[string]any) (actions.Connector, error) {
+// NewZenohConnector creates a new zenohConnector with the provided configuration.
+func NewEmotionZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get()
 
 	var endpoint string
@@ -74,8 +75,10 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 	return nil, nil
 }
 
+// Tick is a no-op since this connector is event-driven.
 func (z *zenohConnector) Tick(ctx context.Context) {
 	<-ctx.Done()
 }
 
+// Stop is a no-op since the AvatarProvider manages its own resources.
 func (z *zenohConnector) Stop() {}

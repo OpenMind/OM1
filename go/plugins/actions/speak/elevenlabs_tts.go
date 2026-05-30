@@ -47,6 +47,7 @@ type ElevenLabsConnector struct {
 	silenceRate    int
 }
 
+// NewElevenLabsTTS creates a new ElevenLabsConnector with the provided configuration.
 func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
 	var cfg ElevenLabsConfig
 	if b, err := json.Marshal(configMap); err == nil {
@@ -123,8 +124,10 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	return nil, nil
 }
 
+// Tick is a no-op since this connector is event-driven.
 func (e *ElevenLabsConnector) Tick(ctx context.Context) {
 	<-ctx.Done()
 }
 
+// Stop is a no-op since the ElevenLabs provider manages its own resources.
 func (e *ElevenLabsConnector) Stop() {}

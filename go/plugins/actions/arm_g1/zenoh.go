@@ -16,16 +16,6 @@ const (
 	sportRequestTopic = "api/sport/request"
 )
 
-// customActionMap translates ArmAction enum values to the action name sent to the ROS2 node.
-var customActionMap = map[string]string{
-	"shake_hand":  "shake_hand",
-	"face_wave":   "face_wave",
-	"hands_up":    "hands_up",
-	"stand_still": "stand_still",
-	"wave":        "face_wave",
-	"show_hand":   "show_hand",
-}
-
 type ArmAction string
 
 func (ArmAction) EnumValues() []string {
@@ -36,7 +26,6 @@ func (ArmAction) EnumValues() []string {
 		"hands_up",
 		"stand_still",
 		"show_hand",
-		"wave",
 	}
 }
 
@@ -52,7 +41,7 @@ func init() {
 			"Supported gestures: shake_hand, face_wave, hands_up, stand_still, show_hand, wave.",
 		ArmInput{},
 	)
-	actions.Register("arm_g1/zenoh", newZenohConnector)
+	actions.Register("arm_g1/zenoh", NewArmG1ZenohConnector)
 }
 
 type zenohConnector struct {
@@ -61,7 +50,8 @@ type zenohConnector struct {
 	publisher *zenohsession.Publisher
 }
 
-func newZenohConnector(cfg map[string]any) (actions.Connector, error) {
+// NewArmG1ZenohConnector creates a new zenohConnector with the provided configuration.
+func NewArmG1ZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get()
 
 	var endpoint string
@@ -86,6 +76,7 @@ func newZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	return &zenohConnector{log: log, session: sess, publisher: pub}, nil
 }
 
+// Connect publishes the arm gesture command based on the input action.
 func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
@@ -96,31 +87,27 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 		return nil, nil
 	}
 
-	actionName, found := customActionMap[action]
-	if !found {
-		z.log.Warn("arm_g1/zenoh: unknown action, skipping", zap.String("action", action))
-		return nil, nil
-	}
-
 	if z.publisher == nil {
 		return nil, nil
 	}
 
-	parameter := fmt.Sprintf(`{"action": "%s"}`, actionName)
+	parameter := fmt.Sprintf(`{"action": "%s"}`, action)
 	payload := serializeUnitreeRequest(customAPIID, parameter)
 	if err := z.publisher.Put(payload); err != nil {
 		z.log.Error("arm_g1/zenoh: put failed", zap.Error(err))
 		return nil, err
 	}
 
-	z.log.Info("arm_g1/zenoh: published", zap.String("action", action), zap.String("mapped", actionName))
+	z.log.Info("arm_g1/zenoh: published", zap.String("action", action), zap.String("mapped", action))
 	return nil, nil
 }
 
+// Tick is a no-op since this connector is event-driven.
 func (z *zenohConnector) Tick(ctx context.Context) {
 	<-ctx.Done()
 }
 
+// Stop cleans up the Zenoh publisher and session.
 func (z *zenohConnector) Stop() {
 	if z.publisher != nil {
 		z.publisher.Drop()

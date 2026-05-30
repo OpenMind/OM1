@@ -10,9 +10,7 @@ import (
 	"github.com/openmind/om1/internal/llm"
 )
 
-// modeSetup holds a ModeConfig together with the live component instances
-// loaded from it.  It mirrors the Python ModeConfig pattern where
-// load_components() and to_runtime_config() are methods on the config object.
+// modeSetup encapsulates the loaded components.
 type modeSetup struct {
 	cfg config.ModeConfig
 	sys *config.SystemConfig
@@ -23,13 +21,12 @@ type modeSetup struct {
 	backgroundList []backgrounds.Background
 }
 
-func newModeSetup(cfg config.ModeConfig, sys *config.SystemConfig) *modeSetup {
+// NewModeSetup creates a new modeSetup for the given ModeConfig and SystemConfig.
+func NewModeSetup(cfg config.ModeConfig, sys *config.SystemConfig) *modeSetup {
 	return &modeSetup{cfg: cfg, sys: sys}
 }
 
-// loadComponents instantiates all sensors, the LLM, actions, and backgrounds
-// for this mode, injecting global metadata into each component's config.
-// Mirrors Python's ModeConfig.load_components.
+// loadComponents initializes all components for the mode based on its configuration.
 func (m *modeSetup) loadComponents() error {
 	modeName := m.cfg.Name
 	meta := m.buildMeta(modeName)
@@ -84,8 +81,7 @@ func (m *modeSetup) loadComponents() error {
 	return nil
 }
 
-// toRuntimeConfig builds the RuntimeConfig for the active mode.
-// Mirrors Python's ModeConfig.to_runtime_config.
+// toRuntimeConfig converts the modeSetup to a RuntimeConfig for execution.
 func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 	rc := &config.RuntimeConfig{
 		Version:          m.sys.Version,
@@ -104,8 +100,7 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 	return rc
 }
 
-// buildMeta collects the global scalar fields that get injected into every
-// component config map, mirroring Python's add_meta helper.
+// buildMeta constructs a metadata map for the mode, including global config values and the mode name.
 func (m *modeSetup) buildMeta(modeName string) map[string]string {
 	meta := make(map[string]string)
 	if m.sys.APIKey != "" {
@@ -123,8 +118,7 @@ func (m *modeSetup) buildMeta(modeName string) map[string]string {
 	return meta
 }
 
-// addMeta injects global metadata into a component's config map, skipping
-// keys that the component has already set explicitly.
+// addMeta adds metadata key-value pairs to a config map if they are not already present.
 func addMeta(cfg map[string]any, meta map[string]string) map[string]any {
 	if cfg == nil {
 		cfg = make(map[string]any)
@@ -137,8 +131,7 @@ func addMeta(cfg map[string]any, meta map[string]string) map[string]any {
 	return cfg
 }
 
-// collectSchemas extracts tool schemas from agent actions for LLM tool use.
-// Mirrors Python's schema collection logic.
+// collectSchemas extracts the schemas from agent actions that are not excluded from the prompt.
 func collectSchemas(agentActions []*actions.AgentAction) []map[string]any {
 	schemas := make([]map[string]any, 0, len(agentActions))
 
@@ -151,8 +144,8 @@ func collectSchemas(agentActions []*actions.AgentAction) []map[string]any {
 	return schemas
 }
 
-// mergePrompt returns the mode-specific prompt if available, otherwise the global prompt.
-// Mirrors Python's prompt merging logic.
+// mergePrompt combines the global system prompt base with the mode-specific one,
+// giving precedence to the mode-specific prompt if it exists.
 func mergePrompt(global, modeSpecific string) string {
 	if modeSpecific != "" {
 		return modeSpecific
@@ -161,7 +154,6 @@ func mergePrompt(global, modeSpecific string) string {
 }
 
 // toolCallsToMaps converts LLM tool calls to map representations for action orchestration.
-// Mirrors Python's tool call conversion logic.
 func toolCallsToMaps(toolCalls []llm.ToolCall) []map[string]any {
 	result := make([]map[string]any, len(toolCalls))
 	for i, tc := range toolCalls {
