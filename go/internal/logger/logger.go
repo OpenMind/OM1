@@ -15,3 +15,15 @@ func Set(l *zap.Logger) {
 func Get() *zap.Logger {
 	return gLogger
 }
+
+func BuildLogger(level string) *zap.Logger {
+	cfg := zap.NewProductionConfig()
+
+	if err := cfg.Level.UnmarshalText([]byte(level)); err != nil {
+		cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+
+	logger, _ := cfg.Build()
+
+	return logger
+}

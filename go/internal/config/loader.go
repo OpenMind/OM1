@@ -11,6 +11,7 @@ import (
 
 var envVarRe = regexp.MustCompile(`\$\{([^}:-]+)(?::-(.*?))?\}`)
 
+// Load reads a configuration file, processes it, and unmarshals it into a SystemConfig struct.
 func Load(nameOrPath string) (*SystemConfig, error) {
 	path, err := resolvePath(nameOrPath)
 	if err != nil {
@@ -38,6 +39,7 @@ func Load(nameOrPath string) (*SystemConfig, error) {
 	return &systemConfig, nil
 }
 
+// resolvePath determines the actual file path of the configuration based on the provided name or path.
 func resolvePath(nameOrPath string) (string, error) {
 	if filepath.IsAbs(nameOrPath) {
 		return nameOrPath, nil
@@ -63,6 +65,7 @@ func resolvePath(nameOrPath string) (string, error) {
 	return "", fmt.Errorf("config %q not found", nameOrPath)
 }
 
+// expandEnv replaces environment variable placeholders.
 func expandEnv(text string) string {
 	return envVarRe.ReplaceAllStringFunc(text, func(match string) string {
 		submatch := envVarRe.FindStringSubmatch(match)
@@ -76,6 +79,7 @@ func expandEnv(text string) string {
 	})
 }
 
+// stripJSON5 removes comments, trailing commas, and unquotes keys to convert JSON5 to standard JSON.
 func stripJSON5(src []byte) ([]byte, error) {
 	text := strings.ReplaceAll(string(src), "\\\n", "")
 	lines := strings.Split(text, "\n")
@@ -99,6 +103,7 @@ func stripJSON5(src []byte) ([]byte, error) {
 	return []byte(text), nil
 }
 
+// commentIndex finds the index of the start of a comment (//) in a line, ignoring any // that are inside string literals.
 func commentIndex(line string) int {
 	inString := false
 	for i := 0; i < len(line)-1; i++ {
@@ -112,6 +117,7 @@ func commentIndex(line string) int {
 	return -1
 }
 
+// normalize ensures that the SystemConfig has a consistent structure.
 func normalize(systemConfig *SystemConfig) {
 	if len(systemConfig.Modes) > 0 {
 		return

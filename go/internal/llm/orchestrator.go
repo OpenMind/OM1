@@ -35,8 +35,11 @@ func NewOrchestrator(llm LLM, config map[string]any, schemas []map[string]any) *
 	return orchestrator
 }
 
+// SetSchemas updates the tool schemas in the underlying LLM.
 func (o *Orchestrator) SetSchemas(schemas []map[string]any) { o.llm.SetSchemas(schemas) }
-func (o *Orchestrator) FunctionSchemas() []map[string]any   { return o.llm.FunctionSchemas() }
+
+// FunctionSchemas returns the currently configured tool schemas from the underlying LLM.
+func (o *Orchestrator) FunctionSchemas() []map[string]any { return o.llm.FunctionSchemas() }
 
 // Call implements the LLM interface. It manages conversation history based on maxLen.
 func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*Response, error) {
@@ -72,12 +75,14 @@ func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*R
 	return resp, nil
 }
 
+// Reset clears the conversation history in the Orchestrator.
 func (o *Orchestrator) Reset() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.msgs = nil
 }
 
+// formatToolCalls converts a list of ToolCalls into a readable string format for conversation history.
 func formatToolCalls(calls []ToolCall) string {
 	parts := make([]string, 0, len(calls))
 

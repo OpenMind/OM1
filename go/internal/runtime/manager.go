@@ -40,7 +40,7 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 		cooldowns:    make(map[string]time.Time),
 		log:          log,
 		statePath:    filepath.Join("config", "memory", ".mode_state.json"),
-		globalHooks:  hooks.New(systemConfig.GlobalHooks, log),
+		globalHooks:  hooks.NewHooks(systemConfig.GlobalHooks, log),
 	}
 	manager.state = ModeState{
 		CurrentMode:   systemConfig.DefaultMode,
@@ -83,7 +83,7 @@ func (m *ModeManager) CheckTransitions(ctx context.Context, latestInputs []strin
 						"actual_duration": elapsed,
 						"timestamp":       float64(time.Now().UnixMilli()) / 1000.0,
 					}
-					if err := hooks.New(modeCfg.LifecycleHooks, m.log).Run(ctx, hooks.OnTimeout, timeoutCtx); err != nil {
+					if err := hooks.NewHooks(modeCfg.LifecycleHooks, m.log).Run(ctx, hooks.OnTimeout, timeoutCtx); err != nil {
 						m.log.Warn("mode OnTimeout hook failed during mode transition",
 							zap.String("mode", currentMode),
 							zap.Float64("timeout_seconds", rule.TimeoutSeconds),

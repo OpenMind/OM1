@@ -22,13 +22,14 @@ const (
 	OnTimeout HookType = "on_timeout"
 )
 
+// Runner manages and executes lifecycle hooks based on their type and configuration.
 type Runner struct {
 	hooks []config.HookSpec
 	log   *zap.Logger
 }
 
-// New creates a new Runner with the given hooks and logger.
-func New(hooks []config.HookSpec, log *zap.Logger) *Runner {
+// NewHooks creates a new Runner instance with the provided hooks and logger.
+func NewHooks(hooks []config.HookSpec, log *zap.Logger) *Runner {
 	return &Runner{hooks: hooks, log: log}
 }
 

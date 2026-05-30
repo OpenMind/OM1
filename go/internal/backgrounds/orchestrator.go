@@ -18,6 +18,7 @@ type Orchestrator struct {
 	log         *zap.Logger
 }
 
+// NewOrchestrator creates a new Orchestrator with the given Background tasks and logger.
 func NewOrchestrator(backgroundList []Background, log *zap.Logger) *Orchestrator {
 	return &Orchestrator{backgrounds: backgroundList, log: log}
 }

@@ -34,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := buildLogger(*logLevel)
+	log := logger.BuildLogger(*logLevel)
 	logger.Set(log)
 	defer func() { _ = log.Sync() }()
 
@@ -54,13 +54,4 @@ func main() {
 	if err := rt.Run(ctx); err != nil && err != context.Canceled {
 		log.Fatal("runtime exited with error", zap.Error(err))
 	}
-}
-
-func buildLogger(level string) *zap.Logger {
-	cfg := zap.NewProductionConfig()
-	if err := cfg.Level.UnmarshalText([]byte(level)); err != nil {
-		cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	}
-	l, _ := cfg.Build()
-	return l
 }

@@ -8,20 +8,24 @@ import (
 	"github.com/openmind/om1/internal/config"
 )
 
+// Fuser is responsible for fusing various prompt components (system persona, sensory inputs, knowledge base context, available actions, examples) into a single prompt string to be sent to the LLM.
 type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
 }
 
+// KnowledgeBase defines an interface for querying a knowledge base with a question and retrieving relevant documents.
 type KnowledgeBase interface {
 	Query(ctx context.Context, question string, topK int) ([]string, error)
 }
 
-func New(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase) *Fuser {
+// NewFuser creates a new Fuser instance with the provided runtime configuration, agent actions, and knowledge base.
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase) *Fuser {
 	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase}
 }
 
+// Fuse combines the prompt components into a single string to be sent to the LLM.
 func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error) {
 	var builder strings.Builder
 
@@ -90,6 +94,7 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 	return builder.String(), nil
 }
 
+// visibleActions filters the agent actions to include only those that are not marked as ExcludeFromPrompt, meaning they should be included in the prompt for the LLM.
 func (f *Fuser) visibleActions() []*actions.AgentAction {
 	var visible []*actions.AgentAction
 	for _, action := range f.agentActions {
@@ -100,6 +105,7 @@ func (f *Fuser) visibleActions() []*actions.AgentAction {
 	return visible
 }
 
+// buildQuestion constructs a question to query the knowledge base.
 func (f *Fuser) buildQuestion() string {
 	return "What should " + f.runtimeConfig.Name + " do next?"
 }

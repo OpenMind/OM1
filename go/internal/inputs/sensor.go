@@ -5,11 +5,13 @@ import (
 	"time"
 )
 
+// Message represents a processed input event with a timestamp and text content.
 type Message struct {
 	Timestamp float64
 	Message   string
 }
 
+// NewMessage creates a new Message with the current timestamp and the given text.
 func NewMessage(text string) *Message {
 	return &Message{
 		Timestamp: float64(time.Now().UnixNano()) / 1e9,
@@ -35,14 +37,18 @@ type Sensor interface {
 	Stop()
 }
 
+// Factory is a function type for creating Sensor instances with a given configuration.
 type Factory func(cfg map[string]any) (Sensor, error)
 
+// registry holds the mapping of Sensor type names to their corresponding factory functions.
 var registry = map[string]Factory{}
 
+// Register adds a new Sensor factory to the registry under the specified type name.
 func Register(typeName string, f Factory) {
 	registry[typeName] = f
 }
 
+// Load creates a Sensor instance based on the provided type name and configuration.
 func Load(typeName string, cfg map[string]any) (Sensor, error) {
 	f, ok := registry[typeName]
 	if !ok {
@@ -51,11 +57,13 @@ func Load(typeName string, cfg map[string]any) (Sensor, error) {
 	return f(cfg)
 }
 
+// UnknownPluginError is returned when an attempt is made to load a Sensor plugin that is not registered.
 type UnknownPluginError struct {
 	Kind string
 	Name string
 }
 
+// Error returns a descriptive error message indicating that the specified plugin type and name were not found.
 func (e *UnknownPluginError) Error() string {
 	return e.Kind + " plugin not found: " + e.Name
 }

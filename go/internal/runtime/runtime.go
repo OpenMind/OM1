@@ -139,7 +139,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.New(runtimeConfig, modeConfig.agentActions, nil),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, nil),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,
@@ -152,7 +152,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			rt.log,
 		),
 		sensors:   modeConfig.sensors,
-		modeHooks: hooks.New(modeCfg.LifecycleHooks, rt.log),
+		modeHooks: hooks.NewHooks(modeCfg.LifecycleHooks, rt.log),
 	}
 	if len(modeConfig.backgroundList) > 0 {
 		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)

@@ -16,17 +16,20 @@ const (
 	WithDeps   ExecMode = "dependencies"
 )
 
+// Call represents a request to execute an AgentAction with the given Input.
 type Call struct {
 	Action *AgentAction
 	Input  Input
 }
 
+// Result represents the outcome of executing a Call, including the action name, output, and any error that occurred.
 type Result struct {
 	ActionName string
 	Output     Output
 	Err        error
 }
 
+// Orchestrator manages the execution of multiple AgentActions based on a specified execution mode and dependencies.
 type Orchestrator struct {
 	actions map[string]*AgentAction
 	mode    ExecMode
@@ -35,6 +38,7 @@ type Orchestrator struct {
 	wg      sync.WaitGroup
 }
 
+// NewOrchestrator creates a new Orchestrator with the given AgentActions, execution mode, dependencies, and logger.
 func NewOrchestrator(
 	agentActions []*AgentAction,
 	mode ExecMode,
@@ -92,6 +96,7 @@ func (o *Orchestrator) Start(ctx context.Context) <-chan struct{} {
 	return done
 }
 
+// runConcurrent executes all calls in parallel and collects their results.
 func (o *Orchestrator) runConcurrent(ctx context.Context, calls []Call) []Result {
 	results := make([]Result, len(calls))
 	var wg sync.WaitGroup
@@ -107,6 +112,7 @@ func (o *Orchestrator) runConcurrent(ctx context.Context, calls []Call) []Result
 	return results
 }
 
+// runSequential executes calls one after another, stopping if the context is canceled.
 func (o *Orchestrator) runSequential(ctx context.Context, calls []Call) []Result {
 	results := make([]Result, 0, len(calls))
 	for _, call := range calls {
@@ -119,6 +125,7 @@ func (o *Orchestrator) runSequential(ctx context.Context, calls []Call) []Result
 	return results
 }
 
+// runWithDeps executes calls in an order that respects their dependencies.
 func (o *Orchestrator) runWithDeps(ctx context.Context, calls []Call) []Result {
 	indexByLabel := make(map[string]int, len(calls))
 	for i, call := range calls {
