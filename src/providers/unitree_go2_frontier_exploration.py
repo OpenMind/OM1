@@ -62,9 +62,7 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
                 self.exploration_info = exploration_data.get("info", "")
 
                 if self.exploration_complete:
-                    logging.info(
-                        "Exploration Status: Completed, Info: %s", self.exploration_info
-                    )
+                    logging.info("Exploration Status: Completed, Info: %s", self.exploration_info)
 
                     # Trigger the context to stop SLAM
                     self.context_provider.update_context(self.context_aware_text)

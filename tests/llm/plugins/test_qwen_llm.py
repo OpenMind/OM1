@@ -16,9 +16,7 @@ class TestParseQwenToolCalls:
 
     def test_parse_single_tool_call(self):
         """Test parsing a single valid tool call block."""
-        text = (
-            '<tool_call>{"name": "speak", "arguments": {"text": "hello"}}</tool_call>'
-        )
+        text = '<tool_call>{"name": "speak", "arguments": {"text": "hello"}}</tool_call>'
         result = _parse_qwen_tool_calls(text)
 
         assert len(result) == 1
@@ -126,11 +124,7 @@ def config():
 def mock_response():
     """Fixture providing a valid mock API response without tool calls."""
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=None))]
     return response
 
 
@@ -142,13 +136,7 @@ def mock_response_with_tool_calls():
     tool_call.function.arguments = '{"arg1": "value1"}'
 
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"test_field": "success"}', tool_calls=[tool_call]
-            )
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=[tool_call]))]
     return response
 
 
@@ -183,9 +171,7 @@ def mock_avatar_components():
         patch("llm.plugins.qwen_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.qwen_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -272,9 +258,7 @@ class TestQwenLLMAsk:
             assert result.actions == [Action(type="test_function", value="value1")]
 
     @pytest.mark.asyncio
-    async def test_ask_with_xml_tool_calls(
-        self, llm, mock_response_with_xml_tool_calls
-    ):
+    async def test_ask_with_xml_tool_calls(self, llm, mock_response_with_xml_tool_calls):
         """Test fallback parsing of Qwen-style XML tool calls."""
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
@@ -319,21 +303,6 @@ class TestQwenLLMAsk:
             assert formatted_messages[-1]["content"] == "test prompt /no_think"
 
     @pytest.mark.asyncio
-    async def test_io_provider_timing(self, llm, mock_response):
-        """Test timing metrics collection."""
-        with pytest.MonkeyPatch.context() as m:
-            m.setattr(
-                llm._client.chat.completions,
-                "create",
-                AsyncMock(return_value=mock_response),
-            )
-
-            await llm.ask("test prompt")
-            assert llm.io_provider.llm_start_time is not None
-            assert llm.io_provider.llm_end_time is not None
-            assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time
-
-    @pytest.mark.asyncio
     async def test_ask_includes_extra_body(self, llm, mock_response):
         """Test that extra_body is included in API request."""
         with pytest.MonkeyPatch.context() as m:
@@ -343,14 +312,10 @@ class TestQwenLLMAsk:
             await llm.ask("test prompt")
 
             call_args = mock_create.call_args
-            assert call_args.kwargs.get("extra_body") == {
-                "chat_template_kwargs": {"enable_thinking": False}
-            }
+            assert call_args.kwargs.get("extra_body") == {"chat_template_kwargs": {"enable_thinking": False}}
 
     @pytest.mark.asyncio
-    async def test_ask_with_function_schemas(
-        self, config, mock_response_with_tool_calls
-    ):
+    async def test_ask_with_function_schemas(self, config, mock_response_with_tool_calls):
         """Test ask() includes function schemas when available."""
         # Create LLM with mock function schemas
         llm = QwenLLM(config, available_actions=None)

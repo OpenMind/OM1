@@ -54,9 +54,7 @@ def test_resolve_nonexistent_config_raises_error():
     """Test that nonexistent config raises FileNotFoundError."""
     with pytest.raises(FileNotFoundError) as exc_info:
         _resolve_config_path("nonexistent_config_that_does_not_exist")
-    assert "Configuration 'nonexistent_config_that_does_not_exist' not found" in str(
-        exc_info.value
-    )
+    assert "Configuration 'nonexistent_config_that_does_not_exist' not found" in str(exc_info.value)
 
 
 def test_class_exists_in_directory(tmp_path):
@@ -232,9 +230,7 @@ def test_validate_mode_components_valid():
             "agent_actions": [{"name": "test_action"}],
         }
 
-        errors, warnings = _validate_mode_components(
-            "test_mode", mode_data, verbose=False
-        )
+        errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False)
         assert errors == []
         assert warnings == []
 
@@ -248,9 +244,7 @@ def test_validate_mode_components_missing_input():
             "agent_inputs": [{"type": "MissingInput"}],
         }
 
-        errors, warnings = _validate_mode_components(
-            "test_mode", mode_data, verbose=False, allow_missing=False
-        )
+        errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False, allow_missing=False)
         assert len(errors) == 1
         assert "MissingInput" in errors[0]
 
@@ -264,9 +258,7 @@ def test_validate_mode_components_missing_input_allowed():
             "agent_inputs": [{"type": "MissingInput"}],
         }
 
-        errors, warnings = _validate_mode_components(
-            "test_mode", mode_data, verbose=False, allow_missing=True
-        )
+        errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False, allow_missing=True)
         assert len(errors) == 0
         assert len(warnings) == 1
         assert "MissingInput" in warnings[0]
@@ -278,9 +270,7 @@ def test_validate_mode_components_skip_inputs():
         "agent_inputs": [{"type": "AnyInput"}],
     }
 
-    errors, warnings = _validate_mode_components(
-        "test_mode", mode_data, verbose=False, skip_inputs=True
-    )
+    errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False, skip_inputs=True)
     assert errors == []
     assert warnings == []
 
@@ -294,9 +284,7 @@ def test_validate_mode_components_simulators():
             "simulators": [{"type": "TestSimulator"}],
         }
 
-        errors, warnings = _validate_mode_components(
-            "test_mode", mode_data, verbose=False
-        )
+        errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False)
         assert errors == []
         mock_simulator.assert_called_once_with("TestSimulator")
 
@@ -310,9 +298,7 @@ def test_validate_mode_components_backgrounds():
             "backgrounds": [{"type": "TestBackground"}],
         }
 
-        errors, warnings = _validate_mode_components(
-            "test_mode", mode_data, verbose=False
-        )
+        errors, warnings = _validate_mode_components("test_mode", mode_data, verbose=False)
         assert errors == []
         mock_background.assert_called_once_with("TestBackground")
 
@@ -376,9 +362,7 @@ def test_list_configs_categorizes_correctly(capsys):
         # Create a side effect to return different content
         def open_side_effect(path, mode):
             if "mode_config" in str(path):
-                return mock_open(
-                    read_data='{"modes": {}, "default_mode": "test"}'
-                ).return_value
+                return mock_open(read_data='{"modes": {}, "default_mode": "test"}').return_value
             else:
                 return mock_open(read_data='{"name": "single"}').return_value
 

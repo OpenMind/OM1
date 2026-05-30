@@ -2,13 +2,14 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-import zenoh
 from zenoh import ZBytes
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from zenoh_msgs import (
     AIStatusRequest,
     String,
+    ZenohSampleType,
+    ZenohSessionType,
     geometry_msgs,
     nav_msgs,
     open_zenoh_session,
@@ -65,7 +66,7 @@ class UnitreeGo2NavigationProvider:
         cancel_goal_topic : str, optional
             The topic on which to publish goal cancellations (default is "navigate_to_pose/_action/cancel_goal").
         """
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()
@@ -91,28 +92,22 @@ class UnitreeGo2NavigationProvider:
         self.ai_status_pub = None
         if self.session:
             try:
-                self.ai_status_pub = self.session.declare_publisher(
-                    self.ai_status_topic
-                )
-                logging.info(
-                    "AI status publisher initialized on topic: %s", self.ai_status_topic
-                )
+                self.ai_status_pub = self.session.declare_publisher(self.ai_status_topic)
+                logging.info("AI status publisher initialized on topic: %s", self.ai_status_topic)
             except Exception as e:
                 logging.error(f"Error creating AI status publisher: {e}")
 
-    def navigation_status_message_callback(self, data: zenoh.Sample):
+    def navigation_status_message_callback(self, data: ZenohSampleType):
         """
         Process an incoming navigation status message.
 
         Parameters
         ----------
-        data : zenoh.Sample
+        data : ZenohSampleType
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(
-                data.payload.to_bytes()
-            )
+            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(data.payload.to_bytes())
             logging.debug("Received Navigation Status message: %s", message)
             status_list = message.status_list
             if status_list:
@@ -130,18 +125,12 @@ class UnitreeGo2NavigationProvider:
                 if status_code in (1, 2):  # ACCEPTED or EXECUTING
                     if not self._nav_in_progress:
                         self._nav_in_progress = True
-                        self._publish_ai_status(
-                            enabled=False
-                        )  # Disable AI during navigation
+                        self._publish_ai_status(enabled=False)  # Disable AI during navigation
                         logging.info("Navigation started - AI mode disabled")
-                elif (
-                    status_code == 4
-                ):  # STATUS_SUCCEEDED - Navigation completed successfully
+                elif status_code == 4:  # STATUS_SUCCEEDED - Navigation completed successfully
                     if self._nav_in_progress:
                         self._nav_in_progress = False
-                        self._publish_ai_status(
-                            enabled=True
-                        )  # Re-enable AI ONLY on success
+                        self._publish_ai_status(enabled=True)  # Re-enable AI ONLY on success
                         logging.info("Navigation succeeded - AI mode re-enabled")
 
                         # Add speech feedback for successful navigation
@@ -150,9 +139,7 @@ class UnitreeGo2NavigationProvider:
                                 f"Yaaay! I have reached the {self._current_destination}. Woof! Woof!"
                             )
                         else:
-                            self.tts_provider.add_pending_message(
-                                "Yaaay! I have reached my destination. Woof! Woof!"
-                            )
+                            self.tts_provider.add_pending_message("Yaaay! I have reached my destination. Woof! Woof!")
                 elif status_code in (5, 6):  # CANCELED or ABORTED
                     if self._nav_in_progress:
                         self._nav_in_progress = False
@@ -186,9 +173,7 @@ class UnitreeGo2NavigationProvider:
                 code=1 if enabled else 0,
             )
             self.ai_status_pub.put(status_msg.serialize())
-            logging.info(
-                "AI mode %s during navigation", "enabled" if enabled else "disabled"
-            )
+            logging.info("AI mode %s during navigation", "enabled" if enabled else "disabled")
         except Exception as e:
             logging.error(f"Error publishing AI status: {e}")
 
@@ -197,15 +182,11 @@ class UnitreeGo2NavigationProvider:
         Start the navigation provider by registering the message callback and starting the listener.
         """
         if self.session is None:
-            logging.error(
-                "Cannot start navigation provider; Zenoh session is not available."
-            )
+            logging.error("Cannot start navigation provider; Zenoh session is not available.")
             return
 
         if not self.running:
-            self.session.declare_subscriber(
-                self.navigation_status_topic, self.navigation_status_message_callback
-            )
+            self.session.declare_subscriber(self.navigation_status_topic, self.navigation_status_message_callback)
             logging.info(
                 "Subscribed to navigation status topic: %s",
                 self.navigation_status_topic,
@@ -217,9 +198,7 @@ class UnitreeGo2NavigationProvider:
 
         logging.warning("Navigation Provider is already running")
 
-    def publish_goal_pose(
-        self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None
-    ):
+    def publish_goal_pose(self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None):
         """
         Publish a goal pose to the navigation topic.
 

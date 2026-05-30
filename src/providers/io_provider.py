@@ -50,8 +50,6 @@ class IOProvider:
         self._fuser_end_time: Optional[float] = None
 
         self._llm_prompt: Optional[str] = None
-        self._llm_start_time: Optional[float] = None
-        self._llm_end_time: Optional[float] = None
 
         self._mode_transition_input: Optional[str] = None
 
@@ -89,9 +87,7 @@ class IOProvider:
         """
         with self._lock:
             ts = timestamp if timestamp is not None else time.time()
-            self._inputs[key] = Input(
-                input=value, timestamp=ts, tick=self._tick_counter
-            )
+            self._inputs[key] = Input(input=value, timestamp=ts, tick=self._tick_counter)
 
     def remove_input(self, key: str) -> None:
         """
@@ -330,60 +326,6 @@ class IOProvider:
         with self._lock:
             self._llm_prompt = None
 
-    @property
-    def llm_start_time(self) -> Optional[float]:
-        """
-        Get the LLM processing start time.
-        """
-        with self._lock:
-            return self._llm_start_time
-
-    @llm_start_time.setter
-    def llm_start_time(self, value: Optional[float]) -> None:
-        """
-        Set the LLM processing start time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM start time value to set.
-        """
-        with self._lock:
-            self._llm_start_time = value
-
-    def set_llm_start_time(self, value: Optional[float]) -> None:
-        """
-        Alternative method to set LLM start time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM start time value to set.
-        """
-        with self._lock:
-            self._llm_start_time = value
-
-    @property
-    def llm_end_time(self) -> Optional[float]:
-        """
-        Get the LLM processing end time.
-        """
-        with self._lock:
-            return self._llm_end_time
-
-    @llm_end_time.setter
-    def llm_end_time(self, value: Optional[float]) -> None:
-        """
-        Set the LLM processing end time.
-
-        Parameters
-        ----------
-        value : Optional[float]
-            The LLM end time value to set.
-        """
-        with self._lock:
-            self._llm_end_time = value
-
     def add_dynamic_variable(self, key: str, value: Any) -> None:
         """
         Add a dynamic variable to the provider.
@@ -428,9 +370,7 @@ class IOProvider:
             if self._mode_transition_input is None:
                 self._mode_transition_input = input_text
             else:
-                self._mode_transition_input = (
-                    self._mode_transition_input + " " + input_text
-                )
+                self._mode_transition_input = self._mode_transition_input + " " + input_text
 
     @contextmanager
     def mode_transition_input(self):

@@ -9,9 +9,7 @@ from zenoh_msgs import Header, PersonGreetingStatus, String, Time
 def test_initialization_success(caplog):
     """Test successful initialization of ApproachingPerson background."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
@@ -28,9 +26,7 @@ def test_initialization_success(caplog):
             background = ApproachingPerson(config)
 
         mock_zenoh_session.assert_called_once()
-        mock_session.declare_subscriber.assert_called_once_with(
-            "om/person_greeting", background._on_person_greeting
-        )
+        mock_session.declare_subscriber.assert_called_once_with("om/person_greeting", background._on_person_greeting)
 
         mock_state_provider_class.assert_called_once()
         assert background.greeting_state_provider == mock_state_provider
@@ -40,9 +36,7 @@ def test_initialization_success(caplog):
 def test_initialization_zenoh_error(caplog):
     """Test initialization when Zenoh session fails to open."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
@@ -64,15 +58,11 @@ def test_initialization_zenoh_error(caplog):
 def test_on_person_greeting_approached(caplog):
     """Test callback when person is approaching (APPROACHED status)."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
-        patch(
-            "backgrounds.plugins.approaching_person.ContextProvider"
-        ) as mock_context_provider_class,
+        patch("backgrounds.plugins.approaching_person.ContextProvider") as mock_context_provider_class,
     ):
 
         mock_session = MagicMock()
@@ -100,34 +90,24 @@ def test_on_person_greeting_approached(caplog):
         mock_sample.payload = mock_payload
 
         with caplog.at_level("DEBUG"):
-            with patch.object(
-                PersonGreetingStatus, "deserialize", return_value=person_greeting_status
-            ):
+            with patch.object(PersonGreetingStatus, "deserialize", return_value=person_greeting_status):
                 background._on_person_greeting(mock_sample)
 
         assert "Person is approaching. Triggering greeting mode." in caplog.text
 
-        mock_context_provider.update_context.assert_called_once_with(
-            {"approaching_detected": True}
-        )
+        mock_context_provider.update_context.assert_called_once_with({"approaching_detected": True})
 
-        mock_state_provider.reset_state.assert_called_once_with(
-            ConversationState.ENGAGING
-        )
+        mock_state_provider.reset_state.assert_called_once_with(ConversationState.ENGAGING)
 
 
 def test_on_person_greeting_not_approached(caplog):
     """Test callback when person greeting status is not APPROACHED."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
-        patch(
-            "backgrounds.plugins.approaching_person.ContextProvider"
-        ) as mock_context_provider_class,
+        patch("backgrounds.plugins.approaching_person.ContextProvider") as mock_context_provider_class,
     ):
 
         mock_session = MagicMock()
@@ -155,9 +135,7 @@ def test_on_person_greeting_not_approached(caplog):
         mock_sample.payload = mock_payload
 
         with caplog.at_level("INFO"):
-            with patch.object(
-                PersonGreetingStatus, "deserialize", return_value=person_greeting_status
-            ):
+            with patch.object(PersonGreetingStatus, "deserialize", return_value=person_greeting_status):
                 background._on_person_greeting(mock_sample)
 
         mock_context_provider.update_context.assert_not_called()
@@ -167,16 +145,12 @@ def test_on_person_greeting_not_approached(caplog):
 def test_run_publishes_switch_status():
     """Test that run method publishes SWITCH status to person greeting topic."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
         patch("backgrounds.plugins.approaching_person.uuid4") as mock_uuid4,
-        patch(
-            "backgrounds.plugins.approaching_person.prepare_header"
-        ) as mock_prepare_header,
+        patch("backgrounds.plugins.approaching_person.prepare_header") as mock_prepare_header,
     ):
 
         mock_session = MagicMock()
@@ -208,9 +182,7 @@ def test_run_publishes_switch_status():
 def test_stop_closes_session(caplog):
     """Test that stop method closes the Zenoh session."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
@@ -234,9 +206,7 @@ def test_stop_closes_session(caplog):
 def test_stop_without_session(caplog):
     """Test that stop method handles missing session gracefully."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,
@@ -259,9 +229,7 @@ def test_stop_without_session(caplog):
 def test_person_greeting_topic_constant():
     """Test that person greeting topic is set correctly."""
     with (
-        patch(
-            "backgrounds.plugins.approaching_person.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("backgrounds.plugins.approaching_person.open_zenoh_session") as mock_zenoh_session,
         patch(
             "backgrounds.plugins.approaching_person.GreetingConversationStateMachineProvider"
         ) as mock_state_provider_class,

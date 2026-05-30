@@ -30,9 +30,7 @@ class VLMOpenAIConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    base_url: str = Field(
-        default="https://api.openmind.org/api/core/openai", description="Base URL"
-    )
+    base_url: str = Field(default="https://api.openmind.com/api/core/openai", description="Base URL")
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     camera_index: int = Field(default=0, description="Camera Index")
 
@@ -75,8 +73,7 @@ class VLMOpenAI(FuserInput[VLMOpenAIConfig, Optional[str]]):
 
         base_url = self.config.base_url
         stream_base_url = (
-            self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}"
+            self.config.stream_base_url or f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}"
         )
         camera_index = self.config.camera_index
 
@@ -196,9 +193,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

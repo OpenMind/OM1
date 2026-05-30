@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -9,6 +10,14 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
+from prometheus import (
+    om1_asr_latency,
+    om1_asr_latency_last,
+    om1_asr_speech_duration,
+    om1_asr_speech_duration_last,
+    om1_asr_utterance_end_latency,
+    om1_asr_utterance_end_latency_last,
+)
 from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -38,6 +47,8 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
     ----------
     api_key : Optional[str]
         API Key.
+    api_version : str
+        API version to use for the ASR service. Default is "v2".
     rtsp_url : str
         RTSP URL for the audio stream.
     rate : int
@@ -46,19 +57,25 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
         Base URL for the ASR service.
     language : str
         Language for speech recognition.
+    alternative_languages : Optional[List[str]]
+        List of alternative languages for multilingual speech recognition. If None (default), no alternative languages will be used.
+    enable_tts_interrupt : bool
+        Enable TTS interrupt (does not mute mic during TTS playback).
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
+    api_version: str = Field(default="v2", description="API version to use for the ASR service")
     rtsp_url: str = Field(
         default="rtsp://localhost:8554/audio",
         description="RTSP URL for the audio stream",
     )
     rate: int = Field(default=16000, description="Audio sampling rate")
-    base_url: Optional[str] = Field(
-        default=None, description="Base URL for the ASR service"
-    )
-    language: str = Field(
-        default="english", description="Language for speech recognition"
+    chunk: int = Field(default=1600, description="Audio chunk size in bytes")
+    base_url: Optional[str] = Field(default=None, description="Base URL for the ASR service")
+    language: str = Field(default="english", description="Language for speech recognition")
+    alternative_languages: Optional[List[str]] = Field(
+        default=None,
+        description="List of alternative languages for multilingual speech recognition",
     )
     enable_tts_interrupt: bool = Field(
         default=False,
@@ -96,10 +113,13 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         api_key = self.config.api_key
         rtsp_url = self.config.rtsp_url
         rate = self.config.rate
-        base_url = (
-            self.config.base_url
-            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
-        )
+
+        api_version = self.config.api_version.strip().lower()
+        if api_version not in ["v1", "v2"]:
+            logging.warning(f"API version {api_version} not recognized. Defaulting to v2.")
+            api_version = "v2"
+
+        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/google/asr/{api_version}?api_key={api_key}"
 
         language = self.config.language.strip().lower()
 
@@ -112,13 +132,32 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
+        alternative_languages = self.config.alternative_languages or []
+        alternative_language_codes = []
+
+        if api_version == "v1" and len(alternative_languages) > 0:
+            for alt_lang in alternative_languages:
+                alt_lang = alt_lang.strip().lower()
+                if alt_lang in LANGUAGE_CODE_MAP:
+                    alt_code = LANGUAGE_CODE_MAP[alt_lang]
+                    alternative_language_codes.append(alt_code)
+                    logging.info(f"Adding alternative language code {alt_code} for language {alt_lang}")
+                else:
+                    logging.warning(f"Alternative language {alt_lang} not supported. Skipping.")
+        elif api_version == "v2" and len(alternative_languages) > 0:
+            logging.warning(
+                "Alternative languages are not supported in API version v2. Ignoring alternative languages."
+            )
+
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRRTSPProvider = ASRRTSPProvider(
             rtsp_url=rtsp_url,
             rate=rate,
+            chunk=self.config.chunk,
             ws_url=base_url,
             language_code=language_code,
+            alternative_language_codes=alternative_language_codes,
             enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
@@ -147,6 +186,11 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         # Guard flag: when True, this instance ignores incoming ASR messages.
         self._stopped = False
 
+        # Timing variable to measure latency from speech start to final transcript or end of utterance
+        self._speech_start_time: Optional[float] = None
+        self._language = language
+        self._api_version = api_version
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages from the ASR provider.
@@ -158,9 +202,47 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         """
         try:
             json_message: Dict = json.loads(raw_message)
+
+            msg_type = json_message.get("type")
+            if msg_type == "speech_start":
+                self._speech_start_time = time.time()
+
+            elif msg_type == "speech_end":
+                if self._speech_start_time is not None:
+                    duration = time.time() - self._speech_start_time
+                    om1_asr_speech_duration.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).observe(duration)
+                    om1_asr_speech_duration_last.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).set(duration)
+
+            elif msg_type == "end_of_utterance":
+                if self._speech_start_time is not None:
+                    latency = time.time() - self._speech_start_time
+                    om1_asr_utterance_end_latency.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).observe(latency)
+                    om1_asr_utterance_end_latency_last.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).set(latency)
+
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (has_cjk and len(asr_reply) > 2) or (not has_cjk and len(asr_reply.split()) > 1):
+                    # Observe ASR latency from speech start to final transcript
+                    if self._speech_start_time is not None:
+                        latency = time.time() - self._speech_start_time
+                        om1_asr_latency.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).observe(latency)
+                        om1_asr_latency_last.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).set(latency)
+                        self._speech_start_time = None
+
                     self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
@@ -240,9 +322,7 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
 {self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 

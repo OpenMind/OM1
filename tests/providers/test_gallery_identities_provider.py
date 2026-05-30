@@ -25,9 +25,7 @@ def reset_singleton():
 
 def test_identities_snapshot_to_text():
     """Test to_text method of IdentitiesSnapshot."""
-    snapshot = IdentitiesSnapshot(
-        ts=1234567890.0, total=3, names=["Alice", "Bob", "Charlie"], raw={}
-    )
+    snapshot = IdentitiesSnapshot(ts=1234567890.0, total=3, names=["Alice", "Bob", "Charlie"], raw={})
 
     text = snapshot.to_text()
 
@@ -36,9 +34,7 @@ def test_identities_snapshot_to_text():
 
 def test_identities_snapshot_to_text_with_duplicates():
     """Test to_text method with duplicate identities."""
-    snapshot = IdentitiesSnapshot(
-        ts=1234567890.0, total=3, names=["Alice", "Bob", "Alice"], raw={}
-    )
+    snapshot = IdentitiesSnapshot(ts=1234567890.0, total=3, names=["Alice", "Bob", "Alice"], raw={})
 
     text = snapshot.to_text()
 

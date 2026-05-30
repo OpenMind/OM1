@@ -23,6 +23,7 @@
         "name": {"type": "string"},
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
+        "use_sim": {"type": "boolean"},
         "unitree_ethernet": {"type": "string"},
         "system_prompt_base": {"type": "string"},
         "system_governance": {"type": "string"},
@@ -36,17 +37,6 @@
             }
         },
         "agent_inputs": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": ["type"],
-                "properties": {
-                    "type": {"type": "string"},
-                    "config": {"type": "object"}
-                }
-            }
-        },
-        "simulators": {
             "type": "array",
             "items": {
                 "type": "object",

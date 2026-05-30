@@ -35,9 +35,7 @@ def mock_video_client():
         pytest.skip("Unitree SDK not available, VideoClient not found")
 
     mock_client = MockVideoClient()
-    with patch(
-        "providers.unitree_camera_vlm_provider.VideoClient", return_value=mock_client
-    ):
+    with patch("providers.unitree_camera_vlm_provider.VideoClient", return_value=mock_client):
         yield mock_client
 
 

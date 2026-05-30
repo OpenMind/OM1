@@ -17,10 +17,7 @@ def test_initialization():
         sensor = TronOdom(config=config)
 
         assert sensor.messages == []
-        assert (
-            "location" in sensor.descriptor_for_LLM.lower()
-            or "pose" in sensor.descriptor_for_LLM.lower()
-        )
+        assert "location" in sensor.descriptor_for_LLM.lower() or "pose" in sensor.descriptor_for_LLM.lower()
 
 
 def test_initialization_with_custom_topic():
@@ -133,10 +130,7 @@ async def test_raw_to_text_standing_still():
 
         assert result is not None
         assert result.timestamp == 1234.0
-        assert (
-            "standing still" in result.message.lower()
-            or "can move" in result.message.lower()
-        )
+        assert "standing still" in result.message.lower() or "can move" in result.message.lower()
 
 
 @pytest.mark.asyncio

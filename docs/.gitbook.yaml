@@ -12,6 +12,7 @@ redirects:
   developing/7_project_structure: developing/7_project_structure.md
   developing/8_backgrounds: developing/8_backgrounds.md
   developing/9_troubleshooting_guide: developing/9_troubleshooting_guide.md
+  developing/mcp-integration: developing/mcp_integration.md
   api-reference/introduction: api-reference/introduction.md
   api-reference/api_pricing: api-reference/api_pricing.md
   api-reference/endpoints/google-asr: api-reference/endpoints/google_asr.md
@@ -58,14 +59,20 @@ redirects:
   robotics/nvidia-thor: robotics/nvidia_thor.md
   robotics/raspberrypi: robotics/raspberrypi.md
   robotics/zenoh: robotics/zenoh.md
-  release-notes/beta/om: release-notes/beta/om.md
-  release-notes/beta/om1-avatar: release-notes/beta/om1-avatar.md
-  release-notes/beta/om1-ros2-sdk: release-notes/beta/om1-ros2-sdk.md
-  release-notes/beta/video-processor: release-notes/beta/video-processor.md
+  release-notes/beta/om: release-notes/om/beta.md
+  release-notes/beta/om1-avatar: release-notes/om1-avatar/beta.md
+  release-notes/beta/om1-ros2-sdk: release-notes/om1-ros2-sdk/beta.md
+  release-notes/beta/om1-system-setup: release-notes/om1-system-setup/beta.md
+  release-notes/beta/video-processor: release-notes/om1-video-processor/beta.md
   release-notes/major-updates/beta-release: release-notes/major-updates/beta_release.md
   release-notes/major-updates/production-ready-release: release-notes/major-updates/production_ready_release.md
-  release-notes/v1.0.0/om: release-notes/v1.0.0/om.md
-  release-notes/v1.0.0/om1-avatar: release-notes/v1.0.0/om1-avatar.md
-  release-notes/v1.0.0/om1-ros2-sdk: release-notes/v1.0.0/om1-ros2-sdk.md
-  release-notes/v1.0.0/om1-system-setup: release-notes/v1.0.0/om1-system-setup.md
-  release-notes/v1.0.0/video-processor: release-notes/v1.0.0/video-processor.md
+  release-notes/v1.0.x/om: release-notes/om/v1.0.x.md
+  release-notes/v1.0.x/om1-avatar: release-notes/om1-avatar/v1.0.x.md
+  release-notes/v1.0.x/om1-ros2-sdk: release-notes/om1-ros2-sdk/v1.0.x.md
+  release-notes/v1.0.x/om1-system-setup: release-notes/om1-system-setup/v1.0.x.md
+  release-notes/v1.0.x/video-processor: release-notes/om1-video-processor/v1.0.x.md
+  release-notes/docker-images/om: release-notes/om/docker_images.md
+  release-notes/docker-images/om1-avatar: release-notes/om1-avatar/docker_images.md
+  release-notes/docker-images/om1-ros2-sdk: release-notes/om1-ros2-sdk/docker_images.md
+  release-notes/docker-images/om1-system-setup: release-notes/om1-system-setup/docker_images.md
+  release-notes/docker-images/video-processor: release-notes/om1-video-processor/docker_images.md

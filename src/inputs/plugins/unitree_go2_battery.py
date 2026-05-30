@@ -1,21 +1,20 @@
 import asyncio
 import logging
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
+from zenoh_msgs import ZenohSampleType, open_zenoh_session
 
 try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
     from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_  # type: ignore
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
     class ChannelSubscriber:
         """
@@ -41,10 +40,22 @@ class UnitreeGo2BatteryConfig(SensorConfig):
     Parameters
     ----------
     api_key : Optional[str]
-        API Key.
+        Teleops API key (forwarded to ``TeleopsStatusProvider``).
+    topic : str
+        Zenoh key for the LowState publication. Default ``lowstate``.
+    use_sim : bool
+        Whether to use the simulation Zenoh endpoint instead of a local one.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
+    topic: str = Field(
+        default="lowstate",
+        description="Zenoh key for Go2 LowState (unitree_go/msg/LowState).",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to use the simulation Zenoh endpoint instead of a local one.",
+    )
 
 
 class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
@@ -81,18 +92,29 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         # Messages buffer
         self.messages: list[Message] = []
 
-        # create subscriber
-        self.low_state = None
-        self.lowstate_subscriber = None
+        # create cyclonedds subscriber
+        self._lowstate_cyclonedds_subscriber = None
 
-        try:
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
-            logging.info("Battery monitor initialized")
-        except Exception as e:
-            logging.error(f"Error initializing Battery monitor: {e}")
+        # create zenoh subscriber
+        self._lowstate_zenoh_subscriber = None
 
-        if self.lowstate_subscriber:
-            self.lowstate_subscriber.Init(self.LowStateMessageHandler, 10)  # type: ignore
+        if not self.config.use_sim:
+            try:
+                self._lowstate_cyclonedds_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
+                logging.info("UnitreeGo2Battery initialized ChannelSubscriber for 'rt/lowstate'")
+            except Exception as e:
+                logging.error(f"UnitreeGo2Battery failed to initialize ChannelSubscriber: {e}")
+
+            if self._lowstate_cyclonedds_subscriber:
+                self._lowstate_cyclonedds_subscriber.Init(self.LowStateMessageHandler, 10)  # type: ignore
+        else:
+            try:
+                self._lowstate_zenoh_subscriber = open_zenoh_session()
+                self._lowstate_zenoh_subscriber.declare_subscriber(self.config.topic, self.LowStateMessageHandler)
+                logging.info('UnitreeGo2Battery subscribed to "%s" via Zenoh', self.config.topic)
+            except Exception:
+                logging.exception("UnitreeGo2Battery: failed to open Zenoh session")
+                self._lowstate_zenoh_subscriber = None
 
         # battery state
         self.battery_percentage = 0.0
@@ -103,17 +125,23 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Levels"
 
-    def LowStateMessageHandler(self, msg: LowState_):
+    def LowStateMessageHandler(self, msg: Union[LowState_, ZenohSampleType]):
         """
         Handle incoming LowState messages from Unitree Go2.
 
         Parameters
         ----------
-        msg : LowState_
-            Incoming LowState message
+        msg : Union[LowState_, ZenohSampleType]
+            The incoming message containing battery information, either from CycloneDDS or Zenoh.
         """
+        if self._lowstate_zenoh_subscriber:
+            try:
+                msg = LowState_.deserialize(msg.payload.to_bytes())  # type: ignore
+            except Exception:
+                logging.exception("UnitreeGo2Battery: failed to deserialize Zenoh message")
+                return
+
         try:
-            self.low_state = msg
             self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
             self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
             self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
@@ -133,6 +161,7 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
             TeleopsStatus(
                 machine_name="UnitreeGo2",
                 update_time=str(time.time()),
+                om1_heartbeat=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_t,
@@ -220,14 +249,10 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
-
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        result = f"""
+{self.descriptor_for_LLM}: "{latest_message.message}"
+"""
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result
