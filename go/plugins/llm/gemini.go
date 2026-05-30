@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/openmind/om1/internal/httpclient"
 	"github.com/openmind/om1/internal/llm"
 )
 
 func init() {
-	llm.Register("GeminiLLM", newGemini)
+	llm.Register("GeminiLLM", NewGemini)
 }
 
 type geminiModel string
@@ -42,7 +43,8 @@ type geminiLLM struct {
 	schemas []map[string]any
 }
 
-func newGemini(configMap map[string]any) (llm.LLM, error) {
+// NewGemini creates a new instance of geminiLLM with the provided configuration.
+func NewGemini(configMap map[string]any) (llm.LLM, error) {
 	var cfg geminiConfig
 	if err := remarshal(configMap, &cfg); err != nil {
 		return nil, fmt.Errorf("GeminiLLM config: %w", err)
@@ -59,10 +61,13 @@ func newGemini(configMap map[string]any) (llm.LLM, error) {
 	return &geminiLLM{config: cfg}, nil
 }
 
+// FunctionSchemas returns the current function schemas registered with the LLM.
 func (g *geminiLLM) FunctionSchemas() []map[string]any { return g.schemas }
 
+// SetSchemas updates the function schemas that the LLM will use for tool calls.
 func (g *geminiLLM) SetSchemas(schemas []map[string]any) { g.schemas = schemas }
 
+// Call sends a prompt and conversation history to the Gemini model and returns the response.
 func (g *geminiLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
 	messages := buildMessages(prompt, history)
 
@@ -90,11 +95,14 @@ func (g *geminiLLM) Call(ctx context.Context, prompt string, history []llm.Messa
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+g.config.APIKey)
 
+	start := time.Now()
 	resp, err := httpclient.Default().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiLLM: http: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	logResponseLatency("GeminiLLM", req, resp, start)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
