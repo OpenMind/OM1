@@ -68,11 +68,6 @@ func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runt
 }
 
 func (rt *Runtime) Run(ctx context.Context) error {
-	startupHooks := hooks.New(rt.systemConfig.GlobalHooks, rt.log)
-	if err := startupHooks.Run(ctx, hooks.OnStartup); err != nil {
-		rt.log.Warn("startup hooks failed", zap.Error(err))
-	}
-
 	if rt.opts.HotReload {
 		go rt.watchConfig(ctx)
 	}
@@ -82,13 +77,43 @@ func (rt *Runtime) Run(ctx context.Context) error {
 		return fmt.Errorf("initialize mode %q: %w", initialMode, err)
 	}
 
+	rt.mu.Lock()
+	current := rt.current
+	rt.mu.Unlock()
+
+	if current != nil {
+		startupCtx := map[string]any{
+			"mode_name":   initialMode,
+			"system_name": rt.systemConfig.Name,
+			"timestamp":   float64(time.Now().UnixMilli()) / 1000.0,
+		}
+
+		if err := rt.manager.globalHooks.Run(ctx, hooks.OnStartup, startupCtx); err != nil {
+			rt.log.Warn("global startup hook failed", zap.Error(err))
+		}
+
+		if err := current.modeHooks.Run(ctx, hooks.OnStartup, startupCtx); err != nil {
+			rt.log.Warn("mode startup hook failed", zap.Error(err))
+		}
+	}
+
 	rt.startOrchestrators(ctx)
 
-	rt.mu.Lock()
-	if rt.current != nil {
-		rt.current.modeHooks.Run(ctx, hooks.OnEntry) //nolint:errcheck
+	if current != nil {
+		entryCtx := map[string]any{
+			"mode_name":   initialMode,
+			"system_name": rt.systemConfig.Name,
+			"timestamp":   float64(time.Now().UnixMilli()) / 1000.0,
+		}
+
+		if err := rt.manager.globalHooks.Run(ctx, hooks.OnEntry, entryCtx); err != nil {
+			rt.log.Warn("global entry hook failed", zap.Error(err))
+		}
+
+		if err := current.modeHooks.Run(ctx, hooks.OnEntry, entryCtx); err != nil {
+			rt.log.Warn("mode entry hook failed", zap.Error(err))
+		}
 	}
-	rt.mu.Unlock()
 
 	<-ctx.Done()
 
@@ -280,7 +305,7 @@ func (rt *Runtime) onModeTransition(ctx context.Context, fromMode, toMode string
 	}
 	rt.mu.Unlock()
 
-	rt.manager.Transition(toMode, exitHooks, entryHooks)
+	rt.manager.Transition(toMode, "transition", exitHooks, entryHooks)
 	rt.startOrchestrators(ctx)
 
 	rt.log.Info("mode transition complete", zap.String("to", toMode))
@@ -362,7 +387,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 
 	sensorBuffers := current.inputOrchestrator.Buffers()
 
-	nextMode := rt.manager.CheckTransitions(sensorBuffers)
+	nextMode := rt.manager.CheckTransitions(ctx, sensorBuffers)
 	if nextMode != "" {
 		select {
 		case rt.modeTransitionCh <- nextMode:

@@ -95,6 +95,17 @@ You should prioritize safe, comfortable, and positive human interaction.",
         },
       ],
       backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "elevenlabs",
+            message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+        },
+      ],
     },
   },
 }

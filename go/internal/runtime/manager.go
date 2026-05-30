@@ -25,9 +25,10 @@ type ModeManager struct {
 	mu           sync.RWMutex
 	state        ModeState
 	systemConfig *config.SystemConfig
-	cooldowns    map[string]time.Time // "from→to" → last transition time
+	cooldowns    map[string]time.Time
 	log          *zap.Logger
 	statePath    string
+	globalHooks  *hooks.Runner
 }
 
 func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeManager {
@@ -36,6 +37,7 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 		cooldowns:    make(map[string]time.Time),
 		log:          log,
 		statePath:    filepath.Join("config", "memory", ".mode_state.json"),
+		globalHooks:  hooks.New(systemConfig.GlobalHooks, log),
 	}
 	manager.state = ModeState{
 		CurrentMode:   systemConfig.DefaultMode,
@@ -53,14 +55,14 @@ func (m *ModeManager) CurrentMode() string {
 	return m.state.CurrentMode
 }
 
-func (m *ModeManager) CheckTransitions(latestInputs []string) string {
+func (m *ModeManager) CheckTransitions(ctx context.Context, latestInputs []string) string {
 	m.mu.RLock()
 	currentMode := m.state.CurrentMode
 	modeStartTime := m.state.ModeStartTime
 	m.mu.RUnlock()
 
 	for _, rule := range m.systemConfig.TransitionRules {
-		if rule.FromMode != currentMode {
+		if rule.FromMode != currentMode && rule.FromMode != "*" {
 			continue
 		}
 		if !m.cooldownExpired(rule) {
@@ -69,7 +71,24 @@ func (m *ModeManager) CheckTransitions(latestInputs []string) string {
 
 		switch rule.TransitionType {
 		case "time_based":
-			if rule.TimeoutSeconds > 0 && time.Since(modeStartTime).Seconds() >= rule.TimeoutSeconds {
+			elapsed := time.Since(modeStartTime).Seconds()
+			if rule.TimeoutSeconds > 0 && elapsed >= rule.TimeoutSeconds {
+				if modeCfg, ok := m.systemConfig.Modes[currentMode]; ok {
+					timeoutCtx := map[string]any{
+						"mode_name":       currentMode,
+						"timeout_seconds": rule.TimeoutSeconds,
+						"actual_duration": elapsed,
+						"timestamp":       float64(time.Now().UnixMilli()) / 1000.0,
+					}
+					if err := hooks.New(modeCfg.LifecycleHooks, m.log).Run(ctx, hooks.OnTimeout, timeoutCtx); err != nil {
+						m.log.Warn("mode OnTimeout hook failed during mode transition",
+							zap.String("mode", currentMode),
+							zap.Float64("timeout_seconds", rule.TimeoutSeconds),
+							zap.Float64("actual_duration", elapsed),
+							zap.Error(err),
+						)
+					}
+				}
 				return rule.ToMode
 			}
 
@@ -86,11 +105,33 @@ func (m *ModeManager) CheckTransitions(latestInputs []string) string {
 }
 
 // Transition updates the mode state and fires lifecycle hooks for the transition.
-// exitHooks are the departing mode's hooks (OnExit); entryHooks are the arriving
-// mode's hooks (OnEntry). Either may be nil if there are no hooks to run.
-func (m *ModeManager) Transition(toMode string, exitHooks, entryHooks *hooks.Runner) {
+func (m *ModeManager) Transition(toMode, reason string, exitHooks, entryHooks *hooks.Runner) {
+	fromMode := m.state.CurrentMode
+	transitionKey := fromMode + "->" + toMode
+	transitionCtx := map[string]any{
+		"from_mode":      fromMode,
+		"to_mode":        toMode,
+		"reason":         reason,
+		"timestamp":      float64(time.Now().UnixMilli()) / 1000.0,
+		"transition_key": transitionKey,
+	}
+
 	if exitHooks != nil {
-		exitHooks.Run(context.Background(), hooks.OnExit) //nolint:errcheck
+		if err := exitHooks.Run(context.Background(), hooks.OnExit, transitionCtx); err != nil {
+			m.log.Warn("mode OnExit hook failed during mode transition",
+				zap.String("from", fromMode),
+				zap.String("to", toMode),
+				zap.Error(err),
+			)
+		}
+	}
+
+	if err := m.globalHooks.Run(context.Background(), hooks.OnExit, transitionCtx); err != nil {
+		m.log.Warn("global OnExit hook failed during mode transition",
+			zap.String("from", fromMode),
+			zap.String("to", toMode),
+			zap.Error(err),
+		)
 	}
 
 	m.mu.Lock()
@@ -115,8 +156,22 @@ func (m *ModeManager) Transition(toMode string, exitHooks, entryHooks *hooks.Run
 	}
 	m.mu.Unlock()
 
+	if err := m.globalHooks.Run(context.Background(), hooks.OnEntry, transitionCtx); err != nil {
+		m.log.Warn("global OnEntry hook failed during mode transition",
+			zap.String("from", fromMode),
+			zap.String("to", toMode),
+			zap.Error(err),
+		)
+	}
+
 	if entryHooks != nil {
-		entryHooks.Run(context.Background(), hooks.OnEntry) //nolint:errcheck
+		if err := entryHooks.Run(context.Background(), hooks.OnEntry, transitionCtx); err != nil {
+			m.log.Warn("mode OnEntry hook failed during mode transition",
+				zap.String("from", fromMode),
+				zap.String("to", toMode),
+				zap.Error(err),
+			)
+		}
 	}
 }
 

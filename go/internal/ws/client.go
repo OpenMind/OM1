@@ -72,9 +72,9 @@ func (c *Client) Connect() error {
 			go c.readLoop()
 			return nil
 		}
-		c.log.Warn("ws: initial connect failed, retrying",
-			zap.Error(err),
-		)
+
+		c.log.Warn("ws: initial connect failed, retrying", zap.Error(err))
+
 		select {
 		case <-c.ctx.Done():
 			return fmt.Errorf("ws: connect cancelled: %w", c.ctx.Err())
@@ -127,22 +127,8 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func (c *Client) redial() error {
-	c.connMu.Lock()
-	if c.conn != nil {
-		_ = c.conn.Close()
-		c.conn = nil
-	}
-	c.connMu.Unlock()
-
-	if err := c.dial(); err != nil {
-		return err
-	}
-	c.wg.Add(1)
-	go c.readLoop()
-	return nil
-}
-
+// sendLoop reads from sendCh and writes to the WebSocket.
+// On write error, it triggers reconnect if enabled.
 func (c *Client) sendLoop() {
 	defer c.wg.Done()
 
@@ -158,16 +144,15 @@ func (c *Client) sendLoop() {
 			if err := c.writeMessage(data); err != nil {
 				c.log.Warn("ws: send failed", zap.Error(err))
 				if c.cfg.Reconnect {
-					c.log.Info("ws: reconnecting...")
-					if rerr := c.redial(); rerr != nil {
-						c.log.Error("ws: reconnect failed", zap.Error(rerr))
-					}
+					c.reconnect()
 				}
 			}
 		}
 	}
 }
 
+// readLoop reads incoming messages.
+// On read error, it triggers reconnect if enabled.
 func (c *Client) readLoop() {
 	defer c.wg.Done()
 
@@ -183,16 +168,32 @@ func (c *Client) readLoop() {
 		conn := c.conn
 		c.connMu.Unlock()
 		if conn == nil {
-			return
+			select {
+			case <-c.ctx.Done():
+				return
+			case <-time.After(50 * time.Millisecond):
+			}
+			continue
 		}
 
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
-			if c.ctx.Err() == nil && websocket.IsUnexpectedCloseError(err,
+			if c.ctx.Err() != nil {
+				return
+			}
+			if websocket.IsUnexpectedCloseError(err,
 				websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseNormalClosure) {
 				c.log.Warn("ws: read error", zap.Error(err))
 			}
-			return
+			if !c.cfg.Reconnect {
+				return
+			}
+			c.connMu.Lock()
+			if c.conn == conn {
+				c.conn = nil
+			}
+			c.connMu.Unlock()
+			continue
 		}
 
 		c.log.Debug("ws: message received",
@@ -217,6 +218,33 @@ func (c *Client) writeMessage(data []byte) error {
 		return fmt.Errorf("ws: set deadline: %w", err)
 	}
 	return c.conn.WriteMessage(websocket.BinaryMessage, data)
+}
+
+// reconnect nulls the connection and attempts to re-dial until successful or context cancellation.
+func (c *Client) reconnect() {
+	c.connMu.Lock()
+	if c.conn != nil {
+		_ = c.conn.Close()
+		c.conn = nil
+	}
+	c.connMu.Unlock()
+
+	c.log.Info("ws: reconnecting...")
+	for {
+		if c.ctx.Err() != nil {
+			return
+		}
+		if err := c.dial(); err != nil {
+			c.log.Error("ws: reconnect failed, retrying", zap.Error(err))
+			select {
+			case <-c.ctx.Done():
+				return
+			case <-time.After(5 * time.Second):
+			}
+			continue
+		}
+		return
+	}
 }
 
 func messageTypeName(t int) string {
