@@ -67,13 +67,14 @@ type ActionSpec struct {
 
 // TransitionRule defines when/how modes switch.
 type TransitionRule struct {
-	FromMode        string   `json:"from_mode"`
-	ToMode          string   `json:"to_mode"`
-	TransitionType  string   `json:"transition_type"` // "input_triggered" | "time_based" | "context"
-	TriggerKeywords []string `json:"trigger_keywords"`
-	TimeoutSeconds  float64  `json:"timeout_seconds"`
-	CooldownSeconds float64  `json:"cooldown_seconds"`
-	Priority        int      `json:"priority"`
+	FromMode          string         `json:"from_mode"`
+	ToMode            string         `json:"to_mode"`
+	TransitionType    string         `json:"transition_type"` // "input_triggered" | "time_based" | "context_aware"
+	TriggerKeywords   []string       `json:"trigger_keywords"`
+	TimeoutSeconds    float64        `json:"timeout_seconds"`
+	CooldownSeconds   float64        `json:"cooldown_seconds"`
+	Priority          int            `json:"priority"`
+	ContextConditions map[string]any `json:"context_conditions"`
 }
 
 // HookSpec declares a lifecycle hook.

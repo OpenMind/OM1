@@ -37,7 +37,7 @@ func BuildSchemaForAction(actionName, llmLabel string) (map[string]any, bool) {
 }
 
 // BuildSchema generates an OpenAI function schema by reflecting over the fields
-// of inputExample.  It mirrors the Python generate_function_schema_from_action:
+// of inputExample.
 //   - fields whose type implements Enumer → {"type":"string","enum":[...]}
 //   - string  → {"type":"string"}
 //   - int     → {"type":"integer"}

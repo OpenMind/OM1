@@ -90,6 +90,9 @@ type GoogleASRSensor struct {
 	paStream   *portaudio.Stream
 	audioChunk []int16
 
+	// captureDone is closed when captureLoop has fully stopped and released the PortAudio stream.
+	captureDone chan struct{}
+
 	// transcriptCh is used to send accepted transcripts from the WS callback to the main loop.
 	transcriptCh chan string
 
@@ -196,21 +199,19 @@ func (s *GoogleASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
 		defer close(out)
+		defer s.Stop()
 
-		if err := portaudio.Initialize(); err != nil {
+		if err := providers.PortAudio.Acquire(); err != nil {
 			s.log.Error("GoogleASRInput: portaudio init failed", zap.Error(err))
 			return
 		}
 
 		if err := s.wsClient.Connect(); err != nil {
-			portaudio.Terminate()
 			s.log.Error("GoogleASRInput: ws connect failed", zap.Error(err))
 			return
 		}
 
 		if err := s.openMic(ctx); err != nil {
-			s.wsClient.Close()
-			portaudio.Terminate()
 			s.log.Error("GoogleASRInput: mic open failed", zap.Error(err))
 			return
 		}
@@ -295,22 +296,24 @@ func (s *GoogleASRSensor) Stop() {
 	}
 
 	s.stopped = true
-	paStream := s.paStream
-	s.paStream = nil
+	captureDone := s.captureDone
 	s.mu.Unlock()
 
 	s.log.Info("GoogleASRInput: stopping sensor")
 
-	if paStream != nil {
-		_ = paStream.Stop()
-		_ = paStream.Close()
+	if captureDone != nil {
+		select {
+		case <-captureDone:
+		case <-time.After(5 * time.Second):
+			s.log.Warn("GoogleASRInput: capture loop did not stop within timeout")
+		}
 	}
 
 	if s.wsClient != nil {
 		s.wsClient.Close()
 	}
 
-	portaudio.Terminate()
+	providers.PortAudio.Release()
 
 	if s.zenohPublisher != nil {
 		s.zenohPublisher.Drop()
@@ -378,15 +381,32 @@ func (s *GoogleASRSensor) openMic(ctx context.Context) error {
 
 	s.mu.Lock()
 	s.paStream = stream
+	s.captureDone = make(chan struct{})
 	s.mu.Unlock()
 
-	go s.captureLoop(ctx)
+	go s.captureLoop(ctx, stream)
 	go s.statsLoop(ctx)
 	s.log.Info("GoogleASRInput: microphone started")
 	return nil
 }
 
-func (s *GoogleASRSensor) captureLoop(ctx context.Context) {
+func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Stream) {
+	defer func() {
+		_ = stream.Stop()
+		_ = stream.Close()
+
+		s.mu.Lock()
+		if s.paStream == stream {
+			s.paStream = nil
+		}
+		done := s.captureDone
+		s.mu.Unlock()
+
+		if done != nil {
+			close(done)
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -394,7 +414,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context) {
 		default:
 		}
 
-		if err := s.paStream.Read(); err != nil && err.Error() != "Input overflowed" {
+		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
 		}
 

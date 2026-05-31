@@ -99,25 +99,10 @@ func (rt *Runtime) Run(ctx context.Context) error {
 
 	rt.startOrchestrators(ctx)
 
-	if current != nil {
-		entryCtx := map[string]any{
-			"mode_name":   initialMode,
-			"system_name": rt.systemConfig.Name,
-			"timestamp":   float64(time.Now().UnixMilli()) / 1000.0,
-		}
-
-		if err := rt.manager.globalHooks.Run(ctx, hooks.OnEntry, entryCtx); err != nil {
-			rt.log.Warn("global entry hook failed", zap.Error(err))
-		}
-
-		if err := current.modeHooks.Run(ctx, hooks.OnEntry, entryCtx); err != nil {
-			rt.log.Warn("mode entry hook failed", zap.Error(err))
-		}
-	}
-
 	<-ctx.Done()
 
 	rt.stopOrchestrators()
+	rt.manager.Close()
 	return ctx.Err()
 }
 
@@ -166,9 +151,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 	return nil
 }
 
-// startOrchestrators mirrors Python's _start_orchestrators: it creates the
-// InputOrchestrator, starts all goroutine pools, starts the cortex loop, and
-// (on first call) starts the long-lived handleModeTransitions goroutine.
+// startOrchestrators starts the orchestrators for the current mode in separate goroutines.
 func (rt *Runtime) startOrchestrators(ctx context.Context) {
 	if ctx.Err() != nil {
 		return
@@ -185,13 +168,9 @@ func (rt *Runtime) startOrchestrators(ctx context.Context) {
 	modeCtx, cancel := context.WithCancel(ctx)
 	current.cancelCtx = cancel
 
-	// Create InputOrchestrator here, mirroring Python which does
-	// self.input_orchestrator = InputOrchestrator(self.current_config.agent_inputs)
-	// inside _start_orchestrators, not _initialize_mode.
 	current.inputOrchestrator = inputs.NewOrchestrator(current.sensors, rt.log)
 	current.inputDone = current.inputOrchestrator.Start(modeCtx)
 
-	// Mirror Python: if self.action_orchestrator / if self.background_orchestrator
 	if current.actionOrchestrator != nil {
 		current.actionDone = current.actionOrchestrator.Start(modeCtx)
 	}
@@ -206,8 +185,6 @@ func (rt *Runtime) startOrchestrators(ctx context.Context) {
 		rt.runCortexLoop(modeCtx)
 	}()
 
-	// Start the mode transition handler goroutine once for the process lifetime,
-	// mirroring Python's: if not self.mode_transition_task or self.mode_transition_task.done()
 	rt.mu.Lock()
 	if !rt.modeTransitionHandlerOnce {
 		rt.modeTransitionHandlerOnce = true
@@ -216,9 +193,7 @@ func (rt *Runtime) startOrchestrators(ctx context.Context) {
 	rt.mu.Unlock()
 }
 
-// stopOrchestrators cancels the current mode context and waits for all goroutine
-// pools to finish (up to 15 seconds total), then runs OnExit hooks.
-// It mirrors Python's _stop_current_orchestrators.
+// stopOrchestrators stops all orchestrators for the current mode and waits for them to finish, with a timeout to prevent hanging.
 func (rt *Runtime) stopOrchestrators() {
 	rt.mu.Lock()
 	current := rt.current
@@ -245,8 +220,6 @@ func (rt *Runtime) stopOrchestrators() {
 		{"input", current.inputDone},
 	}
 
-	// Wait for async goroutine pools concurrently under a shared 15-second timeout,
-	// mirroring Python's asyncio.wait(..., timeout=15.0, return_when=ALL_COMPLETED).
 	var wg sync.WaitGroup
 	for _, p := range pools {
 		if p.ch == nil {
@@ -267,7 +240,7 @@ func (rt *Runtime) stopOrchestrators() {
 }
 
 // onModeTransition stops the current mode's orchestrators, initialises the new
-// mode and restarts all orchestrators, mirroring Python's _on_mode_transition.
+// mode and restarts all orchestrators.
 func (rt *Runtime) onModeTransition(ctx context.Context, fromMode, toMode string) error {
 	rt.log.Info("handling mode transition",
 		zap.String("from", fromMode),
@@ -312,8 +285,7 @@ func (rt *Runtime) onModeTransition(ctx context.Context, fromMode, toMode string
 	return nil
 }
 
-// handleModeTransitions processes queued mode transition requests in a
-// dedicated goroutine, mirroring Python's _handle_mode_transitions.
+// handleModeTransitions listens for mode transition requests and handles them sequentially to avoid concurrent transitions.
 func (rt *Runtime) handleModeTransitions(ctx context.Context) {
 	for {
 		select {
@@ -331,9 +303,8 @@ func (rt *Runtime) handleModeTransitions(ctx context.Context) {
 	}
 }
 
-// runCortexLoop is the main processing loop for the current mode, mirroring
-// Python's _run_cortex_loop. It is started as a goroutine by startOrchestrators
-// and exits when modeCtx is cancelled.
+// runCortexLoop runs the cortex loop for the current mode, ticking at the configured hertz
+// and also allowing immediate ticks when signaled by the InputOrchestrator.
 func (rt *Runtime) runCortexLoop(ctx context.Context) {
 	modeName := rt.manager.CurrentMode()
 	rt.log.Info("cortex loop started", zap.String("mode", modeName))
@@ -370,7 +341,6 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 
 // tick executes a single cortex cycle: checks for mode transitions, fuses a
 // prompt, calls the LLM, executes tool calls and records telemetry.
-// It mirrors Python's _tick.
 func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.Time) {
 	if ctx.Err() != nil {
 		return

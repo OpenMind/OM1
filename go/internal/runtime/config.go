@@ -44,7 +44,14 @@ func (m *modeSetup) loadComponents() error {
 
 	// Load LLM
 	llmSpec := m.cfg.CortexLLM
-	llmSpec.Config = addMeta(llmSpec.Config, meta)
+	if llmSpec.Type == "" {
+		llmSpec = m.sys.CortexLLM
+	}
+	if llmSpec.Type == "" {
+		return fmt.Errorf("no LLM configured for mode %q (mode has no cortex_llm and no global cortex_llm is set)", modeName)
+	}
+
+	llmSpec.Config = addMeta(cloneConfig(llmSpec.Config), meta)
 	var err error
 	m.cortexLLM, err = llm.Load(llmSpec.Type, llmSpec.Config)
 	if err != nil {
@@ -116,6 +123,16 @@ func (m *modeSetup) buildMeta(modeName string) map[string]string {
 		meta["mode"] = modeName
 	}
 	return meta
+}
+
+// cloneConfig returns a shallow copy of a config map so that callers can add
+// per-mode metadata without mutating a shared (e.g. global) source map.
+func cloneConfig(cfg map[string]any) map[string]any {
+	clone := make(map[string]any, len(cfg))
+	for k, v := range cfg {
+		clone[k] = v
+	}
+	return clone
 }
 
 // addMeta adds metadata key-value pairs to a config map if they are not already present.

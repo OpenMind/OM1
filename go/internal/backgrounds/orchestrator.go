@@ -7,8 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Orchestrator runs Background tasks in separate goroutines, mirroring the
-// Python BackgroundOrchestrator's ThreadPoolExecutor model.
+// Orchestrator runs Background tasks in separate goroutines.
 //
 // Each goroutine calls background.Run(ctx) in a continuous loop (one iteration
 // per call), recovers from panics, and calls background.Stop() when the context
@@ -44,8 +43,8 @@ func (o *Orchestrator) Start(ctx context.Context) <-chan struct{} {
 	return done
 }
 
-// runLoop mirrors Python's _run_background_loop: calls background.Run(ctx)
-// repeatedly until ctx is cancelled, then calls background.Stop() once.
+// runLoop continuously calls background.Run(ctx) until the context is cancelled,
+// recovering from panics so one failure doesn't stop the loop.
 func (o *Orchestrator) runLoop(ctx context.Context, background Background) {
 	defer background.Stop()
 

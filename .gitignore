@@ -60,3 +60,6 @@ config/cron_job/
 
 # Zenoh
 go/.zenoh-c/
+
+# go config
+go/config/memory

@@ -23,7 +23,7 @@ const (
 )
 
 // AvatarProvider is a singleton that manages the zenoh session and publishers/subscriber
-// for avatar communication, mirroring the Python AvatarProvider.
+// for avatar communication.
 type AvatarProvider struct {
 	log               *zap.Logger
 	session           *zenohsession.Session

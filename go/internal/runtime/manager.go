@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +15,11 @@ import (
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/hooks"
+	"github.com/openmind/om1/internal/zenoh"
 )
+
+// contextUpdateTopic is the Zenoh topic on which user context updates are published for context-aware transitions.
+const contextUpdateTopic = "om/mode/context"
 
 // ModeState represents the current state of the system's mode.
 type ModeState struct {
@@ -31,6 +38,11 @@ type ModeManager struct {
 	log          *zap.Logger
 	statePath    string
 	globalHooks  *hooks.Runner
+
+	// userContext holds contextual information used to evaluate context-aware transitions.
+	userContext map[string]any
+	zenohSess   *zenoh.Session
+	contextSub  *zenoh.Subscriber
 }
 
 // NewModeManager creates a new ModeManager with the given system configuration and logger.
@@ -41,6 +53,7 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 		log:          log,
 		statePath:    filepath.Join("config", "memory", ".mode_state.json"),
 		globalHooks:  hooks.NewHooks(systemConfig.GlobalHooks, log),
+		userContext:  make(map[string]any),
 	}
 	manager.state = ModeState{
 		CurrentMode:   systemConfig.DefaultMode,
@@ -49,7 +62,60 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 	if systemConfig.ModeMemoryEnabled {
 		manager.load()
 	}
+	manager.subscribeContextUpdates()
 	return manager
+}
+
+// subscribeContextUpdates opens a best-effort Zenoh subscriber on the "om/mode/context" topic.
+func (m *ModeManager) subscribeContextUpdates() {
+	sess, err := zenoh.Open()
+	if err != nil {
+		m.log.Warn("mode manager: Zenoh unavailable, context-aware transitions disabled", zap.Error(err))
+		return
+	}
+
+	sub, err := sess.DeclareSubscriber(contextUpdateTopic, func(data []byte) {
+		var update map[string]any
+		if err := json.Unmarshal(data, &update); err != nil {
+			m.log.Warn("mode manager: invalid context update payload", zap.Error(err))
+			return
+		}
+		m.UpdateUserContext(update)
+		m.log.Debug("mode manager: user context updated", zap.Any("context", update))
+	})
+	if err != nil {
+		m.log.Warn("mode manager: failed to subscribe to context updates", zap.Error(err))
+		sess.Close()
+		return
+	}
+
+	m.zenohSess = sess
+	m.contextSub = sub
+	m.log.Info("mode manager: subscribed to context updates", zap.String("topic", contextUpdateTopic))
+}
+
+// Close releases the Zenoh resources held by the manager.
+func (m *ModeManager) Close() {
+	if m.contextSub != nil {
+		m.contextSub.Drop()
+		m.contextSub = nil
+	}
+
+	if m.zenohSess != nil {
+		m.zenohSess.Close()
+		m.zenohSess = nil
+	}
+}
+
+// UpdateUserContext merges the given key/value pairs into the user context used
+// for context-aware transitions.
+func (m *ModeManager) UpdateUserContext(update map[string]any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for k, v := range update {
+		m.userContext[k] = v
+	}
 }
 
 func (m *ModeManager) CurrentMode() string {
@@ -58,53 +124,246 @@ func (m *ModeManager) CurrentMode() string {
 	return m.state.CurrentMode
 }
 
+// CheckTransitions evaluates all transition rules for the current mode and
+// returns the target mode for the first category that fires, or "" if none do.
 func (m *ModeManager) CheckTransitions(ctx context.Context, latestInputs []string) string {
+	if target := m.checkTimeBased(ctx); target != "" {
+		m.log.Info("time-based transition", zap.String("to", target))
+		return target
+	}
+	if target := m.checkContextAware(); target != "" {
+		m.log.Info("context-aware transition", zap.String("to", target))
+		return target
+	}
+	if target := m.checkInputTriggered(latestInputs); target != "" {
+		m.log.Info("input-triggered transition", zap.String("to", target))
+		return target
+	}
+
+	return ""
+}
+
+// checkTimeBased returns the target mode if the current mode has been active
+// long enough to satisfy a time-based rule, firing OnTimeout hooks first.
+func (m *ModeManager) checkTimeBased(ctx context.Context) string {
 	m.mu.RLock()
 	currentMode := m.state.CurrentMode
 	modeStartTime := m.state.ModeStartTime
 	m.mu.RUnlock()
 
+	elapsed := time.Since(modeStartTime).Seconds()
+
 	for _, rule := range m.systemConfig.TransitionRules {
 		if rule.FromMode != currentMode && rule.FromMode != "*" {
+			continue
+		}
+		if rule.TransitionType != "time_based" {
+			continue
+		}
+		if rule.TimeoutSeconds <= 0 || elapsed < rule.TimeoutSeconds {
 			continue
 		}
 		if !m.cooldownExpired(rule) {
 			continue
 		}
+		if _, ok := m.systemConfig.Modes[rule.ToMode]; !ok {
+			continue
+		}
 
-		switch rule.TransitionType {
-		case "time_based":
-			elapsed := time.Since(modeStartTime).Seconds()
-			if rule.TimeoutSeconds > 0 && elapsed >= rule.TimeoutSeconds {
-				if modeCfg, ok := m.systemConfig.Modes[currentMode]; ok {
-					timeoutCtx := map[string]any{
-						"mode_name":       currentMode,
-						"timeout_seconds": rule.TimeoutSeconds,
-						"actual_duration": elapsed,
-						"timestamp":       float64(time.Now().UnixMilli()) / 1000.0,
-					}
-					if err := hooks.NewHooks(modeCfg.LifecycleHooks, m.log).Run(ctx, hooks.OnTimeout, timeoutCtx); err != nil {
-						m.log.Warn("mode OnTimeout hook failed during mode transition",
-							zap.String("mode", currentMode),
-							zap.Float64("timeout_seconds", rule.TimeoutSeconds),
-							zap.Float64("actual_duration", elapsed),
-							zap.Error(err),
-						)
-					}
-				}
-				return rule.ToMode
+		if modeCfg, ok := m.systemConfig.Modes[currentMode]; ok {
+			timeoutCtx := map[string]any{
+				"mode_name":       currentMode,
+				"timeout_seconds": rule.TimeoutSeconds,
+				"actual_duration": elapsed,
+				"timestamp":       float64(time.Now().UnixMilli()) / 1000.0,
 			}
+			if err := hooks.NewHooks(modeCfg.LifecycleHooks, m.log).Run(ctx, hooks.OnTimeout, timeoutCtx); err != nil {
+				m.log.Warn("mode OnTimeout hook failed during mode transition",
+					zap.String("mode", currentMode),
+					zap.Float64("timeout_seconds", rule.TimeoutSeconds),
+					zap.Float64("actual_duration", elapsed),
+					zap.Error(err),
+				)
+			}
+		}
+		return rule.ToMode
+	}
+	return ""
+}
 
-		case "input_triggered":
-			combinedInput := joinStrings(latestInputs)
-			for _, keyword := range rule.TriggerKeywords {
-				if containsKeyword(combinedInput, keyword) {
-					return rule.ToMode
-				}
+// checkContextAware returns the target mode of the highest-priority context-aware rule
+// whose conditions match the user context and cooldowns have expired, or "" if none match.
+func (m *ModeManager) checkContextAware() string {
+	m.mu.RLock()
+	currentMode := m.state.CurrentMode
+	userCtx := make(map[string]any, len(m.userContext))
+	for k, v := range m.userContext {
+		userCtx[k] = v
+	}
+	m.mu.RUnlock()
+
+	var matching []config.TransitionRule
+	for _, rule := range m.systemConfig.TransitionRules {
+		if rule.FromMode != currentMode && rule.FromMode != "*" {
+			continue
+		}
+		if rule.TransitionType != "context_aware" {
+			continue
+		}
+		if !m.cooldownExpired(rule) {
+			continue
+		}
+		if _, ok := m.systemConfig.Modes[rule.ToMode]; !ok {
+			continue
+		}
+		if evaluateContextConditions(rule.ContextConditions, userCtx) {
+			matching = append(matching, rule)
+		}
+	}
+	return highestPriorityTarget(matching)
+}
+
+// checkInputTriggered returns the highest-priority input-triggered rule whose
+// trigger keywords appear in the latest inputs.
+func (m *ModeManager) checkInputTriggered(latestInputs []string) string {
+	combined := strings.ToLower(joinStrings(latestInputs))
+	if strings.TrimSpace(combined) == "" {
+		return ""
+	}
+
+	m.mu.RLock()
+	currentMode := m.state.CurrentMode
+	m.mu.RUnlock()
+
+	var matching []config.TransitionRule
+	for _, rule := range m.systemConfig.TransitionRules {
+		if rule.FromMode != currentMode && rule.FromMode != "*" {
+			continue
+		}
+		if rule.TransitionType != "input_triggered" {
+			continue
+		}
+		if !m.cooldownExpired(rule) {
+			continue
+		}
+		if _, ok := m.systemConfig.Modes[rule.ToMode]; !ok {
+			continue
+		}
+		for _, keyword := range rule.TriggerKeywords {
+			if keyword != "" && strings.Contains(combined, strings.ToLower(keyword)) {
+				matching = append(matching, rule)
+				break
 			}
 		}
 	}
-	return ""
+	return highestPriorityTarget(matching)
+}
+
+// highestPriorityTarget returns the ToMode of the highest-priority rule, or ""
+// if the slice is empty. Stable sort keeps configuration order among equal
+// priorities, matching Python's sort(..., reverse=True) on a preserved list.
+func highestPriorityTarget(rules []config.TransitionRule) string {
+	if len(rules) == 0 {
+		return ""
+	}
+	sort.SliceStable(rules, func(i, j int) bool {
+		return rules[i].Priority > rules[j].Priority
+	})
+	return rules[0].ToMode
+}
+
+// evaluateContextConditions reports whether every condition in conds is
+// satisfied by userCtx. An empty condition set always matches.
+func evaluateContextConditions(conds, userCtx map[string]any) bool {
+	for key, expected := range conds {
+		if !evaluateSingleCondition(key, expected, userCtx) {
+			return false
+		}
+	}
+	return true
+}
+
+// evaluateSingleCondition checks whether a single condition is satisfied by the user context.
+func evaluateSingleCondition(key string, expected any, userCtx map[string]any) bool {
+	actual, ok := userCtx[key]
+	if !ok {
+		return false
+	}
+
+	switch exp := expected.(type) {
+	case map[string]any:
+		minVal, hasMin := exp["min"]
+		maxVal, hasMax := exp["max"]
+		if hasMin || hasMax {
+			actualNum, ok := toFloat(actual)
+			if !ok {
+				return false
+			}
+			if hasMin {
+				if minNum, ok := toFloat(minVal); ok && actualNum < minNum {
+					return false
+				}
+			}
+			if hasMax {
+				if maxNum, ok := toFloat(maxVal); ok && actualNum > maxNum {
+					return false
+				}
+			}
+			return true
+		}
+		if c, ok := exp["contains"]; ok {
+			actualStr, ok1 := actual.(string)
+			condStr, ok2 := c.(string)
+			if !ok1 || !ok2 {
+				return false
+			}
+			return strings.Contains(strings.ToLower(actualStr), strings.ToLower(condStr))
+		}
+		if oneOf, ok := exp["one_of"]; ok {
+			if list, ok := oneOf.([]any); ok {
+				for _, item := range list {
+					if reflect.DeepEqual(actual, item) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		if notVal, ok := exp["not"]; ok {
+			return !reflect.DeepEqual(actual, notVal)
+		}
+		return false
+
+	case []any:
+		for _, item := range exp {
+			if reflect.DeepEqual(actual, item) {
+				return true
+			}
+		}
+		return false
+
+	default:
+		return reflect.DeepEqual(actual, expected)
+	}
+}
+
+// toFloat coerces JSON-decoded numeric values to float64.
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case float32:
+		return float64(n), true
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case json.Number:
+		f, err := n.Float64()
+		return f, err == nil
+	default:
+		return 0, false
+	}
 }
 
 // Transition updates the mode state and fires lifecycle hooks for the transition.
@@ -218,17 +477,4 @@ func joinStrings(parts []string) string {
 		result += " " + part
 	}
 	return result
-}
-
-func containsKeyword(text, keyword string) bool {
-	return len(text) > 0 && len(keyword) > 0 &&
-		(len(text) >= len(keyword)) &&
-		(func() bool {
-			for i := 0; i <= len(text)-len(keyword); i++ {
-				if text[i:i+len(keyword)] == keyword {
-					return true
-				}
-			}
-			return false
-		}())
 }

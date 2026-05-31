@@ -3,7 +3,7 @@
   version: "v1.0.5",
 
   // Mode system configuration for Unitree G1
-  default_mode: "greeting",
+  default_mode: "conversation",
   allow_manual_switching: true,
   mode_memory_enabled: true,
 
@@ -26,7 +26,27 @@
   },
 
   modes: {
-    greeting: {
+    approaching: {
+      display_name: "Approaching Person Mode",
+      description: "Robot approaches detected humans autonomously.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          config: {
+            api_version: "v2",
+            enable_tts_interrupt: false,
+            rate: 16000,
+            chunk: 1600,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      lifecycle_hooks: [],
+    },
+    conversation: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
       system_prompt_base: "You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\
@@ -104,8 +124,82 @@ You should prioritize safe, comfortable, and positive human interaction.",
             message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "elevenlabs",
+            message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+          priority: 1,
         },
       ],
     },
   },
+  transition_rules: [
+    {
+      from_mode: "approaching",
+      to_mode: "greeting",
+      transition_type: "context_aware",
+      context_conditions: { approaching_detected: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "approaching",
+      transition_type: "context_aware",
+      context_conditions: { greeting_conversation_finished: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "approaching",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "approaching",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to greeting",
+        "switch to the greeting",
+        "switch to a greeting",
+        "to greeting",
+        "to the greeting",
+        "to a greeting",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+  ],
 }
