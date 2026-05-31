@@ -205,8 +205,6 @@ func (c *Connector) Tick(ctx context.Context) {
 	case <-time.After(tickInterval):
 	}
 
-	c.log.Debug("greeting_conversation: tick")
-
 	if c.waitingOnTTS() {
 		c.log.Info("greeting_conversation: skipping tick during active TTS playback")
 		return

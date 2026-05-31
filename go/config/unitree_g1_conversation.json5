@@ -95,10 +95,10 @@ You should prioritize safe, comfortable, and positive human interaction.",
       action_execution_mode: "concurrent",
       agent_actions: [
         {
-          name: "speak",
-          llm_label: "speak",
+          name: "greeting_conversation",
+          llm_label: "greeting_conversation",
           implementation: "passthrough",
-          connector: "elevenlabs_tts",
+          connector: "greeting_conversation_elevenlabs",
           config: {
             enable_tts_interrupt: false,
           },
