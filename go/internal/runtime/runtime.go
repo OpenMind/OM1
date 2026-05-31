@@ -355,6 +355,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
+	rt.ioProvider.IncrementTick()
 	sensorBuffers := current.inputOrchestrator.Buffers()
 
 	nextMode := rt.manager.CheckTransitions(ctx, sensorBuffers)

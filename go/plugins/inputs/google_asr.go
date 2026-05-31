@@ -276,6 +276,8 @@ func (s *GoogleASRSensor) FormattedLatestBuffer() string {
 	s.log.Info("GoogleASRInput: flushing buffer", zap.String("text", latest))
 	s.messages = nil
 
+	providers.IO().AddInput("Voice", latest, time.Time{})
+
 	if s.zenohPublisher != nil {
 		payload := serializeASRText(latest)
 		if err := s.zenohPublisher.Put(payload); err != nil {

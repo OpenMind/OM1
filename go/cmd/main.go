@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/runtime"
 
 	_ "github.com/openmind/om1/plugins/actions"
+	_ "github.com/openmind/om1/plugins/backgrounds"
 	_ "github.com/openmind/om1/plugins/inputs"
 	_ "github.com/openmind/om1/plugins/llm"
 )

@@ -15,6 +15,7 @@ import (
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/hooks"
+	"github.com/openmind/om1/internal/util"
 	"github.com/openmind/om1/internal/zenoh"
 )
 
@@ -295,17 +296,17 @@ func evaluateSingleCondition(key string, expected any, userCtx map[string]any) b
 		minVal, hasMin := exp["min"]
 		maxVal, hasMax := exp["max"]
 		if hasMin || hasMax {
-			actualNum, ok := toFloat(actual)
+			actualNum, ok := util.ToFloat(actual)
 			if !ok {
 				return false
 			}
 			if hasMin {
-				if minNum, ok := toFloat(minVal); ok && actualNum < minNum {
+				if minNum, ok := util.ToFloat(minVal); ok && actualNum < minNum {
 					return false
 				}
 			}
 			if hasMax {
-				if maxNum, ok := toFloat(maxVal); ok && actualNum > maxNum {
+				if maxNum, ok := util.ToFloat(maxVal); ok && actualNum > maxNum {
 					return false
 				}
 			}
@@ -344,25 +345,6 @@ func evaluateSingleCondition(key string, expected any, userCtx map[string]any) b
 
 	default:
 		return reflect.DeepEqual(actual, expected)
-	}
-}
-
-// toFloat coerces JSON-decoded numeric values to float64.
-func toFloat(v any) (float64, bool) {
-	switch n := v.(type) {
-	case float64:
-		return n, true
-	case float32:
-		return float64(n), true
-	case int:
-		return float64(n), true
-	case int64:
-		return float64(n), true
-	case json.Number:
-		f, err := n.Float64()
-		return f, err == nil
-	default:
-		return 0, false
 	}
 }
 
