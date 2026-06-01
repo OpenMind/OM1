@@ -30,3 +30,6 @@ config/cron_job/
 
 # Zenoh
 .zenoh-c/
+
+# Test
+coverage.out
