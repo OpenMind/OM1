@@ -57,6 +57,11 @@
       connector: "unitree_g1_nav",
     },
     {
+      name: "return_to_base",
+      llm_label: "return_to_base",
+      connector: "unitree_go2_return",
+    },
+    {
       name: "arm_g1",
       llm_label: "arm_movement",
       connector: "zenoh",

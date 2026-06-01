@@ -54,6 +54,11 @@
       connector: "unitree_go2_nav",
     },
     {
+      name: "return_to_base",
+      llm_label: "return_to_base",
+      connector: "unitree_go2_return",
+    },
+    {
       name: "speak",
       llm_label: "speak",
       connector: "elevenlabs_tts",
