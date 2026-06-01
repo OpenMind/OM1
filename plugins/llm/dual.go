@@ -28,9 +28,7 @@ func init() {
 }
 
 const (
-	// dualTimeout is the window within which a sub-LLM response is considered "in time".
 	dualTimeout = 3200 * time.Millisecond
-	// dualEvalTimeout bounds the quality-evaluation call when both models respond.
 	dualEvalTimeout = 2 * time.Second
 
 	dualEvalBaseURL = "http://127.0.0.1:8860/v1"
@@ -84,7 +82,6 @@ func NewDual(configMap map[string]any) (llm.LLM, error) {
 	if _, ok := cloudCfg["model"]; !ok {
 		cloudCfg["model"] = defaultDualCloudModel
 	}
-	// The cloud model needs the agent's API key; the local model runs unauthenticated.
 	if cfg.APIKey != "" {
 		cloudCfg["api_key"] = cfg.APIKey
 	}
@@ -152,7 +149,6 @@ func (d *dualLLM) Call(ctx context.Context, prompt string, history []llm.Message
 	go run(d.local, "local")
 	go run(d.cloud, "cloud")
 
-	// Collect responses until both arrive or the in-time window elapses.
 	var arrived []dualResult
 	deadline := time.NewTimer(dualTimeout)
 	defer deadline.Stop()
