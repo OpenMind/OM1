@@ -23,9 +23,9 @@ class TestHomeAssistantInput:
         assert inp.device_type == HADeviceType.LIGHT
         assert inp.entity_id == ""
         assert inp.action == HAAction.TURN_ON
-        assert inp.brightness == 255
+        assert inp.brightness == "255"
         assert inp.color == ""
-        assert inp.temperature == 22.0
+        assert inp.temperature == "22.0"
 
     def test_custom_values(self):
         inp = HomeAssistantInput(
@@ -190,7 +190,7 @@ class TestConnectLight:
             device_type=HADeviceType.LIGHT,
             entity_id="light.bedroom",
             action=HAAction.SET_BRIGHTNESS,
-            brightness=128,
+            brightness="128",
         )
         ctx, mock_session = mock_ha_session()
         with ctx:
@@ -207,7 +207,7 @@ class TestConnectLight:
             device_type=HADeviceType.LIGHT,
             entity_id="light.bedroom",
             action=HAAction.SET_BRIGHTNESS,
-            brightness=999,
+            brightness="999",
         )
         ctx, mock_session = mock_ha_session()
         with ctx:
@@ -300,7 +300,7 @@ class TestConnectClimate:
             device_type=HADeviceType.CLIMATE,
             entity_id="climate.bedroom",
             action=HAAction.SET_TEMPERATURE,
-            temperature=24.5,
+            temperature="24.5",
         )
         ctx, mock_session = mock_ha_session()
         with ctx:

@@ -46,9 +46,9 @@ class HomeAssistantInput:
     device_type: HADeviceType = HADeviceType.LIGHT
     entity_id: str = ""
     action: HAAction = HAAction.TURN_ON
-    brightness: int = 255
+    brightness: str = "255"
     color: str = ""
-    temperature: float = 22.0
+    temperature: str = "22.0"
 
 
 @dataclass

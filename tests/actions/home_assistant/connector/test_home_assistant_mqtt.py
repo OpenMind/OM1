@@ -242,7 +242,7 @@ class TestConnectLight:
             device_type=HADeviceType.LIGHT,
             entity_id="light.living_room",
             action=HAAction.SET_BRIGHTNESS,
-            brightness=200,
+            brightness="200",
         )
         with patch.object(connector, "_publish", new_callable=AsyncMock) as mock_pub:
             await connector.connect(inp)
@@ -361,7 +361,7 @@ class TestConnectClimate:
             device_type=HADeviceType.CLIMATE,
             entity_id="climate.bedroom",
             action=HAAction.SET_TEMPERATURE,
-            temperature=22.0,
+            temperature="22.0",
         )
         with patch.object(connector, "_publish", new_callable=AsyncMock) as mock_pub:
             await connector.connect(inp)

@@ -158,7 +158,11 @@ class HomeAssistantRESTConnector(
             elif action == HAAction.TURN_OFF:
                 await self._call_service("light", "turn_off", {"entity_id": entity_id})
             elif action == HAAction.SET_BRIGHTNESS:
-                brightness = max(0, min(255, output_interface.brightness))
+                try:
+                    brightness = int(output_interface.brightness)
+                except (ValueError, TypeError):
+                    brightness = 255
+                brightness = max(0, min(255, brightness))
                 await self._call_service(
                     "light",
                     "turn_on",
@@ -193,12 +197,16 @@ class HomeAssistantRESTConnector(
         # CLIMATE
         elif device_type == HADeviceType.CLIMATE:
             if action == HAAction.SET_TEMPERATURE:
+                try:
+                    temperature = float(output_interface.temperature)
+                except (ValueError, TypeError):
+                    temperature = 22.0
                 await self._call_service(
                     "climate",
                     "set_temperature",
                     {
                         "entity_id": entity_id,
-                        "temperature": output_interface.temperature,
+                        "temperature": temperature,
                     },
                 )
             elif action == HAAction.TURN_ON:

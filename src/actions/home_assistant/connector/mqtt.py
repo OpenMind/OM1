@@ -153,7 +153,10 @@ class HomeAssistantMQTTConnector(
             elif action == HAAction.TURN_OFF:
                 await self._publish(topic, {"state": "OFF"})
             elif action == HAAction.SET_BRIGHTNESS:
-                brightness = output_interface.brightness or 255
+                try:
+                    brightness = int(output_interface.brightness)
+                except (ValueError, TypeError):
+                    brightness = 255
                 await self._publish(topic, {"state": "ON", "brightness": brightness})
             elif action == HAAction.SET_COLOR:
                 color = (output_interface.color or "white").lower()
@@ -180,7 +183,10 @@ class HomeAssistantMQTTConnector(
         elif device_type == HADeviceType.CLIMATE:
             topic = self._build_topic("climate", entity_id)
             if action == HAAction.SET_TEMPERATURE:
-                temperature = output_interface.temperature or 20.0
+                try:
+                    temperature = float(output_interface.temperature)
+                except (ValueError, TypeError):
+                    temperature = 20.0
                 await self._publish(topic, {"temperature": temperature})
             elif action == HAAction.TURN_ON:
                 await self._publish(topic, {"state": "ON"})

@@ -176,7 +176,10 @@ class HomeAssistantWebSocketConnector(
             elif action == HAAction.TURN_OFF:
                 await self._send_command("light", "turn_off", entity_id)
             elif action == HAAction.SET_BRIGHTNESS:
-                brightness = output_interface.brightness or 255
+                try:
+                    brightness = int(output_interface.brightness)
+                except (ValueError, TypeError):
+                    brightness = 255
                 await self._send_command(
                     "light", "turn_on", entity_id, {"brightness": brightness}
                 )
@@ -205,7 +208,10 @@ class HomeAssistantWebSocketConnector(
 
         elif device_type == HADeviceType.CLIMATE:
             if action == HAAction.SET_TEMPERATURE:
-                temperature = output_interface.temperature or 20.0
+                try:
+                    temperature = float(output_interface.temperature)
+                except (ValueError, TypeError):
+                    temperature = 20.0
                 await self._send_command(
                     "climate",
                     "set_temperature",
