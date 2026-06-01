@@ -124,7 +124,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, nil),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,

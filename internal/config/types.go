@@ -92,9 +92,11 @@ type MCPSpec struct {
 	Env     map[string]string `json:"env"`
 }
 
-// KBSpec describes the optional knowledge base (RAG).
+// KBSpec describes the optional knowledge base.
 type KBSpec struct {
-	Path     string  `json:"path"`
+	Name     string  `json:"knowledge_base_name"`
+	BaseURL  string  `json:"base_url"`
+	Root     string  `json:"knowledge_base_root"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
 }
