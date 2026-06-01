@@ -24,6 +24,7 @@ class ASRRTSPProvider:
         rate: int = 48000,
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
+        alternative_language_codes: Optional[list[str]] = None,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -41,6 +42,8 @@ class ASRRTSPProvider:
             The audio chunk size for the audio stream; used the 200ms default if None
         language_code : str
             The language code for language in the audio stream; used the en-US default if None
+        alternative_language_codes : list[str]
+            A list of alternative language codes for the audio stream; used for multilingual ASR
         enable_tts_interrupt : bool
             If True, enables TTS interrupt.
         """
@@ -52,6 +55,7 @@ class ASRRTSPProvider:
             chunk=chunk,
             audio_data_callback=self.ws_client.send_message,
             language_code=language_code,
+            alternative_language_codes=alternative_language_codes,
             enable_tts_interrupt=enable_tts_interrupt,
         )
 
@@ -86,9 +90,7 @@ class ASRRTSPProvider:
             self.ws_client.message_callback = None
             logging.info("Unregistered message callback")
         else:
-            logging.debug(
-                "Callback already replaced by newer instance, skipping unregister"
-            )
+            logging.debug("Callback already replaced by newer instance, skipping unregister")
 
     def start(self):
         """

@@ -6,6 +6,9 @@
 * [Introduction](developing/0_introduction.md)
 * [Quick Start](developing/1_get-started.md)
 * [Architecture](developing/2_architecture.md)
+
+## Core Concepts <a href="#core-concepts" id="core-concepts"></a>
+
 * [Understanding Core Concepts](concepts.md)
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
@@ -13,11 +16,15 @@
     * [LLMs](developing/5_llms.md)
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
-* [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
 * [Middleware](developing/middleware.md)
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
+* [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+
+## MCP Integration <a href="#mcp" id="mcp"></a>
+
+* [MCP Integration](developing/mcp-integration.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 
@@ -25,85 +32,93 @@
     * [Configuration](developer_cookbook/config.md)
     * [Input](developer_cookbook/input.md)
     * [New Mode](developer_cookbook/new_mode.md)
-* [OM1 Integrations with different machines](robotics/unitree_g1_humanoid.md)
+* [Examples](examples/examples.md)
+    * [Conversation](examples/conversation.md)
+    * [Smart Toy](examples/smart_toy.md)
+* OM1 Integration with different machines
     * [Unitree G1 Humanoid](robotics/unitree_g1_humanoid.md)
     * [Unitree Go2 Quadruped](robotics/unitree_go2_quadruped.md)
     * [Raspberry Pi](robotics/raspberrypi.md)
     * [Tesla Dimo](robotics/tesla_dimo.md)
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
-* [Examples](examples/examples.md)
-    * [Conversation](examples/conversation.md)
-    * [Smart Toy](examples/smart_toy.md)
-
-## Simulators <a href="#simulators" id="simulators"></a>
-
-* [Gazebo](simulators/gazebo.md)
-* [Isaac Sim](simulators/isaac-sim.md)
-* [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Overview](full_autonomy_guidelines/architecture_overview.md)
-* [Setup Instructions](full_autonomy_guidelines/setup_system.md)
-    * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
-    * [System Config](full_autonomy_guidelines/system_config.md)
-    * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
-* [Modes and Lifecycle](full_autonomy_guidelines/modes.md)
-    * [Modes](full_autonomy_guidelines/modes.md)
-    * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
-    * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
-    * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
+* [Hybrid Localisation](full_autonomy_guidelines/localization.md)
+* [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
+* [System Config](full_autonomy_guidelines/system_config.md)
+* [OTA Setup](full_autonomy_guidelines/ota_setup.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
+* [Premium Features](developing/premium_features.md)
+* [API Endpoints to Interact with Premium Features](full_autonomy_guidelines/api_endpoints.md)
+
+## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
+
+* [Modes](full_autonomy_guidelines/modes.md)
+* [Mode Selection](full_autonomy_guidelines/mode_selection.md)
+* [Transition Rules](full_autonomy_guidelines/transition_rules.md)
+* [Lifecycle](full_autonomy_guidelines/lifecycle.md)
+
+## Simulators <a href="#simulators" id="simulators"></a>
+
+* [Gazebo](simulators/gazebo.md)
+* [Isaac Sim](simulators/isaac-sim.md)
+* [Cloud Isaac Sim](simulators/cloud-isaac-sim.md)
+* [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
 * [API Reference](api-reference/introduction.md)
-* [Subscription Plans](api-reference/api_pricing.md)
-* [API Endpoints](api-reference/endpoints/google_asr.md)
-    * [Google ASR](api-reference/endpoints/google_asr.md)
     * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
+    * [Google ASR](api-reference/endpoints/google_asr.md)
+    * [ElevenLabs ASR](api-reference/endpoints/elevenlabs_asr.md)
     * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
     * [LLM](api-reference/endpoints/llm.md)
     * [Riva](api-reference/endpoints/riva.md)
     * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
+* [Subscription Plans](api-reference/api_pricing.md)
 
 ## Release Notes <a href="#release-notes" id="release-notes"></a>
 
-* [Major Updates](release-notes/major-updates/beta_release.md)
+* Major Updates
   * [Beta Release](release-notes/major-updates/beta_release.md)
   * [Production Ready Release](release-notes/major-updates/production_ready_release.md)
-* [OM1](release-notes/om/beta.md)
+* OM1
     * [beta](release-notes/om/beta.md)
-    * [v1.0.0](release-notes/om/v1.0.0.md)
-* [OM1 Avatar](release-notes/om1-avatar/beta.md)
+    * [v1.0.x](release-notes/om/v1.0.x.md)
+    * [Docker Images](release-notes/om/docker_images.md)
+* OM1 Avatar
     * [beta](release-notes/om1-avatar/beta.md)
-    * [v1.0.0](release-notes/om1-avatar/v1.0.0.md)
-    * [v1.0.1](release-notes/om1-avatar/v1.0.1.md)
-* [OM1 ROS2 SDK](release-notes/om1-ros2-sdk/beta.md)
+    * [v1.0.x](release-notes/om1-avatar/v1.0.x.md)
+    * [Docker Images](release-notes/om1-avatar/docker_images.md)
+* OM1 ROS2 SDK
     * [beta](release-notes/om1-ros2-sdk/beta.md)
-    * [v1.0.0](release-notes/om1-ros2-sdk/v1.0.0.md)
-* [Video Processor](release-notes/om1-video-processor/beta.md)
+    * [v1.0.x](release-notes/om1-ros2-sdk/v1.0.x.md)
+    * [Docker Images](release-notes/om1-ros2-sdk/docker_images.md)
+* Video Processor
     * [beta](release-notes/om1-video-processor/beta.md)
-    * [v1.0.0](release-notes/om1-video-processor/v1.0.0.md)
-* [OM1 System Setup](release-notes/om1-system-setup/beta.md)
-    * [beta](release-notes/om1-system-setup/beta.md)
-    * [v1.0.0](release-notes/om1-system-setup/v1.0.0.md)
+    * [v1.0.x](release-notes/om1-video-processor/v1.0.x.md)
+    * [Docker Images](release-notes/om1-video-processor/docker_images.md)
+* OM1 System Setup
+    * [beta](release-notes/OM1-OTA/beta.md)
+    * [v1.0.x](release-notes/OM1-OTA/v1.0.x.md)
+    * [Docker Images](release-notes/OM1-OTA/docker_images.md)
 
-## Robotics <a href="#robotics" id="robotics"></a>
+## Good to know concepts <a href="#robotics" id="robotics"></a>
 
 * [Asimov Governance](robotics/asimov_governance.md)
 * [Coinbase Hackathon](robotics/coinbase_hackathon.md)
-* [Good to know concepts](robotics/coinbase-x402.md)
-    * [Coinbase X402](robotics/coinbase-x402.md)
-    * [CRSF Long Range Control](robotics/crsf_long_range_control.md)
-    * [GPS Compass](robotics/gps_compass.md)
-    * [Mac](robotics/mac.md)
-    * [Media Server](robotics/Media_server.md)
-    * [Motion Planning LiDAR A1M8](robotics/motion_planning_lidarA1M8.md)
-    * [Motion Planning TurtleBot4](robotics/motion_planning_turtlebot4.md)
-    * [Motion Planning Unitree Go2](robotics/motion_planning_unitree_go2.md)
-    * [RF Mapping](robotics/rf_mapping.md)
-    * [Unitree Go2 Quadruped Configurations](robotics/unitree_go2_quadruped_configurations.md)
-    * [Zenoh](robotics/zenoh.md)
+* [Coinbase X402](robotics/coinbase-x402.md)
+* [CRSF Long Range Control](robotics/crsf_long_range_control.md)
+* [GPS Compass](robotics/gps_compass.md)
+* [Mac](robotics/mac.md)
+* [Media Server](robotics/Media_server.md)
+* [Motion Planning LiDAR A1M8](robotics/motion_planning_lidarA1M8.md)
+* [Motion Planning TurtleBot4](robotics/motion_planning_turtlebot4.md)
+* [Motion Planning Unitree Go2](robotics/motion_planning_unitree_go2.md)
+* [RF Mapping](robotics/rf_mapping.md)
+* [Unitree Go2 Quadruped Configurations](robotics/unitree_go2_quadruped_configurations.md)
+* [Zenoh](robotics/zenoh.md)

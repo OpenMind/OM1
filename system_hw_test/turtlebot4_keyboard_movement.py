@@ -19,9 +19,7 @@ print(parser.format_help())
 args = parser.parse_args()
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Global variables
 exit_program = False
@@ -161,9 +159,7 @@ def control_loop(move_controller):
     print(" D - Turn Right")
     print(" ESC - Quit")
 
-    publisher_thread = threading.Thread(
-        target=continuous_publish_thread, args=(move_controller,)
-    )
+    publisher_thread = threading.Thread(target=continuous_publish_thread, args=(move_controller,))
     publisher_thread.daemon = True
     publisher_thread.start()
 

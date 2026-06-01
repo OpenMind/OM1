@@ -21,21 +21,11 @@ except ImportError:
     print("Please run this script from inside /system_hw_test")
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--serial", help="serial port to use, when using the low level driver", type=str
-)
-parser.add_argument(
-    "--zenoh", help="use zenoh to connect to the robot", action="store_true"
-)
-parser.add_argument(
-    "--multicast", help="multicast address for zenoh", type=str, default=None
-)
-parser.add_argument(
-    "--URID", help="your robot's URID, when using Zenoh", type=str, default=""
-)
-parser.add_argument(
-    "--type", help="the type of the robot (go2 or tb4)", type=str, default="go2"
-)
+parser.add_argument("--serial", help="serial port to use, when using the low level driver", type=str)
+parser.add_argument("--zenoh", help="use zenoh to connect to the robot", action="store_true")
+parser.add_argument("--multicast", help="multicast address for zenoh", type=str, default=None)
+parser.add_argument("--URID", help="your robot's URID, when using Zenoh", type=str, default="")
+parser.add_argument("--type", help="the type of the robot (go2 or tb4)", type=str, default="go2")
 print(parser.format_help())
 
 args = parser.parse_args()
@@ -60,9 +50,7 @@ def create_straight_line_path_from_angle(angle_degrees, length=1.0, num_points=1
 path_angles = [-60, -45, -30, -15, 0, 15, 30, 45, 60, 180]  # degrees
 path_length = 1.05  # meters
 
-paths = [
-    create_straight_line_path_from_angle(angle, path_length) for angle in path_angles
-]
+paths = [create_straight_line_path_from_angle(angle, path_length) for angle in path_angles]
 
 print(f"Created {len(paths)} paths with angles: {path_angles}")
 print(f"Each path extends {path_length}m from robot center")
@@ -105,19 +93,11 @@ centerZoom = ax2.plot([0], [0], "o", color="blue")[0]  # the robot
 if args.type == "tb4":
     sensor_mounting_angle = 270.0
     angles_blanked = [[-180.0, -160.0], [110.0, 180.0]]
-    circleZoom = ax2.add_patch(
-        Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot head
-    outline = ax2.add_patch(
-        Rectangle((-0.05, -0.15), 0.20, 0.06, ls="--", fc="black")
-    )  # the robot electronics
+    circleZoom = ax2.add_patch(Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none"))  # the robot head
+    outline = ax2.add_patch(Rectangle((-0.05, -0.15), 0.20, 0.06, ls="--", fc="black"))  # the robot electronics
 else:
-    circleZoom = ax2.add_patch(
-        Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot head
-    outline = ax2.add_patch(
-        Rectangle((-0.2, -0.7), 0.40, 0.70, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot body
+    circleZoom = ax2.add_patch(Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none"))  # the robot head
+    outline = ax2.add_patch(Rectangle((-0.2, -0.7), 0.40, 0.70, ls="--", lw=1, ec="red", fc="none"))  # the robot body
 pointsZoom = ax2.plot([], [], ".", color="black")[0]
 ax2.set_xlim(-1.2, 1.2)
 ax2.set_ylim(-1.2, 1.2)
@@ -166,9 +146,7 @@ for b in angles_blanked:
 
 def continuous_serial(lidar):
 
-    for i, scan in enumerate(
-        lidar.iter_scans(scan_type="express", max_buf_meas=3000, min_len=5)
-    ):
+    for i, scan in enumerate(lidar.iter_scans(scan_type="express", max_buf_meas=3000, min_len=5)):
 
         array = np.array(scan)
 
@@ -352,9 +330,7 @@ def process(data):
                     continue
 
             # Calculate distance from obstacle to the line segment
-            dist_to_line = distance_point_to_line_segment(
-                x, y, start_x, start_y, end_x, end_y
-            )
+            dist_to_line = distance_point_to_line_segment(x, y, start_x, start_y, end_x, end_y)
 
             if dist_to_line < half_width_robot:
                 # too close - this path will not work
@@ -403,25 +379,15 @@ def process(data):
     if len(ppl) > 0:
         print(f"There are {len(ppl)} possible paths.")
         if len(left) > 0:
-            print(
-                f"You can turn left using paths: {left} ({[path_angles[p] for p in left]}°)."
-            )
+            print(f"You can turn left using paths: {left} ({[path_angles[p] for p in left]}°).")
         if len(forward) > 0:
-            print(
-                f"You can go forward using paths: {forward} ({[path_angles[p] for p in forward]}°)."
-            )
+            print(f"You can go forward using paths: {forward} ({[path_angles[p] for p in forward]}°).")
         if len(right) > 0:
-            print(
-                f"You can turn right using paths: {right} ({[path_angles[p] for p in right]}°)."
-            )
+            print(f"You can turn right using paths: {right} ({[path_angles[p] for p in right]}°).")
         if len(backward) > 0:
-            print(
-                f"You can go backward using paths: {backward} ({[path_angles[p] for p in backward]}°)."
-            )
+            print(f"You can go backward using paths: {backward} ({[path_angles[p] for p in backward]}°).")
     else:
-        print(
-            "You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
-        )
+        print("You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE.")
 
     for p in bad_paths:
         # these are all the bad paths
@@ -469,9 +435,7 @@ if __name__ == "__main__":
         print("[INFO] Opening zenoh session...")
         conf = zenoh.Config()
         if args.multicast:
-            conf.insert_json5(
-                "scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}'
-            )
+            conf.insert_json5("scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}')
 
         z = open_zenoh_session()
 

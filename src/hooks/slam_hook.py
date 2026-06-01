@@ -1,8 +1,8 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import aiohttp
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
@@ -13,16 +13,46 @@ class StartSlamHookContext(BaseModel):
 
     Parameters
     ----------
-    base_url : str
-        Base URL for the SLAM system.
+    base_url : Optional[str]
+        Base URL for the SLAM system. If None, determined by use_sim flag.
+    use_sim : bool
+        Whether to run the connector in the simulator.
+    api_key : str
+        API key for OpenMind cloud system authentication.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000",
-        description="Base URL for the SLAM system",
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the SLAM system. If None, determined by use_sim flag.",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
+    )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
     )
 
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def set_base_url(self) -> "StartSlamHookContext":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        StartSlamHookContext
+            The validated context with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator"
+            else:
+                self.base_url = "http://localhost:5000"
+
+        return self
 
 
 class StopSlamHookContext(BaseModel):
@@ -31,22 +61,52 @@ class StopSlamHookContext(BaseModel):
 
     Parameters
     ----------
-    base_url : str
+    base_url : Optional[str]
         Base URL for the SLAM system to send the stop command.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     map_name : str
         Name of the map to save before stopping SLAM.
+    api_key : str
+        API key for OpenMind cloud system authentication.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000",
+    base_url: Optional[str] = Field(
+        default=None,
         description="Base URL for the SLAM system to send the stop command",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
     map_name: str = Field(
         default="map",
         description="Name of the map to save before stopping SLAM",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
 
     model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def set_base_url(self) -> "StopSlamHookContext":
+        """
+        Set base_url based on use_sim if not explicitly provided.
+
+        Returns
+        -------
+        StopSlamHookContext
+            The validated context with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator"
+            else:
+                self.base_url = "http://localhost:5000"
+
+        return self
 
 
 async def start_slam_hook(context: Dict[str, Any]):
@@ -60,21 +120,19 @@ async def start_slam_hook(context: Dict[str, Any]):
     """
     ctx = StartSlamHookContext(**context)
     base_url = ctx.base_url
+    api_key = ctx.api_key
     slam_url = f"{base_url}/start/slam"
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 slam_url,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM started successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM started successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process initiated",
@@ -85,12 +143,8 @@ async def start_slam_hook(context: Dict[str, Any]):
                         error_info = await response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}")
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling SLAM API: {str(e)}")
@@ -109,7 +163,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
     ctx = StopSlamHookContext(**context)
     base_url = ctx.base_url
     map_name = ctx.map_name
-
+    api_key = ctx.api_key
     save_slam_map_url = f"{base_url}/maps/save"
     stop_slam_url = f"{base_url}/stop/slam"
 
@@ -121,42 +175,32 @@ async def stop_slam_hook(context: Dict[str, Any]):
             async with session.post(
                 save_slam_map_url,
                 json={"map_name": map_name},
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as save_response:
 
                 if save_response.status == 200:
                     save_result = await save_response.json()
-                    logging.info(
-                        f"SLAM map saved successfully: {save_result.get('message', 'Success')}"
-                    )
-                    elevenlabs_provider.add_pending_message(
-                        "Map has been saved successfully."
-                    )
+                    logging.info(f"SLAM map saved successfully: {save_result.get('message', 'Success')}")
+                    elevenlabs_provider.add_pending_message("Map has been saved successfully.")
                 else:
                     try:
                         error_info = await save_response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}")
 
             # Stop the SLAM process
             async with session.post(
                 stop_slam_url,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "x-api-key": api_key},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM stopped successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM stopped successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process stopped",
@@ -167,12 +211,8 @@ async def stop_slam_hook(context: Dict[str, Any]):
                         error_info = await response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}")
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling SLAM API: {str(e)}")

@@ -2,7 +2,7 @@
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
-<a href="https://docs.openmind.org/">Documentation</a> |
+<a href="https://docs.openmind.com/">Documentation</a> |
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
@@ -13,35 +13,49 @@
 * **Modular Architecture**: Designed with Python for simplicity and seamless integration.
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
-* **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* **Metrics & Observability**: Includes a pre-configured Prometheus and Grafana stack to monitor real-time AI pipeline metrics like LLM and ASR latencies.
 
 ## Architecture Overview
-![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/dd91457d-010f-43d8-960e-d1165834aa58)
-
+![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
 
 ## Getting Started
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+If you are new to OM1, this is the fastest path to a successful first run using the `spot` agent.
 
-### Package Management and VENV
+Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs as logs and API responses.
 
-You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and does not execute robot hardware actions.
 
-### Install Dependencies
+### Quick Start (5 Minutes)
 
-For macOS
+1. Install system dependencies.
+2. Clone the repository.
+3. Add your OpenMind API key.
+4. Launch OM1 and verify it is running.
+
+### Prerequisites
+
+- Python 3.10+
+- [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/)
+- Webcam access (recommended if configuring VLM)
+
+Install system packages:
+
+### 1. Install System Dependencies
+
+For macOS:
 ```bash
 brew install portaudio ffmpeg
 ```
 
-For Linux
+For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python3-dev ffmpeg
+sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
 ```
 
-### Clone the Repo
+### 2. Clone
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
@@ -50,53 +64,76 @@ git submodule update --init
 uv venv
 ```
 
-### Obtain an OpenMind API Key
+### 3. Configure API Key
 
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/).
-1. Create your account on OpenMind Portal if you haven't yet.
-2. Go to the dashboard and create a new API key.
-3. Copy the generated API key.
-4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Or, configure it in the `.env` file using this command - `cp .env.example .env` and add your key to the `.env`.
+Get your API key from [OpenMind Portal](https://portal.openmind.com/).
 
-Alternatively, you can set your API key in the `.bashrc` file
+1. Sign in to OpenMind Portal.
+2. Open the dashboard and create a new API key.
+3. Copy the generated key.
 
-```bash
-vi ~/.bashrc # for Linux
-vi ~/.zshrc # for macOS
-```
-
-Add the following to the file
-
+Recommended (shell profile):
 ```bash
 export OM_API_KEY="<your_api_key>"
 ```
 
+Alternative (project-local):
 ```bash
-source ~/.bashrc # for linux
-source ~/.zshrc # for macOS
+cp .env.example .env
 ```
+
+Then set:
+```bash
+OM_API_KEY=<your_api_key>
+```
+in `.env`.
+
+You can also verify or adjust the fallback key location in `config/spot.json5`.
+
+### 4. Launch Spot
+
+```bash
+uv run src/run.py spot
+```
+
+#### Verify It Is Working
+
+Your setup is successful if:
+
+- The terminal shows the Spot agent has started successfully.
+- You see input processing and LLM responses logged in the terminal.
+- The agent responds to camera input and generates appropriate outputs.
+
+### 5. Monitor with Grafana (Optional)
+
+If you have Docker installed, you can launch the included Prometheus and Grafana stack to monitor real-time AI pipeline metrics such as LLM and ASR latencies:
+
+```bash
+docker-compose up -d grafana prometheus
+```
+
+Navigate to <http://localhost:3000> in your browser (default login: `admin`/`admin`). The **OM1 Latency Monitoring** dashboard is automatically provisioned and ready to use.
+
+### Troubleshooting
+
+- `Authentication` errors: confirm `OM_API_KEY` is set and not expired.
+- `No module` errors: run the command with `uv run` from the repo root.
+- `Camera` access issues: grant terminal/IDE camera permissions in OS settings.
+- `Address already in use` on port `8000`: stop the conflicting process or free the port.
 
 ### OMCU
 
 OMCU is the computational unit for billing on OpenMind's platform. The free plan provides 50 OMCU renewed monthly.
 
-Upgrade your plan [here](https://portal.openmind.org/) for additional credits.
+Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
-### Launching OM1
+For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-Run
-```bash
-uv run src/run.py spot
-```
-
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
-
-> **Note:** This is just an example agent configuration.
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
+> **Note:** This quick start uses the Spot starter configuration. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
 
 ## What's Next?
 
-* Try out some [examples](https://docs.openmind.org/developer-cookbook/examples)
+* Try out some [examples](https://docs.openmind.com/developer-cookbook/examples)
 * Add new `inputs` and `actions`.
 * Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions.
 * Change the system prompts in the configuration files (located in `/config/`) to create new behaviors.
@@ -115,7 +152,7 @@ elif output_interface.action == "shake paw":
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
 
-OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, please see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, will be dockerized and can then interface with OM1 through DDS middleware or websockets.
+OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, is dockerized and interfaces with OM1 through DDS middleware or websockets.
 
 ## Recommended Development Platforms
 
@@ -137,33 +174,36 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
+OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The following features are supported with BrainPack:
 
-- **om1**
-- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR(S2L) sensor, the SLAM Toolbox and the Nav2 stack.
-- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
-- **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
-- **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
+- **Navigation** - Autonomous path planning and movement.
+- **SLAM** - Simultaneous Localization and Mapping for persistent map-based operation.
+- **Auto Charging** - Automated docking and battery charging workflows.
+- **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
+
+For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
+
+The BrainPack is open-source and you can refer to the guidelines to build your own [here](https://github.com/OpenMind/brainpack).
 
 ## Simulator Support
 
-OM1 integrates with popular robotics simulators to enable rapid prototyping and testing without physical hardware. We currently support Gazebo with Unitree Go2 and Isaac Sim with Unitree Go2 and G1.
+OM1 integrates with popular robotics simulators to enable rapid prototyping and testing without physical hardware.
 
 ### Gazebo
 
-Full support for Gazebo with ROS2 integration. Ideal for testing autonomous SLAM map generation and navigation stacks, sensor simulation, and multi-robot scenarios.
+Open source Gazebo support is designed for rapid prototyping, conversational interaction, and behavior testing. Gazebo integration with OM1 is supported for Unitree Go2.
 
 See [Gazebo](docs/simulators/gazebo.md) to get started.
 
 ### Isaac Sim
 
-NVIDIA Isaac Sim support for physics-accurate simulation with GPU acceleration.
+NVIDIA Isaac Sim support enables physics-accurate simulation with GPU acceleration. Isaac Sim integration with OM1 is supported for Unitree Go2 and G1.
 
 Requires NVIDIA GPU and CUDA support. See [Isaac Sim Setup](docs/simulators/isaac-sim.md) to get started.
 
 ## Detailed Documentation
 
-More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
+More detailed documentation can be accessed at [docs.openmind.com](https://docs.openmind.com/).
 
 ## Contributing
 

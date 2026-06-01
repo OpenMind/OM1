@@ -1,7 +1,7 @@
 ---
 title: Smart Toy
 description: "Combining Inputs, an LLM, and Outputs to create a smart, engaging toy."
-icon: circle
+icon: cubes-stacked
 ---
 
 ## LLM Model
@@ -15,7 +15,7 @@ Run
 uv run src/run.py cubly
 ```
 
-You should see your webcam light turn on and Cubly should speak to you from your default laptop speaker. You can see what is happening in the `WebSim` simulator window.
+You should see your webcam light turn on and Cubly should speak to you from your default laptop speaker. You can see what is happening in the terminal logs.
 
 * There will be an initial delay for your system to download various packages and AI/ML models.
 * Arduino based movement generation only works if you actually have a suitable actuator connected to an Arduino, which is connected to your computer via a USB serial dongle. On Mac, you can determine the correct serial port name to use via `ls /dev/cu.usb*`. If you do not specify your computer's serial port, the example will provide logging data that simulates what it would send.

@@ -29,9 +29,7 @@ def mock_tts_provider():
 @pytest.fixture
 def connector(mock_zenoh_session, mock_tts_provider):
     """Create a UbTtsConnector with mocked dependencies."""
-    config = UbTtsConfig(
-        robot_ip="192.168.1.100", base_url="http://192.168.1.100:9090/v1/"
-    )
+    config = UbTtsConfig(robot_ip="192.168.1.100", base_url="http://192.168.1.100:9090/v1/")
     return UbTtsConnector(config)
 
 
@@ -58,9 +56,7 @@ class TestUbTtsConnector:
 
     def test_init_creates_zenoh_session(self, mock_zenoh_session, mock_tts_provider):
         """Test initialization opens zenoh session and declares subscriber/publisher."""
-        config = UbTtsConfig(
-            robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/"
-        )
+        config = UbTtsConfig(robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/")
         connector = UbTtsConnector(config)
 
         mock_zenoh_session.declare_subscriber.assert_called_once_with(
@@ -70,14 +66,10 @@ class TestUbTtsConnector:
 
     def test_init_creates_tts_provider(self, mock_zenoh_session, mock_tts_provider):
         """Test initialization creates UbTtsProvider with correct URL."""
-        config = UbTtsConfig(
-            robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/"
-        )
+        config = UbTtsConfig(robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/")
         UbTtsConnector(config)
 
-        mock_tts_provider["cls"].assert_called_once_with(
-            url="http://192.168.1.1:9090/v1/voice/tts"
-        )
+        mock_tts_provider["cls"].assert_called_once_with(url="http://192.168.1.1:9090/v1/voice/tts")
 
     def test_init_zenoh_failure(self, mock_tts_provider):
         """Test initialization handles zenoh session failure gracefully."""
@@ -85,9 +77,7 @@ class TestUbTtsConnector:
             "actions.speak.connector.ub_tts.open_zenoh_session",
             side_effect=Exception("Connection refused"),
         ):
-            config = UbTtsConfig(
-                robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/"
-            )
+            config = UbTtsConfig(robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/")
             connector = UbTtsConnector(config)
             assert connector.session is None
 
@@ -128,12 +118,8 @@ class TestUbTtsConnector:
         mock_tts_status.header.frame_id = "frame-001"
 
         with (
-            patch(
-                "actions.speak.connector.ub_tts.TTSStatusRequest"
-            ) as mock_request_cls,
-            patch(
-                "actions.speak.connector.ub_tts.TTSStatusResponse"
-            ) as mock_response_cls,
+            patch("actions.speak.connector.ub_tts.TTSStatusRequest") as mock_request_cls,
+            patch("actions.speak.connector.ub_tts.TTSStatusResponse") as mock_response_cls,
             patch("actions.speak.connector.ub_tts.prepare_header") as mock_header,
             patch("actions.speak.connector.ub_tts.String") as mock_string,
         ):
@@ -160,9 +146,7 @@ class TestUbTtsConnector:
         mock_tts_status.header.frame_id = "frame-002"
 
         with (
-            patch(
-                "actions.speak.connector.ub_tts.TTSStatusRequest"
-            ) as mock_request_cls,
+            patch("actions.speak.connector.ub_tts.TTSStatusRequest") as mock_request_cls,
             patch("actions.speak.connector.ub_tts.TTSStatusResponse"),
             patch("actions.speak.connector.ub_tts.prepare_header"),
             patch("actions.speak.connector.ub_tts.String"),
@@ -184,9 +168,7 @@ class TestUbTtsConnector:
         mock_tts_status.header.frame_id = "frame-003"
 
         with (
-            patch(
-                "actions.speak.connector.ub_tts.TTSStatusRequest"
-            ) as mock_request_cls,
+            patch("actions.speak.connector.ub_tts.TTSStatusRequest") as mock_request_cls,
             patch("actions.speak.connector.ub_tts.TTSStatusResponse"),
             patch("actions.speak.connector.ub_tts.prepare_header"),
             patch("actions.speak.connector.ub_tts.String"),
@@ -197,9 +179,7 @@ class TestUbTtsConnector:
 
             assert connector.tts_enabled is False
 
-    def test_stop_closes_session_and_tts(
-        self, connector, mock_zenoh_session, mock_tts_provider
-    ):
+    def test_stop_closes_session_and_tts(self, connector, mock_zenoh_session, mock_tts_provider):
         """Test stop closes zenoh session and stops TTS provider."""
         connector.stop()
 
@@ -212,9 +192,7 @@ class TestUbTtsConnector:
             "actions.speak.connector.ub_tts.open_zenoh_session",
             side_effect=Exception("Connection refused"),
         ):
-            config = UbTtsConfig(
-                robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/"
-            )
+            config = UbTtsConfig(robot_ip="192.168.1.1", base_url="http://192.168.1.1:9090/v1/")
             connector = UbTtsConnector(config)
             connector.stop()
             # Should not raise - session is None

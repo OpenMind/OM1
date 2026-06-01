@@ -131,14 +131,10 @@ class TestMoveYansheeConnectorSendCommand:
 
     def test_send_command_timeout(self, connector):
         """Test _send_command with timeout."""
-        with patch(
-            "actions.move_ub.connector.yanshee_motion.concurrent.futures.ThreadPoolExecutor"
-        ) as mock_executor:
+        with patch("actions.move_ub.connector.yanshee_motion.concurrent.futures.ThreadPoolExecutor") as mock_executor:
             mock_future = Mock()
             mock_future.result.side_effect = concurrent.futures.TimeoutError()
-            mock_executor.return_value.__enter__ = Mock(
-                return_value=Mock(submit=Mock(return_value=mock_future))
-            )
+            mock_executor.return_value.__enter__ = Mock(return_value=Mock(submit=Mock(return_value=mock_future)))
             mock_executor.return_value.__exit__ = Mock(return_value=False)
 
             result = connector._send_command(Motion("wave"))

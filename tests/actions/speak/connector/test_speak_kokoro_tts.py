@@ -99,14 +99,10 @@ def reset_mocks(mock_om1_speech_module, mock_zenoh_module):
 def common_mocks(mock_zenoh_session):
     """Provide commonly used mocks for connector tests."""
     with (
-        patch(
-            "actions.speak.connector.kokoro_tts.open_zenoh_session"
-        ) as mock_open_zenoh,
+        patch("actions.speak.connector.kokoro_tts.open_zenoh_session") as mock_open_zenoh,
         patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider") as mock_tts,
         patch("actions.speak.connector.kokoro_tts.IOProvider") as mock_io,
-        patch(
-            "actions.speak.connector.kokoro_tts.TeleopsConversationProvider"
-        ) as mock_conv,
+        patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider") as mock_conv,
     ):
 
         mock_open_zenoh.return_value = mock_zenoh_session
@@ -216,9 +212,7 @@ class TestSpeakKokoroTTSConnector:
 
     def test_init_zenoh_failure(self, default_config, common_mocks):
         """Test initialization when Zenoh session fails to open."""
-        common_mocks["open_zenoh_session"].side_effect = Exception(
-            "Zenoh connection failed"
-        )
+        common_mocks["open_zenoh_session"].side_effect = Exception("Zenoh connection failed")
 
         connector = SpeakKokoroTTSConnector(default_config)
 
@@ -236,7 +230,7 @@ class TestSpeakKokoroTTSConnector:
         common_mocks["zenoh_session"].declare_publisher.return_value = mock_audio_pub
 
         mock_io_instance = Mock()
-        mock_io_instance.llm_prompt = "INPUT: Voice: Hello"
+        mock_io_instance.llm_prompt = 'Voice: "Hello"'
         common_mocks["io_provider"].return_value = mock_io_instance
 
         mock_conversation_instance = Mock()
@@ -248,18 +242,12 @@ class TestSpeakKokoroTTSConnector:
 
         await connector.connect(speak_input)
 
-        common_mocks["tts_instance"].create_pending_message.assert_called_once_with(
-            "Hello, world!"
-        )
-        mock_conversation_instance.store_robot_message.assert_called_once_with(
-            "Hello, world!"
-        )
+        common_mocks["tts_instance"].create_pending_message.assert_called_once_with("Hello, world!")
+        mock_conversation_instance.store_robot_message.assert_called_once_with("Hello, world!")
         mock_audio_pub.put.assert_called()
 
     @pytest.mark.asyncio
-    async def test_connect_tts_disabled(
-        self, default_config, common_mocks, speak_input
-    ):
+    async def test_connect_tts_disabled(self, default_config, common_mocks, speak_input):
         """Test connect method when TTS is disabled."""
         connector = SpeakKokoroTTSConnector(default_config)
         connector.tts_enabled = False
@@ -297,9 +285,7 @@ class TestSpeakKokoroTTSConnector:
         common_mocks["tts_instance"].create_pending_message.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connect_without_audio_publisher(
-        self, default_config, common_mocks, speak_input
-    ):
+    async def test_connect_without_audio_publisher(self, default_config, common_mocks, speak_input):
         """Test connect method when audio publisher is None."""
         common_mocks["tts_instance"].create_pending_message.return_value = {
             "id": "test_id",
@@ -321,9 +307,7 @@ class TestSpeakKokoroTTSConnector:
 
         mock_audio_status = Mock()
 
-        with patch(
-            "actions.speak.connector.kokoro_tts.AudioStatus"
-        ) as mock_audio_status_class:
+        with patch("actions.speak.connector.kokoro_tts.AudioStatus") as mock_audio_status_class:
             mock_audio_status_class.deserialize.return_value = mock_audio_status
 
             connector.zenoh_audio_message(mock_zenoh_sample)
@@ -331,19 +315,13 @@ class TestSpeakKokoroTTSConnector:
             mock_audio_status_class.deserialize.assert_called_once_with(b"test_data")
             assert connector.audio_status == mock_audio_status
 
-    def test_zenoh_audio_message_error_handling(
-        self, default_config, common_mocks, mock_zenoh_sample
-    ):
+    def test_zenoh_audio_message_error_handling(self, default_config, common_mocks, mock_zenoh_sample):
         """Test error handling in zenoh_audio_message."""
         connector = SpeakKokoroTTSConnector(default_config)
         original_audio_status = connector.audio_status
 
-        with patch(
-            "actions.speak.connector.kokoro_tts.AudioStatus"
-        ) as mock_audio_status_class:
-            mock_audio_status_class.deserialize.side_effect = Exception(
-                "Deserialization error"
-            )
+        with patch("actions.speak.connector.kokoro_tts.AudioStatus") as mock_audio_status_class:
+            mock_audio_status_class.deserialize.side_effect = Exception("Deserialization error")
 
             connector.zenoh_audio_message(mock_zenoh_sample)
 
@@ -368,9 +346,7 @@ class TestSpeakKokoroTTSConnector:
         tts_status = create_tts_status_mock(code)
 
         with (
-            patch(
-                "actions.speak.connector.kokoro_tts.TTSStatusRequest"
-            ) as mock_request_class,
+            patch("actions.speak.connector.kokoro_tts.TTSStatusRequest") as mock_request_class,
             patch("actions.speak.connector.kokoro_tts.TTSStatusResponse"),
         ):
             mock_request_class.deserialize.return_value = tts_status
@@ -380,9 +356,7 @@ class TestSpeakKokoroTTSConnector:
             assert connector.tts_enabled is expected_enabled
             mock_response_pub.put.assert_called_once()
 
-    def test_zenoh_tts_status_request_read(
-        self, default_config, common_mocks, mock_zenoh_sample
-    ):
+    def test_zenoh_tts_status_request_read(self, default_config, common_mocks, mock_zenoh_sample):
         """Test TTS status request to read current status."""
         mock_response_pub = Mock()
         connector = SpeakKokoroTTSConnector(default_config)
@@ -392,9 +366,7 @@ class TestSpeakKokoroTTSConnector:
         tts_status = create_tts_status_mock(2)  # Read status
 
         with (
-            patch(
-                "actions.speak.connector.kokoro_tts.TTSStatusRequest"
-            ) as mock_request_class,
+            patch("actions.speak.connector.kokoro_tts.TTSStatusRequest") as mock_request_class,
             patch("actions.speak.connector.kokoro_tts.TTSStatusResponse"),
         ):
             mock_request_class.deserialize.return_value = tts_status
@@ -404,9 +376,7 @@ class TestSpeakKokoroTTSConnector:
             assert connector.tts_enabled is True
             mock_response_pub.put.assert_called_once()
 
-    def test_zenoh_tts_status_request_null_publisher(
-        self, default_config, common_mocks, mock_zenoh_sample
-    ):
+    def test_zenoh_tts_status_request_null_publisher(self, default_config, common_mocks, mock_zenoh_sample):
         """Test TTS status request when response publisher is None."""
         connector = SpeakKokoroTTSConnector(default_config)
         connector._zenoh_tts_status_response_pub = None
@@ -414,9 +384,7 @@ class TestSpeakKokoroTTSConnector:
         tts_status = create_tts_status_mock(1)  # Enable TTS
 
         with (
-            patch(
-                "actions.speak.connector.kokoro_tts.TTSStatusRequest"
-            ) as mock_request_class,
+            patch("actions.speak.connector.kokoro_tts.TTSStatusRequest") as mock_request_class,
             patch("actions.speak.connector.kokoro_tts.TTSStatusResponse"),
         ):
             mock_request_class.deserialize.return_value = tts_status
@@ -425,19 +393,13 @@ class TestSpeakKokoroTTSConnector:
 
             assert connector.tts_enabled is True
 
-    def test_zenoh_tts_status_request_error_handling(
-        self, default_config, common_mocks, mock_zenoh_sample
-    ):
+    def test_zenoh_tts_status_request_error_handling(self, default_config, common_mocks, mock_zenoh_sample):
         """Test error handling in _zenoh_tts_status_request."""
         connector = SpeakKokoroTTSConnector(default_config)
         original_tts_enabled = connector.tts_enabled
 
-        with patch(
-            "actions.speak.connector.kokoro_tts.TTSStatusRequest"
-        ) as mock_request_class:
-            mock_request_class.deserialize.side_effect = Exception(
-                "Deserialization error"
-            )
+        with patch("actions.speak.connector.kokoro_tts.TTSStatusRequest") as mock_request_class:
+            mock_request_class.deserialize.side_effect = Exception("Deserialization error")
 
             connector._zenoh_tts_status_request(mock_zenoh_sample)
 
@@ -454,9 +416,7 @@ class TestSpeakKokoroTTSConnector:
 
     def test_stop_no_session(self, default_config, common_mocks):
         """Test stopping the connector when session is None."""
-        common_mocks["open_zenoh_session"].side_effect = Exception(
-            "Failed to open session"
-        )
+        common_mocks["open_zenoh_session"].side_effect = Exception("Failed to open session")
         connector = SpeakKokoroTTSConnector(default_config)
 
         connector.stop()
@@ -481,22 +441,15 @@ class TestSpeakKokoroTTSConnector:
         assert start_time <= connector.last_voice_command_time <= end_time
 
     @patch("actions.speak.connector.kokoro_tts.uuid4")
-    def test_audio_status_initialization(
-        self, mock_uuid4, default_config, common_mocks
-    ):
+    def test_audio_status_initialization(self, mock_uuid4, default_config, common_mocks):
         """Test that audio status is properly initialized."""
         mock_uuid4.return_value = "test-uuid"
 
-        with patch(
-            "actions.speak.connector.kokoro_tts.prepare_header"
-        ) as mock_prepare_header:
+        with patch("actions.speak.connector.kokoro_tts.prepare_header") as mock_prepare_header:
             mock_prepare_header.return_value = "test-header"
 
             connector = SpeakKokoroTTSConnector(default_config)
 
             assert connector.audio_status is not None
-            assert (
-                connector.audio_status.status_speaker
-                == AudioStatus.STATUS_SPEAKER.READY.value
-            )
+            assert connector.audio_status.status_speaker == AudioStatus.STATUS_SPEAKER.READY.value
             mock_prepare_header.assert_called_with("test-uuid")

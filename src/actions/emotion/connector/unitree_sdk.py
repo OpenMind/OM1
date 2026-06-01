@@ -50,9 +50,7 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
         if self.unitree_ethernet and self.unitree_ethernet != "":
             # ChannelFactoryInitialize(0, self.UNITREE_WIRED_ETHERNET)
             # this can only be done once, at top level
-            logging.info(
-                f"Emotion system using {self.unitree_ethernet} as the network Ethernet adapter"
-            )
+            logging.info(f"Emotion system using {self.unitree_ethernet} as the network Ethernet adapter")
             self.ao_client = AudioClient()
             self.ao_client.SetTimeout(10.0)
             self.ao_client.Init()

@@ -1,10 +1,10 @@
+import json
 import logging
 import math
 import random
 from queue import Queue
-from typing import List, Optional
+from typing import Any, List, Optional
 
-import zenoh
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
@@ -12,15 +12,26 @@ from actions.move_go2_autonomy.interface import MoveInput
 from providers.face_presence_provider import FacePresenceProvider
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
+from providers.unitree_go2_odom_zenoh_provider import UnitreeGo2OdomZenohProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from providers.unitree_go2_state_zenoh_provider import UnitreeGo2StateZenohProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
     String,
+    UnitreeRequest,
+    UnitreeRequestHeader,
+    UnitreeRequestIdentity,
+    ZenohSampleType,
+    ZenohSessionType,
     open_zenoh_session,
     prepare_header,
 )
+
+SPORT_API_ID_MOVE = 1008
+SPORT_API_ID_STOPMOVE = 1003
+SPORT_API_ID_BALANCESTAND = 1002
 
 
 class MoveUnitreeOMPathSDKConfig(ActionConfig):
@@ -33,6 +44,10 @@ class MoveUnitreeOMPathSDKConfig(ActionConfig):
         Ethernet channel for Unitree Go2 odometry data.
     mode : Optional[str]
         Operation mode, e.g., "guard".
+    sport_request_topic : str
+        Unitree sport API Zenoh topic for receiving movement requests.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     """
 
     unitree_ethernet: str = Field(
@@ -43,11 +58,17 @@ class MoveUnitreeOMPathSDKConfig(ActionConfig):
         default=None,
         description='Operation mode, e.g., "guard".',
     )
+    sport_request_topic: str = Field(
+        default="api/sport/request",
+        description="Unitree sport API Zenoh topic for receiving movement requests.",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
+    )
 
 
-class MoveUnitreeOMPathSDKConnector(
-    ActionConnector[MoveUnitreeOMPathSDKConfig, MoveInput]
-):
+class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, MoveInput]):
     """
     Connector for moving Unitree Go2 robot using OM Path SDK for obstacle detection.
 
@@ -80,44 +101,50 @@ class MoveUnitreeOMPathSDKConnector(
         self.gap_previous = 0
 
         self.path_provider = SimplePathsProvider()
-        self.unitree_go2_state = UnitreeGo2StateProvider()
         self.face_presence_provider = FacePresenceProvider()
 
         # create sport client
         self.sport_client = None
-        try:
-            self.sport_client = SportClient()
-            self.sport_client.SetTimeout(10.0)
-            self.sport_client.Init()
-            self.sport_client.StopMove()
-            self.sport_client.Move(0.05, 0, 0)
-            logging.info("Autonomy Unitree sport client initialized")
-        except Exception as e:
-            logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = self.config.unitree_ethernet
-        if unitree_ethernet is None:
-            raise ValueError("unitree_ethernet must be specified in the config")
-        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
+        if self.config.use_sim:
+            self.odom = UnitreeGo2OdomZenohProvider()
+            self.unitree_go2_state = UnitreeGo2StateZenohProvider()
+        else:
+            try:
+                self.sport_client = SportClient()
+                self.sport_client.SetTimeout(10.0)
+                self.sport_client.Init()
+                self.sport_client.StopMove()
+                self.sport_client.Move(0.05, 0, 0)
+                logging.info("Autonomy Unitree sport client initialized")
+            except Exception as e:
+                logging.error(f"Error initializing Unitree sport client: {e}")
+
+            unitree_ethernet = self.config.unitree_ethernet
+            if unitree_ethernet is None:
+                raise ValueError("unitree_ethernet must be specified in the config")
+
+            self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
+            self.unitree_go2_state = UnitreeGo2StateProvider()
 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
         self.ai_status_response = "om/ai/response"
-        self.session: Optional[zenoh.Session] = None
-        self.pub = None
+        self.session: Optional[ZenohSessionType] = None
+        self.session_sport_pub: Optional[Any] = None
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(
-                self.ai_status_request, self._zenoh_ai_status_request
-            )
-            self._zenoh_ai_status_response_pub = self.session.declare_publisher(
-                self.ai_status_response
-            )
+            self.session.declare_subscriber(self.ai_status_request, self._zenoh_ai_status_request)
+            self._zenoh_ai_status_response_pub = self.session.declare_publisher(self.ai_status_response)
+
+            if self.config.use_sim:
+                logging.info("MoveUnitreeOMPathSDKConnector initialized in simulator mode")
+                self.session_sport_pub = self.session.declare_publisher(self.config.sport_request_topic)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
-            self.pub = None
+            self.session_sport_pub = None
 
         # AI control status
         self.ai_control_enabled = True
@@ -139,23 +166,19 @@ class MoveUnitreeOMPathSDKConnector(
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
-            logging.info(
-                "Guard mode active and unknown face detected - disregarding AI command"
-            )
+            logging.info("Guard mode active and unknown face detected - disregarding AI command")
             return
 
         if not self.ai_control_enabled:
             logging.info("AI Control is disabled - disregarding AI command")
             return
 
-        if self.unitree_go2_state.state_code == 1002 and self.sport_client:
+        if self.unitree_go2_state.state_code == 1002 and self.sport_client and not self.config.use_sim:
             logging.info("Robot is in jointLock state - issuing BalanceStand()")
             self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(
-                f"Action in progress: {self.unitree_go2_state.action_progress}"
-            )
+            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
             return
 
         # fallback to the odom provider
@@ -225,10 +248,24 @@ class MoveUnitreeOMPathSDKConnector(
         """
         logging.info(f"_move_robot: vx={vx}, vy={vy}, vturn={vturn}")
 
-        if not self.sport_client:
+        if self.odom.position["body_attitude"] != RobotState.STANDING:
             return
 
-        if self.odom.position["body_attitude"] != RobotState.STANDING:
+        if self.config.use_sim:
+            request = UnitreeRequest(
+                header=UnitreeRequestHeader(identity=UnitreeRequestIdentity(id=0, api_id=SPORT_API_ID_MOVE)),
+                parameter=json.dumps({"x": vx, "y": vy, "z": vturn}),
+            )
+
+            if self.session_sport_pub is None:
+                logging.warning("session_sport_pub: zenoh session sport publisher not ready")
+                return
+
+            self.session_sport_pub.put(request.serialize())
+
+            return
+
+        if not self.sport_client:
             return
 
         if self.unitree_go2_state.state == "jointLock":
@@ -279,16 +316,12 @@ class MoveUnitreeOMPathSDKConnector(
 
             current_target = target[0]
 
-            logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
-            )
+            logging.info(f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}")
 
             if self.movement_attempts > self.movement_attempt_limit:
                 # abort - we are not converging
                 self.clean_abort()
-                logging.info(
-                    f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()"
-                )
+                logging.info(f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()")
                 return
 
             goal_dx = current_target.dx
@@ -296,9 +329,7 @@ class MoveUnitreeOMPathSDKConnector(
 
             # Phase 1: Turn to face the target direction
             if not current_target.turn_complete:
-                gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
-                )
+                gap = self._calculate_angle_gap(-1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw)
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -338,8 +369,7 @@ class MoveUnitreeOMPathSDKConnector(
                 speed = current_target.speed
 
                 distance_traveled = math.sqrt(
-                    (self.odom.position["odom_x"] - s_x) ** 2
-                    + (self.odom.position["odom_y"] - s_y) ** 2
+                    (self.odom.position["odom_x"] - s_x) ** 2 + (self.odom.position["odom_y"] - s_y) ** 2
                 )
                 gap = round(abs(goal_dx - distance_traveled), 2)
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -369,14 +399,10 @@ class MoveUnitreeOMPathSDKConnector(
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
-                        )
+                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
-                    logging.info(
-                        "Phase 2 - Movement completed normally, processing next AI command"
-                    )
+                    logging.info("Phase 2 - Movement completed normally, processing next AI command")
                     self.clean_abort()
 
         self.sleep(0.1)
@@ -392,9 +418,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.turn_left)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -416,9 +440,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.turn_right)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -440,9 +462,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.advance)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -543,7 +563,7 @@ class MoveUnitreeOMPathSDKConnector(
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
 
-    def _zenoh_ai_status_request(self, data: zenoh.Sample):
+    def _zenoh_ai_status_request(self, data: ZenohSampleType):
         """
         Process an incoming AI control status message.
 
@@ -552,6 +572,10 @@ class MoveUnitreeOMPathSDKConnector(
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
+        if self._zenoh_ai_status_response_pub is None:
+            logging.error("Zenoh AI status response publisher not initialized")
+            return
+
         ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
         logging.info(f"Received AI Control Status message: {ai_control_status}")
 
@@ -564,17 +588,9 @@ class MoveUnitreeOMPathSDKConnector(
                 header=prepare_header(ai_control_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.ai_control_enabled else 0,
-                status=String(
-                    data=(
-                        "AI Control Enabled"
-                        if self.ai_control_enabled
-                        else "AI Control Disabled"
-                    )
-                ),
+                status=String(data=("AI Control Enabled" if self.ai_control_enabled else "AI Control Disabled")),
             )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
 
         # Enable the AI control
         if code == 1:
@@ -587,9 +603,7 @@ class MoveUnitreeOMPathSDKConnector(
                 code=1,
                 status=String(data="AI Control Enabled"),
             )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the AI control
         if code == 0:
@@ -602,6 +616,4 @@ class MoveUnitreeOMPathSDKConnector(
                 status=String(data="AI Control Disabled"),
             )
 
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())

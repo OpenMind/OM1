@@ -173,9 +173,7 @@ class TestTurtleBot4RPLidarProvider:
             assert filename.endswith("Z.jsonl")
             assert "9876543210" in filename
 
-    def test_write_str_to_file_with_valid_string(
-        self, mock_rplidar_dependencies, tmp_path
-    ):
+    def test_write_str_to_file_with_valid_string(self, mock_rplidar_dependencies, tmp_path):
         """Test writing string to file."""
         provider = TurtleBot4RPLidarProvider()
         provider.filename_current = str(tmp_path / "test.jsonl")
@@ -195,9 +193,7 @@ class TestTurtleBot4RPLidarProvider:
         with pytest.raises(ValueError, match="must be a json string"):
             provider.write_str_to_file({"test": "data"})  # type: ignore
 
-    def test_write_str_to_file_creates_new_file_on_size_limit(
-        self, mock_rplidar_dependencies, tmp_path
-    ):
+    def test_write_str_to_file_creates_new_file_on_size_limit(self, mock_rplidar_dependencies, tmp_path):
         """Test creating new file when size limit is exceeded."""
         provider = TurtleBot4RPLidarProvider()
         provider.filename_current = str(tmp_path / "test.jsonl")
@@ -232,9 +228,7 @@ class TestTurtleBot4RPLidarProvider:
         mocks["zenoh"].assert_called_once()
         assert provider.zen == mocks["zenoh_instance"]
 
-        mocks["zenoh_instance"].declare_subscriber.assert_called_once_with(
-            "test_robot/pi/scan", provider.listen_scan
-        )
+        mocks["zenoh_instance"].declare_subscriber.assert_called_once_with("test_robot/pi/scan", provider.listen_scan)
 
     def test_zenoh_initialization_failure(self, mock_rplidar_dependencies, caplog):
         """Test Zenoh initialization failure is handled."""
@@ -253,9 +247,7 @@ class TestTurtleBot4RPLidarProvider:
         mock_sample = MagicMock()
         mock_scan = MagicMock()
 
-        with patch(
-            "providers.turtlebot4_rplidar_provider.sensor_msgs.LaserScan.deserialize"
-        ) as mock_deserialize:
+        with patch("providers.turtlebot4_rplidar_provider.sensor_msgs.LaserScan.deserialize") as mock_deserialize:
             mock_deserialize.return_value = mock_scan
 
             with patch.object(provider, "_zenoh_processor") as mock_processor:

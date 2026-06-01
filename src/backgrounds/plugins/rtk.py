@@ -17,9 +17,7 @@ class RtkConfig(BackgroundConfig):
         Serial port for RTK device.
     """
 
-    serial_port: Optional[str] = Field(
-        default=None, description="Serial port for RTK device"
-    )
+    serial_port: Optional[str] = Field(default=None, description="Serial port for RTK device")
 
 
 class Rtk(Background[RtkConfig]):

@@ -131,7 +131,7 @@ def sample_transition_rules():
 def sample_system_config(sample_mode_configs, sample_transition_rules):
     """Sample system configuration for testing."""
     config = ModeSystemConfig(
-        version="v1.0.3",
+        version="v1.0.5",
         name="test_system",
         default_mode="default",
         config_name="test_config",
@@ -200,9 +200,7 @@ class TestModeManager:
         sample_system_config.default_mode = "nonexistent"
 
         with patch("runtime.manager.open_zenoh_session"):
-            with pytest.raises(
-                ValueError, match="Default mode 'nonexistent' not found"
-            ):
+            with pytest.raises(ValueError, match="Default mode 'nonexistent' not found"):
                 ModeManager(sample_system_config)
 
     def test_current_mode_config_property(self, mode_manager):
@@ -295,9 +293,7 @@ class TestModeManager:
 
     def test_check_input_triggered_transitions_emergency_priority(self, mode_manager):
         """Test that emergency mode takes priority due to higher priority value."""
-        result = mode_manager.check_input_triggered_transitions(
-            "advanced emergency help"
-        )
+        result = mode_manager.check_input_triggered_transitions("advanced emergency help")
         assert result == "emergency"
 
     def test_check_input_triggered_transitions_no_match(self, mode_manager):
@@ -318,9 +314,7 @@ class TestModeManager:
         result = mode_manager._can_transition(rule)
         assert result is True
 
-    def test_can_transition_cooldown_active(
-        self, mode_manager, sample_transition_rules
-    ):
+    def test_can_transition_cooldown_active(self, mode_manager, sample_transition_rules):
         """Test transition blocked by active cooldown."""
         rule = sample_transition_rules[0]
         transition_key = "default->advanced"
@@ -329,9 +323,7 @@ class TestModeManager:
         result = mode_manager._can_transition(rule)
         assert result is False
 
-    def test_can_transition_cooldown_expired(
-        self, mode_manager, sample_transition_rules
-    ):
+    def test_can_transition_cooldown_expired(self, mode_manager, sample_transition_rules):
         """Test transition allowed after cooldown expires."""
         rule = sample_transition_rules[0]
         transition_key = "default->advanced"
@@ -374,9 +366,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_request_transition_success(self, mode_manager):
         """Test successful manual transition request."""
-        with patch.object(
-            mode_manager, "_execute_transition", return_value=True
-        ) as mock_execute:
+        with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
             result = await mode_manager.request_transition("advanced")
             assert result is True
             mock_execute.assert_called_once_with("advanced", "manual")
@@ -394,9 +384,7 @@ class TestModeManager:
             assert mode_manager.state.current_mode == "advanced"
             assert mode_manager.state.previous_mode == "default"
             assert len(mode_manager.state.transition_history) == 1
-            assert (
-                "default->advanced:test_reason" in mode_manager.state.transition_history
-            )
+            assert "default->advanced:test_reason" in mode_manager.state.transition_history
 
             callback.assert_called_once_with("default", "advanced")
             mock_save.assert_called_once()
@@ -489,9 +477,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_time_transition(self, mode_manager):
         """Test process_tick with time-based transition."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value="advanced"
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value="advanced"):
             result = await mode_manager.process_tick("some input")
 
             assert result == ("advanced", "time_based")
@@ -499,9 +485,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_input_transition(self, mode_manager):
         """Test process_tick with input-triggered transition."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value=None
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value=None):
             with patch.object(
                 mode_manager,
                 "check_input_triggered_transitions",
@@ -514,12 +498,8 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_no_transition(self, mode_manager):
         """Test process_tick with no transitions triggered."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value=None
-        ):
-            with patch.object(
-                mode_manager, "check_input_triggered_transitions", return_value=None
-            ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value=None):
+            with patch.object(mode_manager, "check_input_triggered_transitions", return_value=None):
                 result = await mode_manager.process_tick("normal input")
 
                 assert result is None
@@ -527,9 +507,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_failed_transition(self, mode_manager):
         """Test process_tick with failed transition execution."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value="advanced"
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value="advanced"):
             result = await mode_manager.process_tick("some input")
 
             assert result == ("advanced", "time_based")
@@ -569,9 +547,7 @@ class TestModeManager:
 
     def test_load_mode_state_no_file(self, mode_manager, sample_system_config):
         """Test loading state when no state file exists."""
-        with patch.object(
-            mode_manager, "_get_state_file_path", return_value="/nonexistent/file.json5"
-        ):
+        with patch.object(mode_manager, "_get_state_file_path", return_value="/nonexistent/file.json5"):
             mode_manager._load_mode_state()
 
             assert mode_manager.state.current_mode == sample_system_config.default_mode
@@ -590,16 +566,12 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "advanced"
                 assert mode_manager.state.previous_mode == "default"
-                assert mode_manager.state.transition_history == [
-                    "default->advanced:test"
-                ]
+                assert mode_manager.state.transition_history == ["default->advanced:test"]
         finally:
             import os
 
@@ -618,9 +590,7 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "default"
@@ -636,9 +606,7 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "default"
@@ -648,9 +616,7 @@ class TestModeManager:
             os.unlink(temp_file)
 
     @pytest.mark.asyncio
-    async def test_check_context_aware_transitions_no_matching_rules(
-        self, mode_manager
-    ):
+    async def test_check_context_aware_transitions_no_matching_rules(self, mode_manager):
         """Test context-aware transitions with no matching rules."""
         mode_manager.state.user_context = {"location": "office"}
 
@@ -674,9 +640,7 @@ class TestModeManager:
         assert result == "emergency"
 
     @pytest.mark.asyncio
-    async def test_check_context_aware_transitions_multiple_conditions(
-        self, mode_manager
-    ):
+    async def test_check_context_aware_transitions_multiple_conditions(self, mode_manager):
         """Test context-aware transitions with multiple conditions."""
         mode_manager.state.user_context = {
             "user_skill": "expert",
@@ -687,9 +651,7 @@ class TestModeManager:
         assert result == "advanced"
 
     @pytest.mark.asyncio
-    async def test_check_context_aware_transitions_priority_ordering(
-        self, mode_manager
-    ):
+    async def test_check_context_aware_transitions_priority_ordering(self, mode_manager):
         """Test that higher priority context-aware transitions are selected."""
         mode_manager.state.user_context = {
             "location": "lab",
@@ -700,9 +662,7 @@ class TestModeManager:
         assert result == "emergency"
 
     @pytest.mark.asyncio
-    async def test_check_context_aware_transitions_wildcard_from_mode(
-        self, mode_manager
-    ):
+    async def test_check_context_aware_transitions_wildcard_from_mode(self, mode_manager):
         """Test context-aware transitions with wildcard from_mode."""
         mode_manager.state.current_mode = "emergency"
         mode_manager.state.user_context = {
@@ -779,83 +739,63 @@ class TestModeManager:
         """Test evaluating single condition with numeric range - value within range."""
         user_context = {"battery_level": 10}
 
-        result = mode_manager._evaluate_single_condition(
-            "battery_level", {"min": 0, "max": 15}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("battery_level", {"min": 0, "max": 15}, user_context)
         assert result is True
 
     def test_evaluate_single_condition_numeric_range_below_min(self, mode_manager):
         """Test evaluating single condition with numeric range - value below minimum."""
         user_context = {"battery_level": -5}
 
-        result = mode_manager._evaluate_single_condition(
-            "battery_level", {"min": 0, "max": 15}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("battery_level", {"min": 0, "max": 15}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_numeric_range_above_max(self, mode_manager):
         """Test evaluating single condition with numeric range - value above maximum."""
         user_context = {"battery_level": 20}
 
-        result = mode_manager._evaluate_single_condition(
-            "battery_level", {"min": 0, "max": 15}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("battery_level", {"min": 0, "max": 15}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_numeric_range_only_min(self, mode_manager):
         """Test evaluating single condition with only minimum value."""
         user_context = {"score": 85}
 
-        result = mode_manager._evaluate_single_condition(
-            "score", {"min": 80}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("score", {"min": 80}, user_context)
         assert result is True
 
     def test_evaluate_single_condition_numeric_range_only_max(self, mode_manager):
         """Test evaluating single condition with only maximum value."""
         user_context = {"temperature": 25}
 
-        result = mode_manager._evaluate_single_condition(
-            "temperature", {"max": 30}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("temperature", {"max": 30}, user_context)
         assert result is True
 
-    def test_evaluate_single_condition_numeric_range_non_numeric_value(
-        self, mode_manager
-    ):
+    def test_evaluate_single_condition_numeric_range_non_numeric_value(self, mode_manager):
         """Test evaluating numeric range condition with non-numeric value."""
         user_context = {"battery_level": "low"}
 
-        result = mode_manager._evaluate_single_condition(
-            "battery_level", {"min": 0, "max": 15}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("battery_level", {"min": 0, "max": 15}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_contains_match(self, mode_manager):
         """Test evaluating contains condition with matching string."""
         user_context = {"error_message": "CRITICAL ERROR: System failure"}
 
-        result = mode_manager._evaluate_single_condition(
-            "error_message", {"contains": "critical"}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("error_message", {"contains": "critical"}, user_context)
         assert result is True
 
     def test_evaluate_single_condition_contains_no_match(self, mode_manager):
         """Test evaluating contains condition with non-matching string."""
         user_context = {"error_message": "Minor warning: Low disk space"}
 
-        result = mode_manager._evaluate_single_condition(
-            "error_message", {"contains": "critical"}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("error_message", {"contains": "critical"}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_contains_non_string_value(self, mode_manager):
         """Test evaluating contains condition with non-string value."""
         user_context = {"error_code": 404}
 
-        result = mode_manager._evaluate_single_condition(
-            "error_code", {"contains": "404"}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("error_code", {"contains": "404"}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_one_of_match(self, mode_manager):
@@ -880,36 +820,28 @@ class TestModeManager:
         """Test evaluating not condition with matching negation."""
         user_context = {"status": "running"}
 
-        result = mode_manager._evaluate_single_condition(
-            "status", {"not": "error"}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("status", {"not": "error"}, user_context)
         assert result is True
 
     def test_evaluate_single_condition_not_no_match(self, mode_manager):
         """Test evaluating not condition with non-matching negation."""
         user_context = {"status": "error"}
 
-        result = mode_manager._evaluate_single_condition(
-            "status", {"not": "error"}, user_context
-        )
+        result = mode_manager._evaluate_single_condition("status", {"not": "error"}, user_context)
         assert result is False
 
     def test_evaluate_single_condition_list_membership_match(self, mode_manager):
         """Test evaluating list membership condition with matching value."""
         user_context = {"priority": "high"}
 
-        result = mode_manager._evaluate_single_condition(
-            "priority", ["high", "critical", "urgent"], user_context
-        )
+        result = mode_manager._evaluate_single_condition("priority", ["high", "critical", "urgent"], user_context)
         assert result is True
 
     def test_evaluate_single_condition_list_membership_no_match(self, mode_manager):
         """Test evaluating list membership condition with non-matching value."""
         user_context = {"priority": "low"}
 
-        result = mode_manager._evaluate_single_condition(
-            "priority", ["high", "critical", "urgent"], user_context
-        )
+        result = mode_manager._evaluate_single_condition("priority", ["high", "critical", "urgent"], user_context)
         assert result is False
 
     def test_evaluate_single_condition_simple_equality(self, mode_manager):
@@ -923,15 +855,11 @@ class TestModeManager:
         """Test evaluating condition when key is missing from context."""
         user_context = {"other_key": "value"}
 
-        result = mode_manager._evaluate_single_condition(
-            "missing_key", "expected_value", user_context
-        )
+        result = mode_manager._evaluate_single_condition("missing_key", "expected_value", user_context)
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_check_context_aware_transitions_complex_conditions(
-        self, mode_manager
-    ):
+    async def test_check_context_aware_transitions_complex_conditions(self, mode_manager):
         """Test context-aware transitions with complex multi-condition rule."""
         mode_manager.state.user_context = {
             "user_skill": "expert",
@@ -960,9 +888,7 @@ class TestModeManager:
         """Test process_tick with context-aware transition."""
         mode_manager.state.user_context = {"location": "lab"}
 
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value=None
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value=None):
             result = await mode_manager.process_tick("some input")
             assert result == ("advanced", "context_aware")
 
@@ -971,9 +897,7 @@ class TestModeManager:
         """Test that time-based transitions take precedence over context-aware."""
         mode_manager.state.user_context = {"location": "lab"}
 
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value="emergency"
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value="emergency"):
             result = await mode_manager.process_tick("advanced mode")
             assert result == ("emergency", "time_based")
 
@@ -988,9 +912,7 @@ class TestModeManager:
             nonlocal transition_count
             if delay:
                 await asyncio.sleep(delay)
-            result = await mode_manager._execute_transition(
-                target_mode, "concurrent_test"
-            )
+            result = await mode_manager._execute_transition(target_mode, "concurrent_test")
             transition_results.append((target_mode, result))
             if result and mode_manager.state.current_mode == target_mode:
                 transition_count += 1
@@ -1005,9 +927,7 @@ class TestModeManager:
         assert mode_manager._is_transitioning is False
 
     @pytest.mark.asyncio
-    async def test_transition_lock_prevents_concurrent_flag_modification(
-        self, mode_manager
-    ):
+    async def test_transition_lock_prevents_concurrent_flag_modification(self, mode_manager):
         """Test that transition lock prevents concurrent modification of _is_transitioning flag."""
         mode_manager._is_transitioning = False
 
@@ -1024,9 +944,7 @@ class TestModeManager:
     async def test_transition_flag_reset_on_exception(self, mode_manager):
         """Test that _is_transitioning flag is reset even when transition fails."""
         mode_manager.config.modes["broken"] = Mock()
-        mode_manager.config.modes["broken"].execute_lifecycle_hooks = AsyncMock(
-            side_effect=Exception("Hook failure")
-        )
+        mode_manager.config.modes["broken"].execute_lifecycle_hooks = AsyncMock(side_effect=Exception("Hook failure"))
 
         result = await mode_manager._execute_transition("broken", "test")
 
@@ -1071,36 +989,26 @@ class TestModeManager:
         """Test _check_and_apply_context_transition when no transition is triggered."""
         mode_manager.state.user_context = {"location": "office"}
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value=None
-        ) as mock_check:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value=None) as mock_check:
             await mode_manager._check_and_apply_context_transition()
 
             mock_check.assert_called_once()
             assert mode_manager.state.current_mode == "default"
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_with_transition(
-        self, mode_manager
-    ):
+    async def test_check_and_apply_context_transition_with_transition(self, mode_manager):
         """Test _check_and_apply_context_transition successfully triggers transition."""
         mode_manager.state.user_context = {"location": "lab"}
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="advanced"
-        ) as mock_check:
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="advanced") as mock_check:
+            with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
                 await mode_manager._check_and_apply_context_transition()
 
                 mock_check.assert_called_once()
                 mock_execute.assert_called_once_with("advanced", "context_aware")
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_exception_in_check(
-        self, mode_manager
-    ):
+    async def test_check_and_apply_context_transition_exception_in_check(self, mode_manager):
         """Test _check_and_apply_context_transition handles exceptions gracefully."""
         mode_manager.state.user_context = {"location": "lab"}
 
@@ -1114,15 +1022,11 @@ class TestModeManager:
             assert mode_manager.state.current_mode == "default"
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_exception_in_execute(
-        self, mode_manager
-    ):
+    async def test_check_and_apply_context_transition_exception_in_execute(self, mode_manager):
         """Test _check_and_apply_context_transition handles transition execution errors."""
         mode_manager.state.user_context = {"battery_level": 10}
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="emergency"
-        ):
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="emergency"):
             with patch.object(
                 mode_manager,
                 "_execute_transition",
@@ -1138,12 +1042,8 @@ class TestModeManager:
             "battery_level": 10,
         }
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="emergency"
-        ) as mock_check:
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="emergency") as mock_check:
+            with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
                 await mode_manager._check_and_apply_context_transition()
 
                 mock_check.assert_called_once()
@@ -1158,38 +1058,28 @@ class TestModeManager:
             "complexity_level": "high",
         }
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="advanced"
-        ) as mock_check:
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="advanced") as mock_check:
+            with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
                 await mode_manager._check_and_apply_context_transition()
 
                 mock_check.assert_called_once()
                 mock_execute.assert_called_once_with("advanced", "context_aware")
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_cooldown_respected(
-        self, mode_manager
-    ):
+    async def test_check_and_apply_context_transition_cooldown_respected(self, mode_manager):
         """Test that _check_and_apply_context_transition respects cooldown periods."""
         mode_manager.state.user_context = {"location": "lab"}
         mode_manager.config.transition_rules[4].cooldown_seconds = 5.0
         mode_manager.transition_cooldowns["default->advanced"] = time.time()
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value=None
-        ) as mock_check:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value=None) as mock_check:
             await mode_manager._check_and_apply_context_transition()
 
             mock_check.assert_called_once()
             assert mode_manager.state.current_mode == "default"
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_multiple_conditions(
-        self, mode_manager
-    ):
+    async def test_check_and_apply_context_transition_multiple_conditions(self, mode_manager):
         """Test _check_and_apply_context_transition with complex multi-condition rules."""
         mode_manager.state.user_context = {
             "user_skill": "expert",
@@ -1197,45 +1087,31 @@ class TestModeManager:
             "location": "lab",
         }
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="advanced"
-        ) as mock_check:
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="advanced") as mock_check:
+            with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
                 await mode_manager._check_and_apply_context_transition()
 
                 mock_check.assert_called_once()
                 mock_execute.assert_called_once_with("advanced", "context_aware")
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_logs_info_on_transition(
-        self, mode_manager, caplog
-    ):
+    async def test_check_and_apply_context_transition_logs_info_on_transition(self, mode_manager, caplog):
         """Test that _check_and_apply_context_transition logs info when transition occurs."""
         mode_manager.state.user_context = {"location": "lab"}
 
-        with patch.object(
-            mode_manager, "check_context_aware_transitions", return_value="advanced"
-        ):
+        with patch.object(mode_manager, "check_context_aware_transitions", return_value="advanced"):
             with patch.object(mode_manager, "_execute_transition", return_value=True):
                 with caplog.at_level(logging.INFO):
                     await mode_manager._check_and_apply_context_transition()
 
                     assert any(
-                        "Context-aware transition triggered by context update"
-                        in record.message
+                        "Context-aware transition triggered by context update" in record.message
                         for record in caplog.records
                     )
-                    assert any(
-                        "default -> advanced" in record.message
-                        for record in caplog.records
-                    )
+                    assert any("default -> advanced" in record.message for record in caplog.records)
 
     @pytest.mark.asyncio
-    async def test_check_and_apply_context_transition_logs_error_on_exception(
-        self, mode_manager, caplog
-    ):
+    async def test_check_and_apply_context_transition_logs_error_on_exception(self, mode_manager, caplog):
         """Test that _check_and_apply_context_transition logs errors on exceptions."""
         with patch.object(
             mode_manager,
@@ -1245,10 +1121,7 @@ class TestModeManager:
             with caplog.at_level(logging.ERROR):
                 await mode_manager._check_and_apply_context_transition()
 
-                assert any(
-                    "Error checking context-aware transitions" in record.message
-                    for record in caplog.records
-                )
+                assert any("Error checking context-aware transitions" in record.message for record in caplog.records)
                 assert any("Test error" in record.message for record in caplog.records)
 
     def test_zenoh_context_update_valid_context(self, mode_manager):
@@ -1293,10 +1166,7 @@ class TestModeManager:
         with caplog.at_level(logging.ERROR):
             mode_manager._zenoh_context_update(mock_sample)
 
-            assert any(
-                "Error processing context update" in record.message
-                for record in caplog.records
-            )
+            assert any("Error processing context update" in record.message for record in caplog.records)
 
     def test_zenoh_context_update_non_dict_data(self, mode_manager, caplog):
         """Test _zenoh_context_update with non-dictionary data."""
@@ -1306,10 +1176,7 @@ class TestModeManager:
         with caplog.at_level(logging.WARNING):
             mode_manager._zenoh_context_update(mock_sample)
 
-            assert any(
-                "Invalid context data format" in record.message
-                for record in caplog.records
-            )
+            assert any("Invalid context data format" in record.message for record in caplog.records)
 
     def test_zenoh_context_update_no_event_loop(self, mode_manager, caplog):
         """Test _zenoh_context_update when event loop is not set."""
@@ -1324,10 +1191,7 @@ class TestModeManager:
             mode_manager._zenoh_context_update(mock_sample)
 
             assert mode_manager.state.user_context["location"] == "office"
-            assert any(
-                "Updated user context with" in record.message
-                for record in caplog.records
-            )
+            assert any("Updated user context with" in record.message for record in caplog.records)
 
     def test_zenoh_context_update_event_loop_not_running(self, mode_manager):
         """Test _zenoh_context_update when event loop is not running."""
@@ -1383,9 +1247,7 @@ class TestModeManager:
             transition_called.set()
             return True
 
-        with patch.object(
-            mode_manager, "_execute_transition", side_effect=mock_execute
-        ):
+        with patch.object(mode_manager, "_execute_transition", side_effect=mock_execute):
             mode_manager._zenoh_context_update(mock_sample)
 
             try:
@@ -1404,9 +1266,7 @@ class TestModeManager:
         with caplog.at_level(logging.DEBUG):
             mode_manager._zenoh_context_update(mock_sample)
 
-            assert any(
-                "Received context update" in record.message for record in caplog.records
-            )
+            assert any("Received context update" in record.message for record in caplog.records)
 
     def test_zenoh_context_update_logs_info_on_update(self, mode_manager, caplog):
         """Test that _zenoh_context_update logs info after updating context."""
@@ -1419,7 +1279,4 @@ class TestModeManager:
         with caplog.at_level(logging.INFO):
             mode_manager._zenoh_context_update(mock_sample)
 
-            assert any(
-                "Updated user context with" in record.message
-                for record in caplog.records
-            )
+            assert any("Updated user context with" in record.message for record in caplog.records)

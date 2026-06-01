@@ -22,9 +22,7 @@ def test_initialization():
 async def test_poll_when_localized():
     """Test _poll when robot is localized."""
     with (
-        patch(
-            "inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider") as mock_provider_class,
         patch("inputs.plugins.amcl_localization_input.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -43,9 +41,7 @@ async def test_poll_when_localized():
 
         sensor = AMCLLocalizationInput(config=SensorConfig())
 
-        with patch(
-            "inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()
-        ):
+        with patch("inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is not None
@@ -56,9 +52,7 @@ async def test_poll_when_localized():
 async def test_poll_when_not_localized():
     """Test _poll when robot is not localized."""
     with (
-        patch(
-            "inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider") as mock_provider_class,
         patch("inputs.plugins.amcl_localization_input.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -69,9 +63,7 @@ async def test_poll_when_not_localized():
 
         sensor = AMCLLocalizationInput(config=SensorConfig())
 
-        with patch(
-            "inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()
-        ):
+        with patch("inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is not None
@@ -82,9 +74,7 @@ async def test_poll_when_not_localized():
 async def test_poll_with_exception():
     """Test _poll handles exceptions gracefully."""
     with (
-        patch(
-            "inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.amcl_localization_input.UnitreeGo2AMCLProvider") as mock_provider_class,
         patch("inputs.plugins.amcl_localization_input.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -94,9 +84,7 @@ async def test_poll_with_exception():
 
         sensor = AMCLLocalizationInput(config=SensorConfig())
 
-        with patch(
-            "inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()
-        ):
+        with patch("inputs.plugins.amcl_localization_input.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is not None
@@ -112,9 +100,7 @@ async def test_raw_to_text_with_valid_input():
     ):
         sensor = AMCLLocalizationInput(config=SensorConfig())
 
-        with patch(
-            "inputs.plugins.amcl_localization_input.time.time", return_value=1234.0
-        ):
+        with patch("inputs.plugins.amcl_localization_input.time.time", return_value=1234.0):
             result = await sensor._raw_to_text("LOCALIZED: Robot position confirmed")
 
         assert result is not None

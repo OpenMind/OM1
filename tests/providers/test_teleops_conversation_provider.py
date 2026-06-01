@@ -25,9 +25,7 @@ def test_message_type_enum():
 
 def test_conversation_message_to_dict():
     """Test converting ConversationMessage to a dictionary."""
-    msg = ConversationMessage(
-        message_type=MessageType.USER, content="Hello", timestamp=1234567890.0
-    )
+    msg = ConversationMessage(message_type=MessageType.USER, content="Hello", timestamp=1234567890.0)
 
     msg_dict = msg.to_dict()
 
@@ -52,7 +50,7 @@ def test_initialization_with_api_key():
     provider = TeleopsConversationProvider(api_key="test_key")
 
     assert provider.api_key == "test_key"
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/conversation"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/conversation"
 
 
 def test_initialization_without_api_key():

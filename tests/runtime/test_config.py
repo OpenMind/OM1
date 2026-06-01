@@ -37,14 +37,6 @@ def mock_llm():
 
 
 @pytest.fixture
-def mock_simulator():
-    """Mock simulator for testing."""
-    mock = Mock()
-    mock.config = Mock()
-    return mock
-
-
-@pytest.fixture
 def mock_action():
     """Mock action for testing."""
     mock = Mock()
@@ -80,7 +72,7 @@ def sample_mode_config():
 def sample_system_config():
     """Sample system configuration for testing."""
     return ModeSystemConfig(
-        version="v1.0.3",
+        version="v1.0.5",
         name="test_system",
         default_mode="default",
         config_name="test_config",
@@ -172,13 +164,10 @@ class TestModeConfig:
         assert config.save_interactions is False
         assert len(config.agent_inputs) == 0
         assert config.cortex_llm is None
-        assert len(config.simulators) == 0
         assert len(config.agent_actions) == 0
         assert len(config.backgrounds) == 0
 
-    def test_to_runtime_config_success(
-        self, sample_mode_config, sample_system_config, mock_llm
-    ):
+    def test_to_runtime_config_success(self, sample_mode_config, sample_system_config, mock_llm):
         """Test successful conversion to RuntimeConfig."""
         sample_mode_config.cortex_llm = mock_llm
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -197,9 +186,7 @@ class TestModeConfig:
         assert runtime_config.URID == "test_urid"
         assert runtime_config.unitree_ethernet == "eth0"
 
-    def test_to_runtime_config_with_knowledge_base(
-        self, sample_mode_config, sample_system_config, mock_llm
-    ):
+    def test_to_runtime_config_with_knowledge_base(self, sample_mode_config, sample_system_config, mock_llm):
         """Test conversion to RuntimeConfig with knowledge_base configuration."""
         sample_mode_config.cortex_llm = mock_llm
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -223,14 +210,10 @@ class TestModeConfig:
             sample_mode_config.to_runtime_config(sample_system_config)
 
     @patch("runtime.config._load_mode_components")
-    def test_load_components(
-        self, mock_load_components, sample_mode_config, sample_system_config
-    ):
+    def test_load_components(self, mock_load_components, sample_mode_config, sample_system_config):
         """Test load_components calls _load_mode_components."""
         sample_mode_config.load_components(sample_system_config)
-        mock_load_components.assert_called_once_with(
-            sample_mode_config, sample_system_config
-        )
+        mock_load_components.assert_called_once_with(sample_mode_config, sample_system_config)
 
 
 class TestModeSystemConfig:
@@ -239,7 +222,7 @@ class TestModeSystemConfig:
     def test_system_config_creation(self, sample_system_config):
         """Test basic system config creation."""
         config = sample_system_config
-        assert config.version == "v1.0.3"
+        assert config.version == "v1.0.5"
         assert config.name == "test_system"
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
@@ -255,11 +238,11 @@ class TestModeSystemConfig:
     def test_system_config_defaults(self):
         """Test system config with default values."""
         config = ModeSystemConfig(
-            version="v1.0.3",
+            version="v1.0.5",
             name="minimal_system",
             default_mode="default",
         )
-        assert config.version == "v1.0.3"
+        assert config.version == "v1.0.5"
         assert config.config_name == ""
         assert config.allow_manual_switching is True
         assert config.mode_memory_enabled is True
@@ -279,7 +262,6 @@ class TestLoadModeComponents:
     """Test cases for _load_mode_components function."""
 
     @patch("runtime.config.load_input")
-    @patch("runtime.config.load_simulator")
     @patch("runtime.config.load_action")
     @patch("runtime.config.load_background")
     @patch("runtime.config.load_llm")
@@ -288,37 +270,29 @@ class TestLoadModeComponents:
         mock_load_llm,
         mock_load_background,
         mock_load_action,
-        mock_load_simulator,
         mock_load_input,
         sample_mode_config,
         sample_system_config,
         mock_sensor,
-        mock_simulator,
         mock_action,
         mock_background,
         mock_llm,
     ):
         """Test loading all component types."""
         mock_load_input.return_value = mock_sensor
-        mock_load_simulator.return_value = mock_simulator
         mock_load_action.return_value = mock_action
         mock_load_background.return_value = mock_background
         mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
-        sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
         sample_mode_config._raw_actions = [{"type": "test_action", "config": {}}]
-        sample_mode_config._raw_backgrounds = [
-            {"type": "test_background", "config": {}}
-        ]
+        sample_mode_config._raw_backgrounds = [{"type": "test_background", "config": {}}]
         sample_mode_config._raw_llm = {"type": "test_llm", "config": {}}
 
         _load_mode_components(sample_mode_config, sample_system_config)
 
         assert len(sample_mode_config.agent_inputs) == 1
         assert sample_mode_config.agent_inputs[0] == mock_sensor
-        assert len(sample_mode_config.simulators) == 1
-        assert sample_mode_config.simulators[0] == mock_simulator
         assert len(sample_mode_config.agent_actions) == 1
         assert sample_mode_config.agent_actions[0] == mock_action
         assert len(sample_mode_config.backgrounds) == 1
@@ -353,9 +327,7 @@ class TestLoadModeComponents:
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = None
 
-        with pytest.raises(
-            ValueError, match="No LLM configuration found for mode test_mode"
-        ):
+        with pytest.raises(ValueError, match="No LLM configuration found for mode test_mode"):
             _load_mode_components(sample_mode_config, sample_system_config)
 
 
@@ -375,7 +347,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_loading(self, mock_validate):
         """Test that ${ENV_VAR} patterns in config are resolved by load_env_vars."""
         config_data = {
-            "version": "v1.0.3",
+            "version": "v1.0.5",
             "default_mode": "default",
             "api_key": "${OM_API_KEY:-openmind_free}",
             "robot_ip": "${ROBOT_IP:-}",
@@ -414,10 +386,11 @@ class TestLoadModeConfig:
             os.unlink(temp_file)
 
     @patch("runtime.config.load_unitree")
-    def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
+    @patch("runtime.config.validate_config_schema")
+    def test_load_mode_config_with_unitree_ethernet(self, mock_validate, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "version": "v1.0.3",
+            "version": "v1.0.5",
             "unitree_ethernet": "eth0",
             "default_mode": "default",
             "api_key": "openmind_free",
@@ -496,7 +469,7 @@ class TestModeConfigToDict:
         result = mode_config_to_dict(sample_system_config)
 
         assert "version" in result
-        assert result["version"] == "v1.0.3"
+        assert result["version"] == "v1.0.5"
 
     def test_mode_config_to_dict_all_fields(self, sample_system_config):
         """Test that mode_config_to_dict includes all expected fields."""

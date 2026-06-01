@@ -42,9 +42,7 @@ def mock_dependencies():
 
 def test_initialization(mock_dependencies):
     """Test UnitreeG1LocationsProvider initialization."""
-    provider = UnitreeG1LocationsProvider(
-        base_url="http://localhost:5000/locations", timeout=10, refresh_interval=60
-    )
+    provider = UnitreeG1LocationsProvider(base_url="http://localhost:5000/locations", timeout=10, refresh_interval=60)
 
     assert provider.base_url == "http://localhost:5000/locations"
     assert provider.timeout == 10
@@ -168,9 +166,7 @@ def test_fetch_request_exception(mock_dependencies):
     """Test fetch with request exception."""
     provider = UnitreeG1LocationsProvider()
 
-    mock_dependencies["requests"].get.side_effect = requests.RequestException(
-        "Connection error"
-    )
+    mock_dependencies["requests"].get.side_effect = requests.RequestException("Connection error")
 
     provider._fetch()
 

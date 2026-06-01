@@ -39,9 +39,7 @@ class TestFaceRos2Connector:
         face_input = FaceInput(action=face_action)
         with patch("actions.face.connector.ros2.logging") as mock_logging:
             await connector.connect(face_input)
-            mock_logging.info.assert_called_with(
-                f"SendThisToROS2: {{'face': '{expected_face}'}}"
-            )
+            mock_logging.info.assert_called_with(f"SendThisToROS2: {{'face': '{expected_face}'}}")
 
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector):

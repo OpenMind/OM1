@@ -75,9 +75,7 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
         logging.warning("Run Agent Teleops only if you don't have a robot connected.")
         logging.warning("--------------------------------")
 
-        self.teleops_status_provider = TeleopsStatusProvider(
-            api_key=self.config.api_key
-        )
+        self.teleops_status_provider = TeleopsStatusProvider(api_key=self.config.api_key)
         logging.info("Initiated Teleops Status Provider in background")
 
     def run(self) -> None:
@@ -90,6 +88,7 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
                 {
                     "machine_name": self.config.machine_name,
                     "update_time": current_time,
+                    "om1_heartbeat": current_time,
                     "battery_status": {
                         "battery_level": self.config.battery_level,
                         "voltage": self.config.voltage,

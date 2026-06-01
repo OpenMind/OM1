@@ -187,6 +187,7 @@ def test_teleops_status_creation():
     assert status.action_status == action
     assert status.machine_name == "robot1"
     assert status.video_connected is True
+    assert status.om1_heartbeat == ""
 
 
 def test_teleops_status_to_dict():
@@ -213,6 +214,7 @@ def test_teleops_status_to_dict():
     assert result["update_time"] == "2024-01-01T00:00:00"
     assert result["machine_name"] == "robot1"
     assert result["video_connected"] is False
+    assert result["om1_heartbeat"] == ""
     assert isinstance(result["battery_status"], dict)
     assert isinstance(result["action_status"], dict)
 
@@ -240,6 +242,26 @@ def test_teleops_status_from_dict():
     assert status.video_connected is True
     assert status.battery_status.battery_level == 90.0
     assert status.action_status.action == ActionType.TELEOPS
+    assert status.om1_heartbeat == ""
+
+
+def test_teleops_status_with_heartbeat():
+    """Test TeleopsStatus creation and serialization with om1_heartbeat."""
+    status = TeleopsStatus(
+        update_time="1700000000",
+        battery_status=BatteryStatus(battery_level=0.0, temperature=0.0, voltage=0.0, timestamp=""),
+        machine_name="robot-hb",
+        om1_heartbeat="1700000000",
+    )
+
+    assert status.om1_heartbeat == "1700000000"
+
+    result = status.to_dict()
+    assert result["om1_heartbeat"] == "1700000000"
+
+    restored = TeleopsStatus.from_dict(result)
+    assert restored.om1_heartbeat == "1700000000"
+    assert restored.machine_name == "robot-hb"
 
 
 @pytest.fixture
@@ -257,7 +279,7 @@ def test_teleops_status_provider_initialization(mock_teleops_dependencies):
     provider = TeleopsStatusProvider(api_key="test_api_key_1234567890123456789")
 
     assert provider.api_key == "test_api_key_1234567890123456789"
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/status"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/status"
     assert provider.executor is not None
 
 
@@ -273,4 +295,4 @@ def test_teleops_status_provider_initialization_failure():
     provider = TeleopsStatusProvider()
 
     assert provider.api_key is None
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/status"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/status"

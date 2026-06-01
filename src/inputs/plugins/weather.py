@@ -32,9 +32,7 @@ class WeatherConfig(SensorConfig):
     api_key: str = Field(description="OpenWeatherMap API key")
     latitude: float = Field(default=40.7128, description="Location latitude")
     longitude: float = Field(default=-74.0060, description="Location longitude")
-    poll_interval: float = Field(
-        default=300.0, description="Seconds between weather updates"
-    )
+    poll_interval: float = Field(default=300.0, description="Seconds between weather updates")
     units: str = Field(default="metric", description="Temperature units")
 
 
@@ -102,9 +100,7 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
                         return data
                     else:
                         error_text = await response.text()
-                        logging.error(
-                            f"WeatherInput: API error {response.status}: {error_text}"
-                        )
+                        logging.error(f"WeatherInput: API error {response.status}: {error_text}")
                         return None
         except asyncio.TimeoutError:
             logging.error("WeatherInput: Request timed out")
@@ -220,14 +216,9 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

@@ -7,9 +7,7 @@ from actions.greeting_conversation.connector.greeting_conversation_kokoro import
     GreetingConversationConnector,
     SpeakKokoroTTSConfig,
 )
-from actions.greeting_conversation.interface import (
-    ConversationState as InterfaceConversationState,
-)
+from actions.greeting_conversation.interface import ConversationState as InterfaceConversationState
 from actions.greeting_conversation.interface import (
     GreetingConversationInput,
 )
@@ -20,18 +18,12 @@ from providers.greeting_conversation_state_provider import ConversationState
 def mock_providers():
     """Mock all external providers used by the Kokoro greeting connector."""
     with (
-        patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
-        ) as mock_tts_cls,
+        patch("actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider") as mock_tts_cls,
         patch(
             "actions.greeting_conversation.connector.base_greeting_conversation.GreetingConversationStateMachineProvider"
         ) as mock_state_cls,
-        patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider"
-        ) as mock_ctx_cls,
-        patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session"
-        ) as mock_zenoh,
+        patch("actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider") as mock_ctx_cls,
+        patch("actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session") as mock_zenoh,
     ):
         mock_tts = Mock()
         mock_state = Mock()
@@ -116,47 +108,33 @@ class TestGreetingConversationKokoroConnector:
         mock_providers["state"].start_conversation.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connect_creates_pending_message(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_creates_pending_message(self, connector, greeting_input, mock_providers):
         """Test connect creates a pending TTS message via Zenoh AudioStatus."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        mock_providers["tts"].create_pending_message.return_value = {
-            "text": "Hello! Nice to meet you."
-        }
+        mock_providers["tts"].create_pending_message.return_value = {"text": "Hello! Nice to meet you."}
         await connector.connect(greeting_input)
-        mock_providers["tts"].create_pending_message.assert_called_once_with(
-            "Hello! Nice to meet you."
-        )
+        mock_providers["tts"].create_pending_message.assert_called_once_with("Hello! Nice to meet you.")
 
     @pytest.mark.asyncio
-    async def test_connect_publishes_audio_status(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_publishes_audio_status(self, connector, greeting_input, mock_providers):
         """Test connect publishes AudioStatus via Zenoh."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        mock_providers["tts"].create_pending_message.return_value = {
-            "text": "Hello! Nice to meet you."
-        }
+        mock_providers["tts"].create_pending_message.return_value = {"text": "Hello! Nice to meet you."}
         await connector.connect(greeting_input)
         mock_providers["audio_pub"].put.assert_called_once()
         assert connector.tts_playing is True
 
     @pytest.mark.asyncio
-    async def test_connect_processes_conversation(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_processes_conversation(self, connector, greeting_input, mock_providers):
         """Test connect calls state machine process_conversation with llm_output."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        mock_providers["tts"].create_pending_message.return_value = {
-            "text": "Hello! Nice to meet you."
-        }
+        mock_providers["tts"].create_pending_message.return_value = {"text": "Hello! Nice to meet you."}
         await connector.connect(greeting_input)
         mock_providers["state"].process_conversation.assert_called_once_with(
             {
@@ -168,9 +146,7 @@ class TestGreetingConversationKokoroConnector:
         )
 
     @pytest.mark.asyncio
-    async def test_connect_finished_defers_context_update(
-        self, connector, mock_providers
-    ):
+    async def test_connect_finished_defers_context_update(self, connector, mock_providers):
         """Test connect sets pending flag instead of updating context directly."""
         finished_input = GreetingConversationInput(
             response="Goodbye!",
@@ -178,25 +154,19 @@ class TestGreetingConversationKokoroConnector:
             confidence=0.95,
             speech_clarity=0.9,
         )
-        mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED.value
-        }
+        mock_providers["state"].process_conversation.return_value = {"current_state": ConversationState.FINISHED.value}
         mock_providers["tts"].create_pending_message.return_value = {"text": "Goodbye!"}
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_not_called()
         assert connector.pending_finished_update is True
 
     @pytest.mark.asyncio
-    async def test_connect_not_finished_no_context_update(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_not_finished_no_context_update(self, connector, greeting_input, mock_providers):
         """Test connect does not update context when conversation is not finished."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        mock_providers["tts"].create_pending_message.return_value = {
-            "text": "Hello! Nice to meet you."
-        }
+        mock_providers["tts"].create_pending_message.return_value = {"text": "Hello! Nice to meet you."}
         await connector.connect(greeting_input)
         mock_providers["ctx"].update_context.assert_not_called()
 
@@ -204,9 +174,7 @@ class TestGreetingConversationKokoroConnector:
         """Test tick skips state update when TTS is still active."""
         connector.tts_playing = True
         connector.tts_playing_start_time = time.time()
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_not_called()
 
@@ -218,9 +186,7 @@ class TestGreetingConversationKokoroConnector:
             "confidence": {"overall": 0.8},
             "silence_duration": 2.0,
         }
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_called_once()
 
@@ -232,10 +198,6 @@ class TestGreetingConversationKokoroConnector:
             "confidence": {"overall": 0.9},
             "silence_duration": 5.0,
         }
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.tick()
-        mock_providers["ctx"].update_context.assert_called_once_with(
-            {"greeting_conversation_finished": True}
-        )
+        mock_providers["ctx"].update_context.assert_called_once_with({"greeting_conversation_finished": True})

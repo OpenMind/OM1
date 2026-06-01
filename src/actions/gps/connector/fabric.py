@@ -83,9 +83,7 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
                 f"{self.fabric_endpoint}",
                 json={
                     "method": "omp2p_shareStatus",
-                    "params": [
-                        {"latitude": latitude, "longitude": longitude, "yaw": yaw}
-                    ],
+                    "params": [{"latitude": latitude, "longitude": longitude, "yaw": yaw}],
                     "id": 1,
                     "jsonrpc": "2.0",
                 },
