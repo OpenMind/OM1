@@ -11,9 +11,7 @@ import (
 	"github.com/openmind/om1/internal/util"
 )
 
-// ConversationState enumerates the states of a greeting conversation. The string
-// values match the Python ConversationState enum so they interoperate over the
-// wire and with LLM outputs.
+// ConversationState enumerates the states of a greeting conversation.
 type ConversationState string
 
 const (
@@ -214,8 +212,7 @@ func (c *ConfidenceCalculator) ShouldTransitionToFinished(r ConfidenceResult, ti
 }
 
 // GreetingConversationStateMachineProvider manages greeting conversation state
-// transitions based on confidence scores. It is a Go port of the Python
-// GreetingConversationStateMachineProvider singleton.
+// transitions based on confidence scores.
 type GreetingConversationStateMachineProvider struct {
 	mu sync.Mutex
 
@@ -515,9 +512,6 @@ func (g *GreetingConversationStateMachineProvider) StartConversation() {
 
 // ResetState resets the conversation state machine to initial values. It is
 // typically called when transitioning from approaching to greeting.
-//
-// Matching the Python implementation, the machine ends in CONVERSING regardless
-// of initialState (which only sets timing/bookkeeping before being overwritten).
 func (g *GreetingConversationStateMachineProvider) ResetState(initialState ConversationState) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -539,8 +533,24 @@ func (g *GreetingConversationStateMachineProvider) CurrentState() ConversationSt
 	return g.currentState
 }
 
+// TurnCount returns the number of back-and-forth exchanges in the current
+// conversation.
+func (g *GreetingConversationStateMachineProvider) TurnCount() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.turnCount
+}
+
+// MaxTurnCount returns the maximum turn count before the conversation is forced
+// to finish.
+func (g *GreetingConversationStateMachineProvider) MaxTurnCount() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.maxTurnCount
+}
+
 // parseConversationState coerces an LLM-provided value into a ConversationState,
-// defaulting to CONVERSING on unknown values (matching the Python fallback).
+// defaulting to CONVERSING on unknown values.
 func parseConversationState(raw any, log *zap.Logger) ConversationState {
 	s, ok := raw.(string)
 	if !ok || s == "" {

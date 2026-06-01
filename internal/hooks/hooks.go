@@ -88,30 +88,12 @@ func (r *Runner) execute(ctx context.Context, h config.HookSpec, vars map[string
 		formatted := formatTemplate(msg, vars)
 		r.log.Info("lifecycle message", zap.String("message", formatted))
 
-		cfg := providers.ElevenLabsConfig{
-			APIKey:           stringVal(h.HandlerConfig, "api_key"),
-			ElevenLabsAPIKey: stringVal(h.HandlerConfig, "elevenlabs_api_key"),
-			VoiceID:          stringVal(h.HandlerConfig, "voice_id"),
-			ModelID:          stringVal(h.HandlerConfig, "model_id"),
-			OutputFormat:     stringVal(h.HandlerConfig, "output_format"),
-		}
-		if cfg.VoiceID == "" {
-			cfg.VoiceID = providers.DefaultVoiceID
-		}
-		if cfg.ModelID == "" {
-			cfg.ModelID = providers.DefaultModelID
-		}
-		if cfg.OutputFormat == "" {
-			cfg.OutputFormat = providers.DefaultOutputFormat
-		}
-		if rv, ok := h.HandlerConfig["rate"].(float64); ok && rv > 0 {
-			cfg.Rate = int(rv)
-		} else {
-			cfg.Rate = providers.DefaultRate
-		}
-
+		cfg := elevenLabsConfigFrom(h.HandlerConfig)
 		providers.ElevenLabs(cfg, r.log).AddText(formatted)
 		return nil
+
+	case "function":
+		return r.executeFunction(ctx, h, vars)
 
 	case "action":
 		r.log.Warn("lifecycle action: unimplemented handler type 'action', skipping")
@@ -120,6 +102,18 @@ func (r *Runner) execute(ctx context.Context, h config.HookSpec, vars map[string
 	default:
 		return fmt.Errorf("unknown handler type %q", h.HandlerType)
 	}
+}
+
+// executeFunction looks up and executes a registered function hook based on the module and function names in the hook's HandlerConfig.
+func (r *Runner) executeFunction(ctx context.Context, h config.HookSpec, vars map[string]any) error {
+	module := stringVal(h.HandlerConfig, "module_name")
+	fn := stringVal(h.HandlerConfig, "function")
+
+	handler, ok := lookupHook(module, fn)
+	if !ok {
+		return fmt.Errorf("unknown function hook %s.%s", module, fn)
+	}
+	return handler(r, ctx, h.HandlerConfig, vars)
 }
 
 // formatTemplate replaces {var} in the template with corresponding values from vars.
@@ -134,4 +128,31 @@ func formatTemplate(s string, vars map[string]any) string {
 func stringVal(m map[string]any, key string) string {
 	v, _ := m[key].(string)
 	return v
+}
+
+// elevenLabsConfigFrom builds an ElevenLabsConfig from a hook handler_config map,
+// applying provider defaults for any field that is missing or empty.
+func elevenLabsConfigFrom(m map[string]any) providers.ElevenLabsConfig {
+	cfg := providers.ElevenLabsConfig{
+		APIKey:           stringVal(m, "api_key"),
+		ElevenLabsAPIKey: stringVal(m, "elevenlabs_api_key"),
+		VoiceID:          stringVal(m, "voice_id"),
+		ModelID:          stringVal(m, "model_id"),
+		OutputFormat:     stringVal(m, "output_format"),
+	}
+	if cfg.VoiceID == "" {
+		cfg.VoiceID = providers.DefaultVoiceID
+	}
+	if cfg.ModelID == "" {
+		cfg.ModelID = providers.DefaultModelID
+	}
+	if cfg.OutputFormat == "" {
+		cfg.OutputFormat = providers.DefaultOutputFormat
+	}
+	if rv, ok := m["rate"].(float64); ok && rv > 0 {
+		cfg.Rate = int(rv)
+	} else {
+		cfg.Rate = providers.DefaultRate
+	}
+	return cfg
 }

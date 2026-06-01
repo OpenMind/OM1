@@ -8,10 +8,7 @@ var (
 	timeWithMinutes = regexp.MustCompile(`\b(\d{1,2}):(\d{2})\b`)
 )
 
-// ttsCorrections expands abbreviations for cleaner TTS output. It mirrors the
-// Python _TTS_CORRECTIONS table. Go's regexp engine (RE2) does not support
-// lookahead, so the directional rules capture the following token and reinsert
-// it via ${1} instead of using a zero-width lookahead.
+// ttsCorrections expands abbreviations for cleaner TTS output.
 var ttsCorrections = []struct {
 	re   *regexp.Regexp
 	repl string

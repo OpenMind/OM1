@@ -19,9 +19,6 @@ import (
 //	[..] status           int8
 //	[..] padding to 4-byte data boundary (before message uint32 length)
 //	[..] message          length uint32 + bytes+NUL (last field, no padding)
-//
-// The header frame_id mirrors the Python prepare_header(request_id) call, which
-// sets frame_id to the request UUID.
 func serializePersonGreetingStatus(requestID string, status byte, message string) []byte {
 	now := time.Now()
 
