@@ -4,6 +4,8 @@ import time
 from typing import Optional
 
 import aiohttp
+from eth_abi import decode as abi_decode
+from eth_abi.exceptions import DecodingError
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -101,20 +103,17 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         try:
             response_bytes = bytes.fromhex(hex_response)
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
-
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
+            # Decode the ABI-encoded response as a single dynamic string.
+            # Using eth_abi (from web3) instead of manual offset/length
+            # parsing avoids silent failures when the ABI layout shifts.
+            (decoded_string,) = abi_decode(["string"], response_bytes)
 
             # Remove unexpected control characters (like \x19)
             cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
 
             return cleaned_string
 
-        except Exception as e:
+        except (DecodingError, ValueError, UnicodeDecodeError) as e:
             logging.error(f"Decoding error: {e}")
             return None
 
