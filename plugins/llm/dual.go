@@ -28,7 +28,7 @@ func init() {
 }
 
 const (
-	dualTimeout = 3200 * time.Millisecond
+	dualTimeout     = 3200 * time.Millisecond
 	dualEvalTimeout = 2 * time.Second
 
 	dualEvalBaseURL = "http://127.0.0.1:8860/v1"

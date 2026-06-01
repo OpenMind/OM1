@@ -170,7 +170,7 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 	if err != nil {
 		return PresenceSnapshot{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return PresenceSnapshot{}, fmt.Errorf("face presence: /who returned status %d", resp.StatusCode)
