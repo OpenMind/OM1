@@ -51,7 +51,7 @@ class CorrectIdentity(Interface[CorrectIdentityInput, CorrectIdentityInput]):
       - User does NOT mention a third party
 
     If those conditions don't hold, prefer selfie(force=True) for
-    look-alikes or forget_last() for wrong-person captures.
+    look likes or forget_last() for wrong-person captures.
     """
 
     input: CorrectIdentityInput
