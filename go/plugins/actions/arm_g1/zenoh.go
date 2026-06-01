@@ -54,12 +54,7 @@ type zenohConnector struct {
 func NewArmG1ZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get()
 
-	var endpoint string
-	if ep, ok := cfg["zenoh_endpoint"].(string); ok {
-		endpoint = ep
-	}
-
-	sess, err := zenohsession.Open(endpoint)
+	sess, err := zenohsession.Open()
 	if err != nil {
 		log.Warn("arm_g1/zenoh: zenoh unavailable, arm gestures disabled", zap.Error(err))
 		return &zenohConnector{log: log}, nil

@@ -38,16 +38,16 @@ var (
 )
 
 // Avatar returns the singleton AvatarProvider.
-func Avatar(endpoint string) *AvatarProvider {
-	avatarOnce.Do(func() { avatarInstance = NewAvatarProvider(endpoint) })
+func Avatar() *AvatarProvider {
+	avatarOnce.Do(func() { avatarInstance = NewAvatarProvider() })
 	return avatarInstance
 }
 
 // NewAvatarProvider initializes the AvatarProvider by setting up a zenoh session, publishers, and subscriber.
-func NewAvatarProvider(endpoint string) *AvatarProvider {
+func NewAvatarProvider() *AvatarProvider {
 	p := &AvatarProvider{log: logger.Get()}
 
-	sess, err := zenohsession.Open(endpoint)
+	sess, err := zenohsession.Open()
 	if err != nil {
 		p.log.Warn("avatar: zenoh unavailable, avatar disabled", zap.Error(err))
 		return p

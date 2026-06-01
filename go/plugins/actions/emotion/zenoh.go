@@ -46,16 +46,9 @@ type zenohConnector struct {
 
 // NewZenohConnector creates a new zenohConnector with the provided configuration.
 func NewEmotionZenohConnector(cfg map[string]any) (actions.Connector, error) {
-	log := logger.Get()
-
-	var endpoint string
-	if ep, ok := cfg["zenoh_endpoint"].(string); ok {
-		endpoint = ep
-	}
-
 	return &zenohConnector{
-		log:      log,
-		provider: providers.Avatar(endpoint),
+		log:      logger.Get(),
+		provider: providers.Avatar(),
 	}, nil
 }
 

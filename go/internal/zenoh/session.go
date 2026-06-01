@@ -4,7 +4,12 @@ import (
 	"fmt"
 
 	"github.com/eclipse-zenoh/zenoh-go/zenoh"
+	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/logger"
 )
+
+const defaultEndpoint = "tcp/127.0.0.1:7447"
 
 type Session struct {
 	session zenoh.Session
@@ -18,27 +23,78 @@ type Subscriber struct {
 	subscriber zenoh.Subscriber
 }
 
-// Open creates a new zenoh session. Optionally accepts a custom endpoint.
-func Open(endpoint ...string) (*Session, error) {
-	config := zenoh.NewConfigDefault()
+// Options configures how a zenoh Session is opened.
+type Options struct {
+	Endpoint string
 
-	ep := "tcp/127.0.0.1:7447"
-	if len(endpoint) > 0 && endpoint[0] != "" {
+	// LocalNetwork indicates whether to prefer local-network discovery when opening a session.
+	LocalNetwork bool
+}
+
+// Open creates a new zenoh Session with the given endpoint.
+func Open(endpoint ...string) (*Session, error) {
+	ep := ""
+	if len(endpoint) > 0 {
 		ep = endpoint[0]
 	}
+
+	return OpenWithOptions(Options{Endpoint: ep, LocalNetwork: true})
+}
+
+// OpenWithOptions creates a new zenoh session with the given options.
+func OpenWithOptions(opts Options) (*Session, error) {
+	endpoint := opts.Endpoint
+	if endpoint == "" {
+		endpoint = defaultEndpoint
+	}
+
+	if opts.LocalNetwork {
+		session, err := openDiscovery()
+		if err == nil {
+			return session, nil
+		}
+		logger.Get().Warn("zenoh: local-network discovery failed, falling back to client connect",
+			zap.String("endpoint", endpoint), zap.Error(err))
+		return openClient(endpoint)
+	}
+
+	session, err := openClient(endpoint)
+	if err == nil {
+		return session, nil
+	}
+	logger.Get().Warn("zenoh: client connect failed, falling back to local-network discovery",
+		zap.String("endpoint", endpoint), zap.Error(err))
+	return openDiscovery()
+}
+
+// openClient opens a session in client mode connecting to a single router endpoint.
+func openClient(endpoint string) (*Session, error) {
+	config := zenoh.NewConfigDefault()
 
 	if err := config.InsertJson5(zenoh.ConfigModeKey, `"client"`); err != nil {
 		return nil, fmt.Errorf("zenoh config mode: %w", err)
 	}
-	if err := config.InsertJson5(zenoh.ConfigConnectKey, fmt.Sprintf(`["%s"]`, ep)); err != nil {
+	if err := config.InsertJson5(zenoh.ConfigConnectKey, fmt.Sprintf(`["%s"]`, endpoint)); err != nil {
 		return nil, fmt.Errorf("zenoh config endpoint: %w", err)
 	}
 
 	session, err := zenoh.Open(config, nil)
 	if err != nil {
-		return nil, fmt.Errorf("zenoh open: %w", err)
+		return nil, fmt.Errorf("zenoh open (client): %w", err)
 	}
 
+	return &Session{session: session}, nil
+}
+
+// openDiscovery opens a session using zenoh's default configuration, which
+// enables multicast/gossip scouting on the local network.
+func openDiscovery() (*Session, error) {
+	session, err := zenoh.Open(zenoh.NewConfigDefault(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("zenoh open (discovery): %w", err)
+	}
+
+	logger.Get().Info("zenoh: session opened with local-network discovery")
 	return &Session{session: session}, nil
 }
 

@@ -72,7 +72,6 @@ type Config struct {
 	ModelID          string `json:"model_id"`
 	OutputFormat     string `json:"output_format"`
 	Rate             int    `json:"rate"`
-	ZenohEndpoint    string `json:"zenoh_endpoint"`
 }
 
 // Connector manages a greeting conversation using ElevenLabs TTS. It is a Go
@@ -134,7 +133,7 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 		greetingStatus: providers.StateConversing,
 	}
 
-	if sess, err := zenoh.Open(cfg.ZenohEndpoint); err != nil {
+	if sess, err := zenoh.Open(); err != nil {
 		log.Warn("greeting_conversation: Zenoh unavailable, status/context updates disabled", zap.Error(err))
 	} else {
 		c.session = sess

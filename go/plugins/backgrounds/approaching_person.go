@@ -14,6 +14,7 @@ import (
 	bg "github.com/openmind/om1/internal/backgrounds"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/util"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -47,17 +48,12 @@ type ApproachingPerson struct {
 
 // NewApproachingPerson constructs the ApproachingPerson background task and
 // subscribes to the person-greeting topic.
-func NewApproachingPerson(cfg map[string]any) (bg.Background, error) {
+func NewApproachingPerson(configMap map[string]any) (bg.Background, error) {
 	log := logger.Get()
-
-	var endpoint string
-	if ep, ok := cfg["zenoh_endpoint"].(string); ok {
-		endpoint = ep
-	}
 
 	a := &ApproachingPerson{log: log, greeting: providers.Greeting()}
 
-	sess, err := zenohsession.Open(endpoint)
+	sess, err := zenohsession.Open()
 	if err != nil {
 		log.Error("ApproachingPerson: zenoh unavailable", zap.Error(err))
 		return a, nil
@@ -130,13 +126,13 @@ func (a *ApproachingPerson) Run(ctx context.Context) {
 
 	if approached {
 		a.log.Debug("Skipping SWITCH status - person already approached.")
-		a.sleep(ctx, approachingPollInterval)
+		util.Sleep(ctx, approachingPollInterval)
 		return
 	}
 
 	if a.session == nil {
 		a.log.Warn("No Zenoh session available in ApproachingPerson.")
-		a.sleep(ctx, approachingPollInterval)
+		util.Sleep(ctx, approachingPollInterval)
 		return
 	}
 
@@ -146,17 +142,7 @@ func (a *ApproachingPerson) Run(ctx context.Context) {
 		a.log.Error("ApproachingPerson: failed to publish SWITCH status", zap.Error(err))
 	}
 
-	a.sleep(ctx, approachingPollInterval)
-}
-
-// sleep waits for d or until the context is cancelled, whichever comes first.
-func (a *ApproachingPerson) sleep(ctx context.Context, d time.Duration) {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-	case <-timer.C:
-	}
+	util.Sleep(ctx, approachingPollInterval)
 }
 
 // Stop releases the zenoh subscriber and session.

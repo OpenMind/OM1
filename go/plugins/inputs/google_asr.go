@@ -53,7 +53,6 @@ type GoogleASRConfig struct {
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
-	ZenohEndpoint        string   `json:"zenoh_endpoint"` // optional, default "tcp/127.0.0.1:7447"
 }
 
 type ASRMessage struct {
@@ -177,7 +176,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 
 	s.wsClient = ws.New(ws.Config{URL: wsURL, Reconnect: true}, log, s.onWSMessage)
 
-	sess, err := zenohsession.Open(cfg.ZenohEndpoint)
+	sess, err := zenohsession.Open()
 	if err != nil {
 		log.Warn("GoogleASRInput: zenoh unavailable, ASR broadcast disabled", zap.Error(err))
 	} else {
