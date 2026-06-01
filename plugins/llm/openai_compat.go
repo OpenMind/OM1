@@ -1,0 +1,118 @@
+package llm
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/openmind/om1/internal/httpclient"
+	"github.com/openmind/om1/internal/llm"
+)
+
+// compatConfig holds the configuration shared by every OpenAI-compatible provider.
+type compatConfig struct {
+	APIKey     string `json:"api_key"`
+	Model      string `json:"model"`
+	BaseURL    string `json:"base_url"`
+	AgentName  string `json:"agent_name"`
+	HistoryLen int    `json:"history_length"`
+}
+
+// openAICompatLLM is a generic client for any provider that speaks the OpenAI
+// chat-completions API (Gemini, OpenAI, DeepSeek, xAI, OpenRouter, NearAI, ...).
+// Providers differ only in their defaults (model, base URL) and tool_choice,
+// so they each construct one of these via newOpenAICompat rather than
+// reimplementing the request/response plumbing.
+type openAICompatLLM struct {
+	provider   string // used for log lines and error messages, e.g. "GeminiLLM"
+	config     compatConfig
+	toolChoice string // "auto" or "required"; only sent when schemas are present
+	extraBody  map[string]any
+	schemas    []map[string]any
+}
+
+// newOpenAICompat builds an OpenAI-compatible provider, applying the provider's
+// default model and base URL when the caller's config leaves them blank.
+func newOpenAICompat(provider string, configMap map[string]any, defaultModel, defaultBaseURL, toolChoice string, requireAPIKey bool) (*openAICompatLLM, error) {
+	var cfg compatConfig
+	if err := remarshal(configMap, &cfg); err != nil {
+		return nil, fmt.Errorf("%s config: %w", provider, err)
+	}
+	if requireAPIKey && cfg.APIKey == "" {
+		return nil, fmt.Errorf("%s: api_key is required", provider)
+	}
+	if cfg.Model == "" {
+		cfg.Model = defaultModel
+	}
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = defaultBaseURL
+	}
+	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice}, nil
+}
+
+// FunctionSchemas returns the current function schemas registered with the LLM.
+func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas }
+
+// SetSchemas updates the function schemas that the LLM will use for tool calls.
+func (c *openAICompatLLM) SetSchemas(schemas []map[string]any) { c.schemas = schemas }
+
+// Call sends a prompt and conversation history to the provider and returns the response.
+func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
+	requestBody := map[string]any{
+		"model":    c.config.Model,
+		"messages": buildMessages(prompt, history),
+	}
+
+	if len(c.schemas) > 0 {
+		requestBody["tools"] = c.schemas
+		requestBody["tool_choice"] = c.toolChoice
+	}
+
+	for k, v := range c.extraBody {
+		requestBody[k] = v
+	}
+
+	body, err := c.doRequest(ctx, requestBody)
+	if err != nil {
+		return nil, err
+	}
+	return parseOpenAIResponse(body)
+}
+
+// doRequest marshals the request body, posts it to the provider's
+// chat-completions endpoint, logs latency, and returns the raw response body.
+// It is shared by Call and by providers that need custom response parsing.
+func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]any) ([]byte, error) {
+	requestBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("%s: marshal request: %w", c.provider, err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		c.config.BaseURL+"/chat/completions", bytes.NewReader(requestBytes))
+	if err != nil {
+		return nil, fmt.Errorf("%s: build request: %w", c.provider, err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.config.APIKey)
+
+	start := time.Now()
+	resp, err := httpclient.Default().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%s: http: %w", c.provider, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	logResponseLatency(c.provider, req, resp, start)
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: api %d: %s", c.provider, resp.StatusCode, body)
+	}
+	return body, nil
+}

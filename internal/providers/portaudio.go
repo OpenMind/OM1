@@ -47,6 +47,6 @@ func (p *PortAudioRef) Release() {
 	}
 	p.refCount--
 	if p.refCount == 0 {
-		portaudio.Terminate()
+		_ = portaudio.Terminate()
 	}
 }
