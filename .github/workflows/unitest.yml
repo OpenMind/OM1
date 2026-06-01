@@ -16,8 +16,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install PortAudio
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config libfaiss-dev
 
       - name: Set up Go
         uses: actions/setup-go@v5
