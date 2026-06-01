@@ -44,6 +44,11 @@
       ],
       action_execution_mode: "concurrent",
       agent_actions: [],
+      backgrounds: [
+        {
+          type: "ApproachingPerson",
+        },
+      ],
       lifecycle_hooks: [],
     },
     conversation: {
@@ -142,33 +147,18 @@ You should prioritize safe, comfortable, and positive human interaction.",
   transition_rules: [
     {
       from_mode: "approaching",
-      to_mode: "greeting",
+      to_mode: "conversation",
       transition_type: "context_aware",
       context_conditions: { approaching_detected: true },
       priority: 0,
       cooldown_seconds: 5.0,
     },
     {
-      from_mode: "greeting",
+      from_mode: "conversation",
       to_mode: "approaching",
       transition_type: "context_aware",
       context_conditions: { greeting_conversation_finished: true },
       priority: 0,
-      cooldown_seconds: 5.0,
-    },
-    {
-      from_mode: "greeting",
-      to_mode: "conversation",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "switch to conversation",
-        "switch to the conversation",
-        "switch to a conversation",
-        "to conversation",
-        "to the conversation",
-        "to a conversation",
-      ],
-      priority: 1,
       cooldown_seconds: 5.0,
     },
     {

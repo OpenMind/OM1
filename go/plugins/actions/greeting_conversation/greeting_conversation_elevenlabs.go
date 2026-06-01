@@ -20,9 +20,6 @@ import (
 const (
 	// personGreetingTopic carries countdown / conversation status updates.
 	personGreetingTopic = "om/person_greeting"
-	// contextUpdateTopic carries user-context updates that drive context-aware
-	// mode transitions (the ModeManager subscribes here).
-	contextUpdateTopic = "om/mode/context"
 
 	// statusConversation is PersonGreetingStatus.STATUS.CONVERSATION.
 	statusConversation = byte(3)
@@ -331,21 +328,9 @@ func (c *Connector) publishCountdown(state providers.ConversationState) {
 }
 
 // updateContextFinished publishes greeting_conversation_finished=true so the
-// ModeManager can fire its context-aware transition out of greeting mode.
+// ModeManager can fire its context-aware transition out of the conversation mode.
 func (c *Connector) updateContextFinished() {
-	c.mu.Lock()
-	sess := c.session
-	c.mu.Unlock()
-	if sess == nil {
-		c.log.Warn("greeting_conversation: no Zenoh session, cannot update context")
-		return
-	}
-
-	payload, _ := json.Marshal(map[string]any{"greeting_conversation_finished": true})
-	if err := sess.Put(contextUpdateTopic, payload); err != nil {
-		c.log.Error("greeting_conversation: failed to publish context update", zap.Error(err))
-		return
-	}
+	providers.ModeContext().Publish(map[string]any{"greeting_conversation_finished": true})
 	c.log.Info("greeting_conversation: context greeting_conversation_finished=true")
 }
 

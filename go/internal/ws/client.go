@@ -228,7 +228,6 @@ func (c *Client) reconnect() {
 	}
 	c.connMu.Unlock()
 
-	c.log.Info("ws: reconnecting...")
 	for {
 		if c.ctx.Err() != nil {
 			return

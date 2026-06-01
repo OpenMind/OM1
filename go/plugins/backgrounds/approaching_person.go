@@ -3,7 +3,6 @@ package backgrounds
 import (
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -20,7 +19,6 @@ import (
 
 const (
 	personGreetingTopic = "om/person_greeting"
-	contextUpdateTopic  = "om/mode/context"
 
 	personStatusApproaching  = int8(0)
 	personStatusApproached   = int8(1)
@@ -73,8 +71,6 @@ func NewApproachingPerson(configMap map[string]any) (bg.Background, error) {
 
 // onPersonGreeting is called when a message is received on the person-greeting topic.
 func (a *ApproachingPerson) onPersonGreeting(data []byte) {
-	a.log.Debug("Person greeting detected via Zenoh message.")
-
 	status, err := deserializePersonGreetingStatus(data)
 	if err != nil {
 		a.log.Error("ApproachingPerson: failed to deserialize status", zap.Error(err))
@@ -91,30 +87,9 @@ func (a *ApproachingPerson) onPersonGreeting(data []byte) {
 	a.log.Info("Person is approaching. Triggering greeting mode.")
 	a.isPersonApproached = true
 
-	a.updateContext(map[string]any{"approaching_detected": true})
+	providers.ModeContext().Publish(map[string]any{"approaching_detected": true})
 
 	a.greeting.ResetState(providers.StateEngaging)
-}
-
-// updateContext publishes the given key/value pairs as a JSON-encoded map on the
-// context update topic, so they can be merged into the mode context for context-aware transitions.
-func (a *ApproachingPerson) updateContext(ctx map[string]any) {
-	if a.session == nil {
-		a.log.Warn("ApproachingPerson: no session, cannot update context")
-		return
-	}
-
-	payload, err := json.Marshal(ctx)
-	if err != nil {
-		a.log.Error("ApproachingPerson: failed to marshal context", zap.Error(err))
-		return
-	}
-
-	if err := a.session.Put(contextUpdateTopic, payload); err != nil {
-		a.log.Error("ApproachingPerson: failed to publish context update", zap.Error(err))
-		return
-	}
-	a.log.Debug("ApproachingPerson: sent context update", zap.ByteString("context", payload))
 }
 
 // Run performs one iteration of the task: it emits a SWITCH status unless a

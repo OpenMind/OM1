@@ -335,8 +335,26 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 			}
 			ticker.Reset(tickInterval)
 			rt.tick(ctx, current, time.Now())
+		case update := <-providers.ModeContext().Updates():
+			rt.manager.UpdateUserContext(update)
+			rt.scheduleTransition(rt.manager.CheckTransitions(ctx, current.inputOrchestrator.Buffers()))
 		}
 	}
+}
+
+// scheduleTransition queues a mode change when toMode is non-empty, dropping the
+// request if one is already pending. It reports whether a transition was
+// scheduled, so callers can skip further work for the departing mode.
+func (rt *Runtime) scheduleTransition(toMode string) bool {
+	if toMode == "" {
+		return false
+	}
+	select {
+	case rt.modeTransitionCh <- toMode:
+		rt.log.Info("mode transition scheduled", zap.String("to", toMode))
+	default:
+	}
+	return true
 }
 
 // tick executes a single cortex cycle: checks for mode transitions, fuses a
@@ -358,13 +376,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	rt.ioProvider.IncrementTick()
 	sensorBuffers := current.inputOrchestrator.Buffers()
 
-	nextMode := rt.manager.CheckTransitions(ctx, sensorBuffers)
-	if nextMode != "" {
-		select {
-		case rt.modeTransitionCh <- nextMode:
-			rt.log.Info("mode transition scheduled", zap.String("to", nextMode))
-		default:
-		}
+	if rt.scheduleTransition(rt.manager.CheckTransitions(ctx, sensorBuffers)) {
 		return
 	}
 

@@ -16,11 +16,7 @@ import (
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/hooks"
 	"github.com/openmind/om1/internal/util"
-	"github.com/openmind/om1/internal/zenoh"
 )
-
-// contextUpdateTopic is the Zenoh topic on which user context updates are published for context-aware transitions.
-const contextUpdateTopic = "om/mode/context"
 
 // ModeState represents the current state of the system's mode.
 type ModeState struct {
@@ -42,8 +38,6 @@ type ModeManager struct {
 
 	// userContext holds contextual information used to evaluate context-aware transitions.
 	userContext map[string]any
-	zenohSess   *zenoh.Session
-	contextSub  *zenoh.Subscriber
 }
 
 // NewModeManager creates a new ModeManager with the given system configuration and logger.
@@ -63,50 +57,11 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 	if systemConfig.ModeMemoryEnabled {
 		manager.load()
 	}
-	manager.subscribeContextUpdates()
 	return manager
 }
 
-// subscribeContextUpdates opens a best-effort Zenoh subscriber on the "om/mode/context" topic.
-func (m *ModeManager) subscribeContextUpdates() {
-	sess, err := zenoh.Open()
-	if err != nil {
-		m.log.Warn("mode manager: Zenoh unavailable, context-aware transitions disabled", zap.Error(err))
-		return
-	}
-
-	sub, err := sess.DeclareSubscriber(contextUpdateTopic, func(data []byte) {
-		var update map[string]any
-		if err := json.Unmarshal(data, &update); err != nil {
-			m.log.Warn("mode manager: invalid context update payload", zap.Error(err))
-			return
-		}
-		m.UpdateUserContext(update)
-		m.log.Debug("mode manager: user context updated", zap.Any("context", update))
-	})
-	if err != nil {
-		m.log.Warn("mode manager: failed to subscribe to context updates", zap.Error(err))
-		sess.Close()
-		return
-	}
-
-	m.zenohSess = sess
-	m.contextSub = sub
-	m.log.Info("mode manager: subscribed to context updates", zap.String("topic", contextUpdateTopic))
-}
-
-// Close releases the Zenoh resources held by the manager.
-func (m *ModeManager) Close() {
-	if m.contextSub != nil {
-		m.contextSub.Drop()
-		m.contextSub = nil
-	}
-
-	if m.zenohSess != nil {
-		m.zenohSess.Close()
-		m.zenohSess = nil
-	}
-}
+// Close releases resources held by the manager.
+func (m *ModeManager) Close() {}
 
 // UpdateUserContext merges the given key/value pairs into the user context used
 // for context-aware transitions.
