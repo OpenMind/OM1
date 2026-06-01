@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/httpclient"
+	"github.com/openmind/om1/internal/metrics"
 )
 
 const (
@@ -156,6 +157,7 @@ func (p *ElevenLabsProvider) synthesize(text string) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", p.cfg.APIKey)
 
+	start := time.Now()
 	resp, err := httpclient.Default().Do(req)
 	if err != nil {
 		return fmt.Errorf("http: %w", err)
@@ -168,9 +170,16 @@ func (p *ElevenLabsProvider) synthesize(text string) error {
 	}
 
 	buf := make([]byte, 1024)
+	firstChunk := true
 	for {
 		n, rerr := resp.Body.Read(buf)
 		if n > 0 {
+			if firstChunk {
+				firstChunk = false
+				latency := time.Since(start).Seconds()
+				metrics.TTSLatency.WithLabelValues(p.cfg.ModelID, ElevenLabsTTSURL).Observe(latency)
+				metrics.TTSLatencyLast.WithLabelValues(p.cfg.ModelID, ElevenLabsTTSURL).Set(latency)
+			}
 			p.streamChunk(buf[:n])
 		}
 		if rerr == io.EOF {
