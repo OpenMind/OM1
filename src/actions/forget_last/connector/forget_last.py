@@ -140,9 +140,14 @@ class ForgetLastConnector(ActionConnector[ForgetLastConfig, ForgetLastInput]):
 
         if err == "id_mismatch":
             detail = str(resp.get("detail", ""))
-            self._write_status(f"result=id_mismatch detail={detail}")
+            requested = (requested_id or "").strip().lower()
+            self._write_status(f"result=id_mismatch requested={requested} detail={detail}")
             self._speak("That name doesn't match what I just remembered.")
-            logging.info("[ForgetLast] id_mismatch: %s", detail)
+            logging.info(
+                "[ForgetLast] id_mismatch requested=%s detail=%s",
+                requested,
+                detail,
+            )
             return
 
         if err == "no_safe_files":
