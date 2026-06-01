@@ -45,4 +45,12 @@
       connector: "ros2",
     },
   ],
+  thinking_behavior: {
+    enabled: true,
+    face_action: "think",
+    move_action: "stand still",
+    trigger_delay: 1.0,
+    min_duration: 1.0,
+    max_duration: 3.0,
+  },
 }

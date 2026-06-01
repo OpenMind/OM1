@@ -87,6 +87,14 @@ def validate_config_schema(raw_config: dict) -> None:
 
 
 @dataclass
+class ThinkingBehaviorConfig:
+    """Configuration for thinking behavior when robot is processing complex queries."""
+    enabled: bool = False
+    face_action: str = "think"
+    move_action: str = "stand still"
+    trigger_delay: float = 1.0
+    min_duration: float = 1.0
+    max_duration: float = 3.0
 class RuntimeConfig:
     """
     Runtime configuration for the agent.
@@ -152,6 +160,7 @@ class RuntimeConfig:
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
     mcp_servers: Optional[Any] = None
+    thinking_behavior: Optional[ThinkingBehaviorConfig] = None
 
 
 def add_meta(

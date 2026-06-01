@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+import json
 from typing import List, Optional, Union
 
 from actions.orchestrator import ActionOrchestrator
@@ -649,6 +650,56 @@ class ModeCortexRuntime:
         if output is None:
             logging.debug("No output from LLM")
             return
+
+
+    async def _trigger_thinking_pose(self) -> bool:
+        if not self.current_config or not self.current_config.thinking_behavior:
+            return False
+        tb_config = self.current_config.thinking_behavior
+        if not tb_config.enabled or not self.action_orchestrator:
+            return False
+        try:
+            from llm.output_model import Action
+            think_face = Action(type="emotion", value=json.dumps({"action": tb_config.face_action}))
+            think_move = Action(type="move", value=json.dumps({"action": tb_config.move_action}))
+            await self.action_orchestrator.promise([think_face, think_move])
+            logging.info(f"Thinking pose triggered: face={tb_config.face_action}, move={tb_config.move_action}")
+            return True
+        except Exception as e:
+            logging.warning(f"Failed to trigger thinking pose: {e}")
+            return False
+
+    async def _execute_with_thinking_behavior(self, prompt: str):
+        tb_config = self.current_config.thinking_behavior if self.current_config else None
+        thinking_triggered = False
+        thinking_task = None
+        if tb_config and tb_config.enabled:
+            async def delayed_thinking():
+                await asyncio.sleep(tb_config.trigger_delay)
+                return await self._trigger_thinking_pose()
+            thinking_task = asyncio.create_task(delayed_thinking())
+        try:
+            final_output = None
+            async for output in self.current_config.cortex_llm.ask_stream(prompt):
+                final_output = output
+            if thinking_task and not thinking_task.done():
+                thinking_task.cancel()
+                try:
+                    await thinking_task
+                except asyncio.CancelledError:
+                    pass
+            elif thinking_task and thinking_task.done():
+                thinking_triggered = thinking_task.result()
+            if thinking_triggered and final_output and getattr(final_output, 'thinking_duration', None):
+                duration = min(max(final_output.thinking_duration, tb_config.min_duration), tb_config.max_duration)
+                remaining = max(0, duration - tb_config.trigger_delay)
+                if remaining > 0:
+                    await asyncio.sleep(remaining)
+            return final_output
+        except Exception as e:
+            if thinking_task and not thinking_task.done():
+                thinking_task.cancel()
+            raise e
 
     def get_mode_info(self) -> dict:
         """

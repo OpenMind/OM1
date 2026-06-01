@@ -78,6 +78,20 @@
                 }
             }
         },
+"thinking_behavior": {
+  "type": "object",
+  "description": "Configuration for thinking behavior when the robot is processing complex queries",
+  "properties": {
+    "enabled": { "type": "boolean", "default": false },
+    "face_action": { "type": "string", "default": "think" },
+    "move_action": { "type": "string", "default": "stand still" },
+    "trigger_delay": { "type": "number", "default": 1.0, "minimum": 0.1 },
+    "min_duration": { "type": "number", "default": 1.0, "minimum": 0.1 },
+    "max_duration": { "type": "number", "default": 3.0, "minimum": 0.5 }
+  },
+  "required": ["enabled"],
+  "additionalProperties": false
+}
         "backgrounds": {
             "type": "array",
             "items": {
