@@ -119,10 +119,7 @@ class VLM_Ollama_Local(FuserInput[VLM_Ollama_LocalConfig, Optional[np.ndarray]])
             height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             logging.info(f"VLM Ollama Local: camera resolution {width}x{height}")
 
-        logging.info(
-            f"VLM Ollama Local: initialized with model='{self.config.model}' "
-            f"endpoint='{self._chat_url}'"
-        )
+        logging.info(f"VLM Ollama Local: initialized with model='{self.config.model}' endpoint='{self._chat_url}'")
 
     async def _poll(self) -> Optional[np.ndarray]:
         """
@@ -206,10 +203,7 @@ class VLM_Ollama_Local(FuserInput[VLM_Ollama_LocalConfig, Optional[np.ndarray]])
             return Message(timestamp=time.time(), message=description)
 
         except aiohttp.ClientConnectorError:
-            logging.error(
-                "VLM Ollama Local: cannot connect to Ollama. "
-                "Is Ollama running? Start with: ollama serve"
-            )
+            logging.error("VLM Ollama Local: cannot connect to Ollama. Is Ollama running? Start with: ollama serve")
             return None
         except asyncio.TimeoutError:
             logging.error(
@@ -255,10 +249,7 @@ class VLM_Ollama_Local(FuserInput[VLM_Ollama_LocalConfig, Optional[np.ndarray]])
 
         logging.info(f"VLM_Ollama_Local: {latest_message.message}")
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n{latest_message.message}\n// END\n"
 
         self.io_provider.add_input(
             self.descriptor_for_LLM,

@@ -18,9 +18,7 @@ def test_check_webcam_found():
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = True
 
-    with patch(
-        "inputs.plugins.vlm_ollama_local.cv2.VideoCapture", return_value=mock_cap
-    ):
+    with patch("inputs.plugins.vlm_ollama_local.cv2.VideoCapture", return_value=mock_cap):
         result = check_webcam(0)
         assert result is True
 
@@ -30,9 +28,7 @@ def test_check_webcam_not_found():
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = False
 
-    with patch(
-        "inputs.plugins.vlm_ollama_local.cv2.VideoCapture", return_value=mock_cap
-    ):
+    with patch("inputs.plugins.vlm_ollama_local.cv2.VideoCapture", return_value=mock_cap):
         result = check_webcam(0)
         assert result is False
 
@@ -220,9 +216,7 @@ async def test_raw_to_text_returns_message_on_success():
 
     mock_response = MagicMock()
     mock_response.status = 200
-    mock_response.json = AsyncMock(
-        return_value={"message": {"content": "I see a room with a chair."}}
-    )
+    mock_response.json = AsyncMock(return_value={"message": {"content": "I see a room with a chair."}})
     mock_response.__aenter__ = AsyncMock(return_value=mock_response)
     mock_response.__aexit__ = AsyncMock(return_value=False)
 
@@ -316,9 +310,7 @@ async def test_raw_to_text_returns_none_on_connection_error():
     fake_frame = np.zeros((480, 640, 3), dtype=np.uint8)
 
     mock_session = MagicMock()
-    mock_session.post.side_effect = aiohttp.ClientConnectorError(
-        MagicMock(), MagicMock()
-    )
+    mock_session.post.side_effect = aiohttp.ClientConnectorError(MagicMock(), MagicMock())
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=False)
 
@@ -451,9 +443,7 @@ def test_formatted_latest_buffer_returns_formatted_string():
         config = VLM_Ollama_LocalConfig()
         sensor = VLM_Ollama_Local(config=config)
 
-        test_message = Message(
-            timestamp=123.456, message="I see a person sitting on a chair."
-        )
+        test_message = Message(timestamp=123.456, message="I see a person sitting on a chair.")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()
