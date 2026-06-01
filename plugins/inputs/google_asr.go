@@ -14,10 +14,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/gordonklaus/portaudio"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
@@ -81,6 +83,7 @@ const asrZenohTopic = "om/asr/text"
 type GoogleASRSensor struct {
 	cfg          GoogleASRConfig
 	log          *zap.Logger
+	language     string // friendly name, e.g. "english"; used as a metric label
 	languageCode string
 	altCodes     []string
 	apiVersion   string
@@ -167,6 +170,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 	s := &GoogleASRSensor{
 		cfg:          cfg,
 		log:          log,
+		language:     language,
 		languageCode: languageCode,
 		altCodes:     altCodes,
 		apiVersion:   apiVersion,
@@ -512,17 +516,21 @@ func (s *GoogleASRSensor) onWSMessage(msgType int, data []byte) {
 		)
 	case "speech_end":
 		if s.speechStarted {
+			duration := time.Since(s.speechStartTime)
 			s.log.Debug("GoogleASRInput: speech end",
-				zap.Duration("latency", time.Since(s.speechStartTime)),
+				zap.Duration("latency", duration),
 				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
 			)
+			s.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, duration)
 		}
 	case "end_of_utterance":
 		if s.speechStarted {
+			latency := time.Since(s.speechStartTime)
 			s.log.Debug("GoogleASRInput: end of utterance",
-				zap.Duration("latency", time.Since(s.speechStartTime)),
+				zap.Duration("latency", latency),
 				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
 			)
+			s.observeASR(metrics.ASRUtteranceEndLatency, metrics.ASRUtteranceEndLatencyLast, latency)
 		}
 	}
 
@@ -534,6 +542,7 @@ func (s *GoogleASRSensor) onWSMessage(msgType int, data []byte) {
 	if s.speechStarted {
 		latency = time.Since(s.speechStartTime)
 		s.speechStarted = false
+		s.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, latency)
 	}
 	s.log.Info("GoogleASRInput: transcript accepted",
 		zap.String("text", msg.ASRReply),
@@ -546,6 +555,13 @@ func (s *GoogleASRSensor) onWSMessage(msgType int, data []byte) {
 		s.log.Warn("GoogleASRInput: transcript buffer full, dropping",
 			zap.String("text", msg.ASRReply))
 	}
+}
+
+// observeASR records ASR latency metrics with the appropriate labels for this sensor's configuration.
+func (s *GoogleASRSensor) observeASR(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, d time.Duration) {
+	seconds := d.Seconds()
+	hist.WithLabelValues("google", s.language, s.apiVersion).Observe(seconds)
+	gauge.WithLabelValues("google", s.language, s.apiVersion).Set(seconds)
 }
 
 func (s *GoogleASRSensor) acceptTranscript(text string) bool {

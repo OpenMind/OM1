@@ -110,7 +110,7 @@ func (o *ollamaLLM) Call(ctx context.Context, prompt string, history []llm.Messa
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	logResponseLatency("OllamaLLM", req, resp, start)
+	recordResponseLatency("OllamaLLM", o.config.Model, o.chatURL, req, resp, start)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {

@@ -108,7 +108,7 @@ func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	logResponseLatency(c.provider, req, resp, start)
+	recordResponseLatency(c.provider, c.config.Model, c.config.BaseURL, req, resp, start)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {

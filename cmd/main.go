@@ -7,11 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/runtime"
 
 	_ "github.com/openmind/om1/plugins/actions"
@@ -38,6 +40,13 @@ func main() {
 	log := logger.BuildLogger(*logLevel)
 	logger.Set(log)
 	defer func() { _ = log.Sync() }()
+
+	stopMetrics := metrics.StartServer(log)
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = stopMetrics(shutdownCtx)
+	}()
 
 	cfg, err := config.Load(*configName)
 	if err != nil {
