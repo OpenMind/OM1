@@ -1,27 +1,5 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
+# Build artifacts
 build/
-dist/
-wheels/
-*.egg-info
-.ruff_cache/
-.pytest_cache/
-
-# Coverage reports
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-*.cover
-junit.xml
-
-# Virtual environments
-.venv
-
-# Environment variables
-.env
-*.lock
 
 # IDE
 .vscode/
@@ -30,15 +8,8 @@ junit.xml
 CLAUDE.md
 .claude/
 
-# Debug files
-front_image.jpg
-turtlebot4_debug.jpg
-turtlebot.jpg
-
 # Mac specific lint
 .DS_Store
-config/iris_ai.json
-launch.sh
 
 # AI models
 *.pt
@@ -49,7 +20,6 @@ logs/
 # Data files
 *.jsonl
 *.jpg
-/zenohdb
 /locations
 /traces
 
@@ -59,7 +29,4 @@ config/.runtime.json5
 config/cron_job/
 
 # Zenoh
-go/.zenoh-c/
-
-# go config
-go/config/memory
+.zenoh-c/

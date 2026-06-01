@@ -1,4 +1,4 @@
-name: Package Installation Test
+name: Build
 
 on:
   push:
@@ -8,37 +8,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-installation:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: 'pip'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
 
-    - name: "Disk Cleanup"
-      run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-        sudo docker image prune --all --force
-        sudo docker builder prune -a
+      - name: Cache zenoh-c
+        uses: actions/cache@v4
+        with:
+          path: .zenoh-c
+          key: ${{ runner.os }}-zenoh-c-1.9.0
+          restore-keys: |
+            ${{ runner.os }}-zenoh-c-
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libhidapi-dev python3-opencv portaudio19-dev python3-pyaudio
+      - name: Download zenoh-c
+        run: make download-zenohc
 
-    - name: Install pip dependencies
-      run: |
-        python -m pip install --upgrade pip
+      - name: Build binary
+        run: make build
 
-    - name: Install package
-      run: |
-        python -m pip install --no-cache-dir --prefer-binary .
-
-    - name: Test import
-      run: |
-        python -c "import om1_vlm; import om1_utils; import om1_speech; print('Package imported successfully')"
+      - name: Verify binary
+        run: test -x ./build/om1 && echo "Binary built successfully"

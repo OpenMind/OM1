@@ -3,7 +3,7 @@ GOBIN := $(shell $(GO) env GOPATH)/bin
 BINARY_NAME := om1
 GO_MODULE := github.com/openmind/om1
 CMD_DIR := ./cmd
-BUILD_DIR := ../build
+BUILD_DIR := ./build
 GO_FILES := $(shell find . -name '*.go' -type f)
 
 LDFLAGS := -s -w
