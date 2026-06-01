@@ -169,6 +169,10 @@ func (p *ElevenLabsProvider) synthesize(text string) error {
 		return fmt.Errorf("api %d: %s", resp.StatusCode, b)
 	}
 
+	metrics.RecordHTTPTiming(req.URL.Host, req.URL.Path, req.Method, resp.StatusCode,
+		resp.Header.Get("X-Proxy-Parse-Ms"), resp.Header.Get("X-Upstream-Total-Ms"),
+		resp.Header.Get("X-Upstream-TTFB-Ms"), resp.Header.Get("X-Proxy-Total-Ms"))
+
 	buf := make([]byte, 1024)
 	firstChunk := true
 	for {
