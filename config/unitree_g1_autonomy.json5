@@ -33,6 +33,24 @@
   },
   agent_actions: [
     {
+      name: "dock_charging",
+      llm_label: "dock_charging",
+      connector: "unitree_g1_dock",
+      config: {
+        base_url: "http://localhost:5000/maps/locations/list",
+        default_dock_location: "charging_dock",
+      },
+    },
+    {
+      name: "dock_charging",
+      llm_label: "dock_charging",
+      connector: "unitree_g1_dock",
+      config: {
+        base_url: "http://localhost:5000/maps/locations/list",
+        default_dock_location: "charging_dock",
+      },
+    },
+    {
       name: "speak",
       llm_label: "speak",
       connector: "elevenlabs_tts",
