@@ -149,7 +149,9 @@ python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own pol
 
 You'll now be able to see Isaac Sim running on your system.
 
-![ ](../assets/isaac-sim.png)
+![ ](../.gitbook/assets/isaac-sim.png)
+
+> **Note**: You can skio Step 6 to Step 8 if you don't have Enterprise Plan Subscription. SLAM and Navigation are only supported as Premium features.
 
 Step 6: Open a new terminal , switch to base directory `OM1-ros2-sdk` and run:
 
@@ -192,7 +194,7 @@ uv pip install -r pyproject.toml --extra dds
 
 Setup your API key in `.bashrc` file and run your simulation agent:
 
-Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.com), and add it to `bashrc`
 
 ```bash
 vi ~/.bashrc

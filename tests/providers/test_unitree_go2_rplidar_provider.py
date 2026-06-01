@@ -21,15 +21,9 @@ def reset_singleton():
             provider = UnitreeGo2RPLidarProvider._singleton_instance  # type: ignore
             if hasattr(provider, "running"):
                 provider.running = False
-            if (
-                hasattr(provider, "_serial_processor_thread")
-                and provider._serial_processor_thread
-            ):
+            if hasattr(provider, "_serial_processor_thread") and provider._serial_processor_thread:
                 provider._serial_processor_thread.join(timeout=1)
-            if (
-                hasattr(provider, "_rplidar_processor_thread")
-                and provider._rplidar_processor_thread
-            ):
+            if hasattr(provider, "_rplidar_processor_thread") and provider._rplidar_processor_thread:
                 try:
                     if hasattr(provider, "control_queue"):
                         provider.control_queue.put_nowait("STOP")
@@ -46,9 +40,7 @@ def reset_singleton():
 def mock_rplidar_dependencies():
     """Mock all external dependencies for UnitreeGo2RPLidarProvider."""
     with (
-        patch(
-            "providers.unitree_go2_rplidar_provider.UnitreeGo2OdomProvider"
-        ) as mock_odom,
+        patch("providers.unitree_go2_rplidar_provider.UnitreeGo2OdomProvider") as mock_odom,
         patch("providers.unitree_go2_rplidar_provider.D435Provider") as mock_d435,
         patch("providers.unitree_go2_rplidar_provider.mp.Queue") as mock_queue,
         patch("providers.unitree_go2_rplidar_provider.mp.Process") as mock_process,

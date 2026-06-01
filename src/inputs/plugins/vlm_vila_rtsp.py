@@ -28,16 +28,14 @@ class VLMVilaRTSPConfig(SensorConfig):
     """
 
     base_url: str = Field(
-        default="wss://api-vila.openmind.org",
+        default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
     rtsp_url: str = Field(
         default="rtsp://localhost:8554/top_camera",
         description="RTSP URL for the camera stream",
     )
-    decode_format: str = Field(
-        default="H264", description='Image decode format (e.g., "H264")'
-    )
+    decode_format: str = Field(default="H264", description='Image decode format (e.g., "H264")')
 
 
 class VLMVilaRTSP(FuserInput[VLMVilaRTSPConfig, Optional[str]]):
@@ -192,9 +190,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

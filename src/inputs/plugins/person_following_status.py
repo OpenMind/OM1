@@ -129,15 +129,11 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
                     # Do NOT re-enroll if SEARCHING (person enrolled but temporarily out of frame)
                     if status == "INACTIVE" and target_track_id is None:
                         current_time = time.time()
-                        time_since_last_enroll = (
-                            current_time - self._last_enroll_attempt
-                        )
+                        time_since_last_enroll = current_time - self._last_enroll_attempt
 
                         if time_since_last_enroll >= self.enroll_retry_interval:
                             self._last_enroll_attempt = current_time
-                            logging.info(
-                                "PersonFollowingStatus: Status INACTIVE, attempting enrollment"
-                            )
+                            logging.info("PersonFollowingStatus: Status INACTIVE, attempting enrollment")
                             await self._try_enroll(session)
 
                     return self._format_status(data)
@@ -166,9 +162,7 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
                 if response.status == 200:
                     logging.info("PersonFollowingStatus: Re-enrollment request sent")
                 else:
-                    logging.debug(
-                        f"PersonFollowingStatus: Enroll returned status {response.status}"
-                    )
+                    logging.debug(f"PersonFollowingStatus: Enroll returned status {response.status}")
         except Exception as e:
             logging.debug(f"PersonFollowingStatus: Enroll request failed: {e}")
             return None
@@ -204,9 +198,7 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         current_time = time.time()
 
         # Detect state changes
-        tracking_just_started = (
-            self._previous_is_tracked is not True and is_tracked is True
-        )
+        tracking_just_started = self._previous_is_tracked is not True and is_tracked is True
         tracking_just_lost = self._previous_is_tracked is True and is_tracked is False
 
         self._previous_is_tracked = is_tracked
@@ -215,7 +207,9 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
             # Person was acquired - always report this
             self._lost_tracking_time = None
             self._lost_tracking_announced = False
-            return f"TRACKING STARTED: Person detected and now following. Distance: {z:.1f}m ahead, {x:.1f}m to the side."
+            return (
+                f"TRACKING STARTED: Person detected and now following. Distance: {z:.1f}m ahead, {x:.1f}m to the side."
+            )
 
         if tracking_just_lost:
             # Person was lost - start timer but don't announce immediately
@@ -302,8 +296,6 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages.clear()
         return result

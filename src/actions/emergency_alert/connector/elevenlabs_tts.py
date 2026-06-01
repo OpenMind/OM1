@@ -64,9 +64,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-class EmergencyAlertElevenLabsTTSConnector(
-    ActionConnector[SpeakElevenLabsTTSConfig, EmergencyAlertInput]
-):
+class EmergencyAlertElevenLabsTTSConnector(ActionConnector[SpeakElevenLabsTTSConfig, EmergencyAlertInput]):
     """
     Connector that uses ElevenLabs TTS for emergency alerts.
     """
@@ -114,9 +112,7 @@ class EmergencyAlertElevenLabsTTSConnector(
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
-            self.session.declare_subscriber(
-                self.tts_status_request_topic, self._zenoh_tts_status_request
-            )
+            self.session.declare_subscriber(self.tts_status_request_topic, self._zenoh_tts_status_request)
 
             # Unstable / not released
             # advanced_sub = declare_advanced_subscriber(
@@ -139,12 +135,12 @@ class EmergencyAlertElevenLabsTTSConnector(
         base_url = getattr(
             self.config,
             "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+            f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}",
         )
         self.asr = ASRRTSPProvider(ws_url=base_url)
 
         self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
@@ -187,17 +183,12 @@ class EmergencyAlertElevenLabsTTSConnector(
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         # Store robot message to conversation history only if there was ASR input
-        if (
-            self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" in self.io_provider.llm_prompt
-        ):
+        if self.io_provider.llm_prompt is not None and "Voice:" in self.io_provider.llm_prompt:
             self.conversation_provider.store_robot_message(output_interface.action)
 
         # Avoid queuing too many TTS messages
         if self.tts.get_pending_message_count() > 0:
-            logging.warning(
-                "Too many pending TTS messages, skipping adding new message"
-            )
+            logging.warning("Too many pending TTS messages, skipping adding new message")
             return
 
         state = AudioStatus(

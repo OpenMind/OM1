@@ -27,6 +27,8 @@ class SpeakKokoroTTSConfig(ActionConfig):
 
     Parameters
     ----------
+    base_url : str
+        Base URL for Kokoro TTS API.
     voice_id : str
         Kokoro voice ID.
     model_id : str
@@ -41,6 +43,10 @@ class SpeakKokoroTTSConfig(ActionConfig):
         Number of responses to skip before speaking.
     """
 
+    base_url: str = Field(
+        default="http://127.0.0.1:8880/v1",
+        description="Base URL for Kokoro TTS API",
+    )
     voice_id: str = Field(
         default="af_bella",
         description="Kokoro voice ID",
@@ -117,12 +123,8 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
-            self.session.declare_subscriber(
-                self.tts_status_request_topic, self._zenoh_tts_status_request
-            )
-            self._zenoh_tts_status_response_pub = self.session.declare_publisher(
-                self.tts_status_response_topic
-            )
+            self.session.declare_subscriber(self.tts_status_request_topic, self._zenoh_tts_status_request)
+            self._zenoh_tts_status_response_pub = self.session.declare_publisher(self.tts_status_response_topic)
 
             if self.audio_pub:
                 self.audio_pub.put(self.audio_status.serialize())
@@ -140,7 +142,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
 
         # Initialize Kokoro TTS Provider
         self.tts = KokoroTTSProvider(
-            url="http://127.0.0.1:8880/v1",
+            url=self.config.base_url,
             api_key=api_key,
             voice_id=voice_id,
             model_id=model_id,
@@ -152,7 +154,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
 
         # Configure Kokoro TTS Provider to ensure settings are applied
         self.tts.configure(
-            url="http://127.0.0.1:8880/v1",
+            url=self.config.base_url,
             api_key=api_key,
             voice_id=voice_id,
             model_id=model_id,
@@ -198,12 +200,10 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             self.silence_rate > 0
             and self.silence_counter < self.silence_rate
             and self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" not in self.io_provider.llm_prompt
+            and "Voice:" not in self.io_provider.llm_prompt
         ):
             self.silence_counter += 1
-            logging.info(
-                f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}"
-            )
+            logging.info(f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}")
             return
 
         self.silence_counter = 0
@@ -212,10 +212,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         # Store robot message to conversation history only if there was ASR input
-        if (
-            self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" in self.io_provider.llm_prompt
-        ):
+        if self.io_provider.llm_prompt is not None and "Voice:" in self.io_provider.llm_prompt:
             self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
@@ -253,14 +250,10 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     header=prepare_header(tts_status.header.frame_id),
                     request_id=request_id,
                     code=1 if self.tts_enabled else 0,
-                    status=String(
-                        data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                    ),
+                    status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
             # Enable the TTS
@@ -275,9 +268,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     status=String(data="TTS Enabled"),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
             # Disable the TTS
@@ -291,9 +282,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     status=String(data="TTS Disabled"),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
         except Exception as e:

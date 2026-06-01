@@ -31,12 +31,8 @@ class FacePresenceConfig(SensorConfig):
         default="http://127.0.0.1:6793",
         description="Base URL for the Face HTTP service",
     )
-    face_recent_sec: float = Field(
-        default=2.0, description="Time window in seconds to consider a face present"
-    )
-    face_poll_fps: float = Field(
-        default=5.0, description="Polling frequency in frames per second"
-    )
+    face_recent_sec: float = Field(default=1.0, description="Time window in seconds to consider a face present")
+    face_poll_fps: float = Field(default=5.0, description="Polling frequency in frames per second")
 
 
 class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
@@ -86,33 +82,23 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
     def _handle_face_message(self, text_line: str) -> None:
         """
-        Provider callback: push a new line into the bounded queue.
-
-        Tasks
-        --------
-        - Tries a non-blocking enqueue into `self.message_buffer` (capacity=64).
-        - If the queue is full, drops one oldest item and retries once.
+        Provider callback: push a new line into the bounded queue, clearing old messages.
 
         Parameters
         ----------
         text_line : str
             A single, already formatted line (e.g., "present=[alice], unknown=0, ts=...").
         """
-        try:
-            self.message_buffer.put_nowait(text_line)
-        except Exception:
-            logging.debug("FacePresence queue full; dropping oldest message to enqueue")
+        while not self.message_buffer.empty():
             try:
                 _ = self.message_buffer.get_nowait()
             except Empty:
-                pass
-            try:
-                self.message_buffer.put_nowait(text_line)
-            except Exception:
-                logging.warning(
-                    "FacePresence queue still full; dropping latest message"
-                )
-                pass
+                break
+
+        try:
+            self.message_buffer.put_nowait(text_line)
+        except Exception as e:
+            logging.warning(f"Failed to enqueue face presence message: {e}")
 
     async def _poll(self) -> Optional[str]:
         """
@@ -189,14 +175,22 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
         latest_message = self.messages[-1]
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{latest_message.message}
-// END
+{self.descriptor_for_LLM}: "{latest_message.message}"
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages.clear()
         return result
+
+    def stop(self):
+        """
+        Stop the provider and clean up resources.
+
+        Unregisters callbacks, stops the provider, and ensures that
+        all resources are released properly.
+        """
+        try:
+            self.provider.unregister_message_callback(self._handle_face_message)
+            logging.info("Unregistered face presence message callback")
+        except Exception as e:
+            logging.warning(f"Failed to unregister face presence callback: {e}")

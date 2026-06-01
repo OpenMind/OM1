@@ -15,7 +15,7 @@
   //   - llava (multimodal - supports images)
   //   - codellama (code-focused)
 
-  version: "v1.0.3",
+  version: "v1.0.5",
   hertz: 0.5,
   name: "ollama",
   api_key: "${OM_API_KEY:-openmind_free}",
@@ -27,18 +27,6 @@
       type: "GoogleASRInput",
       config: {
         enable_tts_interrupt: true,
-      },
-    },
-  ],
-  simulators: [
-    {
-      type: "WebSim",
-      config: {
-        host: "0.0.0.0",
-        port: 8000,
-        tick_rate: 100,
-        auto_reconnect: true,
-        debug_mode: false,
       },
     },
   ],

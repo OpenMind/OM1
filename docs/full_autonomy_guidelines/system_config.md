@@ -86,8 +86,11 @@ User=openmind
 
 [Install]
 WantedBy=graphical.target
+```
+
 Enable and start the service:
 
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable kiosk.service
 sudo systemctl start kiosk.service

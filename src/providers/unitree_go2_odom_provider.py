@@ -129,9 +129,7 @@ class UnitreeGo2OdomProvider(OdomProviderBase):
             return
         else:
             logging.info("Starting Odom processor thread")
-            self._odom_processor_thread = threading.Thread(
-                target=self.process_odom, daemon=True
-            )
+            self._odom_processor_thread = threading.Thread(target=self.process_odom, daemon=True)
             self._odom_processor_thread.start()
 
     def _update_body_state(self, pose):

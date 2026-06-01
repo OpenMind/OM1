@@ -88,15 +88,11 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
             if not ret or frame is None:
-                logging.warning(
-                    "FaceEmotion: Failed to read frame from camera, skipping"
-                )
+                logging.warning("FaceEmotion: Failed to read frame from camera, skipping")
                 return None
             return frame
 
-    async def _raw_to_text(
-        self, raw_input: Optional[cv2.typing.MatLike]
-    ) -> Optional[Message]:
+    async def _raw_to_text(self, raw_input: Optional[cv2.typing.MatLike]) -> Optional[Message]:
         """
         Process video frame for emotion detection.
 
@@ -130,18 +126,14 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         rgb_frame = cv2.cvtColor(gray_frame, cv2.COLOR_GRAY2RGB)
 
         # Detect faces in the frame
-        faces = self.face_cascade.detectMultiScale(
-            gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
-        )
+        faces = self.face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
         for x, y, w, h in faces:
             # Extract the face ROI (Region of Interest)
             face_roi = rgb_frame[y : y + h, x : x + w]
 
             # Perform emotion analysis on the face ROI
-            result = DeepFace.analyze(
-                face_roi, actions=["emotion"], enforce_detection=False
-            )
+            result = DeepFace.analyze(face_roi, actions=["emotion"], enforce_detection=False)
 
             # Determine the dominant emotion
             if isinstance(result, list) and len(result) > 0:
@@ -193,9 +185,7 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

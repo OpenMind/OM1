@@ -69,9 +69,7 @@ class ConfidenceCalculator:
             "conversation_quality": 0.20,  # duration + turns
         }
 
-    def calculate_completion_confidence(
-        self, factors: ConfidenceFactors
-    ) -> ConfidenceResult:
+    def calculate_completion_confidence(self, factors: ConfidenceFactors) -> ConfidenceResult:
         """
         Calculate comprehensive confidence that conversation should end.
 
@@ -113,15 +111,11 @@ class ConfidenceCalculator:
             silence_score = factors.silence_duration / self.silence_threshold_soft * 0.5
 
         # 3. Engagement score (lower engagement = higher confidence to end)
-        engagement_score = min(
-            factors.person_distance / self.engagement_distance_max, 1.0
-        )
+        engagement_score = min(factors.person_distance / self.engagement_distance_max, 1.0)
 
         # 4. Conversation quality score (has it been substantial enough to end naturally?)
         # If conversation was very short, we're less confident it's really done
-        duration_score = min(
-            factors.conversation_duration / self.min_conversation_duration, 1.0
-        )
+        duration_score = min(factors.conversation_duration / self.min_conversation_duration, 1.0)
         turn_score = min(factors.turn_count / self.min_turn_count, 1.0)
 
         # Short user utterances might indicate disengagement
@@ -148,9 +142,7 @@ class ConfidenceCalculator:
             "factors": factors,
         }
 
-    def should_transition_to_concluding(
-        self, confidence_result: ConfidenceResult
-    ) -> bool:
+    def should_transition_to_concluding(self, confidence_result: ConfidenceResult) -> bool:
         """
         Decide if we should move to concluding state.
 
@@ -197,9 +189,7 @@ class ConfidenceCalculator:
 
         return False
 
-    def should_transition_to_finished(
-        self, confidence_result: ConfidenceResult, time_in_concluding: float
-    ) -> bool:
+    def should_transition_to_finished(self, confidence_result: ConfidenceResult, time_in_concluding: float) -> bool:
         """
         Decide if we should move to finished state.
 
@@ -241,7 +231,15 @@ class ConfidenceCalculator:
 class GreetingConversationStateMachineProvider:
     """Manages greeting conversation state transitions based on confidence scores."""
 
-    def __init__(self, max_turn_count: int = 3) -> None:
+    def __init__(self, max_turn_count: int = 5) -> None:
+        """
+        Initialize the state machine with default values.
+
+        Parameters
+        ----------
+        max_turn_count : int, optional
+            Maximum number of conversational turns before forcing a transition to finished (default is 5).
+        """
         self.current_state = ConversationState.IDLE
         self.previous_state = None
         self.state_entry_time = time.time()
@@ -277,27 +275,17 @@ class GreetingConversationStateMachineProvider:
         silence_duration = time.time() - self.state_entry_time
         voice_data = self.io_provider.get_input("Voice")
         if voice_data:
-            silence_duration = (
-                time.time() - voice_data.timestamp
-                if voice_data.timestamp
-                else silence_duration
-            )
+            silence_duration = time.time() - voice_data.timestamp if voice_data.timestamp else silence_duration
 
         last_user_utterance_length = len(self.last_user_utterance)
 
         llm_state_raw = llm_output.get("conversation_state", "conversing")
-        llm_state_str = (
-            llm_state_raw.value
-            if hasattr(llm_state_raw, "value")
-            else str(llm_state_raw)
-        )
+        llm_state_str = llm_state_raw.value if hasattr(llm_state_raw, "value") else str(llm_state_raw)
 
         try:
             conversation_state = ConversationState(llm_state_str)
         except (ValueError, KeyError):
-            logging.warning(
-                f"Invalid conversation_state from LLM: {llm_state_str}, defaulting to CONVERSING"
-            )
+            logging.warning(f"Invalid conversation_state from LLM: {llm_state_str}, defaulting to CONVERSING")
             conversation_state = ConversationState.CONVERSING
 
         factors = ConfidenceFactors(
@@ -307,17 +295,13 @@ class GreetingConversationStateMachineProvider:
             speech_clarity=llm_output.get("speech_clarity", 1.0),
             person_distance=person_distance,
             conversation_duration=(
-                (time.time() - self.conversation_start_time)
-                if self.conversation_start_time
-                else 0.0
+                (time.time() - self.conversation_start_time) if self.conversation_start_time else 0.0
             ),
             turn_count=self.turn_count,
             last_user_utterance_length=last_user_utterance_length,
         )
 
-        confidence_result = self.confidence_calculator.calculate_completion_confidence(
-            factors
-        )
+        confidence_result = self.confidence_calculator.calculate_completion_confidence(factors)
 
         self.confidence_history.append(confidence_result["overall"])
         if len(self.confidence_history) > self.max_history:
@@ -328,9 +312,7 @@ class GreetingConversationStateMachineProvider:
         if new_state != self.current_state:
             self.current_state = new_state
             self.state_entry_time = time.time()
-            logging.info(
-                f"State transition: {self.previous_state.value} -> {self.current_state.value}"
-            )
+            logging.info(f"State transition: {self.previous_state.value} -> {self.current_state.value}")
             logging.info(f"Confidence: {confidence_result['overall']:.2f}")
             logging.info(f"Breakdown: {confidence_result['breakdown']}")
 
@@ -350,9 +332,7 @@ class GreetingConversationStateMachineProvider:
             "turn_count": self.turn_count,
         }
 
-    def _determine_next_state(
-        self, confidence_result: ConfidenceResult
-    ) -> ConversationState:
+    def _determine_next_state(self, confidence_result: ConfidenceResult) -> ConversationState:
         """
         Determine the next conversation state based on LLM output and confidence.
 
@@ -371,37 +351,24 @@ class GreetingConversationStateMachineProvider:
 
         # Force finish if we've had too many turns to prevent infinite conversations
         if self.turn_count >= self.max_turn_count:
-            logging.info(
-                f"Maximum turn count ({self.max_turn_count}) reached - forcing finish"
-            )
+            logging.info(f"Maximum turn count ({self.max_turn_count}) reached - forcing finish")
             return ConversationState.FINISHED
 
         # From CONVERSING to CONCLUDING
         if self.current_state == ConversationState.CONVERSING:
             # LLM thinks we should conclude with high confidence
-            if (
-                llm_conversation_state == ConversationState.CONCLUDING
-                and confidence_result["breakdown"]["llm"] >= 0.7
-            ):
-                logging.info(
-                    "LLM indicates concluding with high confidence to conclude"
-                )
+            if llm_conversation_state == ConversationState.CONCLUDING and confidence_result["breakdown"]["llm"] >= 0.7:
+                logging.info("LLM indicates concluding with high confidence to conclude")
                 return ConversationState.CONCLUDING
 
             # Traditional confidence-based transition
-            if self.confidence_calculator.should_transition_to_concluding(
-                confidence_result
-            ):
-                logging.info(
-                    "Transitioning to CONCLUDING based on confidence to conclude"
-                )
+            if self.confidence_calculator.should_transition_to_concluding(confidence_result):
+                logging.info("Transitioning to CONCLUDING based on confidence to conclude")
                 return ConversationState.CONCLUDING
 
         # From CONCLUDING to FINISHED
         elif self.current_state == ConversationState.CONCLUDING:
-            if self.confidence_calculator.should_transition_to_finished(
-                confidence_result, time_in_state
-            ):
+            if self.confidence_calculator.should_transition_to_finished(confidence_result, time_in_state):
                 logging.info("Transitioning to FINISHED based on confidence to finish")
                 return ConversationState.FINISHED
 
@@ -409,18 +376,11 @@ class GreetingConversationStateMachineProvider:
             # 1. LLM explicitly says we're still conversing, OR
             # 2. Low overall confidence with strong engagement
             if llm_conversation_state == ConversationState.CONVERSING:
-                logging.info(
-                    "LLM indicates conversation continuing, reverting to conversing"
-                )
+                logging.info("LLM indicates conversation continuing, reverting to conversing")
                 return ConversationState.CONVERSING
 
-            if (
-                confidence_result["overall"] < 0.4
-                and confidence_result["breakdown"]["engagement"] < 0.3
-            ):
-                logging.info(
-                    "Low confidence and strong engagement, reverting to conversing"
-                )
+            if confidence_result["overall"] < 0.4 and confidence_result["breakdown"]["engagement"] < 0.3:
+                logging.info("Low confidence and strong engagement, reverting to conversing")
                 return ConversationState.CONVERSING
 
         # Emergency timeout - force finish after very long concluding
@@ -534,11 +494,7 @@ class GreetingConversationStateMachineProvider:
         silence_duration = time.time() - self.state_entry_time
         voice_data = self.io_provider.get_input("Voice")
         if voice_data:
-            silence_duration = (
-                time.time() - voice_data.timestamp
-                if voice_data.timestamp
-                else silence_duration
-            )
+            silence_duration = time.time() - voice_data.timestamp if voice_data.timestamp else silence_duration
 
         last_user_utterance_length = len(self.last_user_utterance)
 
@@ -550,17 +506,13 @@ class GreetingConversationStateMachineProvider:
             speech_clarity=1.0,  # Assume good clarity
             person_distance=person_distance,
             conversation_duration=(
-                (time.time() - self.conversation_start_time)
-                if self.conversation_start_time
-                else 0.0
+                (time.time() - self.conversation_start_time) if self.conversation_start_time else 0.0
             ),
             turn_count=self.turn_count,
             last_user_utterance_length=last_user_utterance_length,
         )
 
-        confidence_result = self.confidence_calculator.calculate_completion_confidence(
-            factors
-        )
+        confidence_result = self.confidence_calculator.calculate_completion_confidence(factors)
 
         # Update confidence history
         self.confidence_history.append(confidence_result["overall"])
@@ -571,9 +523,7 @@ class GreetingConversationStateMachineProvider:
         new_state = self._determine_next_state(confidence_result)
         self.previous_state = self.current_state
         if new_state != self.current_state:
-            logging.info(
-                f"State transition: {self.current_state.value} -> {new_state.value}"
-            )
+            logging.info(f"State transition: {self.current_state.value} -> {new_state.value}")
             self.current_state = new_state
             self.state_entry_time = time.time()
             logging.info(f"Entered {self.current_state.value} state")
@@ -599,9 +549,7 @@ class GreetingConversationStateMachineProvider:
         self.confidence_history = []
         self.current_state = ConversationState.CONVERSING
 
-    def reset_state(
-        self, initial_state: ConversationState = ConversationState.CONVERSING
-    ):
+    def reset_state(self, initial_state: ConversationState = ConversationState.CONVERSING):
         """
         Reset the conversation state machine to initial values.
         Typically called when transitioning from approaching to greeting.

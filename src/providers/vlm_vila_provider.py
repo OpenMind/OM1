@@ -40,12 +40,8 @@ class VLMVilaProvider:
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
-        self.stream_ws_client: Optional[ws.Client] = (
-            ws.Client(url=stream_url) if stream_url else None
-        )
-        self.video_stream: VideoStream = VideoStream(
-            self.ws_client.send_message, fps=fps, device_index=camera_index
-        )
+        self.stream_ws_client: Optional[ws.Client] = ws.Client(url=stream_url) if stream_url else None
+        self.video_stream: VideoStream = VideoStream(self.ws_client.send_message, fps=fps, device_index=camera_index)
 
     def register_frame_callback(self, video_callback: Optional[Callable]):
         """
@@ -88,9 +84,7 @@ class VLMVilaProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(
-                self.stream_ws_client.send_message
-            )
+            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
 
         logging.info("Vila VLM provider started")
 

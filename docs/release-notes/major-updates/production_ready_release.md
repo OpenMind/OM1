@@ -13,7 +13,7 @@ v1.0.0 marks the first production-ready release, delivering autonomous robotics 
 - OM1-avatar
 - OM1-ros2-sdk
 - OM1-video-processor
-- OM1-system-setup
+- OM1-OTA
 
 ## Key Highlights
 - Full Autonomy for Go2 and G1

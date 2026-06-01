@@ -8,7 +8,7 @@ OpenMind integrates with multiple LLM providers to offer a diverse range of feat
 
 ## API Keys
 
-OpenMind requires an API key to authenticate requests. You can obtain an API key by signing up for an account on the [OpenMind portal](https://portal.openmind.org). The API key must be included in the `Authorization` or `x-api-key` header of each request, used to authenticate your requests and track usage quotas.
+OpenMind requires an API key to authenticate requests. You can obtain an API key by signing up for an account on the [OpenMind portal](https://portal.openmind.com). The API key must be included in the `Authorization` or `x-api-key` header of each request, used to authenticate your requests and track usage quotas.
 
 **Keep your API key confidential**. Never share it with others or expose it in client-side code, such as in browsers or apps.
 
@@ -20,7 +20,7 @@ x-api-key: YOUR_API_KEY
 Authorization: Bearer YOUR_API_KEY
 ```
 
-For websocket connections, include the API key in the query string. For example: `wss://api.openmind.org?api_key=<YOUR_API_KEY>`.
+For websocket connections, include the API key in the query string. For example: `wss://api.openmind.com?api_key=<YOUR_API_KEY>`.
 
 ## API Pricing
 
@@ -30,7 +30,7 @@ Access our API, scale usage as needed, and stay in control of costs. For detaile
 - Cutting-edge large models
 - Integrated modules for multiple robots
 
-For developer walkthrough and support reach out to: support@openmind.org
+For developer walkthrough and support reach out to: support@openmind.com
 
 ### LLM Models
 
@@ -53,10 +53,9 @@ For developer walkthrough and support reach out to: support@openmind.org
 
 | Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
 |---------------------------------------|-----------------------------|------------------------------|
+| Gemini 3.5 Flash                      | 12500 OMCU                  | 90000 OMCU                   |
 | Gemini 3.1 Pro Preview                | 40000 OMCU                  | 180000 OMCU                  |
-| Gemini 3.1 Flash Lite Preview         | 2500 OMCU                   | 15000 OMCU                   |
-| Gemini 3 Pro Preview                  | 40000 OMCU                  | 180000 OMCU                  |
-| Gemini 3 Flash Preview                | 10000 OMCU                  | 30000 OMCU                   |
+| Gemini 3.1 Flash Lite                 | 2500 OMCU                   | 15000 OMCU                   |
 | Gemini 2.5 Flash                      | 3000 OMCU                   | 25000 OMCU                   |
 | Gemini 2.5 Flash Lite                 | 1000 OMCU                   | 4000 OMCU                    |
 | Gemini 2.5 Pro                        | 25000 OMCU                  | 150000 OMCU                  |
@@ -120,3 +119,4 @@ We will support more models in the future. Contact us if you have any questions 
 | Service              | Price (per 1 minute) |
 |----------------------|----------------------|
 | Google ASR           | 50 OMCU              |
+| ElevenLabs ASR       | 35 OMCU              |

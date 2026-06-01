@@ -42,6 +42,7 @@ class TestUnitreeG1RememberLocationConfig:
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
+        assert config.use_sim is False
 
     def test_custom_config(self):
         config = UnitreeG1RememberLocationConfig(
@@ -53,15 +54,44 @@ class TestUnitreeG1RememberLocationConfig:
         assert config.timeout == 10
         assert config.map_name == "custom_map"
 
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        config = UnitreeG1RememberLocationConfig(use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+        assert config.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        config = UnitreeG1RememberLocationConfig(use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+        assert config.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        config = UnitreeG1RememberLocationConfig(
+            base_url="http://custom:8080/api",
+            use_sim=True,
+        )
+        assert config.base_url == "http://custom:8080/api"
+        assert config.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        config = UnitreeG1RememberLocationConfig(base_url=None, use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        config = UnitreeG1RememberLocationConfig(base_url=None, use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+
 
 class TestUnitreeG1RememberLocationConnector:
     """Test UnitreeG1RememberLocationConnector."""
 
     @pytest.fixture
     def g1_connector(self):
-        with patch(
-            "actions.remember_location.connector.unitree_g1_location.ElevenLabsTTSProvider"
-        ) as mock_tts:
+        with patch("actions.remember_location.connector.unitree_g1_location.ElevenLabsTTSProvider") as mock_tts:
             mock_tts_instance = Mock()
             mock_tts.return_value = mock_tts_instance
             config = UnitreeG1RememberLocationConfig()
@@ -84,9 +114,7 @@ class TestUnitreeG1RememberLocationConnector:
                 "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="kitchen")
             await connector.connect(loc_input)
@@ -96,25 +124,19 @@ class TestUnitreeG1RememberLocationConnector:
             assert call_kwargs["json"]["label"] == "kitchen"
             assert call_kwargs["json"]["map_name"] == "map"
             mock_logging.info.assert_called()
-            mock_tts.add_pending_message.assert_called_once_with(
-                "Location kitchen remembered !"
-            )
+            mock_tts.add_pending_message.assert_called_once_with("Location kitchen remembered !")
 
     @pytest.mark.asyncio
     async def test_connect_api_error(self, g1_connector):
         connector, mock_tts = g1_connector
-        mock_session_cm, mock_session = create_aiohttp_mock(
-            status=500, text="Internal Server Error"
-        )
+        mock_session_cm, mock_session = create_aiohttp_mock(status=500, text="Internal Server Error")
 
         with (
             patch(
                 "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="office")
             await connector.connect(loc_input)
@@ -127,26 +149,18 @@ class TestUnitreeG1RememberLocationConnector:
         connector, mock_tts = g1_connector
         connector.base_url = ""
 
-        with patch(
-            "actions.remember_location.connector.unitree_g1_location.logging"
-        ) as mock_logging:
+        with patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging:
             loc_input = RememberLocationInput(action="somewhere")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationG1 connector missing 'base_url' in config"
-            )
+            mock_logging.error.assert_called_with("RememberLocationG1 connector missing 'base_url' in config")
 
     @pytest.mark.asyncio
     async def test_connect_timeout_error(self, g1_connector):
         connector, mock_tts = g1_connector
 
         with (
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession"
-            ) as mock_cls,
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession") as mock_cls,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             mock_cm = Mock()
             mock_cm.__aenter__ = AsyncMock(side_effect=asyncio.TimeoutError())
@@ -155,9 +169,7 @@ class TestUnitreeG1RememberLocationConnector:
 
             loc_input = RememberLocationInput(action="garden")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationG1 API request timed out"
-            )
+            mock_logging.error.assert_called_with("RememberLocationG1 API request timed out")
 
 
 class TestUnitreeGo2RememberLocationConfig:
@@ -168,6 +180,7 @@ class TestUnitreeGo2RememberLocationConfig:
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
+        assert config.use_sim is False
 
     def test_custom_config(self):
         config = UnitreeGo2RememberLocationConfig(
@@ -179,15 +192,44 @@ class TestUnitreeGo2RememberLocationConfig:
         assert config.timeout == 20
         assert config.map_name == "go2_map"
 
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        config = UnitreeGo2RememberLocationConfig(use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+        assert config.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        config = UnitreeGo2RememberLocationConfig(use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+        assert config.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        config = UnitreeGo2RememberLocationConfig(
+            base_url="http://custom:8080/api",
+            use_sim=True,
+        )
+        assert config.base_url == "http://custom:8080/api"
+        assert config.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        config = UnitreeGo2RememberLocationConfig(base_url=None, use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        config = UnitreeGo2RememberLocationConfig(base_url=None, use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+
 
 class TestUnitreeGo2RememberLocationConnector:
     """Test UnitreeGo2RememberLocationConnector."""
 
     @pytest.fixture
     def go2_connector(self):
-        with patch(
-            "actions.remember_location.connector.unitree_go2_location.ElevenLabsTTSProvider"
-        ) as mock_tts:
+        with patch("actions.remember_location.connector.unitree_go2_location.ElevenLabsTTSProvider") as mock_tts:
             mock_tts_instance = Mock()
             mock_tts.return_value = mock_tts_instance
             config = UnitreeGo2RememberLocationConfig()
@@ -210,9 +252,7 @@ class TestUnitreeGo2RememberLocationConnector:
                 "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="charging_station")
             await connector.connect(loc_input)
@@ -228,18 +268,14 @@ class TestUnitreeGo2RememberLocationConnector:
     @pytest.mark.asyncio
     async def test_connect_api_error(self, go2_connector):
         connector, mock_tts = go2_connector
-        mock_session_cm, mock_session = create_aiohttp_mock(
-            status=404, text="Not Found"
-        )
+        mock_session_cm, mock_session = create_aiohttp_mock(status=404, text="Not Found")
 
         with (
             patch(
                 "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="hall")
             await connector.connect(loc_input)
@@ -250,31 +286,21 @@ class TestUnitreeGo2RememberLocationConnector:
         connector, mock_tts = go2_connector
         connector.base_url = ""
 
-        with patch(
-            "actions.remember_location.connector.unitree_go2_location.logging"
-        ) as mock_logging:
+        with patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging:
             loc_input = RememberLocationInput(action="somewhere")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationGo2 connector missing 'base_url' in config"
-            )
+            mock_logging.error.assert_called_with("RememberLocationGo2 connector missing 'base_url' in config")
 
     @pytest.mark.asyncio
     async def test_connect_exception(self, go2_connector):
         connector, mock_tts = go2_connector
 
         with (
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession"
-            ) as mock_cls,
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession") as mock_cls,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             mock_cm = Mock()
-            mock_cm.__aenter__ = AsyncMock(
-                side_effect=ConnectionError("Connection refused")
-            )
+            mock_cm.__aenter__ = AsyncMock(side_effect=ConnectionError("Connection refused"))
             mock_cm.__aexit__ = AsyncMock(return_value=None)
             mock_cls.return_value = mock_cm
 

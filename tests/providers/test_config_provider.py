@@ -42,9 +42,7 @@ def test_initialization(mock_zenoh):
     assert provider.config_response_publisher == mock_publisher
     assert provider.config_request_subscriber == mock_subscriber
 
-    mock_session_instance.declare_publisher.assert_called_once_with(
-        "om/config/response"
-    )
+    mock_session_instance.declare_publisher.assert_called_once_with("om/config/response")
     mock_session_instance.declare_subscriber.assert_called_once()
 
 
@@ -111,8 +109,6 @@ def test_set_config_uses_unique_temp_file(mock_zenoh, tmp_path):
             provider._handle_set_config(String("req2"), '{"key": "value2"}')
 
     assert len(temp_paths_used) == 2
-    assert (
-        temp_paths_used[0] != temp_paths_used[1]
-    ), "Temp files should have unique names"
+    assert temp_paths_used[0] != temp_paths_used[1], "Temp files should have unique names"
     assert ".tmp." in temp_paths_used[0], "Temp file should contain .tmp. prefix"
     assert ".tmp." in temp_paths_used[1], "Temp file should contain .tmp. prefix"

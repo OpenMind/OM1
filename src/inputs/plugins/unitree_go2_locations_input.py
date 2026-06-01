@@ -3,7 +3,7 @@ import logging
 import time
 from typing import List, Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -17,25 +17,50 @@ class UnitreeGo2LocationsSensorConfig(SensorConfig):
 
     Parameters
     ----------
-    base_url : str
-        Base URL for the locations service.
+    base_url : Optional[str]
+        Base URL for the locations service. If None, determined by use_sim flag.
+    api_key: str
+        API key for OpenMind cloud system.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     timeout : int
         Timeout in seconds.
     refresh_interval : int
         Refresh interval in seconds.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000/maps/locations/list",
-        description="Base URL for the locations service",
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the locations service. If None, determined by use_sim flag.",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
+    use_sim: bool = Field(default=False, description="Whether to run the connector in the simulator.")
     timeout: int = Field(default=5, description="Timeout in seconds")
     refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
+    @model_validator(mode="after")
+    def set_base_url(self) -> "UnitreeGo2LocationsSensorConfig":
+        """
+        Set base_url based on use_sim if not explicitly provided.
 
-class UnitreeGo2LocationsInput(
-    FuserInput[UnitreeGo2LocationsSensorConfig, Optional[str]]
-):
+        Returns
+        -------
+        UnitreeGo2LocationsSensorConfig
+            The validated configuration with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/list"
+            else:
+                self.base_url = "http://localhost:5000/maps/locations/list"
+
+        return self
+
+
+class UnitreeGo2LocationsInput(FuserInput[UnitreeGo2LocationsSensorConfig, Optional[str]]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree Go2).
 
@@ -54,12 +79,15 @@ class UnitreeGo2LocationsInput(
         super().__init__(config)
 
         base_url = self.config.base_url
+        api_key = self.config.api_key
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.locations_provider = UnitreeGo2LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        if not base_url:
+            logging.error("UnitreeGo2LocationsInput requires a base_url to be set in the configuration")
+            return
+
+        self.locations_provider = UnitreeGo2LocationsProvider(base_url, api_key, timeout, refresh_interval)
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []

@@ -18,7 +18,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
     def __init__(
         self,
         topic: str = "om/localization_pose",
-        quality_tolerance: float = 0.9,
+        quality_tolerance: float = 0.7,
     ):
         """
         Initialize the Lidar Localization Provider with a specific topic.
@@ -28,7 +28,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         topic : str, optional
             The topic on which to subscribe for lidar localization messages (default is "om/localization_pose").
         quality_tolerance : float, optional
-            The tolerance for localization quality percent (default is 0.9).
+            The tolerance for localization quality percent (default is 0.7).
         """
         super().__init__(topic)
         logging.info("Lidar Localization Provider initialized with topic: %s", topic)
@@ -47,9 +47,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.LidarLocalization = (
-                nav_msgs.LidarLocalization.deserialize(data.payload.to_bytes())
-            )
+            message: nav_msgs.LidarLocalization = nav_msgs.LidarLocalization.deserialize(data.payload.to_bytes())
             logging.debug("Received Lidar Localization message: %s", message)
 
             quality_percent = message.quality_percent
@@ -78,9 +76,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         if not self.running:
             self.register_message_callback(self.lidar_localization_message_callback)
             self.running = True
-            logging.info(
-                "Lidar Localization Provider started and listening for messages"
-            )
+            logging.info("Lidar Localization Provider started and listening for messages")
         else:
             logging.warning("Lidar Localization Provider is already running")
 

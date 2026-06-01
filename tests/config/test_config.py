@@ -8,15 +8,12 @@ from actions.base import ActionConnector, Interface
 from inputs import find_module_with_class
 from inputs.base import Sensor
 from llm import get_llm_class
-from simulators import get_simulator_class
 
 
 def test_configs():
     """Test that all config files can be loaded."""
     config_folder_path = os.path.join(os.path.dirname(__file__), "../../config")
-    files_names = [
-        entry.name for entry in os.scandir(config_folder_path) if entry.is_file()
-    ]
+    files_names = [entry.name for entry in os.scandir(config_folder_path) if entry.is_file()]
 
     for file_name in files_names:
         if file_name.endswith(".DS_Store"):
@@ -33,17 +30,11 @@ def test_configs():
         assert "type" in cortex_llm, f"'type' key missing in cortex_llm of {file_name}"
         assert get_llm_class(cortex_llm["type"]) is not None
 
-        simulators = raw_config.get("simulators", [])
-        assert isinstance(simulators, list)
-
         agent_actions = raw_config.get("agent_actions", [])
         assert isinstance(agent_actions, list)
 
         for input_config in agent_inputs:
             assert_input_class_exists(input_config)
-
-        for simulator in simulators:
-            assert get_simulator_class(simulator["type"]) is not None
 
         for action in agent_actions:
             assert_action_classes_exist(action)
@@ -63,13 +54,9 @@ def assert_input_class_exists(input_config):
 def assert_action_classes_exist(action_config):
     """Assert that all required classes for an action exist without instantiating them."""
     # Check interface exists
-    action_module = importlib.import_module(
-        f"actions.{action_config['name']}.interface"
-    )
+    action_module = importlib.import_module(f"actions.{action_config['name']}.interface")
     interface = find_subclass_in_module(action_module, Interface)
-    assert (
-        interface is not None
-    ), f"No interface found for action {action_config['name']}"
+    assert interface is not None, f"No interface found for action {action_config['name']}"
 
     # Check connector exists
     try:
@@ -77,23 +64,14 @@ def assert_action_classes_exist(action_config):
             f"actions.{action_config['name']}.connector.{action_config['connector']}"
         )
         connector = find_subclass_in_module(connector_module, ActionConnector)
-        assert (
-            connector is not None
-        ), f"No connector found for action {action_config['name']}"
+        assert connector is not None, f"No connector found for action {action_config['name']}"
     except (ImportError, ModuleNotFoundError) as e:
-        assert False, (
-            f"Connector import failed for action {action_config['name']}: "
-            f"{type(e).__name__}: {e}"
-        )
+        assert False, f"Connector import failed for action {action_config['name']}: " f"{type(e).__name__}: {e}"
 
 
 def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:
     """Find a subclass of parent_class in the given module."""
     for _, obj in module.__dict__.items():
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, parent_class)
-            and obj != parent_class
-        ):
+        if isinstance(obj, type) and issubclass(obj, parent_class) and obj != parent_class:
             return obj
     return None

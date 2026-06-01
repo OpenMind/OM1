@@ -29,7 +29,7 @@ class RivaASRRTSPSensorConfig(SensorConfig):
     rate : int
         Sampling rate. Default is 16000.
     base_url : str
-        Base URL for the ASR service. Default is "wss://api-asr.openmind.org".
+        Base URL for the ASR service. Default is "wss://api-asr.openmind.com".
     enable_tts_interrupt : bool
         Enable TTS interrupt when ASR detects speech during playback.
     """
@@ -40,9 +40,7 @@ class RivaASRRTSPSensorConfig(SensorConfig):
         description="RTSP URL for the audio stream",
     )
     rate: int = Field(default=16000, description="Sampling rate")
-    base_url: str = Field(
-        default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
-    )
+    base_url: str = Field(default="wss://api-asr.openmind.com", description="Base URL for the ASR service")
     enable_tts_interrupt: bool = Field(
         default=False,
         description="Enable TTS interrupt (does not mute mic during TTS playback)",
@@ -212,9 +210,7 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
 {self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 

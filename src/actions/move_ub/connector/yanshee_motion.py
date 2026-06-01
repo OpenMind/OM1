@@ -174,9 +174,7 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
             return False
 
         except Exception as err:
-            logging.error(
-                "Unexpected error sending command %r: %s", asdict(motion), err
-            )
+            logging.error("Unexpected error sending command %r: %s", asdict(motion), err)
             return False
 
     def _execute_command_thread(self, motion: Motion) -> None:
@@ -212,9 +210,7 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
             return
 
         try:
-            thread = threading.Thread(
-                target=self._execute_command_thread, args=(motion,), daemon=True
-            )
+            thread = threading.Thread(target=self._execute_command_thread, args=(motion,), daemon=True)
             thread.start()
         except Exception as e:
             logging.error(f"Error executing UB command {motion.name}: {e}")
@@ -234,9 +230,7 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
             return
 
         try:
-            thread = threading.Thread(
-                target=self._execute_command_thread, args=(motion,), daemon=True
-            )
+            thread = threading.Thread(target=self._execute_command_thread, args=(motion,), daemon=True)
             thread.start()
         except Exception as e:
             logging.error(f"Error executing UB command {motion.name}: {e}")
@@ -256,24 +250,16 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
             await self._execute_sport_command(Motion("wave"))
         elif output_interface.action == "walk forward":
             logging.info("UB command: walk forward")
-            await self._execute_sport_command(
-                Motion("walk", direction="forward", repeat=2)
-            )
+            await self._execute_sport_command(Motion("walk", direction="forward", repeat=2))
         elif output_interface.action == "walk backward":
             logging.info("UB command: walk backward")
-            await self._execute_sport_command(
-                Motion("walk", direction="backward", repeat=2)
-            )
+            await self._execute_sport_command(Motion("walk", direction="backward", repeat=2))
         elif output_interface.action == "walk left":
             logging.info("UB command: walk left")
-            await self._execute_sport_command(
-                Motion("walk", direction="left", repeat=2)
-            )
+            await self._execute_sport_command(Motion("walk", direction="left", repeat=2))
         elif output_interface.action == "walk right":
             logging.info("UB command: walk right")
-            await self._execute_sport_command(
-                Motion("walk", direction="right", repeat=2)
-            )
+            await self._execute_sport_command(Motion("walk", direction="right", repeat=2))
         elif output_interface.action == "turn left":
             logging.info("UB command: turn left")
             await self._execute_sport_command(Motion("turn around", direction="left"))

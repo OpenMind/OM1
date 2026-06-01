@@ -7,7 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
-PERSON_FOLLOW_BASE_URL = "http://localhost:8080"
+FOLLOWING_BASE_URL = "http://localhost:2000"
+VISION_BASE_URL = "http://localhost:2001"
 
 
 class StartPersonFollowHookContext(BaseModel):
@@ -25,7 +26,7 @@ class StartPersonFollowHookContext(BaseModel):
     """
 
     base_url: str = Field(
-        default=PERSON_FOLLOW_BASE_URL,
+        default=VISION_BASE_URL,
         description="Base URL for the person following system",
     )
     enroll_timeout: float = Field(
@@ -35,6 +36,24 @@ class StartPersonFollowHookContext(BaseModel):
     max_retries: int = Field(
         default=5,
         description="Maximum number of enrollment attempts before waiting for detection",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SwitchPersonFollowHookContext(BaseModel):
+    """
+    Context for switching person follow target.
+
+    Parameters
+    ----------
+    switch_url : str
+        URL for the person following switch endpoint.
+    """
+
+    base_url: str = Field(
+        default=VISION_BASE_URL,
+        description="Base URL for the person following system to send the switch command",
     )
 
     model_config = ConfigDict(extra="allow")
@@ -51,8 +70,32 @@ class StopPersonFollowHookContext(BaseModel):
     """
 
     base_url: str = Field(
-        default=PERSON_FOLLOW_BASE_URL,
+        default=VISION_BASE_URL,
         description="Base URL for the person following system to send the clear command",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SetModeHookContext(BaseModel):
+    """
+    Context for setting person follow mode.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the person following system command endpoint.
+    mode : str
+        Mode to set (e.g., 'greeting', 'following').
+    """
+
+    base_url: str = Field(
+        default=FOLLOWING_BASE_URL,
+        description="Base URL for the person following system command endpoint",
+    )
+    mode: str = Field(
+        ...,
+        description="Mode to set (e.g., 'greeting', 'following')",
     )
 
     model_config = ConfigDict(extra="allow")
@@ -66,6 +109,11 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     ----------
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Result of the operation with 'status', 'message', and 'is_tracked' indicating if tracking started.
     """
     ctx = StartPersonFollowHookContext(**context)
 
@@ -80,9 +128,7 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     try:
         async with aiohttp.ClientSession() as session:
             for attempt in range(max_retries):
-                logging.info(
-                    f"Person Follow: Enrolling (attempt {attempt + 1}/{max_retries})"
-                )
+                logging.info(f"Person Follow: Enrolling (attempt {attempt + 1}/{max_retries})")
 
                 try:
                     async with session.post(
@@ -110,9 +156,7 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
                                 status_data = await status_response.json()
                                 if status_data.get("is_tracked", False):
                                     logging.info("Person Follow: Tracking started")
-                                    elevenlabs_provider.add_pending_message(
-                                        "I see you! I'll follow you now."
-                                    )
+                                    elevenlabs_provider.add_pending_message("I see you! I'll follow you now.")
                                     return {
                                         "status": "success",
                                         "message": "Person enrolled and tracking",
@@ -121,14 +165,10 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
                     except Exception as e:
                         logging.warning(f"Person Follow: Status poll failed: {e}")
 
-                logging.info(
-                    f"Person Follow: Attempt {attempt + 1} - not tracking, retrying"
-                )
+                logging.info(f"Person Follow: Attempt {attempt + 1} - not tracking, retrying")
 
             logging.info("Person Follow: Awaiting person detection")
-            elevenlabs_provider.add_pending_message(
-                "Person following mode activated. Please stand in front of me."
-            )
+            elevenlabs_provider.add_pending_message("Person following mode activated. Please stand in front of me.")
             return {
                 "status": "success",
                 "message": "Enrolled but awaiting person detection",
@@ -137,9 +177,50 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
 
     except aiohttp.ClientError as e:
         logging.error(f"Person Follow: Connection error: {str(e)}")
-        elevenlabs_provider.add_pending_message(
-            "I couldn't connect to the person following system."
-        )
+        elevenlabs_provider.add_pending_message("I couldn't connect to the person following system.")
+        return {"status": "error", "message": f"Connection error: {str(e)}"}
+
+
+async def switch_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Hook to switch person following target.
+
+    Parameters
+    ----------
+    context : Dict[str, Any]
+        Context dictionary containing configuration parameters.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Result of the operation with 'status' and 'message'.
+    """
+    ctx = SwitchPersonFollowHookContext(**context)
+    base_url = ctx.base_url
+
+    elevenlabs_provider = ElevenLabsTTSProvider()
+    switch_url = f"{base_url}/switch"
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            logging.info(f"Person Follow: Calling switch at {switch_url}")
+
+            async with session.post(
+                switch_url,
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as response:
+                if response.status == 200:
+                    logging.info("Person Follow: Switched successfully")
+                    elevenlabs_provider.add_pending_message("I'll follow a new person now.")
+                    return {"status": "success", "message": "Person tracking target switched"}
+                else:
+                    logging.error(f"Person Follow: Failed to switch (status {response.status})")
+                    elevenlabs_provider.add_pending_message("I couldn't switch to a new person.")
+                    return {"status": "error", "message": f"Switch failed with status {response.status}"}
+
+    except aiohttp.ClientError as e:
+        logging.error(f"Person Follow: Switch error: {str(e)}")
+        elevenlabs_provider.add_pending_message("I couldn't connect to switch the person.")
         return {"status": "error", "message": f"Connection error: {str(e)}"}
 
 
@@ -151,6 +232,11 @@ async def stop_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     ----------
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Result of the operation with 'status' and 'message'.
     """
     ctx = StopPersonFollowHookContext(**context)
     base_url = ctx.base_url
@@ -173,4 +259,47 @@ async def stop_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
 
     except aiohttp.ClientError as e:
         logging.error(f"Person Follow: Clear error: {str(e)}")
+        return {"status": "error", "message": f"Connection error: {str(e)}"}
+
+
+async def set_mode_hook(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Hook to set person follow mode.
+
+    Parameters
+    ----------
+    context : Dict[str, Any]
+        Context dictionary containing configuration parameters including 'mode'.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Result of the operation with 'status' and 'message'.
+    """
+    ctx = SetModeHookContext(**context)
+    base_url = ctx.base_url
+    mode = ctx.mode
+    command = f"{base_url}/command"
+
+    payload = {"cmd": "set_mode", "mode": mode}
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            logging.info(f"Person Follow: Setting mode to '{mode}' at {command}")
+
+            async with session.post(
+                command,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as response:
+                if response.status == 200:
+                    logging.info(f"Person Follow: Mode set to '{mode}' successfully")
+                    return {"status": "success", "message": f"Mode set to {mode}"}
+                else:
+                    logging.error(f"Person Follow: Failed to set mode (status {response.status})")
+                    return {"status": "error", "message": f"Set mode failed with status {response.status}"}
+
+    except aiohttp.ClientError as e:
+        logging.error(f"Person Follow: Set mode error: {str(e)}")
         return {"status": "error", "message": f"Connection error: {str(e)}"}

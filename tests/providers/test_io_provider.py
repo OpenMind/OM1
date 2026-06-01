@@ -16,8 +16,6 @@ def io_provider():
     provider._fuser_start_time = None
     provider._fuser_end_time = None
     provider._llm_prompt = None
-    provider._llm_start_time = None
-    provider._llm_end_time = None
     provider._mode_transition_input = None
     provider._variables.clear()
     provider._tick_counter = 0
@@ -26,9 +24,7 @@ def io_provider():
 def test_add_input_with_timestamp(io_provider):
     timestamp = time.time()
     io_provider.add_input("key1", "value1", timestamp)
-    assert io_provider.inputs["key1"] == Input(
-        input="value1", timestamp=timestamp, tick=0
-    )
+    assert io_provider.inputs["key1"] == Input(input="value1", timestamp=timestamp, tick=0)
 
 
 def test_remove_input(io_provider):
@@ -61,17 +57,8 @@ def test_fuser_time_properties(io_provider):
 
 def test_llm_properties(io_provider):
     prompt = "test prompt"
-    start_time = time.time()
-    end_time = start_time + 1.0
-
     io_provider.llm_prompt = prompt
     assert io_provider.llm_prompt == prompt
-
-    io_provider.llm_start_time = start_time
-    assert io_provider.llm_start_time == start_time
-
-    io_provider.llm_end_time = end_time
-    assert io_provider.llm_end_time == end_time
 
 
 def test_clear_llm_prompt(io_provider):
@@ -165,12 +152,6 @@ def test_set_llm_prompt_method(io_provider):
     prompt = "llm prompt"
     io_provider.set_llm_prompt(prompt)
     assert io_provider.llm_prompt == prompt
-
-
-def test_set_llm_start_time_method(io_provider):
-    start_time = time.time()
-    io_provider.set_llm_start_time(start_time)
-    assert io_provider.llm_start_time == start_time
 
 
 def test_dynamic_variables(io_provider):

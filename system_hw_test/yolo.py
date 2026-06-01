@@ -25,9 +25,7 @@ RESOLUTIONS = [
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--cam", help="the index of the camera you want to use", type=int, default=0
-)
+parser.add_argument("--cam", help="the index of the camera you want to use", type=int, default=0)
 print(parser.format_help())
 args = parser.parse_args()
 
@@ -48,9 +46,7 @@ def set_best_resolution(cap, resolutions):
             return width, height
 
     print("⚠️ Could not set preferred resolution. Using default.")
-    return int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(
-        cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    )
+    return int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 
 # Open webcam

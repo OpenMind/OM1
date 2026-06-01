@@ -5,6 +5,7 @@ from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from providers.unitree_go2_state_zenoh_provider import UnitreeGo2StateZenohProvider
 
 
 class UnitreeGo2StateConfig(BackgroundConfig):
@@ -13,13 +14,20 @@ class UnitreeGo2StateConfig(BackgroundConfig):
 
     Parameters
     ----------
+    api_key : Optional[str]
+        API Key for OpenMind cloud system, if required.
+    use_sim : bool
+        Whether to use the simulation Zenoh endpoint instead of a local one.
     unitree_ethernet : Optional[str]
         Unitree Go2 Ethernet channel.
     """
 
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Go2 Ethernet channel"
+    api_key: Optional[str] = Field(default=None, description="API Key for OpenMind cloud system, if required.")
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to use the simulation Zenoh endpoint instead of a local one.",
     )
+    unitree_ethernet: Optional[str] = Field(default=None, description="Unitree Go2 Ethernet channel")
 
 
 class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
@@ -48,14 +56,15 @@ class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
         """
         super().__init__(config)
 
+        if self.config.use_sim:
+            self.unitree_go2_state_provider = UnitreeGo2StateZenohProvider(self.config.api_key, self.config.use_sim)
+            logging.info("Unitree Go2 State Zenoh Provider initialized in background")
+            return
+
         unitree_ethernet = self.config.unitree_ethernet
         if not unitree_ethernet:
-            logging.error(
-                "Unitree Go2 Ethernet channel is not set in the configuration."
-            )
-            raise ValueError(
-                "Unitree Go2 Ethernet channel must be specified in the configuration."
-            )
+            logging.error("Unitree Go2 Ethernet channel is not set in the configuration.")
+            raise ValueError("Unitree Go2 Ethernet channel must be specified in the configuration.")
 
         self.unitree_go2_state_provider = UnitreeGo2StateProvider()
         logging.info("Unitree Go2 State Provider initialized in background")

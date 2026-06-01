@@ -17,10 +17,7 @@ def test_initialization():
         sensor = UnitreeG1Odom(config=config)
 
         assert sensor.messages == []
-        assert (
-            "location" in sensor.descriptor_for_LLM.lower()
-            or "pose" in sensor.descriptor_for_LLM.lower()
-        )
+        assert "location" in sensor.descriptor_for_LLM.lower() or "pose" in sensor.descriptor_for_LLM.lower()
 
 
 def test_initialization_with_unitree_ethernet():
@@ -51,9 +48,7 @@ def test_initialization_without_ethernet():
 async def test_poll_with_position_data():
     """Test _poll with position data available."""
     with (
-        patch(
-            "inputs.plugins.unitree_g1_odom.UnitreeG1OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_g1_odom.UnitreeG1OdomProvider") as mock_provider_class,
         patch("inputs.plugins.unitree_g1_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -73,9 +68,7 @@ async def test_poll_with_position_data():
 async def test_poll_with_no_data():
     """Test _poll when no position data available."""
     with (
-        patch(
-            "inputs.plugins.unitree_g1_odom.UnitreeG1OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_g1_odom.UnitreeG1OdomProvider") as mock_provider_class,
         patch("inputs.plugins.unitree_g1_odom.IOProvider"),
     ):
         mock_provider = MagicMock()

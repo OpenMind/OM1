@@ -134,9 +134,7 @@ class TestConfidenceCalculator:
         # Short response should increase completion confidence
         assert result["breakdown"]["engagement"] > 0.0
 
-    def test_should_transition_to_concluding_high_confidence(
-        self, confidence_calculator
-    ):
+    def test_should_transition_to_concluding_high_confidence(self, confidence_calculator):
         """Test transition to concluding with high overall confidence.
 
         This requires the LLM to actually want to conclude (CONCLUDING state)
@@ -154,9 +152,7 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_concluding(
-            result
-        )
+        should_transition = confidence_calculator.should_transition_to_concluding(result)
 
         # High confidence to conclude should trigger transition
         assert should_transition is True
@@ -175,16 +171,12 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_concluding(
-            result
-        )
+        should_transition = confidence_calculator.should_transition_to_concluding(result)
 
         # LLM explicitly wants to conclude with decent confidence
         assert should_transition is True
 
-    def test_should_not_transition_to_concluding_low_confidence(
-        self, confidence_calculator
-    ):
+    def test_should_not_transition_to_concluding_low_confidence(self, confidence_calculator):
         """Test no transition with low confidence."""
         factors = ConfidenceFactors(
             conversation_state=ConversationState.CONVERSING,
@@ -198,9 +190,7 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_concluding(
-            result
-        )
+        should_transition = confidence_calculator.should_transition_to_concluding(result)
 
         # Low confidence should not trigger transition
         assert should_transition is False
@@ -254,9 +244,7 @@ class TestConfidenceCalculator:
         # Overall confidence to end should be relatively high
         assert result["overall"] > 0.4
 
-    def test_high_confidence_to_converse_prevents_concluding_transition(
-        self, confidence_calculator
-    ):
+    def test_high_confidence_to_converse_prevents_concluding_transition(self, confidence_calculator):
         """Test that high confidence to CONVERSING prevents transition to CONCLUDING.
 
         This is a regression test for the bug where high LLM confidence value
@@ -274,9 +262,7 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_concluding(
-            result
-        )
+        should_transition = confidence_calculator.should_transition_to_concluding(result)
 
         # With high confidence to continue (0.85), and inverted llm_score (0.15),
         # breakdown["llm"] should be 0.15, which is < 0.7 threshold
@@ -284,9 +270,7 @@ class TestConfidenceCalculator:
         assert result["breakdown"]["llm"] < 0.7
         assert should_transition is False
 
-    def test_should_transition_to_finished_very_high_confidence(
-        self, confidence_calculator
-    ):
+    def test_should_transition_to_finished_very_high_confidence(self, confidence_calculator):
         """Test immediate transition to finished with very high confidence."""
         factors = ConfidenceFactors(
             conversation_state=ConversationState.FINISHED,
@@ -300,9 +284,7 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_finished(
-            result, time_in_concluding=1.0
-        )
+        should_transition = confidence_calculator.should_transition_to_finished(result, time_in_concluding=1.0)
 
         # Very high confidence should trigger immediate transition
         assert should_transition is True
@@ -349,9 +331,7 @@ class TestConfidenceCalculator:
         # Timeout with reasonable confidence should trigger transition
         assert should_transition is True
 
-    def test_should_not_transition_to_finished_low_confidence(
-        self, confidence_calculator
-    ):
+    def test_should_not_transition_to_finished_low_confidence(self, confidence_calculator):
         """Test no transition to finished with low confidence and short time."""
         factors = ConfidenceFactors(
             conversation_state=ConversationState.CONCLUDING,
@@ -365,9 +345,7 @@ class TestConfidenceCalculator:
         )
 
         result = confidence_calculator.calculate_completion_confidence(factors)
-        should_transition = confidence_calculator.should_transition_to_finished(
-            result, time_in_concluding=1.0
-        )
+        should_transition = confidence_calculator.should_transition_to_finished(result, time_in_concluding=1.0)
 
         assert should_transition is False
 
@@ -468,13 +446,9 @@ class TestGreetingConversationStateMachineProvider:
         state_machine.start_conversation()
         # Set up a conversation with some history
         state_machine.turn_count = 3
-        state_machine.conversation_start_time = (
-            time.time() - 20.0
-        )  # 20 seconds of conversation
+        state_machine.conversation_start_time = time.time() - 20.0  # 20 seconds of conversation
         state_machine.current_state = ConversationState.CONCLUDING
-        state_machine.state_entry_time = (
-            time.time() - 6.0
-        )  # Been concluding for 6 seconds
+        state_machine.state_entry_time = time.time() - 6.0  # Been concluding for 6 seconds
 
         llm_output = {
             "conversation_state": ConversationState.FINISHED,
@@ -491,9 +465,7 @@ class TestGreetingConversationStateMachineProvider:
         """Test reverting to conversing from concluding when LLM says conversing."""
         state_machine.start_conversation()
         state_machine.current_state = ConversationState.CONCLUDING
-        state_machine.state_entry_time = (
-            time.time() - 2.0
-        )  # Been concluding for 2 seconds
+        state_machine.state_entry_time = time.time() - 2.0  # Been concluding for 2 seconds
 
         llm_output = {
             "conversation_state": ConversationState.CONVERSING,  # LLM says still conversing (enum)
@@ -508,9 +480,7 @@ class TestGreetingConversationStateMachineProvider:
         assert state_machine.current_state == ConversationState.CONVERSING
         assert state_machine.previous_state == ConversationState.CONCLUDING
 
-    def test_revert_to_conversing_from_concluding_with_string_state(
-        self, state_machine
-    ):
+    def test_revert_to_conversing_from_concluding_with_string_state(self, state_machine):
         """Test reverting to conversing from concluding when LLM returns string state.
 
         This tests the string-to-enum conversion that happens in process_conversation.
@@ -518,9 +488,7 @@ class TestGreetingConversationStateMachineProvider:
         """
         state_machine.start_conversation()
         state_machine.current_state = ConversationState.CONCLUDING
-        state_machine.state_entry_time = (
-            time.time() - 3.0
-        )  # Been concluding for 3 seconds
+        state_machine.state_entry_time = time.time() - 3.0  # Been concluding for 3 seconds
 
         llm_output = {
             "conversation_state": "conversing",  # LLM returns string, not enum
@@ -543,9 +511,7 @@ class TestGreetingConversationStateMachineProvider:
         """
         state_machine.start_conversation()
         state_machine.current_state = ConversationState.CONCLUDING
-        state_machine.state_entry_time = (
-            time.time() - 3.0
-        )  # Been concluding for only 3 seconds
+        state_machine.state_entry_time = time.time() - 3.0  # Been concluding for only 3 seconds
 
         llm_output = {
             "conversation_state": "conversing",  # String from LLM
@@ -570,9 +536,7 @@ class TestGreetingConversationStateMachineProvider:
         """Test emergency timeout forces finish."""
         state_machine.start_conversation()
         state_machine.current_state = ConversationState.CONCLUDING
-        state_machine.state_entry_time = (
-            time.time() - 20.0
-        )  # Been concluding for 20 seconds
+        state_machine.state_entry_time = time.time() - 20.0  # Been concluding for 20 seconds
 
         llm_output = {
             "conversation_state": ConversationState.CONCLUDING,
@@ -799,9 +763,7 @@ class TestGreetingConversationStateIntegration:
 
         # Simulate several conversation turns
         for i in range(3):
-            voice_input = Input(
-                input=f"User message {i}", timestamp=time.time(), tick=i
-            )
+            voice_input = Input(input=f"User message {i}", timestamp=time.time(), tick=i)
             mock_io.get_input.return_value = voice_input
             mock_io.tick_counter = i
 

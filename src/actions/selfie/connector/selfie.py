@@ -196,9 +196,7 @@ class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
         timeout_sec = int(output_interface.timeout_sec or self.default_timeout)
         if not name:
             logging.error("Selfie requires a non-empty `id` (e.g., 'wendy').")
-            self.io_provider.add_input(
-                "SelfieStatus", "failed reason=bad_id", time.time()
-            )
+            self.io_provider.add_input("SelfieStatus", "failed reason=bad_id", time.time())
             return
 
         loop = asyncio.get_running_loop()
@@ -226,14 +224,10 @@ class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
                 )
                 return
 
-            resp = await loop.run_in_executor(
-                None, self._post_json, "/selfie", {"id": name}
-            )
+            resp = await loop.run_in_executor(None, self._post_json, "/selfie", {"id": name})
             if not (isinstance(resp, dict) and resp.get("ok")):
                 logging.error("[Selfie] /selfie failed or returned non-ok: %s", resp)
-                self.io_provider.add_input(
-                    "SelfieStatus", "failed reason=service", time.time()
-                )
+                self.io_provider.add_input("SelfieStatus", "failed reason=service", time.time())
                 self.elevenlabs_tts_provider.add_pending_message(
                     "Woof! Woof! I couldn't see you clearly. Please try again."
                 )

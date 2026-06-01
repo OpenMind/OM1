@@ -26,12 +26,8 @@ class ElevenLabsTTSConfig(BackgroundConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="OM API key")
-    elevenlabs_api_key: Optional[str] = Field(
-        default=None, description="Eleven Labs API key"
-    )
-    voice_id: str = Field(
-        default="JBFqnCBsd6RMkjVDRZzb", description="Voice ID for TTS"
-    )
+    elevenlabs_api_key: Optional[str] = Field(default=None, description="Eleven Labs API key")
+    voice_id: str = Field(default="JBFqnCBsd6RMkjVDRZzb", description="Voice ID for TTS")
     model_id: str = Field(default="eleven_flash_v2_5", description="Model ID for TTS")
     output_format: str = Field(default="pcm_16000", description="Output audio format")
 
@@ -78,7 +74,7 @@ class ElevenLabsTTS(Background[ElevenLabsTTSConfig]):
 
         # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
@@ -89,7 +85,7 @@ class ElevenLabsTTS(Background[ElevenLabsTTSConfig]):
 
         # Configure Eleven Labs TTS Provider to ensure settings are applied
         self.tts.configure(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,

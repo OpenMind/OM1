@@ -30,20 +30,14 @@ class Intel435ObstacleDector:
 
         self.session = open_zenoh_session()
 
-        self.session.declare_subscriber(
-            "camera/realsense2_camera_node/depth/image_rect_raw", self.depth_callback
-        )
-        self.session.declare_subscriber(
-            "camera/realsense2_camera_node/depth/camera_info", self.depth_info_callback
-        )
+        self.session.declare_subscriber("camera/realsense2_camera_node/depth/image_rect_raw", self.depth_callback)
+        self.session.declare_subscriber("camera/realsense2_camera_node/depth/camera_info", self.depth_info_callback)
 
         logging.info("Zenoh is open for Intel435ObstacleDector")
 
     def depth_info_callback(self, msg):
         try:
-            self.camera_info = sensor_msgs.CameraInfo.deserialize(
-                msg.payload.to_bytes()
-            )
+            self.camera_info = sensor_msgs.CameraInfo.deserialize(msg.payload.to_bytes())
             self.fx = self.camera_info.k[0]
             self.fy = self.camera_info.k[4]
             self.cx = self.camera_info.k[2]
@@ -150,9 +144,7 @@ class Intel435ObstacleDector:
                         )
 
                         if world_x is not None and world_z > self.obstacle_threshold:
-                            angle_degrees, distance = self.calculate_angle_and_distance(
-                                world_x, world_y
-                            )
+                            angle_degrees, distance = self.calculate_angle_and_distance(world_x, world_y)
                             # Change to the robot coordinate system
                             obstacle.append(
                                 {

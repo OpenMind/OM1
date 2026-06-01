@@ -1,0 +1,48 @@
+CLOUD_TOPICS: set[str] = {
+    # Navigation
+    "odom",
+    "cmd_vel",
+    "cmd_vel_human",
+    "scan",
+    "joint_states",
+    "imu/data",
+    "tf",
+    "tf_static",
+    "joy",
+    # Camera streams
+    "camera/go2/image_raw",
+    "camera/realsense2_camera_node/color/image_raw",
+    "camera/realsense2_camera_node/color/image_isaac_sim_raw",
+    "camera/realsense2_camera_node/color/camera_info",
+    "camera/realsense2_camera_node/depth/image_rect_raw",
+    "camera/realsense2_camera_node/depth/image_rect_isaac_sim_raw",
+    "camera/realsense2_camera_node/depth/camera_info",
+    "rgb_image",
+    # Navigation
+    "goal_pose",
+    "navigate_to_pose/_action/status",
+    "navigate_to_pose/_action/cancel_goal",
+    # Unitree
+    "lowstate",
+    "lf/lowstate",
+    "sportmodestate",
+    "lf/sportmodestate",
+    "utlidar/robot_pose",
+    "utlidar/cloud_deskewed",
+    "unitree_lidar/points",
+    # Unitree sport API
+    "api/sport/request",
+    "api/sport/response",
+    # OM system topics
+    "om/paths",
+    "om/paths/r50",
+    "om/paths/r100",
+    "om/paths/r200",
+    "om/ai/request",
+    "om/ai/response",
+    "om/asr/text",
+    "om/avatar/request",
+    "om/avatar/response",
+    "om/localization_pose",
+    "image",
+}

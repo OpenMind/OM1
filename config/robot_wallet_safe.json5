@@ -1,5 +1,5 @@
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   hertz: 1,
   unitree_ethernet: "${UNITREE_ETHERNET:-en0}",
   name: "spot_quadruped",

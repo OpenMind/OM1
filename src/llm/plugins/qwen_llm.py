@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -45,9 +47,7 @@ def _parse_qwen_tool_calls(text: str) -> list:
                         "type": "function",
                         "function": {
                             "name": name,
-                            "arguments": json.dumps(
-                                obj.get("arguments", {}), ensure_ascii=False
-                            ),
+                            "arguments": json.dumps(obj.get("arguments", {}), ensure_ascii=False),
                         },
                     }
                 )
@@ -72,15 +72,9 @@ class QwenLLMConfig(LLMConfig):
         Enable reasoning mode with more detailed thought processes in responses (default: False).
     """
 
-    base_url: T.Optional[str] = Field(
-        default="http://127.0.0.1:8860/v1", description="Base URL for local Qwen API"
-    )
-    api_key: T.Optional[str] = Field(
-        default="placeholder", description="API key for local Qwen API (if required)"
-    )
-    model: T.Optional[str] = Field(
-        default="RedHatAI/Qwen3-30B-A3B-quantized.w4a16", description="Qwen model name"
-    )
+    base_url: T.Optional[str] = Field(default="http://127.0.0.1:8860/v1", description="Base URL for local Qwen API")
+    api_key: T.Optional[str] = Field(default="placeholder", description="API key for local Qwen API (if required)")
+    model: T.Optional[str] = Field(default="RedHatAI/Qwen3-30B-A3B-quantized.w4a16", description="Qwen model name")
     enable_reasoning: bool = Field(
         default=False,
         description="Enable reasoning mode with more detailed thought processes in responses",
@@ -122,6 +116,7 @@ class QwenLLM(LLM[R]):
         self._client = openai.AsyncClient(
             base_url=self._base_url,
             api_key=self._api_key,
+            http_client=get_async_httpx_client(),
         )
 
         self._extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
@@ -131,9 +126,7 @@ class QwenLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
-    ) -> R | None:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None) -> R | None:
         """
         Send prompt to local Qwen model and get structured response.
 
@@ -155,13 +148,10 @@ class QwenLLM(LLM[R]):
             logging.info(f"Qwen input: {prompt}")
             logging.info(f"Qwen messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
-            formatted = [
-                {"role": m.get("role", "user"), "content": m.get("content", "")}
-                for m in messages
-            ]
+            formatted = [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
             user_content = prompt if self._enable_reasoning else f"{prompt} /no_think"
             formatted.append({"role": "user", "content": user_content})
 
@@ -183,14 +173,12 @@ class QwenLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(model=str(self._model), endpoint=str(self._base_url)).observe(latency)
+            om1_llm_latency_last.labels(model=str(self._model), endpoint=str(self._base_url)).set(latency)
 
             tool_calls = list(message.tool_calls or [])
-            if (
-                not tool_calls
-                and isinstance(message.content, str)
-                and "<tool_call>" in message.content
-            ):
+            if not tool_calls and isinstance(message.content, str) and "<tool_call>" in message.content:
                 tool_calls = _parse_qwen_tool_calls(message.content)
 
             if tool_calls:
@@ -200,15 +188,9 @@ class QwenLLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": (
-                                tc.function.name
-                                if hasattr(tc, "function")
-                                else tc["function"]["name"]
-                            ),
+                            "name": (tc.function.name if hasattr(tc, "function") else tc["function"]["name"]),
                             "arguments": (
-                                tc.function.arguments
-                                if hasattr(tc, "function")
-                                else tc["function"]["arguments"]
+                                tc.function.arguments if hasattr(tc, "function") else tc["function"]["arguments"]
                             ),
                         }
                     }
@@ -216,8 +198,13 @@ class QwenLLM(LLM[R]):
                 ]
                 actions = convert_function_calls_to_actions(function_call_data)
                 result = CortexOutputModel(actions=actions)
+                self.tracer.gauge(
+                    llm_input=prompt,
+                    llm_output=[{"type": a.type, "value": a.value} for a in actions],
+                )
                 return T.cast(R, result)
 
+            self.tracer.gauge(llm_input=prompt, llm_output=[])
             return None
         except Exception as e:
             logging.error(f"Qwen LLM error: {e}")

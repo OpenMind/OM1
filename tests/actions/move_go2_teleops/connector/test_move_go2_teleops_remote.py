@@ -22,9 +22,7 @@ def mock_external_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "om1_utils", mock_om1_utils)
     monkeypatch.setitem(sys.modules, "om1_utils.ws", mock_om1_utils.ws)
     monkeypatch.setitem(sys.modules, "unitree", mock_unitree)
-    monkeypatch.setitem(
-        sys.modules, "unitree.unitree_sdk2py", mock_unitree.unitree_sdk2py
-    )
+    monkeypatch.setitem(sys.modules, "unitree.unitree_sdk2py", mock_unitree.unitree_sdk2py)
     monkeypatch.setitem(
         sys.modules,
         "unitree.unitree_sdk2py.go2",
@@ -104,9 +102,7 @@ class TestMoveGo2RemoteConnector:
         """Test initialization of MoveGo2RemoteConnector."""
         with (
             patch("actions.move_go2_teleops.connector.remote.ws") as mock_ws,
-            patch(
-                "actions.move_go2_teleops.connector.remote.SportClient"
-            ) as mock_sport_client_class,
+            patch("actions.move_go2_teleops.connector.remote.SportClient") as mock_sport_client_class,
             patch("actions.move_go2_teleops.connector.remote.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
@@ -125,9 +121,7 @@ class TestMoveGo2RemoteConnector:
         """Test initialization with API key."""
         with (
             patch("actions.move_go2_teleops.connector.remote.ws") as mock_ws,
-            patch(
-                "actions.move_go2_teleops.connector.remote.SportClient"
-            ) as mock_sport_client_class,
+            patch("actions.move_go2_teleops.connector.remote.SportClient") as mock_sport_client_class,
             patch("actions.move_go2_teleops.connector.remote.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
@@ -146,9 +140,7 @@ class TestMoveGo2RemoteConnector:
         """Test initialization when SportClient fails."""
         with (
             patch("actions.move_go2_teleops.connector.remote.ws") as mock_ws,
-            patch(
-                "actions.move_go2_teleops.connector.remote.SportClient"
-            ) as mock_sport_client_class,
+            patch("actions.move_go2_teleops.connector.remote.SportClient") as mock_sport_client_class,
             patch("actions.move_go2_teleops.connector.remote.UnitreeGo2StateProvider"),
         ):
             mock_sport_client_class.side_effect = Exception("Connection error")
@@ -170,9 +162,7 @@ class TestMoveGo2RemoteConnector:
         """Test connect method (passes through)."""
         with (
             patch("actions.move_go2_teleops.connector.remote.ws") as mock_ws,
-            patch(
-                "actions.move_go2_teleops.connector.remote.SportClient"
-            ) as mock_sport_client_class,
+            patch("actions.move_go2_teleops.connector.remote.SportClient") as mock_sport_client_class,
             patch("actions.move_go2_teleops.connector.remote.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
