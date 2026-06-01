@@ -27,7 +27,9 @@ type Subscriber struct {
 type Options struct {
 	Endpoint string
 
-	// LocalNetwork indicates whether to prefer local-network discovery when opening a session.
+	// LocalNetwork indicates whether to connect to the local router endpoint
+	// (e.g. tcp/127.0.0.1:7447) in client mode. When false, the session is
+	// opened with multicast/gossip discovery instead.
 	LocalNetwork bool
 }
 
@@ -49,22 +51,22 @@ func OpenWithOptions(opts Options) (*Session, error) {
 	}
 
 	if opts.LocalNetwork {
-		session, err := openDiscovery()
+		session, err := openClient(endpoint)
 		if err == nil {
 			return session, nil
 		}
-		logger.Get().Warn("zenoh: local-network discovery failed, falling back to client connect",
+		logger.Get().Warn("zenoh: local client connect failed, falling back to discovery",
 			zap.String("endpoint", endpoint), zap.Error(err))
-		return openClient(endpoint)
+		return openDiscovery()
 	}
 
-	session, err := openClient(endpoint)
+	session, err := openDiscovery()
 	if err == nil {
 		return session, nil
 	}
-	logger.Get().Warn("zenoh: client connect failed, falling back to local-network discovery",
+	logger.Get().Warn("zenoh: discovery failed, falling back to local client connect",
 		zap.String("endpoint", endpoint), zap.Error(err))
-	return openDiscovery()
+	return openClient(endpoint)
 }
 
 // openClient opens a session in client mode connecting to a single router endpoint.
