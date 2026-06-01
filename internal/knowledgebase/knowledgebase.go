@@ -34,8 +34,12 @@ func New(spec *config.KBSpec, log *zap.Logger) (*KnowledgeBase, error) {
 		baseURL = "http://localhost:8100"
 	}
 
-	cwd, _ := os.Getwd()
-	kbDir := filepath.Join(cwd, "knowledge_base", name)
+	kbRoot := spec.Root
+	if kbRoot == "" {
+		cwd, _ := os.Getwd()
+		kbRoot = filepath.Join(cwd, "knowledge_base")
+	}
+	kbDir := filepath.Join(kbRoot, name)
 	if _, err := os.Stat(kbDir); err != nil {
 		return nil, fmt.Errorf("knowledge base directory not found: %s", kbDir)
 	}
