@@ -254,7 +254,6 @@ Respond with ONLY a single word: either "A" or "B" for the better response.`, pr
 	defer cancel()
 
 	resp, err := d.eval.Call(evalCtx, evalPrompt, nil)
-	logger.Get().Info("DualLLM eval", zap.String("response", resp.TextContent), zap.Error(err))
 	if err != nil || resp == nil {
 		logger.Get().Warn("DualLLM quality evaluation failed, defaulting to local", zap.Error(err))
 		return "local"
