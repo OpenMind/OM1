@@ -39,8 +39,12 @@ logs/
 *.jpg
 /zenohdb
 
+
 # Config
 config/memory/
 
 # Saved locations
 locations/
+
+# Packages
+*.tar.gz
