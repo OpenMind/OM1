@@ -611,8 +611,7 @@ class SmokeGasDetector(FuserInput[SmokeGasDetectorConfig, Optional[SmokeGasReadi
         latest = self.messages[-1]
 
         result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest.message}\n// END\n"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n{latest.message}\n// END\n"
         )
 
         self.io_provider.add_input(
