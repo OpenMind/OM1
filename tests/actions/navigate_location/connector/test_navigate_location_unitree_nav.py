@@ -45,22 +45,14 @@ class TestUnitreeG1NavConnectorInit:
     def test_init(self):
         """Test successful initialization."""
         with (
-            patch(
-                "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider"
-            ) as mock_loc,
-            patch(
-                "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1NavigationProvider"
-            ) as mock_nav,
-            patch(
-                "actions.navigate_location.connector.unitree_g1_nav.IOProvider"
-            ) as mock_io,
+            patch("actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider") as mock_loc,
+            patch("actions.navigate_location.connector.unitree_g1_nav.UnitreeG1NavigationProvider") as mock_nav,
+            patch("actions.navigate_location.connector.unitree_g1_nav.IOProvider") as mock_io,
         ):
             config = UnitreeG1NavConfig()
             connector = UnitreeG1NavConnector(config)
 
-            mock_loc.assert_called_once_with(
-                "http://localhost:5000/maps/locations/list", 5, 30
-            )
+            mock_loc.assert_called_once_with("http://localhost:5000/maps/locations/list", 5, 30)
             mock_nav.assert_called_once()
             mock_io.assert_called_once()
             assert connector.location_provider == mock_loc.return_value
@@ -74,12 +66,8 @@ class TestUnitreeG1NavConnectorConnect:
     def g1_connector(self):
         """Create G1 nav connector with mocked dependencies."""
         with (
-            patch(
-                "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider"
-            ) as mock_loc,
-            patch(
-                "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1NavigationProvider"
-            ) as mock_nav,
+            patch("actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider") as mock_loc,
+            patch("actions.navigate_location.connector.unitree_g1_nav.UnitreeG1NavigationProvider") as mock_nav,
             patch("actions.navigate_location.connector.unitree_g1_nav.IOProvider"),
         ):
             mock_loc_instance = Mock()
@@ -100,13 +88,9 @@ class TestUnitreeG1NavConnectorConnect:
         mock_loc.get_all_locations.return_value = {}
 
         nav_input = NavigateLocationInput(action="unknown_place")
-        with patch(
-            "actions.navigate_location.connector.unitree_g1_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_g1_nav.logging") as mock_logging:
             await connector.connect(nav_input)
-            mock_logging.warning.assert_called_with(
-                "Location 'unknown_place' not found. No locations available."
-            )
+            mock_logging.warning.assert_called_with("Location 'unknown_place' not found. No locations available.")
             mock_nav.publish_goal_pose.assert_not_called()
 
     @pytest.mark.asyncio
@@ -120,9 +104,7 @@ class TestUnitreeG1NavConnectorConnect:
         }
 
         nav_input = NavigateLocationInput(action="bedroom")
-        with patch(
-            "actions.navigate_location.connector.unitree_g1_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_g1_nav.logging") as mock_logging:
             await connector.connect(nav_input)
             warning_msg = mock_logging.warning.call_args[0][0]
             assert "bedroom" in warning_msg
@@ -140,9 +122,7 @@ class TestUnitreeG1NavConnectorConnect:
         }
 
         nav_input = NavigateLocationInput(action="kitchen")
-        with patch(
-            "actions.navigate_location.connector.unitree_g1_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_g1_nav.logging") as mock_logging:
             await connector.connect(nav_input)
             mock_nav.publish_goal_pose.assert_called_once()
             mock_logging.info.assert_any_call("Navigation to 'kitchen' initiated")
@@ -172,9 +152,7 @@ class TestUnitreeG1NavConnectorConnect:
         mock_nav.publish_goal_pose.side_effect = Exception("Publish failed")
 
         nav_input = NavigateLocationInput(action="kitchen")
-        with patch(
-            "actions.navigate_location.connector.unitree_g1_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_g1_nav.logging") as mock_logging:
             await connector.connect(nav_input)
             mock_logging.error.assert_called()
 
@@ -207,22 +185,14 @@ class TestUnitreeGo2NavConnectorInit:
     def test_init(self):
         """Test successful initialization."""
         with (
-            patch(
-                "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider"
-            ) as mock_loc,
-            patch(
-                "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2NavigationProvider"
-            ) as mock_nav,
-            patch(
-                "actions.navigate_location.connector.unitree_go2_nav.IOProvider"
-            ) as mock_io,
+            patch("actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider") as mock_loc,
+            patch("actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2NavigationProvider") as mock_nav,
+            patch("actions.navigate_location.connector.unitree_go2_nav.IOProvider") as mock_io,
         ):
             config = UnitreeGo2NavConfig()
             connector = UnitreeGo2NavConnector(config)
 
-            mock_loc.assert_called_once_with(
-                "http://localhost:5000/maps/locations/list", 5, 30
-            )
+            mock_loc.assert_called_once_with("http://localhost:5000/maps/locations/list", "", 5, 30)
             mock_nav.assert_called_once()
             mock_io.assert_called_once()
             assert connector.location_provider == mock_loc.return_value
@@ -235,12 +205,8 @@ class TestUnitreeGo2NavConnectorConnect:
     def go2_connector(self):
         """Create Go2 nav connector with mocked dependencies."""
         with (
-            patch(
-                "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider"
-            ) as mock_loc,
-            patch(
-                "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2NavigationProvider"
-            ) as mock_nav,
+            patch("actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider") as mock_loc,
+            patch("actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2NavigationProvider") as mock_nav,
             patch("actions.navigate_location.connector.unitree_go2_nav.IOProvider"),
         ):
             mock_loc_instance = Mock()
@@ -265,9 +231,7 @@ class TestUnitreeGo2NavConnectorConnect:
         }
 
         nav_input = NavigateLocationInput(action="sofa")
-        with patch(
-            "actions.navigate_location.connector.unitree_go2_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_go2_nav.logging") as mock_logging:
             await connector.connect(nav_input)
             mock_nav.publish_goal_pose.assert_called_once()
             mock_logging.info.assert_any_call("Navigation to 'sofa' initiated")
@@ -280,9 +244,7 @@ class TestUnitreeGo2NavConnectorConnect:
         mock_loc.get_all_locations.return_value = {"table": {"name": "table"}}
 
         nav_input = NavigateLocationInput(action="garden")
-        with patch(
-            "actions.navigate_location.connector.unitree_go2_nav.logging"
-        ) as mock_logging:
+        with patch("actions.navigate_location.connector.unitree_go2_nav.logging") as mock_logging:
             await connector.connect(nav_input)
             warning_msg = mock_logging.warning.call_args[0][0]
             assert "garden" in warning_msg

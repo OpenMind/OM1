@@ -14,3 +14,5 @@ This section covers the essential building blocks you need to understand before 
 - **Language Models (LLMs)** - Integration and usage of AI language models
 - **Actions & Responses** - How OM1 processes and executes actions
 - **Project Structure** - Organizing your OM1 projects effectively
+- **Middleware** - Understanding the middleware stack
+- **Troubleshooting** - Guide to help troubleshoot common issues

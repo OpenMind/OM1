@@ -178,9 +178,7 @@ def test_formatted_latest_buffer_empty(gallery_identities_instance):
     assert result is None
 
 
-def test_formatted_latest_buffer_formats_and_clears_latest_message(
-    gallery_identities_instance, mock_io_provider
-):
+def test_formatted_latest_buffer_formats_and_clears_latest_message(gallery_identities_instance, mock_io_provider):
     msg = Message(timestamp=1234.0, message="total=1 ids=[eve]")
     gallery_identities_instance.messages = [msg]
 
@@ -189,6 +187,4 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     assert "INPUT: Gallery Identities" in result
     assert "total=1 ids=[eve]" in result
     assert len(gallery_identities_instance.messages) == 0
-    mock_io_provider.add_input.assert_called_once_with(
-        "GalleryIdentities", "total=1 ids=[eve]", 1234.0
-    )
+    mock_io_provider.add_input.assert_called_once_with("GalleryIdentities", "total=1 ids=[eve]", 1234.0)

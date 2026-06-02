@@ -29,9 +29,7 @@ class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
         if speak_topic is None:
             speak_topic = "speech"
             # Log the speak_topic being used
-            logging.info(
-                f"Speak topic not provided. Using default topic: {speak_topic}"
-            )
+            logging.info(f"Speak topic not provided. Using default topic: {speak_topic}")
         self.publisher = ZenohPublisherProvider(speak_topic)
         self.publisher.start()
 

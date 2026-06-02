@@ -67,12 +67,8 @@ def test_initialization_creates_providers_and_buffers(
     mock_zenoh,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
     config = RivaASRRTSPSensorConfig()
     api_key = config.api_key
@@ -726,21 +722,15 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
         assert msg_content in result
         assert len(instance.messages) == 0
 
-        mock_io_provider.add_input.assert_called_once_with(
-            "Voice", msg_content, fixed_timestamp
-        )
+        mock_io_provider.add_input.assert_called_once_with("Voice", msg_content, fixed_timestamp)
         mock_io_provider.add_mode_transition_input.assert_called_once_with(msg_content)
-        mock_teleops_conv_instance.store_user_message.assert_called_once_with(
-            msg_content
-        )
+        mock_teleops_conv_instance.store_user_message.assert_called_once_with(msg_content)
 
         if instance.asr_publisher:
             mock_zenoh["asr_text_cls"].assert_called_once_with(
                 header=mock_zenoh["prepare_header"].return_value, text=msg_content
             )
-            mock_zenoh["publisher"].put.assert_called_once_with(
-                mock_zenoh["asr_text_cls"].return_value.serialize()
-            )
+            mock_zenoh["publisher"].put.assert_called_once_with(mock_zenoh["asr_text_cls"].return_value.serialize())
 
 
 def test_stop_method_stops_asr_and_closes_zenoh(
@@ -751,12 +741,8 @@ def test_stop_method_stops_asr_and_closes_zenoh(
     mock_zenoh,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
     config = RivaASRRTSPSensorConfig()
     with (
@@ -799,16 +785,10 @@ def test_stop_method_handles_exceptions(
     mock_zenoh,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
-    mock_asr_instance.unregister_message_callback.side_effect = Exception(
-        "Unregister failed"
-    )
+    mock_asr_instance.unregister_message_callback.side_effect = Exception("Unregister failed")
     mock_asr_instance.stop.side_effect = Exception("Stop failed")
     mock_zenoh["publisher"].undeclare.side_effect = Exception("Undeclare failed")
     mock_zenoh["session"].close.side_effect = Exception("Close failed")
@@ -844,12 +824,8 @@ def test_initialization_with_zenoh_failure(
     mock_teleops_conversation_provider,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
     config = RivaASRRTSPSensorConfig()
 

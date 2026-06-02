@@ -74,52 +74,50 @@ Example config to setup time based transition type for transitioning into guard 
     }
 ```
 
-## Input triggered (Voice Commands)
+## Input Triggered (Voice Commands)
 
-Step 1: Configure your API key in ~/.bashrc file and start your machine in full autonomy mode.
-Step 2: Start talking to your robot dog and ask it to switch to a particular mode.
-    For example,
-    The robot says, hi I'm your friendly robot dog, how may I help you?
-    The user can then request the robot to switch to a particular mode by saying, switch to [desired mode].
+1. Configure your API key in `~/.bashrc` file and start your machine in full autonomy mode.
+2. Start talking to your robot dog and ask it to switch to a particular mode.
 
-- Desired mode: **Welcome**
-    trigger_keywords: ["reset", "start over", "welcome mode", "restart", "initialize"]
-- Desired mode: **Conversation**
-    trigger_keywords: ["talk", "chat", "conversation", "tell me", "ask you", "discuss"]
-- Desired mode: **Slam**
-    trigger_keywords: ["explore", "map", "navigate", "look around", "slam", "wander"]
-- Desired mode: **Navigation**
-    trigger_keywords: ["navigate", "navigation", "go to", "take me to", "show me"]
-- Desired mode: **Guard**
-    trigger_keywords: ["guard", "security", "patrol", "keep watch"]
+**Example:**
+> The robot says: "Hi, I'm your friendly robot dog, how may I help you?"
+>
+> The user can then request the robot to switch to a particular mode by saying: "Switch to [desired mode]."
+
+| Desired Mode | Trigger Keywords |
+|--------------|------------------|
+| **Welcome** | `reset`, `start over`, `welcome mode`, `restart`, `initialize` |
+| **Conversation** | `talk`, `chat`, `conversation`, `tell me`, `ask you`, `discuss` |
+| **SLAM** | `explore`, `map`, `navigate`, `look around`, `slam`, `wander` |
+| **Navigation** | `navigate`, `navigation`, `go to`, `take me to`, `show me` |
+| **Guard** | `guard`, `security`, `patrol`, `keep watch` |
 
 ## Manual Trigger (via Portal)
 
-Step 1: Configure your API key in ~/.bashrc file and start your machine in full autonomy mode.
+1. Configure your API key in `~/.bashrc` file and start your machine in full autonomy mode.
 
-Step 2: Login to your OM1 portal and head over to Machine Teleops on the left navigation bar.
+2. Login to your OM1 portal and head over to **Machine Teleops** on the left navigation bar.
 
-![ ](../assets/full-autonomy-assets/machine_teleops.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/machine_teleops.png)
 
-Step 3: Once connected, you’ll see your machine listed as **Online** at the top of the screen.
+3. Once connected, you'll see your machine listed as **Online** at the top of the screen.
 
-![ ](../assets/full-autonomy-assets/online_machine.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/online_machine.png)
 
-Step 4: Scroll down to access the Mode Selection section. From here, choose the mode you want your robot to switch to.
+4. Scroll down to access the **Mode Selection** section. From here, choose the mode you want your robot to switch to.
 
-![ ](../assets/full-autonomy-assets/portal_mode_selection.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/portal_mode_selection.png)
 
-Step 5: In SLAM Mode, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
+5. In **SLAM Mode**, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
 
-![ ](../assets/full-autonomy-assets/slam_map.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/slam_map.png)
 
-Step 6: Once the map is saved, switch to Navigation Mode to make the robot move autonomously between locations.
-    Use the dropdown menu to select a destination.
+6. Once the map is saved, switch to **Navigation Mode** to make the robot move autonomously between locations. Use the dropdown menu to select a destination.
 
-![ ](../assets/full-autonomy-assets/select_location_to_navigate.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
 
-Step 7: You can also monitor three live camera streams directly from the portal.
+7. You can also monitor three live camera streams directly from the portal.
 
-![ ](../assets/full-autonomy-assets/video_streams.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/video_streams.png)
 
 These steps and exploration methods provide a structured approach to understanding and managing OM1’s modes.

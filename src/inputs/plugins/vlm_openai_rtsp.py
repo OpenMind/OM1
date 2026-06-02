@@ -35,7 +35,7 @@ class VLMOpenAIRTSPConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="https://api.openmind.org/api/core/openai",
+        default="https://api.openmind.com/api/core/openai",
         description="Base URL for the OpenAI service",
     )
     rtsp_url: str = Field(
@@ -47,9 +47,7 @@ class VLMOpenAIRTSPConfig(SensorConfig):
         description="Prompt for the VLM",
     )
     fps: int = Field(default=15, description="Frames per second to process")
-    descriptor_for_LLM: str = Field(
-        default="Vision", description="Descriptor for LLM context"
-    )
+    descriptor_for_LLM: str = Field(default="Vision", description="Descriptor for LLM context")
 
 
 class VLMOpenAIRTSP(FuserInput[VLMOpenAIRTSPConfig, Optional[str]]):
@@ -210,9 +208,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

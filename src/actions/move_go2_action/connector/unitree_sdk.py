@@ -99,24 +99,18 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionUnitreeSDKConfig, ActionIn
                 except Exception as e:
                     logging.error(f"Error sending ShakeHand command: {e}")
             else:
-                logging.info(
-                    "ActionUnitreeSDKConnector: Still performing previous action"
-                )
+                logging.info("ActionUnitreeSDKConnector: Still performing previous action")
         elif action == "dance":
             if self.unitree_go2_state.go2_action_progress == 0:
                 logging.info("ActionUnitreeSDKConnector: Dancing")
                 try:
                     if self.sport_client is not None:
-                        dance_move = random.choice(
-                            [self.sport_client.Dance1, self.sport_client.Dance2]
-                        )
+                        dance_move = random.choice([self.sport_client.Dance1, self.sport_client.Dance2])
                         dance_move()
                 except Exception as e:
                     logging.error(f"Error sending Dance command: {e}")
             else:
-                logging.info(
-                    "ActionUnitreeSDKConnector: Still performing previous action"
-                )
+                logging.info("ActionUnitreeSDKConnector: Still performing previous action")
         elif action == "stretch":
             if self.unitree_go2_state.go2_action_progress == 0:
                 logging.info("ActionUnitreeSDKConnector: Stretching")
@@ -126,8 +120,6 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionUnitreeSDKConfig, ActionIn
                 except Exception as e:
                     logging.error(f"Error sending Stretch command: {e}")
             else:
-                logging.info(
-                    "ActionUnitreeSDKConnector: Still performing previous action"
-                )
+                logging.info("ActionUnitreeSDKConnector: Still performing previous action")
         else:
             logging.warning(f"Action '{action}' not recognized or not implemented.")

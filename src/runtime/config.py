@@ -16,6 +16,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from mcp_servers import load_mcp
 from runtime.converter import convert_to_multi_mode
 from runtime.env import load_env_vars
 from runtime.hook import (
@@ -26,8 +27,7 @@ from runtime.hook import (
 )
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
-from simulators import load_simulator
-from simulators.base import Simulator
+from zenoh_msgs.session import load_session_config
 
 
 def _load_schema(schema_file: str) -> dict:
@@ -52,9 +52,7 @@ def _load_schema(schema_file: str) -> dict:
     schema_path = Path(__file__).parent / "../../config/schema" / schema_file
 
     if not schema_path.exists():
-        raise FileNotFoundError(
-            f"Schema file not found: {schema_path}. Cannot validate configuration."
-        )
+        raise FileNotFoundError(f"Schema file not found: {schema_path}. Cannot validate configuration.")
 
     with open(schema_path, "r") as f:
         return json.load(f)
@@ -111,8 +109,6 @@ class RuntimeConfig:
         List of agent input sensors.
     cortex_llm : LLM
         The main LLM for the agent.
-    simulators : List[Simulator]
-        List of simulators.
     agent_actions : List[AgentAction]
         List of agent actions.
     backgrounds : List[Background]
@@ -144,7 +140,6 @@ class RuntimeConfig:
 
     agent_inputs: List[Sensor]
     cortex_llm: LLM
-    simulators: List[Simulator]
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
@@ -156,6 +151,7 @@ class RuntimeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
+    mcp_servers: Optional[Any] = None
 
 
 def add_meta(
@@ -165,6 +161,7 @@ def add_meta(
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
     g_mode: Optional[str] = None,
+    g_use_sim: Optional[bool] = None,
 ) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
@@ -183,13 +180,14 @@ def add_meta(
         The Robot IP address.
     g_mode : Optional[str]
         The mode of operation.
+    g_use_sim : Optional[bool]
+        Whether simulation mode is enabled.
 
     Returns
     -------
     dict
         The updated runtime configuration.
     """
-    # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
     if "unitree_ethernet" not in config and g_ut_eth is not None:
@@ -200,6 +198,8 @@ def add_meta(
         config["robot_ip"] = g_robot_ip
     if "mode" not in config and g_mode is not None:
         config["mode"] = g_mode
+    if "use_sim" not in config and g_use_sim is not None:
+        config["use_sim"] = g_use_sim
     return config
 
 
@@ -285,8 +285,6 @@ class ModeConfig:
         List of input sensors for the mode. Defaults to empty list.
     cortex_llm : Optional[LLM], optional
         The LLM used for the mode. Defaults to None.
-    simulators : List[Simulator], optional
-        List of simulators used in the mode. Defaults to empty list.
     agent_actions : List[AgentAction], optional
         List of actions available to the agent in this mode. Defaults to empty list.
     backgrounds : List[Background], optional
@@ -299,8 +297,6 @@ class ModeConfig:
         Raw input configurations before loading. Defaults to empty list.
     _raw_llm : Optional[Dict], optional
         Raw LLM configuration before loading. Defaults to None.
-    _raw_simulators : List[Dict], optional
-        Raw simulator configurations before loading. Defaults to empty list.
     _raw_actions : List[Dict], optional
         Raw action configurations before loading. Defaults to empty list.
     _raw_backgrounds : List[Dict], optional
@@ -324,18 +320,18 @@ class ModeConfig:
 
     agent_inputs: List[Sensor] = field(default_factory=list)
     cortex_llm: Optional[LLM] = None
-    simulators: List[Simulator] = field(default_factory=list)
     agent_actions: List[AgentAction] = field(default_factory=list)
     backgrounds: List[Background] = field(default_factory=list)
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    mcp_servers: Optional[Any] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
-    _raw_simulators: List[Dict] = field(default_factory=list)
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
+    _raw_mcp_servers: List[Dict] = field(default_factory=list)
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
         """
@@ -364,7 +360,6 @@ class ModeConfig:
             system_prompt_examples=global_config.system_prompt_examples,
             agent_inputs=self.agent_inputs,
             cortex_llm=self.cortex_llm,
-            simulators=self.simulators,
             agent_actions=self.agent_actions,
             backgrounds=self.backgrounds,
             robot_ip=global_config.robot_ip,
@@ -374,6 +369,7 @@ class ModeConfig:
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
+            mcp_servers=self.mcp_servers,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -465,6 +461,10 @@ class ModeSystemConfig:
         Mapping of mode names to their configurations. Defaults to empty dict.
     transition_rules : List[TransitionRule], optional
         List of rules for transitioning between modes. Defaults to empty list.
+    use_sim: bool
+        Whether the system is running in simulation mode. Defaults to False.
+    use_tracer: bool
+        Whether to enable tracing of interactions and decisions for debugging purposes. Defaults to False.
     """
 
     # Global settings
@@ -497,6 +497,12 @@ class ModeSystemConfig:
     modes: Dict[str, ModeConfig] = field(default_factory=dict)
     transition_rules: List[TransitionRule] = field(default_factory=list)
 
+    # Simulation
+    use_sim: bool = False
+
+    # Tracing
+    use_tracer: bool = False
+
     async def execute_global_lifecycle_hooks(
         self, hook_type: LifecycleHookType, context: Optional[Dict[str, Any]] = None
     ) -> bool:
@@ -520,14 +526,10 @@ class ModeSystemConfig:
 
         context.update({"system_name": self.name, "is_global_hook": True})
 
-        return await execute_lifecycle_hooks(
-            self.global_lifecycle_hooks, hook_type, context
-        )
+        return await execute_lifecycle_hooks(self.global_lifecycle_hooks, hook_type, context)
 
 
-def load_mode_config(
-    config_name: str, mode_source_path: Optional[str] = None
-) -> ModeSystemConfig:
+def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -> ModeSystemConfig:
     """
     Load a mode-aware configuration from a JSON5 file.
 
@@ -554,9 +556,7 @@ def load_mode_config(
         try:
             raw_config = json5.load(f)
         except Exception as e:
-            raise ValueError(
-                f"Failed to parse configuration file '{config_path}': {e}"
-            ) from e
+            raise ValueError(f"Failed to parse configuration file '{config_path}': {e}") from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
@@ -570,8 +570,11 @@ def load_mode_config(
     g_api_key = raw_config.get("api_key")
     g_URID = raw_config.get("URID")
     g_ut_eth = raw_config.get("unitree_ethernet")
+    g_use_sim = raw_config.get("use_sim", False)
+    g_use_tracer = raw_config.get("use_tracer", False)
 
     load_unitree(g_ut_eth)
+    load_session_config(g_api_key, g_use_sim)
 
     mode_system_config = ModeSystemConfig(
         version=config_version,
@@ -584,12 +587,14 @@ def load_mode_config(
         robot_ip=g_robot_ip,
         URID=g_URID,
         unitree_ethernet=g_ut_eth,
+        use_sim=g_use_sim,
+        use_tracer=g_use_tracer,
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         knowledge_base=raw_config.get("knowledge_base"),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
-            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
+            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key, use_sim=g_use_sim
         ),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
@@ -603,7 +608,7 @@ def load_mode_config(
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
             lifecycle_hooks=parse_lifecycle_hooks(
-                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
+                mode_data.get("lifecycle_hooks", []), api_key=g_api_key, use_sim=g_use_sim
             ),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
@@ -612,10 +617,10 @@ def load_mode_config(
             action_dependencies=mode_data.get("action_dependencies"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
-            _raw_simulators=mode_data.get("simulators", []),
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
+            _raw_mcp_servers=mode_data.get("mcp_servers", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config
@@ -652,6 +657,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     g_URID = system_config.URID
     g_robot_ip = system_config.robot_ip
     g_mode = mode_config.name
+    g_use_sim = system_config.use_sim
 
     # Load inputs
     mode_config.agent_inputs = [
@@ -665,28 +671,11 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
         for inp in mode_config._raw_inputs
-    ]
-
-    # Load simulators
-    mode_config.simulators = [
-        load_simulator(
-            {
-                **sim,
-                "config": add_meta(
-                    sim.get("config", {}),
-                    g_api_key,
-                    g_ut_eth,
-                    g_URID,
-                    g_robot_ip,
-                    g_mode,
-                ),
-            }
-        )
-        for sim in mode_config._raw_simulators
     ]
 
     # Load actions
@@ -701,6 +690,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -719,6 +709,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             }
         )
@@ -738,12 +729,16 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_URID,
                     g_robot_ip,
                     g_mode,
+                    g_use_sim,
                 ),
             },
             available_actions=mode_config.agent_actions,
         )
     else:
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
+
+    # Load MCP servers
+    mode_config.mcp_servers = load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
@@ -774,7 +769,6 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
                 "save_interactions": mode_config.save_interactions,
                 "agent_inputs": mode_config._raw_inputs,
                 "cortex_llm": mode_config._raw_llm,
-                "simulators": mode_config._raw_simulators,
                 "agent_actions": mode_config._raw_actions,
                 "backgrounds": mode_config._raw_backgrounds,
                 "lifecycle_hooks": mode_config._raw_lifecycle_hooks,

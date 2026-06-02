@@ -35,9 +35,7 @@ def test_formatted_latest_buffer():
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="Home (x:1.00 y:2.00)\nOffice (x:5.00 y:6.00)"
-        )
+        test_message = Message(timestamp=123.456, message="Home (x:1.00 y:2.00)\nOffice (x:5.00 y:6.00)")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

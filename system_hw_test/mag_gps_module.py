@@ -8,9 +8,7 @@ import time
 import serial
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--serial", help="serial port to use, when using the low level driver", type=str
-)
+parser.add_argument("--serial", help="serial port to use, when using the low level driver", type=str)
 print(parser.format_help())
 
 args = parser.parse_args()

@@ -4,7 +4,7 @@ description: "Installation"
 icon: gear
 ---
 
-ROS (the Robot Operating System) is a set of software libraries and tools allowing to build robotic applications. In its version 2, ROS 2 relies mostly on O.M.G. DDS as a middleware for communications. This plugin bridges all ROS 2 communications using DDS over Zenoh.
+ROS (the Robot Operating System) is a set of software libraries and tools allowing to build robotic applications. In its version 2, ROS 2 relies mostly on DDS as a middleware for communications. This plugin bridges all ROS 2 communications using DDS over Zenoh.
 
 While a Zenoh bridge for DDS already exists and helped lot of robotic use cases to overcome some wireless connectivity, bandwidth and integration issues, using a bridge dedicated to ROS 2 brings the following advantages:
 

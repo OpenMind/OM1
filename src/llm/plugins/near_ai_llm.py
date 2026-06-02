@@ -9,7 +9,9 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -31,7 +33,7 @@ class NearAIConfig(LLMConfig):
     """NearAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/nearai",
+        default="https://api.openmind.com/api/core/nearai",
         description="Base URL for the NearAI API endpoint",
     )
     model: T.Optional[T.Union[NearAIModel, str]] = Field(
@@ -70,9 +72,11 @@ class NearAILLM(LLM[R]):
         if not config.model:
             self._config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
+        self.base_url = config.base_url or "https://api.openmind.com/api/core/nearai"
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/nearai",
+            base_url=self.base_url,
             api_key=config.api_key,
+            http_client=get_async_httpx_client(),
         )
 
         # Initialize history manager
@@ -80,9 +84,7 @@ class NearAILLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the NearAI API and get a structured response.
 
@@ -105,17 +107,16 @@ class NearAILLM(LLM[R]):
             logging.info(f"NearAI LLM input: {prompt}")
             logging.info(f"NearAI LLM messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.beta.chat.completions.parse(
-                model=self._config.model or "Qwen/Qwen3-30B-A3B-Instruct-2507",
+                model=self._config.model or NearAIModel.QWEN_30B_A3B_INSTRUCT_2507,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
@@ -127,7 +128,15 @@ class NearAILLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(
+                model=str(self._config.model or NearAIModel.QWEN_30B_A3B_INSTRUCT_2507),
+                endpoint=str(self.base_url),
+            ).observe(latency)
+            om1_llm_latency_last.labels(
+                model=str(self._config.model or NearAIModel.QWEN_30B_A3B_INSTRUCT_2507),
+                endpoint=str(self.base_url),
+            ).set(latency)
 
             if message.tool_calls:
                 logging.info(f"Received {len(message.tool_calls)} function calls")
@@ -146,9 +155,14 @@ class NearAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
+                self.tracer.gauge(
+                    llm_input=prompt,
+                    llm_output=[{"type": a.type, "value": a.value} for a in actions],
+                )
                 logging.info(f"NearAI LLM function call output: {result}")
                 return T.cast(R, result)
 
+            self.tracer.gauge(llm_input=prompt, llm_output=[])
             return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")

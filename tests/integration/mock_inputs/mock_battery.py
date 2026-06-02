@@ -61,9 +61,7 @@ class MockUnitreeGo2Battery(UnitreeGo2Battery):
             self.battery_percentage = data[0]
             self.battery_voltage = data[1]
             self.battery_amperes = data[2]
-            logging.info(
-                f"MockUnitreeGo2Battery: Battery {data[0]}%, {data[1]}V, {data[2]}A"
-            )
+            logging.info(f"MockUnitreeGo2Battery: Battery {data[0]}%, {data[1]}V, {data[2]}A")
             return data
 
         if not self.data_processed:
@@ -98,14 +96,9 @@ class MockUnitreeGo2Battery(UnitreeGo2Battery):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

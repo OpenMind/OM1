@@ -1,16 +1,109 @@
 ---
 title: OM1 Beta Release
-description: "v1.0.1-beta.2"
+description: "v1.0.2-beta.2"
 icon: rectangle-beta
 ---
 
-## What's included
+## [v1.0.2-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.2) - latest
 
-Beta release for the Docker image openmindagi/om1, which provides the full setup of OM1 service in one go without having the user to install dependencies separately.
+### What's New
 
-## Features
+- Added Unitree Go2 patrol background plugin with autonomous patrol routes and back-and-forth patterns
+- Added conversation mode and person follow functionality for natural interactions with dynamic tracking
+- Introduced base ElevenLabs TTS connector for high-quality voice synthesis
+- Added Unitree G1 configuration and updated to Gemini 3.1 model
+- Added greeting conversation config with customizable greeting scenarios
+- Introduced GitHub Actions workflow for ECS deployments with environment-specific configurations
 
-### [v1.0.1-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.2)
+### Improvements
+
+- Refactored `_emit` method for message delivery with better error handling and comprehensive test coverage
+- Enhanced ASR provider logging and updated `om1-modules` dependency for improved debugging
+- Refined voice input extraction to remove surrounding quotes for better parsing accuracy
+- Simplified environment selection in release workflow for streamlined deployments
+- Included Jan in greeting prompts and agents for expanded interaction capabilities
+- Updated `om1-modules` revision with improved functionality
+
+### Bug Fixes
+
+- Renamed `done_payment` to `down_payment` for correct terminology
+- Fixed farewell message handling in greeting conversations
+- Commented out problematic `ASR.stop()` call with TODO for future resolution
+
+### Documentation
+
+- Added comprehensive premium feature documentation
+- Elaborated full autonomy documentation with detailed guides
+- General documentation updates and improvements across the codebase
+
+### Dependency Updates
+
+- Upgraded testing dependencies:
+  - `pytest` to `9.0.3`
+  - `pytest-asyncio` to `1.3.0`
+- Updated core dependencies:
+  - `gdown` from `5.2.0` to `5.2.2`
+  - `python-multipart` from `0.0.22` to `0.0.26`
+  - `python-dotenv` from `1.0.1` to `1.2.2`
+- Pinned `numpy` to `1.26.4` for stability
+
+### Cleanup
+
+- Removed extra space in comment for code consistency
+
+## [v1.0.2-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.1)
+
+### What’s New
+
+- Introduce MCP (Model Context Protocol) tools with reference configs and documentation
+- Add cron job scheduling feature
+- Add G1 arm action support for improved manipulation capabilities
+- Add alternative ASR language support and upgrade ASR modules
+- Add Chirp 3 (V2) ASR documentation with VAD support
+- Introduce auto done_payment handling in ARM zenoh connector
+
+### Improvements
+
+- Upgrade runtime to Python 3.12 with updated dependency requirements
+- Refactor LLM action naming and connector configs for consistency
+- Set default knowledge base to om
+- Use environment variables for model IDs
+- Improve code formatting and line length standards
+- Enhance documentation coverage with NumPy-style docstrings and general improvements
+- Update release notes structure and documentation links
+- zy-load FAISS and improve dependency handling
+- Upgrade Coinbase plugin
+
+### Bug Fixes
+
+- Fix ASR prompt format alignment in TTS conversation storage
+- Fix schema script issues
+- Correct turn angle comments (90° → 30°) in zenoh.py
+- Fix GitBook configuration and documentation mappings
+
+### Dependency Updates
+
+- Upgrade core dependencies including:
+- torch, fastapi, aiohttp, requests
+- cryptography, pyjwt, pillow, cbor2, pygments
+- Update development tooling:
+- black formatter
+- Refresh lockfiles and dependency versions across the stack
+
+### Cleanup
+
+- Remove deprecated LLM plugins and introduce parallel stubs
+- General codebase cleanup and consistency improvements
+
+## [v1.0.1-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.3)
+
+- The single mode has been migrated to multi-mode. The same Cortex runtime now supports both single and multiple modes.
+- Fixed a bug where the previous LLM could persist when switching between modes.
+- Fixed a bug in the callback handling for Riva and Google ASR.
+- Improved the TTS duration calculation for the greeting mode.
+
+## [v1.0.1-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.2)
+
 - A huge performance improvement has been added.
 - Standardized the codebase to only support multimode configuration, removing the separate single-mode structure and related folders. Single-mode setups are still supported and are now automatically converted to multimode via the new runtime infrastructure.
 - Added support for monitoring and reporting the charging status of the Unitree Go2 robot.
@@ -21,7 +114,8 @@ Beta release for the Docker image openmindagi/om1, which provides the full setup
 - OM1 now supports Isaac Sim.
 - Improved test coverage across plugins.
 
-### [v1.0.1-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.1)
+## [v1.0.1-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.1)
+
 - Added support for LimX TRON
 - Ollama support added for local inference
 - Latest config version is now upgraded to v1.0.2
@@ -39,7 +133,8 @@ Beta release for the Docker image openmindagi/om1, which provides the full setup
 - Improved unit test coverage for provider and input plugins
 
 
-### [v1.0.0-beta.4](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.4)
+## [v1.0.0-beta.4](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.4)
+
 - Openrouter support for LLama and Anthropic: Added compatibility with OpenRouter API, enabling seamless access to more AI providers, including Meta’s LLaMA and Anthropic Claude models. This allows flexible model selection for natural language processing, reasoning, and control tasks depending on performance or cost preferences.
 - Support multiple modes: We now support 5 different modes with Unitree Go2 full autonomy.
     Welcome mode - Initial greeting and user information gathering
@@ -63,7 +158,8 @@ Beta release for the Docker image openmindagi/om1, which provides the full setup
 - Introducing Lifecycle
     Each operational mode in OM1 follows a defined lifecycle, representing the complete process from entry to exit of that mode. A mode lifecycle ensures predictable behavior, safe transitions, and consistent data handling across all system states.
 
-### [v1.0.0-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.3)
+## [v1.0.0-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.3)
+
 - Downgraded Python to 3.10 for better Jetson support.
 - Integrated Nav2 for state feedback and target publishing, with auto AI-mode disable after localization.
 - Zenoh configs/sessions moved to zenoh_msgs, now preferring local network before multicast.
@@ -72,41 +168,15 @@ Beta release for the Docker image openmindagi/om1, which provides the full setup
 - Added support for long range control of humanoids and quadrupeds using the TBS_TANGO2 radios.
 - Added sleep mode for ASR, if there's no voice input for 5 min, it goes to sleep.
 
-### [v1.0.0-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.2)
+## [v1.0.0-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.2)
+
 - Support for custom camera indices and enables both microphone and speaker functionality in Docker.
 
-### [v1.0.0-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.1)
+## [v1.0.0-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.1)
+
 - Multiple LLM provider integrations(OpenAI, Gemini, Deepseek, xAI).
 - GoogleASR model for speech to text.
 - Riva and Eleven Labs for TTS.
 - Preconfigured support for Unitree Go2, G1, TurtleBot, Ubtech Yanshee.
 - Simulator support with Gazebo for Go2.
 - Multi-arch support - AMD64 and ARM64.
-
-## Docker image
-
-### Setup the API key
-
-For Bash: vim ~/.bashrc or ~/.bash_profile.
-
-For Zsh: vim ~/.zshrc.
-
-Add
-```bash
-export OM_API_KEY="your_api_key"
-```
-
-Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
-```bash
-command: ["unitree_go2_autonomy_advance"]
-```
-
-The OM1 service is provided as a Docker image for easy setup:
-```bash
-cd OM1
-docker-compose up om1 -d --no-build
-```
-
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.2-beta.2).
-
-For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).

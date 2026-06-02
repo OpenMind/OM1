@@ -13,9 +13,7 @@ def test_initialization():
     """Test basic initialization."""
     with (
         patch("inputs.plugins.unitree_g1_camera_vlm_cloud.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"
-        ),
+        patch("inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"),
     ):
         config = UnitreeG1CameraVLMCloudConfig()
         sensor = UnitreeG1CameraVLMCloud(config=config)
@@ -27,9 +25,7 @@ def test_initialization_with_custom_config():
     """Test initialization with custom configuration."""
     with (
         patch("inputs.plugins.unitree_g1_camera_vlm_cloud.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"
-        ),
+        patch("inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"),
     ):
         config = UnitreeG1CameraVLMCloudConfig(base_url="wss://test.com")
         sensor = UnitreeG1CameraVLMCloud(config=config)
@@ -42,12 +38,8 @@ async def test_poll():
     """Test _poll method."""
     with (
         patch("inputs.plugins.unitree_g1_camera_vlm_cloud.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"
-        ),
-        patch(
-            "inputs.plugins.unitree_g1_camera_vlm_cloud.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"),
+        patch("inputs.plugins.unitree_g1_camera_vlm_cloud.asyncio.sleep", new=AsyncMock()),
     ):
         config = UnitreeG1CameraVLMCloudConfig()
         sensor = UnitreeG1CameraVLMCloud(config=config)
@@ -60,9 +52,7 @@ def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
         patch("inputs.plugins.unitree_g1_camera_vlm_cloud.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"
-        ),
+        patch("inputs.plugins.unitree_g1_camera_vlm_cloud.UnitreeRealSenseDevVLMProvider"),
     ):
         config = UnitreeG1CameraVLMCloudConfig()
         sensor = UnitreeG1CameraVLMCloud(config=config)

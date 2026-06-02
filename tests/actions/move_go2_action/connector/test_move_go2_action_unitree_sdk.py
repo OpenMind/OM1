@@ -14,18 +14,10 @@ def mock_dependencies():
     """Mock all external dependencies for connector initialization."""
 
     with (
-        patch(
-            "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"
-        ) as mock_lidar,
-        patch(
-            "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2StateProvider"
-        ) as mock_state,
-        patch(
-            "actions.move_go2_action.connector.unitree_sdk.SportClient"
-        ) as mock_sport,
-        patch(
-            "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2OdomProvider"
-        ) as mock_odom,
+        patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider") as mock_lidar,
+        patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2StateProvider") as mock_state,
+        patch("actions.move_go2_action.connector.unitree_sdk.SportClient") as mock_sport,
+        patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2OdomProvider") as mock_odom,
     ):
         mock_lidar_instance = Mock()
         mock_lidar.return_value = mock_lidar_instance
@@ -87,21 +79,11 @@ class TestActionUnitreeSDKConnectorInit:
     def test_initialization_sport_client_error(self):
         """Test initialization when SportClient fails."""
         with (
-            patch(
-                "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"
-            ),
-            patch(
-                "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2StateProvider"
-            ),
-            patch(
-                "actions.move_go2_action.connector.unitree_sdk.SportClient"
-            ) as mock_sport,
-            patch(
-                "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_go2_action.connector.unitree_sdk.logging"
-            ) as mock_logging,
+            patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"),
+            patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2StateProvider"),
+            patch("actions.move_go2_action.connector.unitree_sdk.SportClient") as mock_sport,
+            patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2OdomProvider"),
+            patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging,
         ):
             mock_sport.side_effect = Exception("Sport client init failed")
             config = ActionUnitreeSDKConfig()
@@ -118,13 +100,9 @@ class TestActionUnitreeSDKConnectorConnect:
     async def test_connect_stand_still(self, connector, mock_dependencies):
         """Test stand still action."""
         action_input = ActionInput(action=Action.STAND_STILL)
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging:
             await connector.connect(action_input)
-            mock_logging.info.assert_any_call(
-                "ActionUnitreeSDKConnector: Standing still"
-            )
+            mock_logging.info.assert_any_call("ActionUnitreeSDKConnector: Standing still")
 
     @pytest.mark.asyncio
     async def test_connect_shake_paw_ready(self, connector, mock_dependencies):
@@ -139,13 +117,9 @@ class TestActionUnitreeSDKConnectorConnect:
         """Test shake paw when robot is busy (progress != 0)."""
         mock_dependencies["state"].go2_action_progress = 50
         action_input = ActionInput(action=Action.SHAKE_PAW)
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging:
             await connector.connect(action_input)
-            mock_logging.info.assert_any_call(
-                "ActionUnitreeSDKConnector: Still performing previous action"
-            )
+            mock_logging.info.assert_any_call("ActionUnitreeSDKConnector: Still performing previous action")
             mock_dependencies["sport"].Hello.assert_not_called()
 
     @pytest.mark.asyncio
@@ -154,9 +128,7 @@ class TestActionUnitreeSDKConnectorConnect:
         mock_dependencies["state"].go2_action_progress = 0
         mock_dependencies["sport"].Hello.side_effect = Exception("Hardware error")
         action_input = ActionInput(action=Action.SHAKE_PAW)
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging:
             await connector.connect(action_input)
             mock_logging.error.assert_called()
 
@@ -165,9 +137,7 @@ class TestActionUnitreeSDKConnectorConnect:
         """Test dance when robot is ready."""
         mock_dependencies["state"].go2_action_progress = 0
         action_input = ActionInput(action=Action.DANCE)
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.random"
-        ) as mock_random:
+        with patch("actions.move_go2_action.connector.unitree_sdk.random") as mock_random:
             mock_random.choice.return_value = mock_dependencies["sport"].Dance1
             await connector.connect(action_input)
             mock_dependencies["sport"].Dance1.assert_called_once()
@@ -185,26 +155,18 @@ class TestActionUnitreeSDKConnectorConnect:
         """Test stretch when robot is busy."""
         mock_dependencies["state"].go2_action_progress = 75
         action_input = ActionInput(action=Action.STRETCH)
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging:
             await connector.connect(action_input)
-            mock_logging.info.assert_any_call(
-                "ActionUnitreeSDKConnector: Still performing previous action"
-            )
+            mock_logging.info.assert_any_call("ActionUnitreeSDKConnector: Still performing previous action")
             mock_dependencies["sport"].Stretch.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector, mock_dependencies):
         """Test unknown action logs warning."""
         action_input = ActionInput(action="fly")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_go2_action.connector.unitree_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging:
             await connector.connect(action_input)
-            mock_logging.warning.assert_called_with(
-                "Action 'fly' not recognized or not implemented."
-            )
+            mock_logging.warning.assert_called_with("Action 'fly' not recognized or not implemented.")
 
     @pytest.mark.asyncio
     async def test_connect_no_sport_client(self, connector, mock_dependencies):

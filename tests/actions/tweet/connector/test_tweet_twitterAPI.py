@@ -65,15 +65,9 @@ class TestTweetAPIConnectorConnect:
         with patch("actions.tweet.connector.twitterAPI.logging") as mock_logging:
             await twitter_connector.connect(tweet_input)
 
-            twitter_connector.client.create_tweet.assert_called_once_with(
-                text="Hello world!"
-            )
-            mock_logging.info.assert_any_call(
-                "SendThisToTwitterAPI: {'action': 'Hello world!'}"
-            )
-            mock_logging.info.assert_any_call(
-                "Tweet sent successfully! URL: https://twitter.com/user/status/12345"
-            )
+            twitter_connector.client.create_tweet.assert_called_once_with(text="Hello world!")
+            mock_logging.info.assert_any_call("SendThisToTwitterAPI: {'action': 'Hello world!'}")
+            mock_logging.info.assert_any_call("Tweet sent successfully! URL: https://twitter.com/user/status/12345")
 
     @pytest.mark.asyncio
     async def test_connect_empty_tweet(self, twitter_connector):
@@ -106,6 +100,4 @@ class TestTweetAPIConnectorConnect:
         tweet_input = TweetInput(action="Logging test")
         with patch("actions.tweet.connector.twitterAPI.logging") as mock_logging:
             await twitter_connector.connect(tweet_input)
-            mock_logging.info.assert_any_call(
-                "SendThisToTwitterAPI: {'action': 'Logging test'}"
-            )
+            mock_logging.info.assert_any_call("SendThisToTwitterAPI: {'action': 'Logging test'}")

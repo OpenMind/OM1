@@ -84,7 +84,7 @@ class TeleopsConversationProvider:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/teleops/conversation",
+        base_url: str = "https://api.openmind.com/api/core/teleops/conversation",
     ):
         """
         Initialize the Teleops conversation provider.
@@ -94,7 +94,7 @@ class TeleopsConversationProvider:
         api_key : str, optional
             API key for authenticating requests to the Teleops backend.
             If None or empty, message storage will be disabled.
-        base_url : str, default="https://api.openmind.org/api/core/teleops/conversation"
+        base_url : str, default="https://api.openmind.com/api/core/teleops/conversation"
             Base URL for the Teleops conversation API endpoint.
         """
         self.api_key = api_key
@@ -159,17 +159,13 @@ class TeleopsConversationProvider:
             )
 
             if request.status_code == 200:
-                logging.debug(
-                    f"Successfully stored {message.message_type.value} message to conversation"
-                )
+                logging.debug(f"Successfully stored {message.message_type.value} message to conversation")
             else:
                 logging.debug(
                     f"Failed to store {message.message_type.value} message: {request.status_code} - {request.text}"
                 )
         except Exception as e:
-            logging.debug(
-                f"Error storing {message.message_type.value} conversation message: {str(e)}"
-            )
+            logging.debug(f"Error storing {message.message_type.value} conversation message: {str(e)}")
 
     def _store_message(self, message: ConversationMessage) -> None:
         """

@@ -1,9 +1,9 @@
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from actions.base import ActionConfig, ActionConnector
 from actions.remember_location.interface import RememberLocationInput
@@ -16,17 +16,29 @@ class UnitreeG1RememberLocationConfig(ActionConfig):
 
     Parameters
     ----------
-    base_url : str
-        The base URL for the remember location API.
+    base_url : Optional[str]
+        Base URL for the remember location API. If None, automatically determined by use_sim flag.
+    api_key : str
+        API key for OpenMind API authentication.
+    use_sim : bool
+        Whether to run the connector in the simulator.
     timeout : int
         Timeout for the HTTP requests in seconds.
     map_name : str
         The name of the map to use when remembering locations.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000/maps/locations/add/slam",
-        description="The base URL for the remember location API.",
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the remember location API. If None, determined by use_sim flag.",
+    )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind API authentication",
+    )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to run the connector in the simulator.",
     )
     timeout: int = Field(
         default=5,
@@ -37,10 +49,26 @@ class UnitreeG1RememberLocationConfig(ActionConfig):
         description="The name of the map to use when remembering locations.",
     )
 
+    @model_validator(mode="after")
+    def set_base_url(self) -> "UnitreeG1RememberLocationConfig":
+        """
+        Set base_url based on use_sim if not explicitly provided.
 
-class UnitreeG1RememberLocationConnector(
-    ActionConnector[UnitreeG1RememberLocationConfig, RememberLocationInput]
-):
+        Returns
+        -------
+        UnitreeG1RememberLocationConfig
+            The validated configuration with base_url set if it was None.
+        """
+        if self.base_url is None:
+            if self.use_sim:
+                self.base_url = "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+            else:
+                self.base_url = "http://localhost:5000/maps/locations/add/slam"
+
+        return self
+
+
+class UnitreeG1RememberLocationConnector(ActionConnector[UnitreeG1RememberLocationConfig, RememberLocationInput]):
     """
     Connector that persists a remembered location for Unitree G1 by POSTing to an HTTP API.
     """
@@ -86,20 +114,17 @@ class UnitreeG1RememberLocationConnector(
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    self.base_url, json=payload, headers=headers, timeout=self.timeout
+                    self.base_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as resp:
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
-                        logging.info(
-                            f"RememberLocationG1: stored '{output_interface.action}' -> {resp.status} {text}"
-                        )
-                        self.elevenlabs_provider.add_pending_message(
-                            f"Location {output_interface.action} remembered !"
-                        )
+                        logging.info(f"RememberLocationG1: stored '{output_interface.action}' -> {resp.status} {text}")
+                        self.elevenlabs_provider.add_pending_message(f"Location {output_interface.action} remembered !")
                     else:
-                        logging.error(
-                            f"RememberLocationG1 API returned {resp.status}: {text}"
-                        )
+                        logging.error(f"RememberLocationG1 API returned {resp.status}: {text}")
         except asyncio.TimeoutError:
             logging.error("RememberLocationG1 API request timed out")
         except Exception as e:

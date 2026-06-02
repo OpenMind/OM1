@@ -17,7 +17,7 @@ Before contributing, please take a moment to read through the following guidelin
 
 *   **Suggest Features:**  Have an idea for a new feature or improvement?  [Open an issue](https://github.com/OpenMind/OM1/issues) on GitHub and describe your suggestion. Explain the motivation behind the feature and how it would benefit OM1 users.  We encourage discussion on feature requests before implementation.
 
-*   **Improve Documentation:**  Good documentation is crucial.  If you find anything unclear, incomplete, or outdated in the documentation, please submit a pull request with your changes. This includes the README, docstrings, and any other documentation files. Visit [OM1 docs](https://docs.openmind.org/), and [source code](https://github.com/OpenMind/OM1/tree/main/docs).
+*   **Improve Documentation:**  Good documentation is crucial.  If you find anything unclear, incomplete, or outdated in the documentation, please submit a pull request with your changes. This includes the README, docstrings, and any other documentation files. Visit [OM1 docs](https://docs.openmind.com/), and [source code](https://github.com/OpenMind/OM1/tree/main/docs).
 
 *   **Fix Bugs:** Browse the [open issues](https://github.com/OpenMind/OM1/issues) and look for bugs labeled "bug" or "help wanted." If you want to tackle a bug, comment on the issue to let us know you're working on it.
 
@@ -51,7 +51,7 @@ Before contributing, please take a moment to read through the following guidelin
     (Replace `<your-username>` with your GitHub username.)
 
 3. **Setup Development Environment**
-    Refer [documentation](https://docs.openmind.org/developing/1_get-started) to setup your development environment.
+    Refer [documentation](https://docs.openmind.com/developing/1_get-started) to setup your development environment.
 
 4.  **Create a Branch:**  Create a new branch for your work.  Use a descriptive name that reflects the purpose of your changes (e.g., `fix-bug-xyz`, `add-feature-abc`, `docs-improve-readme`).
     ```bash

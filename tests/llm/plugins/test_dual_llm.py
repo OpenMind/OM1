@@ -55,10 +55,11 @@ def mock_llm_classes():
 
 @pytest.fixture
 def dual_llm(mock_llm_classes):
-    config = DualLLMConfig(
-        local_llm_type="MockLocal", cloud_llm_type="MockCloud", api_key="test_key"
-    )
-    with patch("openai.AsyncClient"):
+    config = DualLLMConfig(local_llm_type="MockLocal", cloud_llm_type="MockCloud", api_key="test_key")
+    mock_client = MagicMock()
+    mock_client.aclose = AsyncMock()
+
+    with patch("openai.AsyncClient", return_value=mock_client):
         llm = DualLLM(config)
 
     llm._local_llm = mock_llm_classes[0]
@@ -70,15 +71,9 @@ def dual_llm(mock_llm_classes):
 
 
 def test_extract_voice_input():
-    assert (
-        _extract_voice_input("INPUT: Voice // START create a folder // END")
-        == "create a folder"
-    )
+    assert _extract_voice_input("INPUT: Voice: create a folder") == "create a folder"
     assert _extract_voice_input("Normal prompt") == ""
-    assert (
-        _extract_voice_input("INPUT: Voice // START   multi line \n input  // END")
-        == "multi line \n input"
-    )
+    assert _extract_voice_input("INPUT: Voice: multi line input") == "multi line input"
 
 
 @pytest.mark.asyncio
@@ -173,9 +168,7 @@ async def test_race_both_fast_both_functions_eval(dual_llm):
 
     mock_eval_response = MagicMock()
     mock_eval_response.choices = [MagicMock(message=MagicMock(content="B"))]
-    dual_llm._eval_client.chat.completions.create = AsyncMock(
-        return_value=mock_eval_response
-    )
+    dual_llm._eval_client.chat.completions.create = AsyncMock(return_value=mock_eval_response)
 
     response = await dual_llm.ask("test prompt")
 

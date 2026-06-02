@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.3",
+  version: "v1.0.5",
   name: "rplidar_test",
   description: "Test RP LIDAR input integration",
   hertz: 1,

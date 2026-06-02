@@ -58,16 +58,12 @@ class TestLoadEnvVars:
 
     def test_default_with_trailing_path(self):
         with patch.dict(os.environ, {}, clear=True):
-            result = EnvLoader.load_env_vars(
-                {"url": "${EXAMPLE_URL:-http://example.local:8860}/v1"}
-            )
+            result = EnvLoader.load_env_vars({"url": "${EXAMPLE_URL:-http://example.local:8860}/v1"})
             assert result == {"url": "http://example.local:8860/v1"}
 
     def test_env_overrides_default_with_trailing_path(self):
         with patch.dict(os.environ, {"EXAMPLE_URL": "http://prod.example.com:9999"}):
-            result = EnvLoader.load_env_vars(
-                {"url": "${EXAMPLE_URL:-http://example.local:8860}/v1"}
-            )
+            result = EnvLoader.load_env_vars({"url": "${EXAMPLE_URL:-http://example.local:8860}/v1"})
             assert result == {"url": "http://prod.example.com:9999/v1"}
 
     def test_missing_var_keeps_pattern(self):

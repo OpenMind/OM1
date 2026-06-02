@@ -49,6 +49,7 @@ def create_mock_config(
     mock_config.system_prompt_examples = "system prompt examples"
     mock_config.agent_actions = agent_actions
     mock_config.knowledge_base = knowledge_base
+    mock_config.mcp_servers = None
 
     return mock_config
 
@@ -82,9 +83,7 @@ async def test_fuser_timestamps(mock_time):
 @pytest.mark.asyncio
 async def test_fuser_with_inputs_and_actions(mock_describe):
     mock_describe.return_value = "action description"
-    config = create_mock_config(
-        agent_actions=[MockAction("action1"), MockAction("action2")]
-    )
+    config = create_mock_config(agent_actions=[MockAction("action1"), MockAction("action2")])
     inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
     io_provider = IOProvider()
 
@@ -92,11 +91,11 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
-        today = datetime.now().strftime("%B %-d, %Y")
+        now = datetime.now().strftime("%B %-d, %Y %H:%M:%S")
         system_prompt = (
             "\nBASIC CONTEXT:\n"
             + config.system_prompt_base
-            + f"\n\nToday is {today}.\n"
+            + f"\n\nCurrent time is {now}.\n"
             + "\nLAWS:\n"
             + config.system_governance
             + "\n\nEXAMPLES:\n"
@@ -221,12 +220,8 @@ async def test_fuser_with_knowledge_base_and_voice_input():
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
-        mock_kb.query.assert_called_once_with(
-            "What is the capital of France?", top_k=3, min_score=0.0
-        )
-        mock_kb.format_context.assert_called_once_with(
-            [mock_doc1, mock_doc2], max_chars=1500
-        )
+        mock_kb.query.assert_called_once_with("What is the capital of France?", top_k=3, min_score=0.0)
+        mock_kb.format_context.assert_called_once_with([mock_doc1, mock_doc2], max_chars=1500)
         assert result is not None
         assert "KNOWLEDGE BASE:" in result
         assert "Paris is the capital of France." in result

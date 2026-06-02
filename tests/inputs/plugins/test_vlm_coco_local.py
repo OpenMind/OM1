@@ -9,9 +9,7 @@ from inputs.plugins.vlm_coco_local import Message, VLM_COCO_Local, VLM_COCO_Loca
 
 @pytest.fixture
 def mock_model():
-    with patch(
-        "inputs.plugins.vlm_coco_local.detection_model.fasterrcnn_mobilenet_v3_large_320_fpn"
-    ) as mock:
+    with patch("inputs.plugins.vlm_coco_local.detection_model.fasterrcnn_mobilenet_v3_large_320_fpn") as mock:
         mock_instance = Mock()
         mock_instance.eval = Mock()
         mock.return_value = mock_instance
@@ -98,9 +96,7 @@ def test_formatted_latest_buffer_empty(vlm_coco_local):
 
 
 @pytest.mark.asyncio
-async def test_poll_returns_none_on_failed_frame_read(
-    mock_model, mock_check_webcam, mock_cv2_video_capture
-):
+async def test_poll_returns_none_on_failed_frame_read(mock_model, mock_check_webcam, mock_cv2_video_capture):
     """Test that _poll returns None when cap.read() fails."""
     mock_cv2_video_capture.read.return_value = (False, None)
     with patch(

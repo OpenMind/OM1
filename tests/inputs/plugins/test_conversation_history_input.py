@@ -36,9 +36,7 @@ async def test_poll_with_new_voice_input():
     """Test _poll when there's new voice input."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -63,9 +61,7 @@ async def test_poll_with_whitespace_input():
     """Test _poll filters out whitespace-only input."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -89,9 +85,7 @@ async def test_poll_with_no_new_voice_input():
     """Test _poll when there's no new voice input."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -111,9 +105,7 @@ async def test_poll_with_old_tick():
     """Test _poll when tick hasn't advanced."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -134,9 +126,7 @@ async def test_poll_when_stopped():
     """Test _poll returns None when input is stopped."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -157,9 +147,7 @@ async def test_raw_to_text_with_valid_input():
     """Test _raw_to_text with valid input."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.time.time", return_value=1234.5
-        ),
+        patch("inputs.plugins.conversation_history_input.time.time", return_value=1234.5),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -189,9 +177,7 @@ async def test_raw_to_text_updates_messages():
     """Test raw_to_text updates message buffer."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.time.time", return_value=1234.5
-        ),
+        patch("inputs.plugins.conversation_history_input.time.time", return_value=1234.5),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)
@@ -307,9 +293,7 @@ async def test_full_workflow():
     """Test full workflow: poll -> raw_to_text -> formatted_latest_buffer."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
         patch(
             "inputs.plugins.conversation_history_input.time.time",
             side_effect=[1000.0, 1001.0],
@@ -351,9 +335,7 @@ async def test_poll_with_input_object_no_input_field():
     """Test _poll handles voice input with missing or empty input field."""
     with (
         patch("inputs.plugins.conversation_history_input.IOProvider"),
-        patch(
-            "inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.conversation_history_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = ConversationHistoryConfig()
         sensor = ConversationHistoryInput(config=config)

@@ -33,9 +33,7 @@ def mock_zenoh():
 
 def test_initialization(mock_zenoh):
     """Test UnitreeGo2LidarLocalizationProvider initialization."""
-    provider = UnitreeGo2LidarLocalizationProvider(
-        topic="test/lidar_loc", quality_tolerance=0.85
-    )
+    provider = UnitreeGo2LidarLocalizationProvider(topic="test/lidar_loc", quality_tolerance=0.85)
 
     assert provider.sub_topic == "test/lidar_loc"
     assert provider.quality_tolerance == 0.85
@@ -48,7 +46,7 @@ def test_initialization_defaults(mock_zenoh):
     provider = UnitreeGo2LidarLocalizationProvider()
 
     assert provider.sub_topic == "om/localization_pose"
-    assert provider.quality_tolerance == 0.9
+    assert provider.quality_tolerance == 0.7
 
 
 def test_singleton_pattern(mock_zenoh):
