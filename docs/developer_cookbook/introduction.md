@@ -32,7 +32,7 @@ pre-commit run --all-files
 
 To unit test the system, run:
 ```bash
-uv run pytest --log-cli-level=DEBUG -s
+make test
 ```
 
-Use type `hints` and `docstrings` for better code maintainability.
+Use clear naming conventions and comments for better code maintainability.
