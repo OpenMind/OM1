@@ -23,7 +23,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config libfaiss-dev
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config cmake libopenblas-dev
+
+      - name: Cache FAISS
+        id: cache-faiss
+        uses: actions/cache@v4
+        with:
+          path: /tmp/faiss-install
+          key: ${{ runner.os }}-faiss-1.9.0-c-api
+
+      - name: Build FAISS from source
+        if: steps.cache-faiss.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch v1.9.0 https://github.com/facebookresearch/faiss.git /tmp/faiss
+          cmake -B /tmp/faiss/build -S /tmp/faiss \
+            -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF \
+            -DFAISS_ENABLE_C_API=ON \
+            -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_INSTALL_PREFIX=/tmp/faiss-install
+          cmake --build /tmp/faiss/build -j$(nproc)
+          cmake --install /tmp/faiss/build
+
+      - name: Install FAISS
+        run: sudo cp -r /tmp/faiss-install/* /usr/local/ && sudo ldconfig
 
       - name: Set up Go
         uses: actions/setup-go@v5

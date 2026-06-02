@@ -3,13 +3,27 @@
 # ---------- Build stage ----------
 FROM golang:1.22-bookworm AS builder
 
-# Tools needed to fetch/extract zenoh-c and build the cgo binary.
+# Tools needed to fetch/extract zenoh-c, build FAISS, and build the cgo binary.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
+    cmake \
     curl \
     unzip \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Build and install FAISS C library.
+RUN git clone --depth 1 --branch v1.9.0 https://github.com/facebookresearch/faiss.git /tmp/faiss \
+    && cmake -B /tmp/faiss/build -S /tmp/faiss \
+        -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF \
+        -DFAISS_ENABLE_C_API=ON \
+        -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --build /tmp/faiss/build -j$(nproc) \
+    && cmake --install /tmp/faiss/build \
+    && ldconfig \
+    && rm -rf /tmp/faiss
 
 WORKDIR /app
 
@@ -63,6 +77,7 @@ WORKDIR /app/OM1
 # Binary and the zenoh-c shared library it links against at runtime.
 COPY --from=builder /app/build/om1 /usr/local/bin/om1
 COPY --from=builder /app/.zenoh-c/lib/ /usr/local/lib/
+COPY --from=builder /usr/local/lib/libfaiss* /usr/local/lib/
 RUN ldconfig
 
 # Runtime assets.
