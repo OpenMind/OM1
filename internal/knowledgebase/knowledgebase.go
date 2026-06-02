@@ -135,8 +135,6 @@ func loadGraph(path string) (*hnsw.Graph[int], error) {
 	defer f.Close()
 
 	graph := hnsw.NewGraph[int]()
-	// hnsw.Import reads varints and therefore requires an io.ByteReader, which
-	// *os.File does not satisfy; wrap it in a bufio.Reader.
 	if err := graph.Import(bufio.NewReader(f)); err != nil {
 		return nil, fmt.Errorf("import index %s: %w", path, err)
 	}
