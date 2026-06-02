@@ -165,9 +165,7 @@ class FabricData:
             "odom_rockchip_ts": self.odom_rockchip_ts,
             "odom_subscriber_ts": self.odom_subscriber_ts,
             "rf_data": [rf.to_dict() for rf in self.rf_data] if self.rf_data else [],
-            "rf_data_raw": (
-                [rf.to_dict() for rf in self.rf_data_raw] if self.rf_data_raw else []
-            ),
+            "rf_data_raw": ([rf.to_dict() for rf in self.rf_data_raw] if self.rf_data_raw else []),
         }
 
 
@@ -180,7 +178,7 @@ class FabricDataSubmitter:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/fabric/submit",
+        base_url: str = "https://api.openmind.com/api/core/fabric/submit",
         write_to_local_file: bool = False,
     ):
         """
@@ -192,7 +190,7 @@ class FabricDataSubmitter:
             API key for authentication. Default is None.
         base_url : str
             Base URL for the FABRIC API. Default is
-            "https://api.openmind.org/api/core/fabric/submit".
+            "https://api.openmind.com/api/core/fabric/submit".
         write_to_local_file : bool
             If True, enables local file logging of submitted data.
             Default is False.
@@ -228,10 +226,7 @@ class FabricDataSubmitter:
         if not isinstance(data, dict):
             raise ValueError("Provided data must be a dictionary.")
 
-        if (
-            os.path.exists(self.filename_current)
-            and os.path.getsize(self.filename_current) > self.max_file_size_bytes
-        ):
+        if os.path.exists(self.filename_current) and os.path.getsize(self.filename_current) > self.max_file_size_bytes:
             self.filename_current = self.update_filename()
             logging.info(f"new file name: {self.filename_current}")
 
@@ -276,9 +271,7 @@ class FabricDataSubmitter:
             if request.status_code == 201:
                 logging.debug(f"Data shared: {request.json()}")
             else:
-                logging.error(
-                    f"Failed to share data: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to share data: {request.status_code} - {request.text}")
         except Exception as e:
             logging.error(f"Error sharing data: {str(e)}")
 

@@ -106,9 +106,7 @@ class TestWeatherInputFetch:
 
             mock_session_instance = MagicMock()
             mock_session_instance.get = MagicMock(return_value=mock_get)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -133,9 +131,7 @@ class TestWeatherInputFetch:
 
             mock_session_instance = MagicMock()
             mock_session_instance.get = MagicMock(return_value=mock_get)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -174,9 +170,7 @@ class TestWeatherInputPoll:
         """Test that first poll fetches weather data."""
         mock_data = {"name": "NYC", "main": {"temp": 20.0}}
 
-        with patch.object(
-            weather_input, "_fetch_weather", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(weather_input, "_fetch_weather", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_data
             result = await weather_input._poll()
 
@@ -188,9 +182,7 @@ class TestWeatherInputPoll:
         """Test that poll returns None when interval has not elapsed."""
         mock_data = {"name": "NYC", "main": {"temp": 20.0}}
 
-        with patch.object(
-            weather_input, "_fetch_weather", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(weather_input, "_fetch_weather", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_data
 
             await weather_input._poll()
@@ -205,9 +197,7 @@ class TestWeatherInputPoll:
         """Test that poll fetches new data after interval elapses."""
         mock_data = {"name": "NYC", "main": {"temp": 20.0}}
 
-        with patch.object(
-            weather_input, "_fetch_weather", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(weather_input, "_fetch_weather", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_data
 
             await weather_input._poll()
@@ -228,9 +218,7 @@ class TestWeatherInputPoll:
             "weather": [{"description": "clear"}],
         }
 
-        with patch.object(
-            weather_input, "_fetch_weather", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(weather_input, "_fetch_weather", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_data
 
             result1 = await weather_input._poll()

@@ -1,5 +1,5 @@
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   hertz: 1,
   name: "fabric_gps",
   unitree_ethernet: "${UNITREE_ETHERNET:-en0}",
@@ -31,18 +31,6 @@
         origin_lat: 37.7818286,
         origin_lon: -122.394063,
         origin_yaw_deg: 105,
-      },
-    },
-  ],
-  simulators: [
-    {
-      type: "WebSim",
-      config: {
-        host: "0.0.0.0",
-        port: 8000,
-        tick_rate: 100,
-        auto_reconnect: true,
-        debug_mode: false,
       },
     },
   ],

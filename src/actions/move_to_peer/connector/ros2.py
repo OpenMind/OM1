@@ -84,9 +84,7 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
         distance = math.hypot(x_east, y_north)
 
         if distance < self.STOP_DIST:
-            logging.info(
-                f"MoveToPeer: already near peer (d={distance:.1f} m < {self.STOP_DIST} m)."
-            )
+            logging.info(f"MoveToPeer: already near peer (d={distance:.1f} m < {self.STOP_DIST} m).")
             return
 
         bearing_deg = math.degrees(math.atan2(x_east, y_north)) % 360.0
@@ -103,9 +101,7 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
 
         # heading error – positive → need CW rotation
         heading_err = ((bearing_deg - yaw_deg + 180.0) % 360.0) - 180.0  # -> (‑180,180]
-        logging.info(
-            f"MoveToPeer: bearing={bearing_deg:.1f}°, yaw={yaw_deg:.1f}°, error={heading_err:.1f}°"
-        )
+        logging.info(f"MoveToPeer: bearing={bearing_deg:.1f}°, yaw={yaw_deg:.1f}°, error={heading_err:.1f}°")
 
         if abs(heading_err) > self.ANG_TOL_DEG:
             yaw_rate = math.copysign(self.MAX_ROT_SPEED, -heading_err)

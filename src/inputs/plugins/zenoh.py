@@ -57,9 +57,7 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
         if listen_topic is None:
             listen_topic = "speech"
             # Log the listen_topic being used
-            logging.info(
-                f"Listen topic not provided. Using default topic: {listen_topic}"
-            )
+            logging.info(f"Listen topic not provided. Using default topic: {listen_topic}")
 
         self.listener: ZenohListenerProvider = ZenohListenerProvider(
             topic=listen_topic,
@@ -163,8 +161,6 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
 {self.messages[-1]}
 // END
 """
-        self.io_provider.add_input(
-            self.descriptor_for_message, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_message, self.messages[-1], time.time())
         self.messages = []
         return result

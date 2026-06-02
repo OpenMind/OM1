@@ -4,9 +4,9 @@ description: "Managing your OpenMind Account and API Keys"
 icon: webhook
 ---
 
-Your OpenMind account and API keys are used for authentication and authorization in your applications. You can manage your account and keys via the [OpenMind portal](https://portal.openmind.org) or directly via an API. The API provides access to the full set of operations (generate, delete, account balance, and key listing).
+Your OpenMind account and API keys are used for authentication and authorization in your applications. You can manage your account and keys via the [OpenMind portal](https://portal.openmind.com) or directly via an API. The API provides access to the full set of operations (generate, delete, account balance, and key listing).
 
-**Base URL:** `https://api.openmind.org/api/core`
+**Base URL:** `https://api.openmind.com/api/core`
 
 **Authentication:** All endpoints require a JWT token generated with [Clerk](https://clerk.com/). Include the token in the `Authorization` header as a Bearer token.
 
@@ -28,7 +28,7 @@ Create a new API key for your account. Each plan has a limit on the number of AP
 ### Request
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/api_keys/create \
+curl -X POST https://api.openmind.com/api/core/api_keys/create \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json"
 ```
@@ -84,7 +84,7 @@ Mark an API key as deleted and invalidate it. This action cannot be undone.
 ### Request
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/api_keys/delete \
+curl -X POST https://api.openmind.com/api/core/api_keys/delete \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -145,7 +145,7 @@ Retrieve your current OMCU (OpenMind Compute Unit) balance and subscription deta
 ### Request
 
 ```bash
-curl -X GET https://api.openmind.org/api/core/account/balance \
+curl -X GET https://api.openmind.com/api/core/account/balance \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -204,7 +204,7 @@ Retrieve a list of all active API keys for your account.
 ### Request
 
 ```bash
-curl -X GET https://api.openmind.org/api/core/api_keys \
+curl -X GET https://api.openmind.com/api/core/api_keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -285,7 +285,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 ### Getting Your JWT Token
 
 You can obtain your JWT token through:
-1. **OpenMind Portal:** Log in at [portal.openmind.org](https://portal.openmind.org) and copy your session token
+1. **OpenMind Portal:** Log in at [portal.openmind.com](https://portal.openmind.com) and copy your session token
 2. **Clerk SDK:** Use the Clerk client library to authenticate and retrieve the session token programmatically
 
 ### Example with Token
@@ -295,7 +295,7 @@ You can obtain your JWT token through:
 export OPENMIND_JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 # Use it in your requests
-curl -X GET https://api.openmind.org/api/core/account/balance \
+curl -X GET https://api.openmind.com/api/core/account/balance \
   -H "Authorization: Bearer $OPENMIND_JWT_TOKEN"
 ```
 

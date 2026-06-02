@@ -51,9 +51,7 @@ class MockGps(Gps):
         """
         data = get_next_gps()
         if data is not None:
-            logging.info(
-                f"MockGps: GPS lat={data.get('gps_lat')}, lon={data.get('gps_lon')}"
-            )
+            logging.info(f"MockGps: GPS lat={data.get('gps_lat')}, lon={data.get('gps_lon')}")
             return data
 
         if not self.data_processed:
@@ -97,14 +95,9 @@ class MockGps(Gps):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

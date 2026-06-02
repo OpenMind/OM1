@@ -5,7 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from aiohttp import ClientError, ClientTimeout
 
-from hooks.nav2_hook import start_nav2_hook, stop_nav2_hook
+from hooks.nav2_hook import (
+    StartNav2HookContext,
+    StopNav2HookContext,
+    start_nav2_hook,
+    stop_nav2_hook,
+)
 
 
 def create_mock_response(status, json_data=None, json_error=None):
@@ -32,6 +37,89 @@ def mock_elevenlabs_provider():
         provider_instance.add_pending_message = Mock()
         mock.return_value = provider_instance
         yield provider_instance
+
+
+class TestStartNav2HookContext:
+    """Tests for StartNav2HookContext model validator."""
+
+    def test_default_context(self):
+        """Test default context values."""
+        context = StartNav2HookContext()
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+        assert context.map_name == "map"
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        context = StartNav2HookContext(use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+        assert context.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        context = StartNav2HookContext(use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        context = StartNav2HookContext(
+            base_url="http://custom:8080",
+            use_sim=True,
+        )
+        assert context.base_url == "http://custom:8080"
+        assert context.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        context = StartNav2HookContext(base_url=None, use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        context = StartNav2HookContext(base_url=None, use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+
+
+class TestStopNav2HookContext:
+    """Tests for StopNav2HookContext model validator."""
+
+    def test_default_context(self):
+        """Test default context values."""
+        context = StopNav2HookContext()
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        context = StopNav2HookContext(use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+        assert context.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        context = StopNav2HookContext(use_sim=False)
+        assert context.base_url == "http://localhost:5000"
+        assert context.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        context = StopNav2HookContext(
+            base_url="http://custom:9090",
+            use_sim=True,
+        )
+        assert context.base_url == "http://custom:9090"
+        assert context.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        context = StopNav2HookContext(base_url=None, use_sim=True)
+        assert context.base_url == "https://api.openmind.com/api/core/simulation/orchestrator"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        context = StopNav2HookContext(base_url=None, use_sim=False)
+        assert context.base_url == "http://localhost:5000"
 
 
 class TestStartNav2Hook:
@@ -97,9 +185,7 @@ class TestStartNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Failed to start Nav2: Service unavailable"
-            ):
+            with pytest.raises(Exception, match="Failed to start Nav2: Service unavailable"):
                 await start_nav2_hook(context)
 
     @pytest.mark.asyncio
@@ -129,9 +215,7 @@ class TestStartNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Error calling Nav2 API: Connection refused"
-            ):
+            with pytest.raises(Exception, match="Error calling Nav2 API: Connection refused"):
                 await start_nav2_hook(context)
 
     @pytest.mark.asyncio
@@ -228,7 +312,5 @@ class TestStopNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Error calling Nav2 stop API: Network error"
-            ):
+            with pytest.raises(Exception, match="Error calling Nav2 stop API: Network error"):
                 await stop_nav2_hook(context)

@@ -5,10 +5,9 @@ import time
 from queue import Empty, Queue
 from typing import Optional
 
-import zenoh
 from zenoh import ZBytes
 
-from zenoh_msgs import open_zenoh_session
+from zenoh_msgs import ZenohSessionType, open_zenoh_session
 
 
 class ZenohPublisherProvider:
@@ -28,7 +27,7 @@ class ZenohPublisherProvider:
         topic : str, optional
             The topic on which to publish messages (default is "speech").
         """
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()

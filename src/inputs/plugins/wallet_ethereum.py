@@ -43,9 +43,7 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
 
         self.PROVIDER_URL = "https://eth.llamarpc.com"
         self.POLL_INTERVAL = 4  # seconds between blockchain data updates
-        self.ACCOUNT_ADDRESS = os.environ.get(
-            "ETH_ADDRESS", "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-        )
+        self.ACCOUNT_ADDRESS = os.environ.get("ETH_ADDRESS", "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
         logging.debug(f"Using {self.ACCOUNT_ADDRESS} as the wallet address")
         logging.info("Testing: WalletEthereum: Initialized")
 
@@ -75,9 +73,7 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
 
             self.eth_info = {
                 "block_number": int(block_number),
-                "address": str(
-                    self.ACCOUNT_ADDRESS
-                ),  # that's a string prefixed with `0x`
+                "address": str(self.ACCOUNT_ADDRESS),  # that's a string prefixed with `0x`
                 "balance": self.balance_eth,
             }
             logging.debug(
@@ -153,8 +149,6 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
         return result

@@ -77,9 +77,7 @@ class TestTurtleBot4RPLidar:
     def test_initialization(self):
         """Test basic initialization."""
         with (
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"
-            ) as mock_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider") as mock_provider_class,
             patch("inputs.plugins.turtlebot4_rplidar.IOProvider"),
         ):
             mock_provider = MagicMock()
@@ -91,17 +89,12 @@ class TestTurtleBot4RPLidar:
             assert sensor.messages == []
             assert sensor.lidar == mock_provider
             mock_provider.start.assert_called_once()
-            assert (
-                "objects" in sensor.descriptor_for_LLM.lower()
-                or "walls" in sensor.descriptor_for_LLM.lower()
-            )
+            assert "objects" in sensor.descriptor_for_LLM.lower() or "walls" in sensor.descriptor_for_LLM.lower()
 
     def test_initialization_with_custom_config(self):
         """Test initialization with custom configuration."""
         with (
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"
-            ) as mock_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider") as mock_provider_class,
             patch("inputs.plugins.turtlebot4_rplidar.IOProvider"),
         ):
             mock_provider = MagicMock()
@@ -120,9 +113,7 @@ class TestTurtleBot4RPLidar:
     def test_provider_initialization_with_correct_parameters(self):
         """Test that provider is initialized with correct parameters."""
         with (
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"
-            ) as mock_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider") as mock_provider_class,
             patch("inputs.plugins.turtlebot4_rplidar.IOProvider"),
         ):
             mock_provider = MagicMock()
@@ -152,9 +143,7 @@ class TestTurtleBot4RPLidar:
     async def test_poll_with_lidar_data(self):
         """Test _poll with lidar data available."""
         with (
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"
-            ) as mock_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider") as mock_provider_class,
             patch("inputs.plugins.turtlebot4_rplidar.IOProvider"),
         ):
             mock_provider = MagicMock()
@@ -164,9 +153,7 @@ class TestTurtleBot4RPLidar:
             config = RPLidarConfig()
             sensor = TurtleBot4RPLidar(config=config)
 
-            with patch(
-                "inputs.plugins.turtlebot4_rplidar.asyncio.sleep", new=AsyncMock()
-            ):
+            with patch("inputs.plugins.turtlebot4_rplidar.asyncio.sleep", new=AsyncMock()):
                 result = await sensor._poll()
 
             assert result == "Lidar scan data"
@@ -175,9 +162,7 @@ class TestTurtleBot4RPLidar:
     async def test_poll_with_no_data(self):
         """Test _poll when no lidar data available."""
         with (
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"
-            ) as mock_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider") as mock_provider_class,
             patch("inputs.plugins.turtlebot4_rplidar.IOProvider"),
         ):
             mock_provider = MagicMock()
@@ -187,9 +172,7 @@ class TestTurtleBot4RPLidar:
             config = RPLidarConfig()
             sensor = TurtleBot4RPLidar(config=config)
 
-            with patch(
-                "inputs.plugins.turtlebot4_rplidar.asyncio.sleep", new=AsyncMock()
-            ):
+            with patch("inputs.plugins.turtlebot4_rplidar.asyncio.sleep", new=AsyncMock()):
                 result = await sensor._poll()
 
             assert result is None
@@ -261,9 +244,7 @@ class TestTurtleBot4RPLidar:
         """Test formatted_latest_buffer with messages in buffer."""
         with (
             patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"),
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.IOProvider"
-            ) as mock_io_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.IOProvider") as mock_io_provider_class,
         ):
             mock_io_provider = MagicMock()
             mock_io_provider_class.return_value = mock_io_provider
@@ -272,9 +253,7 @@ class TestTurtleBot4RPLidar:
             sensor = TurtleBot4RPLidar(config=config)
 
             # Add a message
-            sensor.messages.append(
-                Message(timestamp=123.456, message="Front: clear, Left: obstacle")
-            )
+            sensor.messages.append(Message(timestamp=123.456, message="Front: clear, Left: obstacle"))
 
             result = sensor.formatted_latest_buffer()
 
@@ -303,9 +282,7 @@ class TestTurtleBot4RPLidar:
         """Test formatted_latest_buffer returns only the latest message."""
         with (
             patch("inputs.plugins.turtlebot4_rplidar.TurtleBot4RPLidarProvider"),
-            patch(
-                "inputs.plugins.turtlebot4_rplidar.IOProvider"
-            ) as mock_io_provider_class,
+            patch("inputs.plugins.turtlebot4_rplidar.IOProvider") as mock_io_provider_class,
         ):
             mock_io_provider = MagicMock()
             mock_io_provider_class.return_value = mock_io_provider

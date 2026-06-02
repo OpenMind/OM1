@@ -8,17 +8,13 @@ from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 
 _mock_unitree = MagicMock()
 _mock_sport_client_class = Mock()
-_mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = (
-    _mock_sport_client_class
-)
+_mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = _mock_sport_client_class
 _unitree_mocks = {
     "unitree": _mock_unitree,
     "unitree.unitree_sdk2py": _mock_unitree.unitree_sdk2py,
     "unitree.unitree_sdk2py.go2": _mock_unitree.unitree_sdk2py.go2,
     "unitree.unitree_sdk2py.go2.sport": _mock_unitree.unitree_sdk2py.go2.sport,
-    "unitree.unitree_sdk2py.go2.sport.sport_client": (
-        _mock_unitree.unitree_sdk2py.go2.sport.sport_client
-    ),
+    "unitree.unitree_sdk2py.go2.sport.sport_client": (_mock_unitree.unitree_sdk2py.go2.sport.sport_client),
 }
 
 
@@ -65,9 +61,7 @@ class TestMoveToPeerRos2ConnectorConnect:
         move_input = MoveToPeerInput(action=MoveToPeerAction.IDLE)
         with patch("actions.move_to_peer.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_any_call(
-                "MoveToPeer: idle, no movement commanded."
-            )
+            mock_logging.info.assert_any_call("MoveToPeer: idle, no movement commanded.")
 
     @pytest.mark.asyncio
     async def test_connect_no_own_location(self, mock_dependencies):
@@ -77,9 +71,7 @@ class TestMoveToPeerRos2ConnectorConnect:
         move_input = MoveToPeerInput(action=MoveToPeerAction.NAVIGATE)
         with patch("actions.move_to_peer.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_any_call(
-                "MoveToPeer: own location not available, not moving."
-            )
+            mock_logging.info.assert_any_call("MoveToPeer: own location not available, not moving.")
 
     @pytest.mark.asyncio
     async def test_connect_no_peer_location(self, mock_dependencies):
@@ -95,9 +87,7 @@ class TestMoveToPeerRos2ConnectorConnect:
         move_input = MoveToPeerInput(action=MoveToPeerAction.NAVIGATE)
         with patch("actions.move_to_peer.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_any_call(
-                "MoveToPeer: peer location not available, not moving."
-            )
+            mock_logging.info.assert_any_call("MoveToPeer: peer location not available, not moving.")
 
     @pytest.mark.asyncio
     async def test_connect_already_near_peer(self, mock_dependencies):
@@ -118,9 +108,7 @@ class TestMoveToPeerRos2ConnectorConnect:
         move_input = MoveToPeerInput(action=MoveToPeerAction.NAVIGATE)
         with patch("actions.move_to_peer.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_any_call(
-                "MoveToPeer: already near peer (d=0.0\u00a0m < 4.0\u00a0m)."
-            )
+            mock_logging.info.assert_any_call("MoveToPeer: already near peer (d=0.0\u00a0m < 4.0\u00a0m).")
 
     @pytest.mark.asyncio
     async def test_connect_no_yaw_drives_body_frame(self, mock_dependencies):
@@ -142,9 +130,7 @@ class TestMoveToPeerRos2ConnectorConnect:
         move_input = MoveToPeerInput(action=MoveToPeerAction.NAVIGATE)
         with patch("actions.move_to_peer.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_any_call(
-                "MoveToPeer: yaw unknown \u2192 driving body\u2011frame vector instead."
-            )
+            mock_logging.info.assert_any_call("MoveToPeer: yaw unknown \u2192 driving body\u2011frame vector instead.")
             mock_sport.Move.assert_called_once()
 
     @pytest.mark.asyncio

@@ -6,7 +6,7 @@ icon: webhook
 
 The ElevenLabs TTS API converts text into natural-sounding speech using ElevenLabs' advanced text-to-speech models. This endpoint provides high-quality voice synthesis with customizable voice selection, speech speed, and output formats.
 
-**Base URL:** `https://api.openmind.org`
+**Base URL:** `https://api.openmind.com`
 
 **Authentication:** OpenMind API key is required. Include the key in the `x-api-key` or `Authorization` header.
 
@@ -26,7 +26,7 @@ Convert text to speech using the ElevenLabs TTS engine with customizable voice a
 ### Request
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -121,7 +121,7 @@ See Error Responses for `/elevenlabs/tts`.
 Convert simple text to speech using default settings:
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -134,7 +134,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 Use a specific voice with faster speech rate:
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -149,7 +149,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 Customize all available parameters:
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -167,7 +167,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 Generate speech and save directly to an MP3 file:
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -185,7 +185,7 @@ export TTS_VOICE_ID="JBFqnCBsd6RMkjVDRZzb"
 export TTS_SPEED="1.1"
 
 # Use in request
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d "{
@@ -200,7 +200,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 Stream the audio directly to a file using the streaming endpoint:
 
 ```bash
-curl -X POST https://api.openmind.org/elevenlabs/tts/audio/speech \
+curl -X POST https://api.openmind.com/elevenlabs/tts/audio/speech \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
@@ -256,7 +256,7 @@ All endpoints follow consistent error response patterns:
 **Missing Input Field:**
 ```bash
 # This will fail - input is required
-curl -X POST https://api.openmind.org/elevenlabs/tts \
+curl -X POST https://api.openmind.com/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{}'

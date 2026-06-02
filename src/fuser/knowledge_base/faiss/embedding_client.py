@@ -61,16 +61,12 @@ class EmbeddingClient(BaseEmbeddingClient):
             JSON response from server.
         """
         if self._session:
-            async with self._session.post(
-                f"{self.base_url}/{endpoint}", json=payload
-            ) as resp:
+            async with self._session.post(f"{self.base_url}/{endpoint}", json=payload) as resp:
                 resp.raise_for_status()
                 return await resp.json()
         else:
             async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                async with session.post(
-                    f"{self.base_url}/{endpoint}", json=payload
-                ) as resp:
+                async with session.post(f"{self.base_url}/{endpoint}", json=payload) as resp:
                     resp.raise_for_status()
                     return await resp.json()
 
@@ -99,9 +95,7 @@ class EmbeddingClient(BaseEmbeddingClient):
         emb_bytes = base64.b64decode(data["embedding_b64"])
         embedding = np.frombuffer(emb_bytes, dtype="float32")
 
-        logging.debug(
-            f"Embedded query (len={len(query)}) in {data['latency_ms']:.1f}ms"
-        )
+        logging.debug(f"Embedded query (len={len(query)}) in {data['latency_ms']:.1f}ms")
         return embedding
 
     async def embed_batch(self, queries: list[str]) -> np.ndarray:

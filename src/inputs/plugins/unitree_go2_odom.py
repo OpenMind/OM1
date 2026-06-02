@@ -10,6 +10,7 @@ from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
+from providers.unitree_go2_odom_zenoh_provider import UnitreeGo2OdomZenohProvider
 
 
 class UnitreeGo2OdomConfig(SensorConfig):
@@ -18,17 +19,26 @@ class UnitreeGo2OdomConfig(SensorConfig):
 
     Parameters
     ----------
-    use_zenoh : bool
-        Whether to use Zenoh for odometry.
-    URID : str
-        URID (Unitree ID).
+    api_key : Optional[str]
+        API key for authentication, if required by the Zenoh session.
+    topic : str
+        Zenoh keyexpression to subscribe to.
+    use_sim : bool
+        Whether to use the simulation Zenoh endpoint instead of a local one.
     unitree_ethernet : Optional[str]
         Ethernet channel for Unitree odometry.
     """
 
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Ethernet channel for Unitree odometry"
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    topic: str = Field(
+        default="utlidar/robot_pose",
+        description="Zenoh key for Go2 robot_pose / odom.",
     )
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to use the simulation Zenoh endpoint instead of a local one.",
+    )
+    unitree_ethernet: Optional[str] = Field(default=None, description="Ethernet channel for Unitree odometry")
 
 
 class UnitreeGo2Odom(FuserInput[UnitreeGo2OdomConfig, Optional[dict]]):
@@ -60,7 +70,17 @@ class UnitreeGo2Odom(FuserInput[UnitreeGo2OdomConfig, Optional[dict]]):
 
         unitree_ethernet = self.config.unitree_ethernet
 
-        self.odom = UnitreeGo2OdomProvider(unitree_ethernet)
+        if self.config.use_sim is True:
+            self.odom = UnitreeGo2OdomZenohProvider(
+                api_key=self.config.api_key,
+                topic=self.config.topic,
+                use_sim=self.config.use_sim,
+            )
+            logging.info("Using Zenoh-based Odom Provider for Unitree Go2")
+        else:
+            self.odom = UnitreeGo2OdomProvider(unitree_ethernet)
+            logging.info("Using CycloneDDS-based Odom Provider for Unitree Go2")
+
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
     async def _poll(self) -> Optional[dict]:
@@ -158,14 +178,9 @@ class UnitreeGo2Odom(FuserInput[UnitreeGo2OdomConfig, Optional[dict]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

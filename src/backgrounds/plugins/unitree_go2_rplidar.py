@@ -35,24 +35,12 @@ class UnitreeGo2RPLidarConfig(BackgroundConfig):
         Whether to log to file.
     """
 
-    serial_port: Optional[str] = Field(
-        default=None, description="Serial port for the RPLidar device"
-    )
-    half_width_robot: float = Field(
-        default=0.20, description="Half width of the robot in meters"
-    )
-    angles_blanked: List[float] = Field(
-        default_factory=list, description="Angles to blank out from lidar scan"
-    )
-    relevant_distance_max: float = Field(
-        default=1.1, description="Maximum relevant distance in meters"
-    )
-    relevant_distance_min: float = Field(
-        default=0.08, description="Minimum relevant distance in meters"
-    )
-    sensor_mounting_angle: float = Field(
-        default=180.0, description="Sensor mounting angle in degrees"
-    )
+    serial_port: Optional[str] = Field(default=None, description="Serial port for the RPLidar device")
+    half_width_robot: float = Field(default=0.20, description="Half width of the robot in meters")
+    angles_blanked: List[float] = Field(default_factory=list, description="Angles to blank out from lidar scan")
+    relevant_distance_max: float = Field(default=1.1, description="Maximum relevant distance in meters")
+    relevant_distance_min: float = Field(default=0.08, description="Minimum relevant distance in meters")
+    sensor_mounting_angle: float = Field(default=180.0, description="Sensor mounting angle in degrees")
     log_file: bool = Field(default=False, description="Whether to log to file")
 
 

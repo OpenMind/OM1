@@ -65,9 +65,7 @@ def test_register_message_callback(ws_url, rtsp_url, mock_dependencies):
     callback = Mock()
     provider.register_message_callback(callback)
 
-    mock_ws_client.return_value.register_message_callback.assert_called_once_with(
-        callback
-    )
+    mock_ws_client.return_value.register_message_callback.assert_called_once_with(callback)
 
 
 def test_register_message_callback_none(ws_url, rtsp_url, mock_dependencies):

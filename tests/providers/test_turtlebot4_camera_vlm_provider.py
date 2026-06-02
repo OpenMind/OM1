@@ -28,9 +28,7 @@ def reset_singleton():
 @pytest.fixture
 def mock_zenoh():
     """Mock Zenoh dependencies."""
-    with patch(
-        "providers.turtlebot4_camera_vlm_provider.open_zenoh_session"
-    ) as mock_session:
+    with patch("providers.turtlebot4_camera_vlm_provider.open_zenoh_session") as mock_session:
         mock_session_instance = MagicMock()
         mock_subscriber = MagicMock()
         mock_session_instance.declare_subscriber.return_value = mock_subscriber
@@ -42,9 +40,7 @@ def test_turtlebot4_video_stream_initialization(mock_zenoh):
     """Test TurtleBot4CameraVideoStream initialization."""
     _, mock_session_instance, _ = mock_zenoh
 
-    stream = TurtleBot4CameraVideoStream(
-        fps=30, resolution=(640, 480), jpeg_quality=70, URID="test_robot"
-    )
+    stream = TurtleBot4CameraVideoStream(fps=30, resolution=(640, 480), jpeg_quality=70, URID="test_robot")
 
     assert stream.session == mock_session_instance
     assert stream.debug is False
@@ -89,9 +85,7 @@ def test_turtlebot4_video_stream_with_callback(mock_zenoh):
 
 def test_turtlebot4_video_stream_initialization_failure():
     """Test handling of Zenoh initialization failure."""
-    with patch(
-        "providers.turtlebot4_camera_vlm_provider.open_zenoh_session"
-    ) as mock_session:
+    with patch("providers.turtlebot4_camera_vlm_provider.open_zenoh_session") as mock_session:
         mock_session.side_effect = Exception("Connection failed")
 
         stream = TurtleBot4CameraVideoStream()
@@ -136,9 +130,7 @@ def test_turtlebot4_vlm_provider_initialization():
     """Test TurtleBot4CameraVLMProvider initialization."""
     with (
         patch("providers.turtlebot4_camera_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream"
-        ) as mock_stream,
+        patch("providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -147,9 +139,7 @@ def test_turtlebot4_vlm_provider_initialization():
         mock_stream_instance = MagicMock()
         mock_stream.return_value = mock_stream_instance
 
-        provider = TurtleBot4CameraVLMProvider(
-            ws_url="ws://localhost:8000", URID="test_robot", fps=15
-        )
+        provider = TurtleBot4CameraVLMProvider(ws_url="ws://localhost:8000", URID="test_robot", fps=15)
 
         assert provider.running is False
         mock_ws.assert_called_once_with(url="ws://localhost:8000")
@@ -162,12 +152,8 @@ def test_turtlebot4_vlm_provider_singleton():
         patch("providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream"),
     ):
 
-        provider1 = TurtleBot4CameraVLMProvider(
-            ws_url="ws://localhost:8000", URID="robot1"
-        )
-        provider2 = TurtleBot4CameraVLMProvider(
-            ws_url="ws://localhost:8001", URID="robot2"
-        )
+        provider1 = TurtleBot4CameraVLMProvider(ws_url="ws://localhost:8000", URID="robot1")
+        provider2 = TurtleBot4CameraVLMProvider(ws_url="ws://localhost:8001", URID="robot2")
         assert provider1 is provider2
 
 
@@ -175,9 +161,7 @@ def test_turtlebot4_vlm_provider_start():
     """Test starting the VLM provider."""
     with (
         patch("providers.turtlebot4_camera_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream"
-        ) as mock_stream,
+        patch("providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -186,9 +170,7 @@ def test_turtlebot4_vlm_provider_start():
         mock_stream_instance = MagicMock()
         mock_stream.return_value = mock_stream_instance
 
-        provider = TurtleBot4CameraVLMProvider(
-            ws_url="ws://localhost:8000", URID="test"
-        )
+        provider = TurtleBot4CameraVLMProvider(ws_url="ws://localhost:8000", URID="test")
         provider.start()
 
         assert provider.running is True
@@ -200,9 +182,7 @@ def test_turtlebot4_vlm_provider_stop():
     """Test stopping the VLM provider."""
     with (
         patch("providers.turtlebot4_camera_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream"
-        ) as mock_stream,
+        patch("providers.turtlebot4_camera_vlm_provider.TurtleBot4CameraVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -211,9 +191,7 @@ def test_turtlebot4_vlm_provider_stop():
         mock_stream_instance = MagicMock()
         mock_stream.return_value = mock_stream_instance
 
-        provider = TurtleBot4CameraVLMProvider(
-            ws_url="ws://localhost:8000", URID="test"
-        )
+        provider = TurtleBot4CameraVLMProvider(ws_url="ws://localhost:8000", URID="test")
         provider.start()
         provider.stop()
 

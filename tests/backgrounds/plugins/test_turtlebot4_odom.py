@@ -31,9 +31,7 @@ class TestTurtleBot4Odom:
 
     def test_initialization(self):
         """Test background initialization."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -47,9 +45,7 @@ class TestTurtleBot4Odom:
 
     def test_initialization_with_empty_urid(self):
         """Test background initialization with empty URID."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -62,9 +58,7 @@ class TestTurtleBot4Odom:
 
     def test_initialization_logging(self, caplog):
         """Test that initialization logs the correct message."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -72,16 +66,11 @@ class TestTurtleBot4Odom:
             with caplog.at_level("INFO"):
                 TurtleBot4Odom(config)
 
-            assert (
-                "Initialized TurtleBot4 Odom Provider with URID: test_robot_123"
-                in caplog.text
-            )
+            assert "Initialized TurtleBot4 Odom Provider with URID: test_robot_123" in caplog.text
 
     def test_provider_initialization_with_correct_urid(self):
         """Test that provider is initialized with the correct URID."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -94,9 +83,7 @@ class TestTurtleBot4Odom:
 
     def test_config_stored_correctly(self):
         """Test that config is stored correctly in the background instance."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -108,9 +95,7 @@ class TestTurtleBot4Odom:
 
     def test_multiple_instances_with_different_urids(self):
         """Test that multiple instances can be created with different URIDs."""
-        with patch(
-            "backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class:
             mock_provider1 = MagicMock()
             mock_provider2 = MagicMock()
             mock_provider_class.side_effect = [mock_provider1, mock_provider2]

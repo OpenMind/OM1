@@ -1,0 +1,350 @@
+import asyncio
+import json
+import logging
+import re
+import time
+from typing import Dict, List, Optional
+from uuid import uuid4
+
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
+from inputs.base.loop import FuserInput
+from prometheus import (
+    om1_asr_latency,
+    om1_asr_latency_last,
+)
+from providers.asr_provider import ASRProvider
+from providers.io_provider import IOProvider
+from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.teleops_conversation_provider import TeleopsConversationProvider
+from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
+
+LANGUAGE_CODE_MAP: dict = {
+    "auto": "auto",
+    "english": "en",
+    "spanish": "es",
+    "french": "fr",
+    "german": "de",
+    "italian": "it",
+    "portuguese": "pt",
+    "japanese": "ja",
+    "korean": "ko",
+    "chinese": "zh",
+    "dutch": "nl",
+    "polish": "pl",
+    "russian": "ru",
+}
+
+
+class ElevenLabsASRSensorConfig(SensorConfig):
+    """
+    Configuration for ElevenLabs ASR Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    rate : int
+        Sampling rate.
+    chunk : int
+        Chunk size.
+    base_url : Optional[str]
+        Base URL for the ASR service.
+    microphone_device_id : Optional[int]
+        Microphone Device ID.
+    microphone_name : Optional[str]
+        Microphone Name.
+    language : str
+        Language for speech recognition (supports BCP-47 codes or auto-detection).
+    alternative_languages : Optional[List[str]]
+        List of alternative languages for multilingual speech recognition. If None (default), no alternative languages will be used.
+    remote_input : bool
+        Whether to use remote input.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    rate: int = Field(default=48000, description="Sampling rate")
+    chunk: int = Field(default=4800, description="Chunk size")
+    base_url: Optional[str] = Field(default=None, description="Base URL for the ASR service")
+    microphone_device_id: Optional[int] = Field(default=None, description="Microphone Device ID")
+    microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
+    language: str = Field(default="auto", description="Language for speech recognition")
+    remote_input: bool = Field(default=False, description="Whether to use remote input")
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
+
+
+class ElevenLabsASRInput(FuserInput[ElevenLabsASRSensorConfig, Optional[str]]):
+    """
+    ElevenLabs Automatic Speech Recognition (ASR) input handler.
+
+    This class manages the input stream from an ASR service, buffering messages
+    and providing text conversion capabilities.
+    """
+
+    def __init__(self, config: ElevenLabsASRSensorConfig):
+        """
+        Initialize ElevenLabsASRInput instance.
+
+        Parameters
+        ----------
+        config : ElevenLabsASRSensorConfig
+            Configuration for the ElevenLabs ASR input
+        """
+        super().__init__(config)
+
+        # Buffer for storing the final output
+        self.messages: List[str] = []
+
+        # Set IO Provider
+        self.descriptor_for_LLM = "Voice"
+        self.io_provider = IOProvider()
+
+        # Message buffer for incoming ASR messages
+        self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
+
+        # Initialize ASR provider
+        api_key = self.config.api_key
+        rate = self.config.rate
+        chunk = self.config.chunk
+
+        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/elevenlabs/asr?api_key={api_key}"
+
+        microphone_device_id = self.config.microphone_device_id
+        microphone_name = self.config.microphone_name
+
+        language = self.config.language.strip().lower()
+
+        if language not in LANGUAGE_CODE_MAP:
+            logging.error(
+                f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to auto"
+            )
+            language = "auto"
+
+        language_code = LANGUAGE_CODE_MAP.get(language, "auto")
+        logging.info(f"Using language code {language_code} for ElevenLabs ASR")
+
+        remote_input = self.config.remote_input
+        enable_tts_interrupt = self.config.enable_tts_interrupt
+
+        self.asr: ASRProvider = ASRProvider(
+            rate=rate,
+            chunk=chunk,
+            ws_url=base_url,
+            device_id=microphone_device_id,
+            microphone_name=microphone_name,
+            language_code=language_code,
+            remote_input=remote_input,
+            enable_tts_interrupt=enable_tts_interrupt,
+        )
+        self.asr.start()
+        self.asr.register_message_callback(self._handle_asr_message)
+
+        # Initialize sleep ticker provider
+        self.global_sleep_ticker_provider = SleepTickerProvider()
+
+        # Initialize conversation provider
+        self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
+
+        # Initialize Zenoh session
+        self.asr_topic = "om/asr/text"
+        self.session = None
+        self.asr_publisher = None
+
+        try:
+            self.session = open_zenoh_session()
+            self.asr_publisher = self.session.declare_publisher(self.asr_topic)
+            logging.info("Zenoh ASR publisher initialized on topic 'om/asr/text'")
+        except Exception as e:
+            logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
+            self.session = None
+            self.asr_publisher = None
+
+        # Guard flag: when True, this instance ignores incoming ASR messages.
+        self._stopped = False
+
+        # Timing variable to measure latency from speech start to final transcript or end of utterance
+        self._speech_start_time: Optional[float] = None
+        self._language = language
+
+    def _handle_asr_message(self, raw_message: str):
+        """
+        Process incoming ASR messages.
+
+        Parameters
+        ----------
+        raw_message : str
+            Raw message received from ASR service
+        """
+        if self._stopped:
+            return
+
+        try:
+            json_message: Dict = json.loads(raw_message)
+
+            msg_type = json_message.get("type")
+            if msg_type == "partial":
+                self._speech_start_time = time.time()
+
+            if "asr_reply" in json_message and msg_type == "committed":
+                asr_reply = json_message["asr_reply"]
+                has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (has_cjk and len(asr_reply) > 2) or (not has_cjk and len(asr_reply.split()) > 1):
+                    if self._speech_start_time is not None:
+                        latency = time.time() - self._speech_start_time
+                        om1_asr_latency.labels(model="elevenlabs", language=self._language, api_version="v1").observe(
+                            latency
+                        )
+                        om1_asr_latency_last.labels(model="elevenlabs", language=self._language, api_version="v1").set(
+                            latency
+                        )
+
+                        self._speech_start_time = None
+                    self.message_buffer.put_nowait(asr_reply)
+                    logging.info("Detected ASR message: %s", asr_reply)
+
+        except json.JSONDecodeError:
+            pass
+
+    async def _poll(self) -> Optional[str]:
+        """
+        Poll for new messages in the buffer.
+
+        Returns
+        -------
+        Optional[str]
+            Message from the buffer if available, None otherwise
+        """
+        try:
+            message = self.message_buffer.get_nowait()
+            return message
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.01)
+            return None
+
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
+        """
+        Convert raw input to text format.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed
+
+        Returns
+        -------
+        Optional[Message]
+            Processed message or None if input is None
+        """
+        if raw_input is None:
+            return None
+
+        return Message(timestamp=time.time(), message=raw_input)
+
+    async def raw_to_text(self, raw_input: Optional[str]):
+        """
+        Convert raw input to processed text and manage buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed
+        """
+        pending_message = await self._raw_to_text(raw_input)
+        if pending_message is None:
+            if len(self.messages) != 0:
+                self.global_sleep_ticker_provider.skip_sleep = True
+
+        if pending_message is not None:
+            if len(self.messages) == 0:
+                self.messages.append(pending_message.message)
+            else:
+                self.messages[-1] = f"{self.messages[-1]} {pending_message.message}"
+
+    def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string of buffer contents or None if buffer is empty
+        """
+        if len(self.messages) == 0:
+            return None
+
+        result = f"""
+{self.descriptor_for_LLM}: "{self.messages[-1]}"
+"""
+        # Add to IO provider and conversation provider
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
+        self.io_provider.add_mode_transition_input(self.messages[-1])
+        self.conversation_provider.store_user_message(self.messages[-1])
+
+        # Publish to Zenoh
+        if self.asr_publisher:
+            try:
+                asr_msg = ASRText(
+                    header=prepare_header(str(uuid4())),
+                    text=self.messages[-1],
+                )
+                self.asr_publisher.put(asr_msg.serialize())
+                logging.info(f"Published ASR to Zenoh: {self.messages[-1]}")
+            except Exception as e:
+                logging.warning(f"Failed to publish ASR to Zenoh: {e}")
+
+        # Reset messages buffer
+        self.messages = []
+        return result
+
+    def stop(self):
+        """
+        Stop the ASR input.
+        """
+        logging.info("Stopping ElevenLabsASRInput, disabling callback")
+
+        self._stopped = True
+
+        while not self.message_buffer.empty():
+            try:
+                self.message_buffer.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+        self.messages = []
+
+        if self.asr:
+            try:
+                self.asr.unregister_message_callback(self._handle_asr_message)
+                logging.info("Unregistered ASR callback")
+            except Exception as e:
+                logging.warning(f"Failed to unregister ASR callback: {e}")
+
+        if self.asr_publisher:
+            try:
+                self.asr_publisher.undeclare()
+                logging.info("Zenoh ASR publisher undeclared")
+            except Exception as e:
+                logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
+
+        if self.session:
+            try:
+                self.session.close()
+                logging.info("Zenoh ASR session closed")
+            except Exception as e:
+                logging.warning(f"Failed to close Zenoh ASR session: {e}")
+
+        # TODO:
+        # Consider sending the TTS status multiple times to ASR provider to ensure that
+        # the ASR provider properly receives the interrupt signal,
+        # especially in cases where the mode switch happens during TTS playback
+        # if self.asr:
+        #     try:
+        #         self.asr.stop()
+        #         logging.info("ASR provider stopped")
+        #     except Exception as e:
+        #         logging.warning(f"Failed to stop ASR provider: {e}")

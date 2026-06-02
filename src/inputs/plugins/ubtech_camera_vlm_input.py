@@ -27,7 +27,7 @@ class UbtechCameraVLMSensorConfig(SensorConfig):
 
     robot_ip: str = Field(default="", description="Robot IP address")
     base_url: str = Field(
-        default="wss://api-vila.openmind.org",
+        default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
 
@@ -62,9 +62,7 @@ class UbtechCameraVLMInput(FuserInput[UbtechCameraVLMSensorConfig, Optional[str]
 
         # Initialize VLM provider
         base_url = self.config.base_url
-        self.vlm: UbtechVLMProvider = UbtechVLMProvider(
-            ws_url=base_url, robot_ip=self.robot_ip
-        )
+        self.vlm: UbtechVLMProvider = UbtechVLMProvider(ws_url=base_url, robot_ip=self.robot_ip)
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
@@ -177,9 +175,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result
