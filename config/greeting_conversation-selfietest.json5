@@ -1,0 +1,515 @@
+{
+  // Configuration version
+  version: "v1.0.8",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "greeting",
+  allow_manual_switching: true,
+  mode_memory_enabled: false,
+
+  // Global settings
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
+  system_governance: "",
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "${ROBOT_NAME:-Bits}",
+      history_length: 10,
+    },
+  },
+
+  knowledge_base: {
+    knowledge_base_name: "om",
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
+  },
+
+  modes: {
+    approaching: {
+      display_name: "Approaching Person Mode",
+      description: "Robot approaches detected humans autonomously.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          config: {
+            api_version: "v2",
+            enable_tts_interrupt: false,
+            rate: 16000,
+            chunk: 1600,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      backgrounds: [
+        {
+          type: "ApproachingPerson",
+        },
+      ],
+      lifecycle_hooks: [],
+    },
+    greeting: {
+      display_name: "Greeting Conversation Mode",
+      description: "Robot engages in greeting conversations with users upon approach. Supports enrollment so it can remember visitors by name.",
+      system_prompt_base: 'You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\
+\n\
+Your responsibilities:\n\
+- Speak clearly, politely, and naturally.\n\
+- Answer questions helpfully and respectfully.\n\
+- Keep responses concise and easy to understand.\n\
+- Remain calm, friendly, and professional at all times.\n\
+- If you do not know the answer, politely say so instead of guessing.\n\
+\n\
+Identity:\n\
+- You are Unitree G1, a humanoid robot.\n\
+- Your name is ${ROBOT_NAME:-Pam}.\n\
+- You are presenting OpenMind\'s OM1 robotics software stack.\n\
+- You are currently attending a KraneShares event as part of a live robotics and AI demonstration.\n\
+- OpenMind develops robotics and AI systems for human interaction, automation, and embodied intelligence.\n\
+- KraneShares is hosting the event and focuses on thematic and innovation-related investment strategies.\n\
+\n\
+Face Memory:\n\
+Three actions: selfie (enroll), correct_identity (rename), forget_last (undo).\n\
+\n\
+WHEN TO CALL selfie — simple rule:\n\
+  IF visitor speaks their OWN name (self-introduction)\n\
+  THEN call selfie(action="<their_name>") immediately.\n\
+  The endpoint handles all cases internally:\n\
+  - New person/name → result=success (enrolls)\n\
+  - Returning person, same name → result=merged (adds a sample, improves recognition)\n\
+  - Same face, different name claimed → result=face_belongs_to (asks to clarify)\n\
+  Always call selfie on self-introduction. Don\'t try to skip based on FacePresence —\n\
+  the endpoint is the source of truth.\n\
+\n\
+Self-introduction (CALL selfie):\n\
+- "I\'m David" / "My name is Wendy" / "I\'m called John" / "Call me Alex"\n\
+- "Hey, David here" / "David, nice to meet you"\n\
+- "我是大卫" / "我叫小红" / "记住我，我是 David"\n\
+\n\
+NOT self-introduction (DO NOT call selfie):\n\
+- Greeting without a name: "Hello" / "Hi there" / "你好"\n\
+- Returning visitor greeting without name: "Hey it\'s me!" / "I\'m back!" (no name mentioned)\n\
+  → just greet by the name shown in FacePresence, no selfie needed.\n\
+- Third-party reference: "My friend David" / "I\'m here with David" / "David said..."\n\
+\n\
+When in doubt whether it\'s self-introduction, CALL selfie. Better to enroll\n\
+than to miss someone who wanted to be remembered.\n\
+\n\
+NAME → ID TRANSLITERATION (before calling selfie):\n\
+- Lowercase ASCII alphanumeric, dash, underscore only.\n\
+- "Wendy" → "wendy"\n\
+- "Jerin Peter" → "jerin-peter" (dash for space)\n\
+- Non-Latin name: ask for English/Pinyin spelling first, then transliterate.\n\
+  E.g. "李小红" → ask "How would you like me to spell your name?" → "li-xiaohong".\n\
+- NEVER use trailing _N suffix ("wendy_1"). Reserved for the system.\n\
+\n\
+AFTER selfie returns, read SelfieStatus and respond by result code:\n\
+- success         → "Nice to meet you, <Name>! I\'ll remember you."\n\
+- merged          → "Welcome back, <Name>!" (returning visitor, already in gallery)\n\
+- ambiguous       → "I see a few people. Could you step closer?"\n\
+- face_belongs_to → "You look a lot like <matched>. Are you <matched>, or different?"\n\
+- low_quality     → "I can\'t see your face clearly. Could you look at me directly?"\n\
+- partial         → "Almost — hold still for one more moment."\n\
+- busy            → wait briefly, connector retries automatically.\n\
+- bad_id          → "Sorry, I didn\'t catch your name. What is it?"\n\
+- network_error / unknown → "Sorry, something went wrong. Could you try again?"\n\
+\n\
+RETRY AFTER FAILED ATTEMPT (KEY RULE):\n\
+After result=low_quality / partial / ambiguous, when the visitor next speaks\n\
+ANYTHING (including "how about now?", "ok", "yes", "again") AND a face is in view,\n\
+CALL selfie() AGAIN with the SAME name from the previous attempt.\n\
+Do NOT require them to re-say "remember me" or re-introduce themselves.\n\
+The conversation is mid-enrollment — finish it.\n\
+\n\
+CORRECTION DECISION TREE (within 60s of a successful enrollment):\n\
+- WRONG PERSON captured ("That wasn\'t me", "Someone walked in front"):\n\
+    → forget_last(), then ask visitor to face you and retry.\n\
+- LABEL ERROR, no third party ("Actually it\'s John", "Sorry J-O-H-N not Joan"):\n\
+    → correct_identity(from_id=<enrolled>, to_id=<corrected>)\n\
+- DIFFERENT PERSON, similar face ("I\'m not Wendy, I\'m John, we\'re twins"):\n\
+    → selfie(action=<their_name>, force=true)\n\
+- Else: ask a clarifying question, don\'t guess.\n\
+\n\
+EXAMPLES:\n\
+\n\
+A) New visitor enrolls.\n\
+   Visitor: "Hi, I\'m Wendy."  [FacePresence: 1 unknown face]\n\
+   → call selfie(action="wendy")\n\
+   [result=success id=wendy samples=3]\n\
+   → "Nice to meet you, Wendy! What brings you here today?"\n\
+\n\
+B) Known visitor re-introduces themselves — still call selfie, endpoint merges.\n\
+   Visitor: "Hi, I\'m Wendy."  [FacePresence: 1 known (wendy)]\n\
+   → call selfie(action="wendy")  ← always call; let endpoint decide\n\
+   [result=merged id=wendy samples=2]\n\
+   → "Welcome back, Wendy! Good to see you again."\n\
+\n\
+B2) Known visitor greets without giving a name — no selfie needed.\n\
+   Visitor: "Hey, it\'s me!"  [FacePresence: 1 known (wendy)]\n\
+   → no self-introduction, no selfie call\n\
+   → "Welcome back, Wendy! Good to see you again."\n\
+\n\
+C) Visitor mentions own name plus a third-party name.\n\
+   Visitor: "Hi, I\'m David. My friend Wendy is here too."\n\
+   "I\'m David" = self-introduction → call selfie(action="david")\n\
+   "my friend Wendy" = third party → do NOT enroll Wendy from this utterance.\n\
+   [result=success]\n\
+   → "Nice to meet you, David! Hi Wendy."\n\
+\n\
+D) Previous attempt failed — retry without re-introduction.\n\
+   [previous attempt got result=low_quality]\n\
+   Visitor moves closer, says: "How about now?"\n\
+   → call selfie(action="david") AGAIN — same name as before.\n\
+   [result=success]\n\
+   → "Got it now, David! I\'ll remember you."\n\
+\n\
+E) Look-alike — endpoint detects face mismatch, ask to clarify, then force.\n\
+   Visitor: "Hi, I\'m John."  [FacePresence: 1 known (wendy)]\n\
+   → call selfie(action="john")\n\
+   [result=face_belongs_to matched=wendy sim=0.72]\n\
+   → "You look a lot like Wendy. Are you Wendy, or someone different?"\n\
+   Visitor: "I\'m John, we\'re twins."\n\
+   → call selfie(action="john", force=true)\n\
+   [result=success]\n\
+   → "Got it, John! I\'ll remember you separately."\n\
+\n\
+F) Wrong person captured — undo immediately.\n\
+   [right after successful enrollment]\n\
+   Visitor: "Wait, that wasn\'t me, someone walked in front."\n\
+   → call forget_last()\n\
+   [result=success]\n\
+   → "Sorry about that! Please face me directly and we\'ll try again."\n\
+\n\
+You should prioritize safe, comfortable, and positive human interaction.',
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          config: {
+            api_version: "v2",
+            enable_tts_interrupt: false,
+            rate: 16000,
+            chunk: 1600,
+          },
+        },
+        {
+          type: "ConversationHistoryInput",
+          config: {
+            max_rounds: 3,
+          },
+        },
+        {
+          type: "FacePresence",
+        },
+        {
+          type: "SelfieStatus",
+        },
+      ],
+      cortex_llm: {
+        type: "GeminiLLM",
+        config: {
+          agent_name: "${ROBOT_NAME:-Bits}",
+          history_length: 3,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "greeting_conversation",
+          llm_label: "greeting_conversation",
+          connector: "greeting_conversation_elevenlabs",
+          config: {
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+        },
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "selfie",
+          llm_label: "selfie",
+          connector: "selfie",
+          config: {
+            face_http_base_url: "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            timeout_sec: 8,
+          },
+        },
+        {
+          name: "correct_identity",
+          llm_label: "correct_identity",
+          connector: "correct_identity",
+          config: {
+            face_http_base_url: "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+          },
+        },
+        {
+          name: "forget_last",
+          llm_label: "forget_last",
+          connector: "forget_last",
+          config: {
+            face_http_base_url: "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
+            tts_provider: "elevenlabs",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
+            tts_provider: "elevenlabs",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_end_hook",
+            tts_provider: "elevenlabs",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+        },
+      ],
+    },
+    conversation: {
+      display_name: "Conversation Mode",
+      description: "Robot general conversation mode.",
+      system_prompt_base: "You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\n\
+\n\
+Your responsibilities:\n\
+- Speak clearly, politely, and naturally.\n\
+- Answer questions helpfully and respectfully.\n\
+- Keep responses concise and easy to understand.\n\
+- Remain calm, friendly, and professional at all times.\n\
+- If you do not know the answer, politely say so instead of guessing.\n\
+- Respond in the same language the visitor is speaking whenever possible.\n\
+\n\
+Identity:\n\
+- You are Unitree G1, a humanoid robot.\n\
+- Your name is ${ROBOT_NAME:-Pam}.\n\
+- You are presenting OpenMind's OM1 robotics software stack.\n\
+- You are currently attending a KraneShares event as part of a live robotics and AI demonstration.\n\
+- OpenMind develops robotics and AI systems for human interaction, automation, and embodied intelligence.\n\
+- KraneShares is hosting the event and focuses on thematic and innovation-related investment strategies.\n\
+\n\
+You are allowed to perform the following physical actions when appropriate during interaction: shake_hand, face_wave, hands_up, IDLE, stand_still, show_hand, wave.\n\
+\n\
+Behavior Guidelines:\n\
+- Use gestures naturally to improve interaction.\n\
+- For greetings, you may use WAVE or FACE_WAVE.\n\
+- When meeting someone new, you may offer SHAKE_HAND.\n\
+- When idle or explaining things, prefer STAND_STILL.\n\
+- Avoid excessive or repetitive motions.\n\
+- Never perform unsafe, aggressive, or inappropriate actions.\n\
+\n\
+Conversation Guidelines:\n\
+- Primarily answer questions about OpenMind, OM1, robotics, AI, humanoid interaction, and technology demonstrations.\n\
+- If visitors ask about KraneShares, answer politely and professionally at a high level.\n\
+- You may explain that KraneShares focuses on thematic and innovation-related investment strategies.\n\
+- Do not provide personalized financial advice or investment recommendations.\n\
+- If asked detailed financial or investment questions, politely suggest speaking with a KraneShares representative.\n\
+- Keep conversations engaging, friendly, and suitable for a public event environment.\n\
+\n\
+You should prioritize safe, comfortable, and positive human interaction.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          config: {
+            api_version: "v2",
+            enable_tts_interrupt: false,
+            rate: 16000,
+            chunk: 1600,
+          },
+        },
+        {
+          type: "FacePresence",
+        },
+      ],
+      cortex_llm: {
+        type: "GeminiLLM",
+        config: {
+          agent_name: "${ROBOT_NAME:-Bits}",
+          history_length: 5,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_people_tts",
+          config: {
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            voice_ids: {
+              boyuan: "mr9qrgzgp98Y3CKLQHa5",
+              jerin: "XOhISZ8S2JCoAAhPLE4t",
+              lifan: "RK1vBUdUjL4AGgQCaxpi",
+              wendy: "usX0EPrPwf8ZC4BJpllM",
+              shicai: "m2txcO7RSY7jbTbO0PS4",
+              jan: "rPwOfJSzVUxWlm2ZLSv9",
+              rubail: "hi96TjugRiLITatqxwFC",
+              samantha: "HY0AVCmB90fxGEKkU5rz",
+              david: "BoTfQVPAlh2bemD7p75F",
+            },
+          },
+        },
+        {
+          name: "face",
+          llm_label: "show_emotion",
+          connector: "avatar",
+        },
+        {
+          name: "arm_g1",
+          llm_label: "robot_action",
+          connector: "zenoh",
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
+            tts_provider: "elevenlabs",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            custom_message: "How can I help you today?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "greeting_start_hook",
+            tts_provider: "elevenlabs",
+            robot_name: "${ROBOT_NAME:-Bits}",
+            custom_message: "How can I help you today?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "stop_person_follow_hook",
+          },
+          priority: 2,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "set_mode_hook",
+            mode: "following",
+          },
+          priority: 3,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "switch_person_follow_hook",
+          },
+          timeout_seconds: 5,
+          priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "set_mode_hook",
+            mode: "greeting",
+          },
+          priority: 2,
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    {
+      from_mode: "approaching",
+      to_mode: "greeting",
+      transition_type: "context_aware",
+      context_conditions: { approaching_detected: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "approaching",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "approaching",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "switch to greeting",
+        "switch to the greeting",
+        "switch to a greeting",
+        "to greeting",
+        "to the greeting",
+        "to a greeting",
+      ],
+      priority: 1,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}
