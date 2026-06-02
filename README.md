@@ -10,7 +10,7 @@
 
 ## Capabilities of OM1
 
-* **Modular Architecture**: Designed with Python for simplicity and seamless integration.
+* **Modular Architecture**: Written in Go for performance and seamless integration.
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
@@ -36,8 +36,8 @@ Spot in this quick start is the default starter configuration to help you unders
 
 ### Prerequisites
 
-- Python 3.10+
-- [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/)
+- Go 1.23.0+ ([installation guide](https://go.dev/doc/install))
+- `make` build tool
 - Webcam access (recommended if configuring VLM)
 
 Install system packages:
@@ -52,7 +52,7 @@ brew install portaudio ffmpeg
 For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
+sudo apt-get install -y portaudio19-dev ffmpeg
 ```
 
 ### 2. Clone
@@ -60,8 +60,8 @@ sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
 ```bash
 git clone https://github.com/OpenMind/OM1.git
 cd OM1
-git submodule update --init
-uv venv
+make deps
+make build
 ```
 
 ### 3. Configure API Key
@@ -93,7 +93,12 @@ You can also verify or adjust the fallback key location in `config/spot.json5`.
 ### 4. Launch Spot
 
 ```bash
-uv run src/run.py spot
+make run CONFIG=spot
+```
+
+Or for development with debug logging:
+```bash
+make dev CONFIG=spot
 ```
 
 #### Verify It Is Working
@@ -117,7 +122,7 @@ Navigate to <http://localhost:3000> in your browser (default login: `admin`/`adm
 ### Troubleshooting
 
 - `Authentication` errors: confirm `OM_API_KEY` is set and not expired.
-- `No module` errors: run the command with `uv run` from the repo root.
+- `Build` errors: ensure Go 1.23.0+ is installed and run `make deps` first.
 - `Camera` access issues: grant terminal/IDE camera permissions in OS settings.
 - `Address already in use` on port `8000`: stop the conflicting process or free the port.
 
@@ -140,14 +145,13 @@ For more help connecting OM1 to your robot hardware, see [getting started](https
 
 ## Interfacing with New Robot Hardware
 
-OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `src/actions/move/connector/ros2.py`:
+OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `plugins/actions/move/ros2.go`:
 
-```python
-...
-elif output_interface.action == "shake paw":
-    if self.sport_client:
-        self.sport_client.Hello()
-...
+```go
+case "shake paw":
+    if connector.sportClient != nil {
+        connector.sportClient.Hello()
+    }
 ```
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
