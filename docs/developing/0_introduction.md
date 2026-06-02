@@ -22,7 +22,7 @@ Whether you're just getting started with OM1 or looking to optimize an existing 
 | **Title**                                | **Description**                                                                 |
 |------------------------------------------|----------------------------------------------------------------------------------|
 | Simple, modular architecture             | Human-intelligible architecture with natural language data buses.               |
-| All Python                               | Independent modules that are easy to maintain, debug, and extend.              |
+| All Go                                   | Independent modules that are easy to maintain, debug, and extend.              |
 | Easy to add new data inputs              | Seamlessly integrate new data without major changes to the existing architecture. |
 | Easy to support new hardware             | Via plugins for API endpoints and specific robot hardware.                      |
 | Supports Standard Middleware             | `ROS2`, `Zenoh`, and `CycloneDDS`                                               |
