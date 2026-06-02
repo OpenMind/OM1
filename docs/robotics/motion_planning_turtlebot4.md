@@ -9,7 +9,7 @@ icon: turtle
 Using OM1, the TurtleBot4 (TB4) is able to autonomously explore spaces such as your home. There are several parts to this capability. To get started, launch OM1:
 
 ```bash
-uv run src/run.py turtlebot4_lidar
+make run CONFIG=turtlebot4_lidar
 ```
 
 ### TB4 RPLIDAR Laserscan Data

@@ -20,13 +20,13 @@ https://github.com/unitreerobotics/unitree_sdk2_python
 Run
 
 ```bash Run Robot
-uv run src/run.py unitree_g1_humanoid
+make run CONFIG=unitree_g1_humanoid
 ```
 
 ### Installation on Mac
 
 ```bash
-brew install uv portaudio cmake
+brew install portaudio cmake
 ```
 
 Install cycloneDDS via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
