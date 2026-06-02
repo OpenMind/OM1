@@ -17,6 +17,7 @@ func init() {
 	inputs.Register("GoogleASRInput", NewGoogleASR)
 }
 
+// GoogleASRConfig configures the local microphone-sourced Google ASR sensor.
 type GoogleASRConfig struct {
 	APIKey               string   `json:"api_key"`
 	APIVersion           string   `json:"api_version"`           // "v1" or "v2" (default "v2")
