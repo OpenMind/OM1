@@ -129,17 +129,29 @@ class Fuser:
 
         # Query long-term memory if configured
         memory_context = ""
+        user_id = None
         if self.memory_reader:
             try:
+                try:
+                    from fuser.memory_base.identity_resolver import resolve_current_user
+
+                    user_id = resolve_current_user()
+                    if user_id and user_id != "unknown":
+                        self.io_provider.add_dynamic_variable("current_user_id", user_id)
+                    else:
+                        user_id = None
+                except Exception:
+                    user_id = None
+
                 memory_md = self.memory_reader.read_memory_md()
 
                 search_results = []
                 if query_text:
-                    search_results = await self.memory_reader.search_daily(query_text)
+                    search_results = await self.memory_reader.search_daily(query_text, user_id=user_id)
 
-                memory_context = self.memory_reader.format_context(memory_md, search_results)
+                memory_context = self.memory_reader.format_context(memory_md, search_results, user_id=user_id)
                 if memory_context:
-                    logging.info(f"Memory: injecting {len(memory_context)} chars into prompt")
+                    logging.info(f"Memory: injecting {len(memory_context)} chars into prompt (user={user_id})")
             except Exception as e:
                 logging.error(f"Error querying memory: {e}")
 

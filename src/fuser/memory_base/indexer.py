@@ -1,7 +1,9 @@
 import hashlib
 import logging
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 
@@ -44,7 +46,9 @@ class MemoryIndex:
         """Number of cached chunks."""
         return len(self._cache)
 
-    async def search(self, query: str, top_k: int = 1, min_score: float = DEFAULT_MIN_SCORE) -> list[Document]:
+    async def search(
+        self, query: str, top_k: int = 1, min_score: float = DEFAULT_MIN_SCORE, user_id: Optional[str] = None
+    ) -> list[Document]:
         """Search for most similar chunks using cosine similarity.
 
         Parameters
@@ -55,6 +59,8 @@ class MemoryIndex:
             Number of top results to return.
         min_score : float
             Minimum similarity score threshold.
+        user_id : str, optional
+            If provided, only return chunks matching this user_id.
 
         Returns
         -------
@@ -73,6 +79,8 @@ class MemoryIndex:
 
         scored: list[tuple[float, Document]] = []
         for embedding, doc in self._cache.values():
+            if user_id and doc.metadata.get("user_id") != user_id:
+                continue
             score = _cosine_similarity(query_embedding, embedding)
             if score >= min_score:
                 scored.append((score, doc))
@@ -173,37 +181,49 @@ def parse_daily_file(filepath: Path) -> list[Document]:
         return []
 
     date_prefix = f"[Date: {filepath.stem}]"
+    user_tag_re = re.compile(r"^\[User: (.+)\]$")
 
     chunks: list[Document] = []
     current_chunk = ""
+    current_user_id: Optional[str] = None
     chunk_start_line = 1
 
     for i, line in enumerate(content.split("\n"), 1):
         if line.startswith("## ") and current_chunk.strip():
+            metadata: dict = {
+                "source": filepath.name,
+                "chunk_id": len(chunks),
+                "start_line": chunk_start_line,
+            }
+            if current_user_id:
+                metadata["user_id"] = current_user_id
             chunks.append(
                 Document(
                     text=f"{date_prefix}\n{current_chunk.strip()}",
-                    metadata={
-                        "source": filepath.name,
-                        "chunk_id": len(chunks),
-                        "start_line": chunk_start_line,
-                    },
+                    metadata=metadata,
                 )
             )
             current_chunk = line + "\n"
+            current_user_id = None
             chunk_start_line = i
         else:
+            tag_match = user_tag_re.match(line)
+            if tag_match:
+                current_user_id = tag_match.group(1).strip().lower()
             current_chunk += line + "\n"
 
     if current_chunk.strip():
+        metadata = {
+            "source": filepath.name,
+            "chunk_id": len(chunks),
+            "start_line": chunk_start_line,
+        }
+        if current_user_id:
+            metadata["user_id"] = current_user_id
         chunks.append(
             Document(
                 text=f"{date_prefix}\n{current_chunk.strip()}",
-                metadata={
-                    "source": filepath.name,
-                    "chunk_id": len(chunks),
-                    "start_line": chunk_start_line,
-                },
+                metadata=metadata,
             )
         )
 

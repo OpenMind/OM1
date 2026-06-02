@@ -13,15 +13,20 @@ from providers.singleton import singleton
 EXTRACT_PROMPT = """\
 Extract candidate facts from the robot-human interaction log below.
 
+The log may contain [User: xxx] tags indicating which user said what.
+Preserve this association: if a fact comes from a tagged section,
+include the user_id in your output.
+
 For each fact, assign a category tag:
 - [IDENTITY] user identity (name, age, occupation)
 - [PREFERENCE] user preference (language, style, habits)
 - [FACT] important facts (decisions, agreements, locations)
 
 Output format (one per line):
-- [IDENTITY] User's name is Alice
-- [PREFERENCE] User prefers casual tone
-- [FACT] User lives in Beijing
+- [IDENTITY] [user:alice] User's name is Alice
+- [PREFERENCE] [user:bob] User prefers casual tone
+- [FACT] [user:alice] User lives in Beijing
+- [FACT] User asked about the weather (no user tag if unknown)
 
 If no meaningful facts, respond with exactly "NONE"
 """
@@ -50,10 +55,12 @@ Candidate facts:
 
 Respond with a JSON array (no extra text):
 [
-  {{"fact": "...", "category": "IDENTITY", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"}},
-  {{"fact": "...", "category": "FACT", "durability": 5, "novelty": 5, "significance": 5, "decision": "UPDATE", "replaces": "old fact text"}},
-  {{"fact": "...", "category": "PREFERENCE", "durability": 1, "novelty": 1, "significance": 1, "decision": "SKIP"}}
+  {{"fact": "...", "category": "IDENTITY", "user_id": "alice", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"}},
+  {{"fact": "...", "category": "FACT", "user_id": null, "durability": 5, "novelty": 5, "significance": 5, "decision": "UPDATE", "replaces": "old fact text"}},
+  {{"fact": "...", "category": "PREFERENCE", "user_id": "bob", "durability": 1, "novelty": 1, "significance": 1, "decision": "SKIP"}}
 ]
+
+Include "user_id" if the fact is associated with a specific user, otherwise set it to null.
 """
 
 EXPIRE_PROMPT = """\
@@ -393,9 +400,10 @@ class MemorySummarizer:
     }
 
     def _apply_decisions(self, decisions: list[dict]) -> None:
-        """Execute scored decisions against MEMORY.md.
+        """Execute scored decisions against MEMORY.md and per-user facts.json.
 
-        - **PROMOTE**: Append fact under its category section
+        - **PROMOTE**: Append fact under its category section in MEMORY.md,
+          and also append to user's facts.json if user_id is present.
         - **UPDATE**: Replace the old fact text with the new fact.
           Falls back to PROMOTE if the old text is not found.
         - **SKIP**: No action taken.
@@ -406,22 +414,29 @@ class MemorySummarizer:
         """
         promoted: dict[str, list[str]] = {}  # category -> [facts]
         updated: list[tuple[str, str]] = []
+        # Track per-user facts: user_id -> [(fact, category)]
+        user_facts: dict[str, list[tuple[str, str]]] = {}
 
         for item in decisions:
             decision = item.get("decision", "SKIP").upper()
             fact = item.get("fact", "")
             category = item.get("category", "FACT").upper()
+            uid = item.get("user_id")
             if not fact:
                 continue
 
             if decision == "PROMOTE":
                 promoted.setdefault(category, []).append(fact)
+                if uid:
+                    user_facts.setdefault(uid, []).append((fact, category))
             elif decision == "UPDATE":
                 old = item.get("replaces", "")
                 if old:
                     updated.append((old, fact))
                 else:
                     promoted.setdefault(category, []).append(fact)
+                if uid:
+                    user_facts.setdefault(uid, []).append((fact, category))
 
         if not promoted and not updated:
             return
@@ -449,11 +464,60 @@ class MemorySummarizer:
         logging.info(f"Memory summarization PROMOTE: " f"{sum(len(v) for v in promoted.values())} facts")
         self._safe_write(content)
 
+        # Route facts to per-user facts.json
+        self._apply_user_facts(user_facts)
+
     def _safe_write(self, content: str) -> None:
         """Atomically write content to MEMORY.md via a temporary file."""
         tmp = self.memory_file.with_suffix(".tmp")
         tmp.write_text(content, encoding="utf-8")
         tmp.replace(self.memory_file)
+
+    def _apply_user_facts(self, user_facts: dict[str, list[tuple[str, str]]]) -> None:
+        """Append promoted facts to each user's facts.json.
+
+        Parameters
+        ----------
+        user_facts : dict
+            Mapping of user_id -> [(fact_text, category)].
+        """
+        if not user_facts:
+            return
+
+        from fuser.memory_base.writer import MemoryWriter
+
+        writer = MemoryWriter()
+        now = datetime.now().isoformat(timespec="seconds")
+
+        for uid, facts in user_facts.items():
+            uid_lower = uid.strip().lower()
+            if not uid_lower or uid_lower == "unknown":
+                continue
+
+            writer.ensure_user_dir(uid_lower)
+            facts_path = writer.users_dir / uid_lower / "facts.json"
+
+            try:
+                data = json.loads(facts_path.read_text(encoding="utf-8"))
+            except Exception:
+                data = {"user_id": uid_lower, "facts": []}
+
+            existing_texts = {f.get("fact", "") for f in data.get("facts", [])}
+            added = 0
+            for fact_text, category in facts:
+                if fact_text not in existing_texts:
+                    data["facts"].append(
+                        {
+                            "fact": fact_text,
+                            "category": category,
+                            "added_at": now,
+                        }
+                    )
+                    added += 1
+
+            if added:
+                facts_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+                logging.info(f"Memory: added {added} facts to user {uid_lower}")
 
     _EXPIRED_RE = re.compile(r"\s*<!-- expired: (\d+) -->$")
 
