@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/fuser"
 	"github.com/openmind/om1/internal/hooks"
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
 	"github.com/openmind/om1/internal/providers"
 )
@@ -122,9 +123,19 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
 
+	var knowledgeBase fuser.KnowledgeBase
+	if runtimeConfig.KnowledgeBase != nil {
+		kb, err := knowledgebase.NewKnowledgeBase(runtimeConfig.KnowledgeBase)
+		if err != nil {
+			rt.log.Warn("knowledge base disabled", zap.Error(err))
+		} else {
+			knowledgeBase = kb
+		}
+	}
+
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, nil),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, rt.log),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,

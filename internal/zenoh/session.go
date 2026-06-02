@@ -88,15 +88,14 @@ func openClient(endpoint string) (*Session, error) {
 	return &Session{session: session}, nil
 }
 
-// openDiscovery opens a session using zenoh's default configuration, which
-// enables multicast/gossip scouting on the local network.
+// openDiscovery opens a session using zenoh's default configuration with network discovery enabled.
 func openDiscovery() (*Session, error) {
 	session, err := zenoh.Open(zenoh.NewConfigDefault(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("zenoh open (discovery): %w", err)
 	}
 
-	logger.Get().Info("zenoh: session opened with local-network discovery")
+	logger.Get().Info("zenoh: session opened with network discovery")
 	return &Session{session: session}, nil
 }
 

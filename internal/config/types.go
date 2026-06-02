@@ -94,7 +94,9 @@ type MCPSpec struct {
 
 // KBSpec describes the optional knowledge base (RAG).
 type KBSpec struct {
-	Path     string  `json:"path"`
+	Name     string  `json:"knowledge_base_name"`
+	Root     string  `json:"knowledge_base_root"`
+	BaseURL  string  `json:"base_url"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
 }
