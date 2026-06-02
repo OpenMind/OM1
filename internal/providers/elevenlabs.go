@@ -44,6 +44,12 @@ var (
 	elevenLabsInstance *ElevenLabsProvider
 )
 
+// ttsRequest is a queued utterance with an optional per-request voice override.
+type ttsRequest struct {
+	text    string
+	voiceID string
+}
+
 // ElevenLabs returns the singleton ElevenLabsProvider instance, initializing it on first call.
 func ElevenLabs(cfg ElevenLabsConfig, log *zap.Logger) *ElevenLabsProvider {
 	elevenLabsOnce.Do(func() {
@@ -58,7 +64,7 @@ type ElevenLabsProvider struct {
 	cfg ElevenLabsConfig
 	log *zap.Logger
 
-	queue chan string
+	queue chan ttsRequest
 
 	ffplayMu sync.Mutex
 	ffplay   *exec.Cmd
@@ -77,7 +83,7 @@ func newElevenLabsProvider(cfg ElevenLabsConfig, log *zap.Logger) *ElevenLabsPro
 	return &ElevenLabsProvider{
 		cfg:           cfg,
 		log:           log,
-		queue:         make(chan string, providerQueueDepth),
+		queue:         make(chan ttsRequest, providerQueueDepth),
 		lastAudioTime: time.Now(),
 		ctx:           ctx,
 		cancel:        cancel,
@@ -90,10 +96,18 @@ func (p *ElevenLabsProvider) Start() {
 	go p.processAudio()
 }
 
-// AddText enqueues text for TTS synthesis. Non-blocking; drops if the queue is full.
+// AddText enqueues text for TTS synthesis using the provider's default voice.
+// Non-blocking; drops if the queue is full.
 func (p *ElevenLabsProvider) AddText(text string) {
+	p.AddTextWithVoice(text, "")
+}
+
+// AddTextWithVoice enqueues text for TTS synthesis with an optional per-utterance
+// voice override. An empty voiceID falls back to the provider's default VoiceID.
+// Non-blocking; drops if the queue is full.
+func (p *ElevenLabsProvider) AddTextWithVoice(text, voiceID string) {
 	select {
-	case p.queue <- text:
+	case p.queue <- ttsRequest{text: text, voiceID: voiceID}:
 	default:
 		p.log.Warn("elevenlabs: queue full, dropping", zap.String("text", text))
 	}
@@ -113,7 +127,7 @@ func (p *ElevenLabsProvider) processAudio() {
 		select {
 		case <-p.ctx.Done():
 			return
-		case text, ok := <-p.queue:
+		case req, ok := <-p.queue:
 			if !ok {
 				return
 			}
@@ -124,7 +138,7 @@ func (p *ElevenLabsProvider) processAudio() {
 			p.streamChunk(silenceBytes(p.cfg.Rate, 10))
 
 			Speaking.Store(true)
-			if err := p.synthesize(text); err != nil && p.ctx.Err() == nil {
+			if err := p.synthesize(req.text, req.voiceID); err != nil && p.ctx.Err() == nil {
 				p.log.Error("elevenlabs: synthesis failed", zap.Error(err))
 			}
 			p.finishPlayback()
@@ -134,10 +148,14 @@ func (p *ElevenLabsProvider) processAudio() {
 }
 
 // synthesize posts text to the ElevenLabs endpoint and streams PCM chunks to ffplay.
-func (p *ElevenLabsProvider) synthesize(text string) error {
+// An empty voiceID falls back to the provider's configured default voice.
+func (p *ElevenLabsProvider) synthesize(text, voiceID string) error {
+	if voiceID == "" {
+		voiceID = p.cfg.VoiceID
+	}
 	body := map[string]any{
 		"model":           p.cfg.ModelID,
-		"voice":           p.cfg.VoiceID,
+		"voice":           voiceID,
 		"response_format": p.cfg.OutputFormat,
 		"input":           text,
 	}
