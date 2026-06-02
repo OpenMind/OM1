@@ -5,14 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from fuser.knowledge_base.base_retriever import Document
-from fuser.memory_base.identity_resolver import (
-    copy_face_photo,
-    get_face_embedding,
-)
 from providers.singleton import singleton
-
-DEFAULT_GALLERY_ROOT = "/data/gallery"
-DEFAULT_EMBEDS_ROOT = "/data/embeds"
 
 
 @singleton
@@ -28,8 +21,6 @@ class MemoryWriter:
     def __init__(
         self,
         memory_root: str | Path | None = None,
-        gallery_root: str = DEFAULT_GALLERY_ROOT,
-        embeds_root: str = DEFAULT_EMBEDS_ROOT,
     ):
         if memory_root is None:
             project_root = Path(__file__).parent.parent.parent.parent
@@ -38,8 +29,6 @@ class MemoryWriter:
         self.daily_dir = self.memory_root / "daily"
         self.users_dir = self.memory_root / "users"
         self.memory_file = self.memory_root / "MEMORY.md"
-        self.gallery_root = gallery_root
-        self.embeds_root = embeds_root
         self._ensure_dirs()
 
     def _ensure_dirs(self) -> None:
@@ -75,17 +64,12 @@ class MemoryWriter:
         profile_path = user_dir / "profile.json"
         if not profile_path.exists():
             now = datetime.now().isoformat(timespec="seconds")
-            face_photo_path = copy_face_photo(user_id, user_dir, self.gallery_root)
-            face_embedding = get_face_embedding(user_id, self.embeds_root)
-
             profile = {
                 "user_id": user_id,
                 "display_name": user_id.title(),
                 "first_seen": now,
                 "last_seen": now,
                 "interaction_count": 0,
-                "face_embedding": face_embedding,
-                "face_photo_path": face_photo_path,
             }
             profile_path.write_text(json.dumps(profile, indent=2), encoding="utf-8")
             logging.info(f"Memory: created user profile for {user_id}")

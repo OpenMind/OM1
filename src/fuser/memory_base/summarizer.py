@@ -112,8 +112,8 @@ class MemorySummarizer:
         LLM model to use for summarization.
     """
 
-    # Summarize when new conversations chunks is more than 10
-    SUMMARY_THRESHOLD: int = 10
+    # Summarize when new conversations chunks is more than 2
+    SUMMARY_THRESHOLD: int = 2
     EXPIRE_THRESHOLD: int = 5
     DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
     DEFAULT_BASE_URL = "https://api.openmind.com/api/core/gemini"
