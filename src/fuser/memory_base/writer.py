@@ -28,17 +28,12 @@ class MemoryWriter:
         self.memory_root = Path(memory_root)
         self.daily_dir = self.memory_root / "daily"
         self.users_dir = self.memory_root / "users"
-        self.memory_file = self.memory_root / "MEMORY.md"
         self._ensure_dirs()
 
     def _ensure_dirs(self) -> None:
         """Create memory directories if they don't exist."""
         self.daily_dir.mkdir(parents=True, exist_ok=True)
         self.users_dir.mkdir(parents=True, exist_ok=True)
-        if not self.memory_file.exists():
-            self.memory_file.write_text(
-                "# Long-Term Memory\n\n" "<!-- Persistent facts, preferences, and important context -->\n"
-            )
 
     def _get_daily_path(self) -> Path:
         """Get the path for today's daily log file."""

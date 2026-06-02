@@ -143,13 +143,11 @@ class Fuser:
                 except Exception:
                     user_id = None
 
-                memory_md = self.memory_reader.read_memory_md()
-
                 search_results = []
                 if query_text:
                     search_results = await self.memory_reader.search_daily(query_text, user_id=user_id)
 
-                memory_context = self.memory_reader.format_context(memory_md, search_results, user_id=user_id)
+                memory_context = self.memory_reader.format_context(search_results, user_id=user_id)
                 if memory_context:
                     logging.info(f"Memory: injecting {len(memory_context)} chars into prompt (user={user_id})")
             except Exception as e:

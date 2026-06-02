@@ -12,7 +12,6 @@ from fuser.memory_base.indexer import (
 )
 from providers.singleton import singleton
 
-DEFAULT_MEMORY_MD_CHARS = 500
 DEFAULT_CONTEXT_MAX_CHARS = 1000
 
 
@@ -20,8 +19,8 @@ DEFAULT_CONTEXT_MAX_CHARS = 1000
 class MemoryReader:
     """Read and search long-term memory files.
 
-    1. MEMORY.md — read in full (include facts)
-    2. Daily logs — top 3 relevant chunks
+    1. Per-user facts — from users/{id}/facts.json
+    2. Daily logs — top relevant chunks via vector search
 
     Parameters
     ----------
@@ -44,7 +43,6 @@ class MemoryReader:
             memory_root = project_root / "memory"
 
         self.memory_root = Path(memory_root)
-        self.memory_file = self.memory_root / "MEMORY.md"
         self.daily_dir = self.memory_root / "daily"
         self.users_dir = self.memory_root / "users"
         self.embedding_client = EmbeddingClient(base_url=base_url)
@@ -68,34 +66,6 @@ class MemoryReader:
             self._index_initialized = True
             logging.info(f"Memory: index initialized with {self.index.size} chunks")
         return self.index
-
-    def read_memory_md(self, max_chars: int = DEFAULT_MEMORY_MD_CHARS) -> str:
-        """Read MEMORY.md, truncated to max_chars.
-
-        Parameters
-        ----------
-        max_chars : int
-            Maximum number of characters to return.
-
-        Returns
-        -------
-        str
-            Contents of MEMORY.md, or empty string if not found.
-        """
-        if not self.memory_file.exists():
-            return ""
-
-        try:
-            content = self.memory_file.read_text(encoding="utf-8")
-            lines = content.strip().split("\n")
-            content_lines = [line for line in lines if not line.startswith("# ") and not line.startswith("<!--")]
-            result = "\n".join(content_lines).strip()
-            if len(result) > max_chars:
-                result = result[:max_chars] + "..."
-            return result
-        except Exception as e:
-            logging.error(f"Memory: failed to read MEMORY.md: {e}")
-            return ""
 
     async def search_daily(
         self, query_text: str, top_k: int = 3, min_score: Optional[float] = None, user_id: Optional[str] = None
@@ -131,7 +101,6 @@ class MemoryReader:
 
     def format_context(
         self,
-        memory_md: str,
         search_results: list[Document],
         max_chars: int = DEFAULT_CONTEXT_MAX_CHARS,
         user_id: Optional[str] = None,
@@ -140,8 +109,6 @@ class MemoryReader:
 
         Parameters
         ----------
-        memory_md : str
-            Contents of MEMORY.md.
         search_results : list of Document
             Search results from daily logs with date/time metadata.
         max_chars : int
@@ -163,11 +130,6 @@ class MemoryReader:
                 section = f"[User: {user_id}]\n{user_facts}"
                 parts.append(section)
                 total_chars += len(section)
-
-        if memory_md:
-            section = f"[Facts]\n{memory_md}"
-            parts.append(section)
-            total_chars += len(section)
 
         for doc in search_results:
             if total_chars >= max_chars:

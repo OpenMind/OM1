@@ -63,42 +63,14 @@ Respond with a JSON array (no extra text):
 Include "user_id" if the fact is associated with a specific user, otherwise set it to null.
 """
 
-EXPIRE_PROMPT = """\
-You are a memory manager for a robot. Review the existing memory facts \
-below and determine which ones should be expired.
-
-Only review facts under ## Preferences and ## Facts sections.
-Do NOT expire facts under ## Identity — those are permanent.
-
-A fact should be marked "EXPIRED" if BOTH conditions are true:
-1. EVENT-CLOSED: It describes a specific, time-bound situation
-2. LOW-IDENTITY SIGNAL: It reveals nothing stable about the user — \
-no recurring pattern, preference, habit, relationship, or long-term goal
-
-Recent conversations (for context):
-{recent_log}
-
-Current memory facts to review:
-{facts}
-
-Only output facts you judge as EXPIRED.
-Respond with a JSON array (no extra text):
-[
-  {{"fact": "...", "decision": "EXPIRED"}}
-]
-
-If no facts should be expired, respond with: []
-"""
-
 
 @singleton
 class MemorySummarizer:
     """Long-term memory manager.
 
-    Stage 0: Review existing facts for expiration.
-    Stage 1: Extract candidate from daily logs.
-    Stage 2: Score candidates against existing MEMORY.md.
-    Stage 3: Execute PROMOTE / UPDATE / SKIP decisions.
+    Stage 1: Extract candidate facts from daily logs.
+    Stage 2: Score candidates against existing per-user facts.
+    Stage 3: Route PROMOTE decisions to per-user facts.json.
 
     Parameters
     ----------
@@ -112,9 +84,7 @@ class MemorySummarizer:
         LLM model to use for summarization.
     """
 
-    # Summarize when new conversations chunks is more than 2
     SUMMARY_THRESHOLD: int = 2
-    EXPIRE_THRESHOLD: int = 5
     DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
     DEFAULT_BASE_URL = "https://api.openmind.com/api/core/gemini"
 
@@ -126,8 +96,9 @@ class MemorySummarizer:
         model: str = DEFAULT_MODEL,
     ):
         self.memory_root = Path(memory_root)
-        self.memory_file = self.memory_root / "MEMORY.md"
         self.daily_dir = self.memory_root / "daily"
+        self.users_dir = self.memory_root / "users"
+        self._marker_file = self.memory_root / ".last_summary"
         self._client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
         self._model = model
         self._running = False
@@ -172,7 +143,7 @@ class MemorySummarizer:
         return count >= self.SUMMARY_THRESHOLD
 
     async def run(self) -> None:
-        """Execute the three-stage summarization pipeline."""
+        """Execute the two-stage summarization pipeline."""
         if self._running:
             logging.debug("Summarizer already running, skipping")
             return
@@ -187,8 +158,6 @@ class MemorySummarizer:
                 return
 
             log_content = self._read_files(unprocessed, last_summary)
-
-            await self._review_expiration(log_content)
 
             candidates = await self._extract_candidates(log_content)
             if not candidates:
@@ -214,36 +183,19 @@ class MemorySummarizer:
         finally:
             self._running = False
 
-    _MARKER_RE = re.compile(r"<!-- last_summary: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) -->")
-
     def _read_last_summary(self) -> Optional[datetime]:
-        """Parse the ``<!-- last_summary: ... -->`` marker from MEMORY.md.
-
-        Returns
-        -------
-        datetime or None
-            Timestamp of the last summarization run, or None if no
-            marker exists or the file is missing.
-        """
-        if not self.memory_file.exists():
+        """Read the last summary timestamp from .last_summary marker file."""
+        if not self._marker_file.exists():
             return None
-        content = self.memory_file.read_text(encoding="utf-8")
-        match = self._MARKER_RE.search(content)
-        if match:
-            return datetime.strptime(match.group(1), "%Y-%m-%d %H:%M")
-        return None
+        try:
+            text = self._marker_file.read_text(encoding="utf-8").strip()
+            return datetime.strptime(text, "%Y-%m-%d %H:%M")
+        except (ValueError, OSError):
+            return None
 
     def _write_last_summary(self) -> None:
-        """Insert or update the ``<!-- last_summary: ... -->`` marker."""
-        if not self.memory_file.exists():
-            return
-        content = self.memory_file.read_text(encoding="utf-8")
-        marker = f"<!-- last_summary: " f"{datetime.now().strftime('%Y-%m-%d %H:%M')} -->"
-        if "<!-- last_summary:" in content:
-            content = self._MARKER_RE.sub(marker, content)
-        else:
-            content = marker + "\n" + content
-        self._safe_write(content)
+        """Write current timestamp to .last_summary marker file."""
+        self._marker_file.write_text(datetime.now().strftime("%Y-%m-%d %H:%M"), encoding="utf-8")
 
     def _find_unprocessed(self, last_summary: Optional[datetime]) -> list[Path]:
         """Return daily log files whose date >= the last summary date.
@@ -359,16 +311,14 @@ class MemorySummarizer:
         return result
 
     async def _score_candidates(self, candidates: str) -> list[dict]:
-        """LLM call to score each candidate against existing memory.
+        """LLM call to score each candidate against existing per-user facts.
 
         Returns
         -------
         list of dict
-            Each dict has keys: fact, decision, and optionally replaces.
+            Each dict has keys: fact, decision, user_id, and optionally replaces.
         """
-        existing = ""
-        if self.memory_file.exists():
-            existing = self.memory_file.read_text(encoding="utf-8")
+        existing = self._read_all_user_facts()
 
         prompt = SCORE_PROMPT.format(memory=existing, candidates=candidates)
 
@@ -393,93 +343,69 @@ class MemorySummarizer:
             logging.warning(f"Memory summarization: failed to parse score response: {e}")
             return []
 
-    _CATEGORY_MAP = {
-        "IDENTITY": "## Identity",
-        "PREFERENCE": "## Preferences",
-        "FACT": "## Facts",
-    }
+    def _read_all_user_facts(self) -> str:
+        """Read all per-user facts.json files and format as context for scoring."""
+        if not self.users_dir.exists():
+            return "(no existing facts)"
+
+        parts = []
+        for user_dir in sorted(self.users_dir.iterdir()):
+            if not user_dir.is_dir():
+                continue
+            facts_path = user_dir / "facts.json"
+            if not facts_path.exists():
+                continue
+            try:
+                data = json.loads(facts_path.read_text(encoding="utf-8"))
+                facts_list = data.get("facts", [])
+                if facts_list:
+                    uid = user_dir.name
+                    lines = [f"[User: {uid}]"]
+                    for f in facts_list:
+                        lines.append(f"- [{f.get('category', 'FACT')}] {f.get('fact', '')}")
+                    parts.append("\n".join(lines))
+            except Exception:
+                continue
+
+        return "\n\n".join(parts) if parts else "(no existing facts)"
 
     def _apply_decisions(self, decisions: list[dict]) -> None:
-        """Execute scored decisions against MEMORY.md and per-user facts.json.
+        """Route scored decisions to per-user facts.json.
 
-        - **PROMOTE**: Append fact under its category section in MEMORY.md,
-          and also append to user's facts.json if user_id is present.
-        - **UPDATE**: Replace the old fact text with the new fact.
-          Falls back to PROMOTE if the old text is not found.
+        - **PROMOTE**: Append to user's facts.json if user_id is present.
+        - **UPDATE**: Replace old fact in user's facts.json.
         - **SKIP**: No action taken.
 
         Parameters
         ----------
         decisions : list of dict
         """
-        promoted: dict[str, list[str]] = {}  # category -> [facts]
-        updated: list[tuple[str, str]] = []
-        # Track per-user facts: user_id -> [(fact, category)]
-        user_facts: dict[str, list[tuple[str, str]]] = {}
+        # Track per-user facts: user_id -> [(fact, category, replaces)]
+        user_facts: dict[str, list[tuple[str, str, Optional[str]]]] = {}
 
         for item in decisions:
             decision = item.get("decision", "SKIP").upper()
             fact = item.get("fact", "")
             category = item.get("category", "FACT").upper()
             uid = item.get("user_id")
-            if not fact:
+            if not fact or not uid:
                 continue
 
             if decision == "PROMOTE":
-                promoted.setdefault(category, []).append(fact)
-                if uid:
-                    user_facts.setdefault(uid, []).append((fact, category))
+                user_facts.setdefault(uid, []).append((fact, category, None))
             elif decision == "UPDATE":
                 old = item.get("replaces", "")
-                if old:
-                    updated.append((old, fact))
-                else:
-                    promoted.setdefault(category, []).append(fact)
-                if uid:
-                    user_facts.setdefault(uid, []).append((fact, category))
+                user_facts.setdefault(uid, []).append((fact, category, old))
 
-        if not promoted and not updated:
-            return
-
-        content = ""
-        if self.memory_file.exists():
-            content = self.memory_file.read_text(encoding="utf-8")
-
-        for old_fact, new_fact in updated:
-            if old_fact in content:
-                content = content.replace(old_fact, new_fact)
-                logging.info(f"Memory summarization UPDATE: '{old_fact[:40]}' → '{new_fact[:40]}'")
-            else:
-                promoted.setdefault("FACT", []).append(new_fact)
-
-        for category, facts in promoted.items():
-            header = self._CATEGORY_MAP.get(category, "## Facts")
-            header_line = header + "\n"
-            new_bullets = "\n".join(f"- {f} <!-- expired: 0 -->" for f in facts) + "\n"
-            if header_line in content:
-                content = content.replace(header_line, header_line + new_bullets)
-            else:
-                content += f"\n{header}\n{new_bullets}"
-
-        logging.info(f"Memory summarization PROMOTE: " f"{sum(len(v) for v in promoted.values())} facts")
-        self._safe_write(content)
-
-        # Route facts to per-user facts.json
         self._apply_user_facts(user_facts)
 
-    def _safe_write(self, content: str) -> None:
-        """Atomically write content to MEMORY.md via a temporary file."""
-        tmp = self.memory_file.with_suffix(".tmp")
-        tmp.write_text(content, encoding="utf-8")
-        tmp.replace(self.memory_file)
-
-    def _apply_user_facts(self, user_facts: dict[str, list[tuple[str, str]]]) -> None:
-        """Append promoted facts to each user's facts.json.
+    def _apply_user_facts(self, user_facts: dict[str, list[tuple[str, str, Optional[str]]]]) -> None:
+        """Append or update facts in each user's facts.json.
 
         Parameters
         ----------
         user_facts : dict
-            Mapping of user_id -> [(fact_text, category)].
+            Mapping of user_id -> [(fact_text, category, replaces)].
         """
         if not user_facts:
             return
@@ -504,7 +430,13 @@ class MemorySummarizer:
 
             existing_texts = {f.get("fact", "") for f in data.get("facts", [])}
             added = 0
-            for fact_text, category in facts:
+            for fact_text, category, replaces in facts:
+                # Handle UPDATE: remove old fact if found
+                if replaces:
+                    data["facts"] = [f for f in data["facts"] if f.get("fact", "") != replaces]
+                    existing_texts.discard(replaces)
+                    logging.info(f"Memory UPDATE for {uid_lower}: replaced '{replaces[:40]}'")
+
                 if fact_text not in existing_texts:
                     data["facts"].append(
                         {
@@ -513,118 +445,9 @@ class MemorySummarizer:
                             "added_at": now,
                         }
                     )
+                    existing_texts.add(fact_text)
                     added += 1
 
-            if added:
+            if added or any(r for _, _, r in facts if r):
                 facts_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-                logging.info(f"Memory: added {added} facts to user {uid_lower}")
-
-    _EXPIRED_RE = re.compile(r"\s*<!-- expired: (\d+) -->$")
-
-    @staticmethod
-    def _extract_reviewable_facts(content: str) -> list[str]:
-        """Extract facts from ## Preferences and ## Facts sections.
-
-        Strips the inline ``<!-- expired: N -->`` marker before returning.
-        Skips ## Identity section entirely since those are permanent.
-
-        Returns
-        -------
-        list of str
-            Fact texts (without leading ``- `` or expired marker).
-        """
-        expired_re = re.compile(r"\s*<!-- expired: \d+ -->$")
-        facts: list[str] = []
-        in_reviewable = False
-        for line in content.split("\n"):
-            if line.startswith("## "):
-                section = line.strip().lower()
-                in_reviewable = section in ("## preferences", "## facts")
-                continue
-            if in_reviewable and line.startswith("- "):
-                raw = line[2:].strip()
-                clean = expired_re.sub("", raw).strip()
-                if clean:
-                    facts.append(clean)
-        return facts
-
-    async def _review_expiration(self, recent_log: str) -> None:
-        """LLM call to check existing facts for staleness."""
-        if not self.memory_file.exists():
-            return
-
-        content = self.memory_file.read_text(encoding="utf-8")
-        facts = self._extract_reviewable_facts(content)
-        if not facts:
-            return
-
-        facts_text = "\n".join(f"- {f}" for f in facts)
-        prompt = EXPIRE_PROMPT.format(
-            recent_log=recent_log[:2000],
-            facts=facts_text,
-        )
-
-        try:
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[{"role": "user", "content": prompt}],
-                timeout=10,
-            )
-            raw = (response.choices[0].message.content or "").strip()
-            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-            decisions = json.loads(cleaned)
-            if not isinstance(decisions, list):
-                return
-        except Exception as e:
-            logging.warning(f"Memory expiration review failed: {e}")
-            return
-
-        self._apply_expiration(decisions)
-
-    def _apply_expiration(self, decisions: list[dict]) -> None:
-        """Update inline expired counters and remove facts at threshold.
-
-        EXPIRED: increment ``<!-- expired: N -->`` counter.
-        If N >= EXPIRE_THRESHOLD, remove the line.
-        Facts not mentioned by LLM are left unchanged.
-        """
-        if not self.memory_file.exists():
-            return
-
-        expired_set: set[str] = set()
-        for item in decisions:
-            fact = item.get("fact", "").strip()
-            if fact and item.get("decision", "").upper() == "EXPIRED":
-                expired_set.add(fact)
-
-        if not expired_set:
-            return
-
-        content = self.memory_file.read_text(encoding="utf-8")
-        new_lines: list[str] = []
-        expired_re = self._EXPIRED_RE
-
-        for line in content.split("\n"):
-            if not line.startswith("- "):
-                new_lines.append(line)
-                continue
-
-            match = expired_re.search(line)
-            if match:
-                count = int(match.group(1))
-                fact_text = expired_re.sub("", line[2:]).strip()
-            else:
-                count = 0
-                fact_text = line[2:].strip()
-
-            if fact_text not in expired_set:
-                new_lines.append(line)
-                continue
-
-            count += 1
-            if count >= self.EXPIRE_THRESHOLD:
-                logging.info(f"Memory EXPIRED (removed): '{fact_text[:60]}'")
-                continue
-            new_lines.append(f"- {fact_text} <!-- expired: {count} -->")
-
-        self._safe_write("\n".join(new_lines))
+                logging.info(f"Memory: updated facts for user {uid_lower} (+{added})")
