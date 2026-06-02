@@ -65,6 +65,19 @@ var (
 	}, []string{"model", "language", "api_version"})
 )
 
+// TTS metrics.
+var (
+	TTSLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "om1_tts_latency_seconds",
+		Help: "Latency from TTS synthesis request to first audio chunk in seconds",
+	}, []string{"model", "endpoint"})
+
+	TTSLatencyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "om1_tts_latency_last_seconds",
+		Help: "Most recent TTS time-to-first-audio latency in seconds",
+	}, []string{"model", "endpoint"})
+)
+
 // HTTP metrics.
 var (
 	HTTPProxyParse = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -110,6 +123,7 @@ func init() {
 		ASRLatency, ASRLatencyLast,
 		ASRSpeechDuration, ASRSpeechDurationLast,
 		ASRUtteranceEndLatency, ASRUtteranceEndLatencyLast,
+		TTSLatency, TTSLatencyLast,
 		HTTPProxyParse, HTTPProxyParseLast,
 		HTTPUpstreamTotal, HTTPUpstreamTotalLast,
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
