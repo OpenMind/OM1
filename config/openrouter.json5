@@ -1,5 +1,5 @@
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   hertz: 1,
   name: "openrouter",
   api_key: "${OM_API_KEY:-openmind_free}",
@@ -12,18 +12,6 @@
     },
     {
       type: "VLMVila",
-    },
-  ],
-  simulators: [
-    {
-      type: "WebSim",
-      config: {
-        host: "0.0.0.0",
-        port: 8000,
-        tick_rate: 100,
-        auto_reconnect: true,
-        debug_mode: false,
-      },
     },
   ],
   cortex_llm: {

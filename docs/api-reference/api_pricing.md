@@ -27,7 +27,8 @@ The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit
 ### Builder Plan
 - **Cost:** $25/month
 - **Rate Limit:** 20 requests/second
-- **Memory:** Long-term memory (ships March)
+- **Memory:** Advanced session memory controls (ships June)
+- **Simulator Instance:**  Dedicated simulator instance(Gazebo and Isaac Sim) (ships April)
 - **Support:** Email support
 - **OMCU:** 15K units
 - **Features:** Priority queue, App Store publishing
@@ -36,7 +37,7 @@ The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit
 ### Pro Plan
 - **Cost:** $99/month
 - **Rate Limit:** 40 requests/second
-- **Memory:** Advanced memory controls (ships June)
+- **Memory:** Unlimited long-term memory and Advanced memory controls (ships June)
 - **Support:** Slack/Private support channel
 - **OMCU:** 100K units
 - All features in **Builder** plan
@@ -50,6 +51,7 @@ The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit
   - Private model access (ships later this year)
 - **OMCU:** 1.5M units
 - All features in **Pro** plan
+- Access to all premium features. More details [here](../developing/premium_features.md)
 
 ### Custom Plan
 For custom pricing, quotas, or special requirements, please [contact our support team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)

@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -114,6 +116,7 @@ class QwenLLM(LLM[R]):
         self._client = openai.AsyncClient(
             base_url=self._base_url,
             api_key=self._api_key,
+            http_client=get_async_httpx_client(),
         )
 
         self._extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
@@ -145,7 +148,7 @@ class QwenLLM(LLM[R]):
             logging.info(f"Qwen input: {prompt}")
             logging.info(f"Qwen messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             formatted = [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
@@ -170,7 +173,9 @@ class QwenLLM(LLM[R]):
                 return None
 
             message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(model=str(self._model), endpoint=str(self._base_url)).observe(latency)
+            om1_llm_latency_last.labels(model=str(self._model), endpoint=str(self._base_url)).set(latency)
 
             tool_calls = list(message.tool_calls or [])
             if not tool_calls and isinstance(message.content, str) and "<tool_call>" in message.content:
@@ -193,8 +198,13 @@ class QwenLLM(LLM[R]):
                 ]
                 actions = convert_function_calls_to_actions(function_call_data)
                 result = CortexOutputModel(actions=actions)
+                self.tracer.gauge(
+                    llm_input=prompt,
+                    llm_output=[{"type": a.type, "value": a.value} for a in actions],
+                )
                 return T.cast(R, result)
 
+            self.tracer.gauge(llm_input=prompt, llm_output=[])
             return None
         except Exception as e:
             logging.error(f"Qwen LLM error: {e}")

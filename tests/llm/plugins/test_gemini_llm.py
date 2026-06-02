@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.gemini_llm import GeminiConfig, GeminiLLM
+from llm.plugins.gemini_llm import GeminiConfig, GeminiLLM, GeminiModel
 
 
 class DummyOutputModel(BaseModel):
@@ -95,21 +95,6 @@ async def test_ask_api_error(llm):
 
 
 @pytest.mark.asyncio
-async def test_io_provider_timing(llm, mock_response):
-    """Test timing metrics collection"""
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.chat.completions,
-            "create",
-            AsyncMock(return_value=mock_response),
-        )
-        await llm.ask("test prompt")
-        assert llm.io_provider.llm_start_time is not None
-        assert llm.io_provider.llm_end_time is not None
-        assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time - 0.1
-
-
-@pytest.mark.asyncio
 async def test_init_with_config(llm, config):
     assert llm._client.base_url == config.base_url
     assert llm._client.api_key == config.api_key
@@ -167,7 +152,7 @@ async def test_init_without_model():
     """When the test model is None, use the default value"""
     config = GeminiConfig(api_key="test_key", model=None)
     llm = GeminiLLM(config)
-    assert llm._config.model == "gemini-3.1-flash-lite-preview"
+    assert llm._config.model == GeminiModel.GEMINI_3_1_FLASH_LITE
 
 
 @pytest.mark.asyncio

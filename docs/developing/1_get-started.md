@@ -175,7 +175,7 @@ After the initial run, you can start the agent using the simplified command:
 uv run src/run.py
 ```
 
-![ ](../assets/hot_reload.png)
+![ ](../.gitbook/assets/hot_reload.png)
 
 The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
 
@@ -187,9 +187,17 @@ To run a different agent (for example, the conversation agent), specify the conf
 uv run src/run.py conversation
 ```
 
-### WebSim to check input and output
+### Prometheus and Grafana Monitoring
 
-Go to [http://localhost:8000](http://localhost:8000) to see real time logs along with the input and output in the terminal. For easy debugging, add `--debug` to see additional logging information.
+If you have Docker installed, you can use the included Docker Compose configuration to spin up Grafana and Prometheus to monitor real-time AI pipeline metrics (such as LLM response times and ASR latencies).
+
+Run the following command:
+
+```bash
+docker-compose up -d grafana prometheus
+```
+
+Then navigate to [http://localhost:3000](http://localhost:3000) (default login: `admin`/`admin`). The **OM1 Latency Monitoring** dashboard is automatically provisioned and will display your latency metrics as you interact with the agent.
 
 ### Understanding the Log Data
 

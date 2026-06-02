@@ -258,21 +258,6 @@ class TestNearAILLMAsk:
             assert call_args.kwargs.get("model") == llm._config.model
 
     @pytest.mark.asyncio
-    async def test_io_provider_timing(self, llm, mock_response):
-        """Test timing metrics collection."""
-        with pytest.MonkeyPatch.context() as m:
-            m.setattr(
-                llm._client.beta.chat.completions,
-                "parse",
-                AsyncMock(return_value=mock_response),
-            )
-
-            await llm.ask("test prompt")
-            assert llm.io_provider.llm_start_time is not None
-            assert llm.io_provider.llm_end_time is not None
-            assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time
-
-    @pytest.mark.asyncio
     async def test_ask_sets_llm_prompt(self, llm, mock_response):
         """Test that ask() sets the prompt in io_provider."""
         with pytest.MonkeyPatch.context() as m:

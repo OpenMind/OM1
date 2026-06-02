@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.3",
+  version: "v1.0.5",
   name: "parallel_llm_two_test",
   description: "Test ParallelLLM with 2 LLMs - one for speech/emotion, one for movement",
   hertz: 1,

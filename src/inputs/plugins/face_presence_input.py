@@ -181,3 +181,16 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
         self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages.clear()
         return result
+
+    def stop(self):
+        """
+        Stop the provider and clean up resources.
+
+        Unregisters callbacks, stops the provider, and ensures that
+        all resources are released properly.
+        """
+        try:
+            self.provider.unregister_message_callback(self._handle_face_message)
+            logging.info("Unregistered face presence message callback")
+        except Exception as e:
+            logging.warning(f"Failed to unregister face presence callback: {e}")

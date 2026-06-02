@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 import time
@@ -16,12 +17,14 @@ class PresenceSnapshot:
 
     Attributes
     ----------
-    ts : float
+    timestamp : float
         Server timestamp in UNIX epoch seconds (falls back to local time if missing).
     names : list[str]
         Known identities present (deduplicated).
     unknown_faces : int
         Count of unknown faces present.
+    closest_name : str
+        Name of the person with the largest face area (closest to camera), or "unknown" if unavailable.
     raw : dict
         Full response body from `/who` for advanced consumers.
 
@@ -31,9 +34,10 @@ class PresenceSnapshot:
         Produce a concise human-readable summary suitable for logs/prompts.
     """
 
-    ts: float
+    timestamp: float
     names: List[str]
     unknown_faces: int
+    closest_name: str
     raw: Dict
 
     def to_text(self) -> str:
@@ -52,24 +56,24 @@ class PresenceSnapshot:
         - names=[], unknown=0
         -> "No one in view."
         """
-        seen = set()
-        clean: List[str] = []
-        for n in self.names or []:
-            name = (n or "").strip()
-            if name and name.lower() != "unknown" and name not in seen:
-                seen.add(name)
-                clean.append(name)
+        seen_names = set()
+        valid_names: List[str] = []
+        for name in self.names or []:
+            cleaned_name = (name or "").strip()
+            if cleaned_name and cleaned_name.lower() != "unknown" and cleaned_name not in seen_names:
+                seen_names.add(cleaned_name)
+                valid_names.append(cleaned_name)
 
-        k = len(clean)
-        u = int(self.unknown_faces or 0)
+        known_count = len(valid_names)
+        unknown_count = int(self.unknown_faces or 0)
 
-        def join_names(ns: List[str]) -> str:
+        def join_names(name_list: List[str]) -> str:
             """
             Join a list of names into a human-readable string.
 
             Parameters
             ----------
-            ns : List[str]
+            name_list : List[str]
                 List of name strings to join.
 
             Returns
@@ -77,24 +81,29 @@ class PresenceSnapshot:
             str
                 Human-readable string with proper conjunctions.
             """
-            if not ns:
+            if not name_list:
                 return ""
-            if len(ns) == 1:
-                return ns[0]
-            if len(ns) == 2:
-                return f"{ns[0]} and {ns[1]}"
-            return ", ".join(ns[:-1]) + f" and {ns[-1]}"
+            if len(name_list) == 1:
+                return name_list[0]
+            if len(name_list) == 2:
+                return f"{name_list[0]} and {name_list[1]}"
+            return ", ".join(name_list[:-1]) + f" and {name_list[-1]}"
 
-        if k == 0 and u == 0:
+        if known_count == 0 and unknown_count == 0:
             return "No one in view."
 
         parts = []
-        if k > 0:
-            parts.append(f"{k} known ({join_names(clean)})")
-        if u > 0:
-            parts.append(f"{u} unknown face" + ("s" if u != 1 else ""))
+        if known_count > 0:
+            parts.append(f"{known_count} known ({join_names(valid_names)})")
+        if unknown_count > 0:
+            parts.append(f"{unknown_count} unknown face" + ("s" if unknown_count != 1 else ""))
 
-        return "In Camera View: " + " and ".join(parts) + "."
+        result = "In Camera View: " + " and ".join(parts) + "."
+
+        if self.closest_name:
+            result += f" Closest: {self.closest_name}."
+
+        return result
 
 
 @singleton
@@ -113,13 +122,13 @@ class FacePresenceProvider:
         self,
         *,
         base_url: str = "http://127.0.0.1:6793",
-        recent_sec: float = 3.0,
+        recent_sec: float = 1.0,
         fps: float = 5.0,
         timeout_s: float = 2.0,
-        prefer_recent: bool = True,
         unknown_frac_threshold: float = 0.15,
         unknown_min_count: int = 6,
         min_obs_window: int = 24,
+        min_face_area: int = 500,
     ) -> None:
         """
         Configure the provider (first construction establishes the singleton).
@@ -137,9 +146,6 @@ class FacePresenceProvider:
             Defaults to 5.0.
         timeout_s : float, optional
             HTTP request timeout in seconds. Defaults to 2.0.
-        prefer_recent : bool, optional
-            If True, prioritize recent face detection data when fetching snapshots.
-            Defaults to True.
         unknown_frac_threshold : float, optional
             Fraction threshold for suppressing unknown face counts based on recent frames.
             Defaults to 0.15.
@@ -149,20 +155,23 @@ class FacePresenceProvider:
         min_obs_window : int, optional
             Minimum observation window size (in frames) used for unknown face suppression.
             Defaults to 24.
+        min_face_area : int, optional
+            Minimum area (in pixels) for detected faces to be included in the snapshot.
+            Defaults to 500.
         """
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
         self.period = 1.0 / max(1e-6, float(fps))
         self.timeout_s = float(timeout_s)
-        self.prefer_recent = bool(prefer_recent)
         self.unknown_frac_threshold = float(unknown_frac_threshold)
         self.unknown_min_count = int(unknown_min_count)
         self.min_obs_window = int(min_obs_window)
+        self.min_face_area = int(min_face_area)
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._callbacks: List = []
-        self._cb_lock = threading.Lock()
+        self._callback_lock = threading.Lock()
         self._session = requests.Session()
         self._unknown_faces: int = 0
 
@@ -177,31 +186,31 @@ class FacePresenceProvider:
         """
         self.recent_sec = max(0.0, float(sec))
 
-    def register_message_callback(self, fn: Callable[[str], None]) -> None:
+    def register_message_callback(self, callback: Callable[[str], None]) -> None:
         """
         Subscribe a consumer to receive each emitted presence line.
 
         Parameters
         ----------
-        fn : Callable[[str], None]
+        callback : Callable[[str], None]
             Function invoked from the polling thread with one formatted string.
         """
-        with self._cb_lock:
-            if fn not in self._callbacks:
-                self._callbacks.append(fn)
+        with self._callback_lock:
+            if callback not in self._callbacks:
+                self._callbacks.append(callback)
 
-    def unregister_message_callback(self, fn: Callable[[str], None]) -> None:
+    def unregister_message_callback(self, callback: Callable[[str], None]) -> None:
         """
         Remove a previously registered consumer.
 
         Parameters
         ----------
-        fn : Callable[[str], None]
+        callback : Callable[[str], None]
             The same callable passed to `register_message_callback()`.
         """
-        with self._cb_lock:
+        with self._callback_lock:
             try:
-                self._callbacks.remove(fn)
+                self._callbacks.remove(callback)
             except ValueError:
                 pass
 
@@ -235,11 +244,11 @@ class FacePresenceProvider:
         - Waits until the next scheduled time (based on `fps`).
         - Calls `_fetch_snapshot()` → formats with `to_text()` → `_emit(text)`.
         """
-        next_t = time.time()
+        next_time = time.time()
         while not self._stop.is_set():
             now = time.time()
-            if now < next_t:
-                time.sleep(min(0.02, next_t - now))
+            if now < next_time:
+                time.sleep(min(0.02, next_time - now))
                 continue
             try:
                 snap = self._fetch_snapshot()
@@ -247,10 +256,11 @@ class FacePresenceProvider:
                 self._emit(text)
             except Exception as e:
                 logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
+                time.sleep(2.0)
 
-            next_t += self.period
-            if next_t < time.time() - self.period:
-                next_t = time.time()
+            next_time += self.period
+            if next_time < time.time() - self.period:
+                next_time = time.time()
 
     def _emit(self, text: str) -> None:
         """
@@ -261,13 +271,30 @@ class FacePresenceProvider:
         text : str
             A concise, human-readable snapshot (e.g., "present=[alice], unknown=0, ts=...").
         """
-        with self._cb_lock:
+        with self._callback_lock:
             callbacks = list(self._callbacks)
-        for cb in callbacks:
+        for callback in callbacks:
             try:
-                cb(text)
+                callback(text)
             except Exception as e:
                 logging.warning(f"Face presence callback failed: {e}")
+
+    async def fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
+        """
+        Async wrapper for `_fetch_snapshot()`.
+
+        Parameters
+        ----------
+        recent_sec : Optional[float]
+            Lookback window in seconds (overrides self.recent_sec if given).
+
+        Returns
+        -------
+        PresenceSnapshot
+            The canonical presence snapshot.
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._fetch_snapshot, recent_sec)
 
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
@@ -296,45 +323,38 @@ class FacePresenceProvider:
         r.raise_for_status()
         data: Dict = r.json() or {}
 
-        if self.prefer_recent:
+        faces = data.get("faces", []) or []
+        filtered_faces = [f for f in faces if f.get("area", 0) >= self.min_face_area]
+        sorted_faces = sorted(filtered_faces, key=lambda f: f.get("area", 0), reverse=True)
 
-            name_frames: Dict[str, int] = data.get("recent_name_frames", {}) or {}
-            names = [k for k in name_frames.keys() if k and k != "unknown"]
+        closest_name = "unknown"
+        if sorted_faces:
+            closest_face_name = (sorted_faces[0].get("name", "") or "").strip()
+            if closest_face_name and closest_face_name.lower() != "unknown":
+                closest_name = closest_face_name
 
-            # Frames-based unknown suppression
-            frames_recent = int(data.get("frames_recent", 0) or 0)
-            frames_with_unknown = int(data.get("frames_with_unknown", 0) or 0)
-            unknown_peak = int(data.get("unknown_recent", 0) or 0)
+        seen_names = set()
+        names = []
+        for face in sorted_faces:
+            name = (face.get("name", "") or "").strip()
+            if name and name.lower() != "unknown" and name not in seen_names:
+                seen_names.add(name)
+                names.append(name)
 
-            if frames_recent > 0:
-                unknown_frac = frames_with_unknown / float(frames_recent)
-                if frames_recent >= self.min_obs_window and unknown_frac < self.unknown_frac_threshold:
-                    unknown_faces = 0  # suppress brief/rare unknowns
-                else:
-                    unknown_faces = unknown_peak  # report the maximum unknown seen in any single frame
-            else:
-                now = data.get("now", []) or []
-                seen, names_fallback = set(), []
-                for n in now:
-                    if n and n != "unknown" and n not in seen:
-                        seen.add(n)
-                        names_fallback.append(n)
-                names = names_fallback
-                unknown_faces = int(data.get("unknown_now", 0) or 0)
-        else:
-            now = data.get("now", []) or []
-            seen, names = set(), []
-            for n in now:
-                if n and n != "unknown" and n not in seen:
-                    seen.add(n)
-                    names.append(n)
-            unknown_faces = int(data.get("unknown_now", 0) or 0)
+        unknown_count_in_faces = sum(
+            1 for face in filtered_faces if (face.get("name", "") or "").strip().lower() == "unknown"
+        )
 
-        ts = float(data.get("server_ts", time.time()))
+        timestamp = float(data.get("server_ts", time.time()))
+        self._unknown_faces = int(unknown_count_in_faces)
 
-        self._unknown_faces = int(unknown_faces)
-
-        return PresenceSnapshot(ts=ts, names=names, unknown_faces=unknown_faces, raw=data)
+        return PresenceSnapshot(
+            timestamp=timestamp,
+            names=names,
+            unknown_faces=unknown_count_in_faces,
+            closest_name=closest_name,
+            raw=data,
+        )
 
     @property
     def unknown_faces(self) -> int:

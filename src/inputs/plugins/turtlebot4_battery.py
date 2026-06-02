@@ -137,6 +137,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
             TeleopsStatus(
                 machine_name="TurtleBot4",
                 update_time=str(time.time()),
+                om1_heartbeat=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_temperature,

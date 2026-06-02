@@ -2,13 +2,14 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-import zenoh
 from zenoh import ZBytes
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from zenoh_msgs import (
     AIStatusRequest,
     String,
+    ZenohSampleType,
+    ZenohSessionType,
     geometry_msgs,
     nav_msgs,
     open_zenoh_session,
@@ -65,7 +66,7 @@ class UnitreeGo2NavigationProvider:
         cancel_goal_topic : str, optional
             The topic on which to publish goal cancellations (default is "navigate_to_pose/_action/cancel_goal").
         """
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()
@@ -96,13 +97,13 @@ class UnitreeGo2NavigationProvider:
             except Exception as e:
                 logging.error(f"Error creating AI status publisher: {e}")
 
-    def navigation_status_message_callback(self, data: zenoh.Sample):
+    def navigation_status_message_callback(self, data: ZenohSampleType):
         """
         Process an incoming navigation status message.
 
         Parameters
         ----------
-        data : zenoh.Sample
+        data : ZenohSampleType
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:

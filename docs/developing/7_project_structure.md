@@ -17,7 +17,6 @@ icon: diagram-project
 │   ├── llm/              # LLM integration
 │   ├── providers/        # Background tasks
 │   ├── runtime/          # Core runtime system
-│   ├── simulators/       # Virtual endpoints such as `WebSim`
 │   ├── zenoh_msgs/       # Zenoh's Interface Definition Language (IDL)
 │   └── run.py            # CLI entry point
 ```
@@ -28,7 +27,7 @@ The system is based on a loop that runs at a fixed frequency of `self.config.her
 
 ## Flow Diagram
 
-![ ](../assets/om1-flow-diagram.png)
+![ ](../.gitbook/assets/om1-flow-diagram.png)
 
 ### Sensory Input & AI Captioning
 The system's perception begins with a suite of Sensory Inputs that gather data from the environment and its own internal state. These inputs are multi-modal and include:

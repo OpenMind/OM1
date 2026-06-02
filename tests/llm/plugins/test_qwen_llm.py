@@ -303,21 +303,6 @@ class TestQwenLLMAsk:
             assert formatted_messages[-1]["content"] == "test prompt /no_think"
 
     @pytest.mark.asyncio
-    async def test_io_provider_timing(self, llm, mock_response):
-        """Test timing metrics collection."""
-        with pytest.MonkeyPatch.context() as m:
-            m.setattr(
-                llm._client.chat.completions,
-                "create",
-                AsyncMock(return_value=mock_response),
-            )
-
-            await llm.ask("test prompt")
-            assert llm.io_provider.llm_start_time is not None
-            assert llm.io_provider.llm_end_time is not None
-            assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time
-
-    @pytest.mark.asyncio
     async def test_ask_includes_extra_body(self, llm, mock_response):
         """Test that extra_body is included in API request."""
         with pytest.MonkeyPatch.context() as m:

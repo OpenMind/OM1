@@ -12,7 +12,9 @@ import openai
 from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig, get_llm_class
+from prometheus import om1_llm_latency, om1_llm_latency_last
 from providers.avatar_llm_state_provider import AvatarLLMState
+from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -126,7 +128,9 @@ class DualLLM(LLM[R]):
         self._local_llm._skip_state_management = True
         self._cloud_llm._skip_state_management = True
 
-        self._eval_client = openai.AsyncClient(base_url="http://127.0.0.1:8860/v1", api_key="local")
+        self._eval_client = openai.AsyncClient(
+            base_url="http://127.0.0.1:8860/v1", api_key="local", http_client=get_async_httpx_client()
+        )
         self._eval_model = local_cfg.get("model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16")
 
         self.history_manager = LLMHistoryManager(self._config, self._eval_client)
@@ -291,7 +295,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         if messages is None:
             messages = []
         try:
-            self.io_provider.llm_start_time = time.time()
+            llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
             voice_input = _extract_voice_input(prompt)
@@ -351,7 +355,9 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                     results = [t.result() for t in tasks.values()]
                     chosen = min(results, key=lambda x: x["time"])
 
-            self.io_provider.llm_end_time = time.time()
+            latency = time.time() - llm_start_time
+            om1_llm_latency.labels(model=str("dual_llm"), endpoint=str("dual_selection")).observe(latency)
+            om1_llm_latency_last.labels(model=str("dual_llm"), endpoint=str("dual_selection")).set(latency)
 
             if chosen and chosen["result"]:
                 return T.cast(R, chosen["result"])

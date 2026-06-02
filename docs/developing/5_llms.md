@@ -218,7 +218,7 @@ DEEPSEEK_SUPPORTED_MODELS = ["deepseek-chat"]
 ```
 
 ```python
-GEMINI_SUPPORTED_MODELS = ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
+GEMINI_SUPPORTED_MODELS = ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite",  "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
 ```
 
 ```python
@@ -241,30 +241,6 @@ OLLAMA_SUPPORTED_MODELS = ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2", 
 ```python
 Local LLM = ["Qwen3-30B"]
 ```
-
-### Memory Management
-
-The system includes memory capabilities at `/api/core/agent/memory`:
-
-```bash
-DELETE /api/core/agent/memory
-```
-
-- Session-based memory storage via API keys
-- Graph memory integration using Zep
-- Conversation history tracking
-
-### RAG Integration (Currently Disabled)
-
-The RAG agent connects to the knowledge base system (`/api/core/rag`) to provide retrieval-augmented generation capabilities. To use RAG with your documents:
-
-1. **Upload Documents**: Visit [https://portal.openmind.com/machines](https://portal.openmind.com/machines) to upload your documents and files to your knowledge base
-2. **Ask Questions**: Once uploaded, you can ask questions about your documents through the multi-agent system at `/api/core/agent`
-
-The RAG agent will:
-- Retrieve relevant documents during agent processing
-- Provide context-aware responses based on your uploaded content
-- Access and search through your user-uploaded documents and files
 
 ## Examples
 

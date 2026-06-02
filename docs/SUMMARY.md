@@ -47,10 +47,13 @@
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Overview](full_autonomy_guidelines/architecture_overview.md)
+* [Hybrid Localisation](full_autonomy_guidelines/localization.md)
 * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
 * [System Config](full_autonomy_guidelines/system_config.md)
 * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
+* [Premium Features](developing/premium_features.md)
+* [API Endpoints to Interact with Premium Features](full_autonomy_guidelines/api_endpoints.md)
 
 ## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
 
@@ -63,13 +66,15 @@
 
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
+* [Cloud Isaac Sim](simulators/cloud-isaac-sim.md)
 * [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
 * [API Reference](api-reference/introduction.md)
-    * [Google ASR](api-reference/endpoints/google_asr.md)
     * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
+    * [Google ASR](api-reference/endpoints/google_asr.md)
+    * [ElevenLabs ASR](api-reference/endpoints/elevenlabs_asr.md)
     * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
     * [LLM](api-reference/endpoints/llm.md)
     * [Riva](api-reference/endpoints/riva.md)
@@ -98,9 +103,9 @@
     * [v1.0.x](release-notes/om1-video-processor/v1.0.x.md)
     * [Docker Images](release-notes/om1-video-processor/docker_images.md)
 * OM1 System Setup
-    * [beta](release-notes/om1-system-setup/beta.md)
-    * [v1.0.x](release-notes/om1-system-setup/v1.0.x.md)
-    * [Docker Images](release-notes/om1-system-setup/docker_images.md)
+    * [beta](release-notes/OM1-OTA/beta.md)
+    * [v1.0.x](release-notes/OM1-OTA/v1.0.x.md)
+    * [Docker Images](release-notes/OM1-OTA/docker_images.md)
 
 ## Good to know concepts <a href="#robotics" id="robotics"></a>
 

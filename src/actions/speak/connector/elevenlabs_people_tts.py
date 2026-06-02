@@ -59,16 +59,15 @@ class SpeakElevenLabsTTSConnector(BaseElevenLabsTTSConnector):
                 and face_presence_input.input
                 and face_presence_input.tick == self.io_provider.tick_counter
             ):
-                # Extract known person name from camera view message
-                # Format: "In Camera View: 1 known (boyuan) and 1 unknown face."
-                # or "In Camera View: 2 known (shicai and lifan) and 2 unknown faces."
+                # Extract closest person name from camera view message
+                # Format: "In Camera View: 1 known (boyuan). Closest: boyuan."
+                # or "In Camera View: 2 known (shicai and lifan) and 2 unknown faces. Closest: shicai."
                 input_text = face_presence_input.input
-                match = re.search(r"known \(([^)]+)\)", input_text)
+                match = re.search(r"Closest:\s*(\w+)", input_text)
                 if match:
-                    names_str = match.group(1)
-                    people_name = names_str.split(" and ")[0].strip()
-                else:
-                    people_name = input_text
+                    people_name = match.group(1).strip()
+                    if people_name.lower() == "unknown":
+                        people_name = None
 
         # Search people name in voice_ids mapping if available
         voice_ids = self.config.voice_ids

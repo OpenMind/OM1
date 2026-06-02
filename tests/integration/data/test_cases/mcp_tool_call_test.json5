@@ -1,5 +1,5 @@
 {
-  version: "v1.0.3",
+  version: "v1.0.5",
   name: "mcp_tool_call_test",
   description: "Robot calls get_location then get_weather via MCP (scripted mock) and speaks the result.",
   hertz: 1,

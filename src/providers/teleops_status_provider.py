@@ -163,6 +163,7 @@ class TeleopsStatus:
     action_status: ActionStatus = field(default_factory=lambda: ActionStatus(ActionType.AI, time.time()))
     machine_name: str = "unknown"
     video_connected: bool = False
+    om1_heartbeat: str = ""
 
     def to_dict(self) -> dict:
         """
@@ -176,6 +177,7 @@ class TeleopsStatus:
         return {
             "machine_name": self.machine_name,
             "update_time": self.update_time,
+            "om1_heartbeat": self.om1_heartbeat,
             "battery_status": self.battery_status.to_dict(),
             "action_status": self.action_status.to_dict(),
             "video_connected": self.video_connected,
@@ -197,6 +199,7 @@ class TeleopsStatus:
             action_status=ActionStatus.from_dict(data.get("action_status", {})),
             machine_name=data.get("machine_name", "unknown"),
             video_connected=data.get("video_connected", False),
+            om1_heartbeat=data.get("om1_heartbeat", ""),
         )
 
 

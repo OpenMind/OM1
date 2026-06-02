@@ -13,6 +13,7 @@ from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.tracer import Tracer
 from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -20,7 +21,6 @@ from runtime.config import (
     load_mode_config,
 )
 from runtime.manager import ModeManager
-from simulators.orchestrator import SimulatorOrchestrator
 
 
 class ModeCortexRuntime:
@@ -39,7 +39,6 @@ class ModeCortexRuntime:
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
     action_orchestrator: Optional[ActionOrchestrator]
-    simulator_orchestrator: Optional[SimulatorOrchestrator]
     background_orchestrator: Optional[BackgroundOrchestrator]
     input_orchestrator: Optional[InputOrchestrator]
 
@@ -68,6 +67,7 @@ class ModeCortexRuntime:
         self.mode_config_name = mode_config_name
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
+        self.tracer = Tracer()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
 
@@ -89,14 +89,12 @@ class ModeCortexRuntime:
         self.current_config: Optional[RuntimeConfig] = None
         self.fuser: Optional[Fuser] = None
         self.action_orchestrator: Optional[ActionOrchestrator] = None
-        self.simulator_orchestrator: Optional[SimulatorOrchestrator] = None
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
         self.mcp_orchestrator: Optional[MCPOrchestrator] = None
 
         # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
-        self.simulator_task: Optional[asyncio.Future] = None
         self.action_task: Optional[asyncio.Future] = None
         self.background_task: Optional[asyncio.Future] = None
         self.cortex_loop_task: Optional[asyncio.Task] = None
@@ -121,6 +119,10 @@ class ModeCortexRuntime:
         self._mode_transition_event = asyncio.Event()
         self._pending_mode_transition: Optional[str] = None
         self._pending_transition_reason: Optional[str] = None
+
+        # Trace logging
+        if self.mode_config.use_tracer:
+            self.tracer.enable()
 
     async def _initialize_mode(self, mode_name: str):
         """
@@ -156,9 +158,6 @@ class ModeCortexRuntime:
             await self.summarizer.run()
 
         self.action_orchestrator = ActionOrchestrator(self.current_config)
-
-        if self.current_config.simulators:
-            self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
 
         if self.current_config.backgrounds:
             self.background_orchestrator = BackgroundOrchestrator(self.current_config)
@@ -249,10 +248,6 @@ class ModeCortexRuntime:
         if self.background_orchestrator:
             self.background_orchestrator.stop()
 
-        if self.simulator_orchestrator:
-            logging.debug("Stopping simulator orchestrator")
-            self.simulator_orchestrator.stop()
-
         if self.action_orchestrator:
             logging.debug("Stopping action orchestrator")
             self.action_orchestrator.stop()
@@ -275,10 +270,6 @@ class ModeCortexRuntime:
         if self.input_listener_task and not self.input_listener_task.done():
             logging.debug("Cancelling input listener task")
             tasks_to_cancel["input_listener"] = self.input_listener_task
-
-        if self.simulator_task and not self.simulator_task.done():
-            logging.debug("Cancelling simulator task")
-            tasks_to_cancel["simulator"] = self.simulator_task
 
         if self.action_task and not self.action_task.done():
             logging.debug("Cancelling action task")
@@ -325,11 +316,9 @@ class ModeCortexRuntime:
 
         self.cortex_loop_task = None
         self.input_listener_task = None
-        self.simulator_task = None
         self.action_task = None
         self.background_task = None
 
-        self.simulator_orchestrator = None
         self.background_orchestrator = None
         self.mcp_orchestrator = None
 
@@ -370,8 +359,6 @@ class ModeCortexRuntime:
         self.input_listener_task = asyncio.create_task(self.input_orchestrator.listen())
 
         # Start other orchestrators
-        if self.simulator_orchestrator:
-            self.simulator_task = self.simulator_orchestrator.start()
         if self.action_orchestrator:
             self.action_task = self.action_orchestrator.start()
         if self.background_orchestrator:
@@ -404,8 +391,6 @@ class ModeCortexRuntime:
             tasks_to_cancel.append(self.mode_transition_task)
         if self.input_listener_task and not self.input_listener_task.done():
             tasks_to_cancel.append(self.input_listener_task)
-        if self.simulator_task and not self.simulator_task.done():
-            tasks_to_cancel.append(self.simulator_task)
         if self.action_task and not self.action_task.done():
             tasks_to_cancel.append(self.action_task)
         if self.background_task and not self.background_task.done():
@@ -471,8 +456,6 @@ class ModeCortexRuntime:
                         awaitables.append(self.config_watcher_task)
                     if self.input_listener_task and not self.input_listener_task.done():
                         awaitables.append(self.input_listener_task)
-                    if self.simulator_task and not self.simulator_task.done():
-                        awaitables.append(self.simulator_task)
                     if self.action_task and not self.action_task.done():
                         awaitables.append(self.action_task)
                     if self.background_task and not self.background_task.done():
@@ -561,6 +544,8 @@ class ModeCortexRuntime:
             return
 
         tick_num = self.io_provider.increment_tick()
+        self.tracer.set_generation(cortex_generation)
+
         logging.debug(f"Processing tick #{tick_num}")
 
         finished_promises, _ = await self.action_orchestrator.flush_promises()
@@ -666,9 +651,6 @@ class ModeCortexRuntime:
                 if self._is_reloading or not self._is_generation_valid(cortex_generation, "action execution"):
                     logging.debug("Skipping action execution due to mode transition")
                     return
-
-                if self.simulator_orchestrator:
-                    await self.simulator_orchestrator.promise(output.actions)
 
                 await self.action_orchestrator.promise(output.actions)
 

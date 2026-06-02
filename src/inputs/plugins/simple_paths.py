@@ -3,13 +3,34 @@ import time
 from queue import Empty, Queue
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.simple_paths_provider import SimplePathsProvider
 
 
-class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
+class SimplePathsConfig(SensorConfig):
+    """
+    Configuration for SimplePaths Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key for authentication.
+    use_sim : bool
+        Whether to use the simulation endpoint instead of a local one.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    use_sim: bool = Field(
+        default=False,
+        description="Whether to use the simulation endpoint instead of a local one.",
+    )
+
+
+class SimplePaths(FuserInput[SimplePathsConfig, Optional[str]]):
     """
     SimplePaths input handler.
 
@@ -17,7 +38,7 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
     It maintains an internal buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: SimplePathsConfig):
         """
         Initialize the SimplePaths input handler.
 
@@ -25,7 +46,7 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
         Parameters
         ----------
-        config : SensorConfig
+        config : SimplePathsConfig
             Configuration for the sensor input.
         """
         super().__init__(config)
@@ -40,7 +61,10 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize SimplePaths Provider
-        self.paths_provider: SimplePathsProvider = SimplePathsProvider()
+        self.paths_provider: SimplePathsProvider = SimplePathsProvider(
+            api_key=self.config.api_key,
+            use_sim=self.config.use_sim,
+        )
         self.paths_provider.start()
 
         self.descriptor_for_LLM = (
@@ -128,8 +152,9 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
         latest_message = self.messages[-1]
 
-        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
-
+        result = f"""
+{self.descriptor_for_LLM}: "{latest_message.message}"
+"""
         self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 

@@ -88,6 +88,7 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
                 {
                     "machine_name": self.config.machine_name,
                     "update_time": current_time,
+                    "om1_heartbeat": current_time,
                     "battery_status": {
                         "battery_level": self.config.battery_level,
                         "voltage": self.config.voltage,

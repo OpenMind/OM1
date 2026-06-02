@@ -2,15 +2,15 @@ import asyncio
 import logging
 import time
 from queue import Empty, Queue
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from openai.types.chat import ChatCompletion
 from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_gemini_provider import VLMGeminiProvider
+from providers.vlm_gemini_zenoh_provider import VLMGeminiZenohProvider
 
 
 class VLMGeminiConfig(SensorConfig):
@@ -20,13 +20,19 @@ class VLMGeminiConfig(SensorConfig):
     Parameters
     ----------
     api_key : Optional[str]
-        API Key.
+        OM portal key. If unset, falls back to env $OM_API_KEY.
     base_url : str
-        Base URL for the Gemini service.
-    stream_base_url : Optional[str]
-        Stream Base URL.
-    camera_index : int
-        Index of the camera device.
+        OM Gemini proxy URL (HTTP, not WS).
+    topic : str
+        Zenoh topic carrying sensor_msgs/Image frames.
+    decode_format : str
+        Stored on the VideoZenohStream but unused by it; safe to leave default.
+    model : str
+        Gemini model id.
+    max_tokens : int
+        Token budget. Reasoning models burn through this — bump if cut off.
+    prompt : Optional[str]
+        Prompt sent with each frame. Defaults to a one-sentence scene-description prompt; override for task-specific use.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
@@ -36,6 +42,29 @@ class VLMGeminiConfig(SensorConfig):
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     camera_index: int = Field(default=0, description="Index of the camera device")
+
+    topic: str = Field(default="camera/go2/image_raw", description="Zenoh topic for the image stream")
+    decode_format: str = Field(default="RAW", description="Image decode format hint")
+    use_sim: bool = Field(default=False, description="Whether to use the simulation stream endpoint")
+
+    model: str = Field(
+        default="gemini-2.5-flash",
+        description="Gemini model id; supported (server-side): "
+        "gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro, "
+        "gemini-3.1-flash-lite, gemini-3.1-pro-preview"
+        "gemini-3.5-flash",
+    )
+    max_tokens: int = Field(
+        default=1024,
+        description="Token budget for VLM response. Reasoning-capable models "
+        "(gemini-3.x, 2.5-pro) consume hidden reasoning tokens "
+        "before visible content — bump to 2048+ if responses cut off.",
+    )
+    prompt: Optional[str] = Field(
+        default=None,
+        description="Prompt sent with each frame. Defaults to a one-sentence "
+        "scene-description prompt; override for task-specific use.",
+    )
 
 
 class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
@@ -56,6 +85,11 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
 
         Sets up the required providers and buffers for handling VLM processing.
         Initializes connection to the VLM service and registers message handlers.
+
+        Parameters
+        ----------
+        config : VLMGeminiConfig
+            Configuration for the VLM input handler.
         """
         super().__init__(config)
 
@@ -80,35 +114,51 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         )
         camera_index = self.config.camera_index
 
-        self.vlm: VLMGeminiProvider = VLMGeminiProvider(
-            base_url=base_url,
-            api_key=api_key,
-            stream_url=stream_base_url,
-            camera_index=camera_index,
-        )
+        provider_kwargs = {
+            "model": self.config.model,
+            "max_tokens": self.config.max_tokens,
+        }
+
+        if self.config.prompt is not None:
+            provider_kwargs["prompt"] = self.config.prompt
+
+        if self.config.use_sim:
+            self.vlm: Union[VLMGeminiZenohProvider, VLMGeminiProvider] = VLMGeminiZenohProvider(
+                base_url=self.config.base_url,
+                api_key=api_key,
+                topic=self.config.topic,
+                decode_format=self.config.decode_format,
+                **provider_kwargs,
+            )
+        else:
+            self.vlm = VLMGeminiProvider(
+                base_url=base_url,
+                api_key=api_key,
+                stream_url=stream_base_url,
+                camera_index=camera_index,
+                **provider_kwargs,
+            )
+
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
         self.descriptor_for_LLM = "Vision"
 
-    def _handle_vlm_message(self, raw_message: ChatCompletion):
+    def _handle_vlm_message(self, content: str):
         """
         Process incoming VLM messages.
 
-        Parses JSON messages from the VLM service and adds valid responses
-        to the message buffer for further processing.
-
         Parameters
         ----------
-        raw_message : str
-            Raw JSON message received from the VLM service
+        content : str
+            Plain text content from the VLM proxy (already extracted from
+            choices[0].message.content by the provider).
         """
-        content = raw_message.choices[0].message.content
-        if content is not None:
+        if content:
             logging.info(f"VLM Gemini received message: {content}")
             self.message_buffer.put(content)
         else:
-            logging.warning("VLM Gemini received message with None content")
+            logging.warning("VLM Gemini received empty message")
 
     async def _poll(self) -> Optional[str]:
         """
@@ -192,10 +242,7 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{latest_message.message}
-// END
+{self.descriptor_for_LLM}: "{latest_message.message}"
 """
 
         self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
@@ -208,4 +255,5 @@ INPUT: {self.descriptor_for_LLM}
         Stop the VLM input.
         """
         if self.vlm:
+            self.vlm.deregister_message_callback()
             self.vlm.stop()

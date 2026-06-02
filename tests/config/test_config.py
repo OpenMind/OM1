@@ -8,7 +8,6 @@ from actions.base import ActionConnector, Interface
 from inputs import find_module_with_class
 from inputs.base import Sensor
 from llm import get_llm_class
-from simulators import get_simulator_class
 
 
 def test_configs():
@@ -31,17 +30,11 @@ def test_configs():
         assert "type" in cortex_llm, f"'type' key missing in cortex_llm of {file_name}"
         assert get_llm_class(cortex_llm["type"]) is not None
 
-        simulators = raw_config.get("simulators", [])
-        assert isinstance(simulators, list)
-
         agent_actions = raw_config.get("agent_actions", [])
         assert isinstance(agent_actions, list)
 
         for input_config in agent_inputs:
             assert_input_class_exists(input_config)
-
-        for simulator in simulators:
-            assert get_simulator_class(simulator["type"]) is not None
 
         for action in agent_actions:
             assert_action_classes_exist(action)

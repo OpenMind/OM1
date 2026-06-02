@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
+from providers.tracer import Tracer
 
 R = T.TypeVar("R")
 
@@ -113,6 +114,9 @@ class LLM(T.Generic[R]):
 
         # Set up the IO provider
         self.io_provider = IOProvider()
+
+        # Initialize the tracer
+        self.tracer = Tracer()
 
         # Enable state management by default
         self._skip_state_management: bool = False

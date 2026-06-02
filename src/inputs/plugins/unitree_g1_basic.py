@@ -191,6 +191,7 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
             TeleopsStatus(
                 machine_name="UnitreeG1",
                 update_time=str(time.time()),
+                om1_heartbeat=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_temperature,

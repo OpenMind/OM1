@@ -82,6 +82,8 @@ class ConfigConverter:
             "knowledge_base": raw_config.get("knowledge_base"),
             "memory": raw_config.get("memory"),
             "cortex_llm": raw_config.get("cortex_llm"),
+            "use_sim": raw_config.get("use_sim", False),
+            "use_tracer": raw_config.get("use_tracer", False),
         }
 
     @staticmethod

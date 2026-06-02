@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Optional
 
-import zenoh
 from zenoh import ZBytes
 
 from actions.arm_g1.interface import ArmInput
@@ -12,6 +11,7 @@ from zenoh_msgs import (
     UnitreeRequest,
     UnitreeRequestHeader,
     UnitreeRequestIdentity,
+    ZenohSessionType,
     open_zenoh_session,
 )
 
@@ -23,13 +23,13 @@ CUSTOM_ACTION_MAP = {
     "face_wave": "face_wave",
     "hands_up": "hands_up",
     "stand_still": "stand_still",
-    "wave": "wave",
+    "wave": "face_wave",
     "show_hand": "show_hand",
     "show_hand1": "show_hand1",
     "show_hand2": "show_hand2",
     "my_gesture": "my_gesture",
-    "do_payment": "do_payment",
-    "down_payment": "down_payment",
+    # "do_payment": "do_payment",
+    # "down_payment": "down_payment",
 }
 
 
@@ -52,7 +52,7 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
             Configuration for the action connector.
         """
         super().__init__(config)
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
 
         try:
             self.session = open_zenoh_session()

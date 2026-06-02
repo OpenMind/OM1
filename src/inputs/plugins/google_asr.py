@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -9,6 +10,14 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
+from prometheus import (
+    om1_asr_latency,
+    om1_asr_latency_last,
+    om1_asr_speech_duration,
+    om1_asr_speech_duration_last,
+    om1_asr_utterance_end_latency,
+    om1_asr_utterance_end_latency_last,
+)
 from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -189,6 +198,11 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         # Guard flag: when True, this instance ignores incoming ASR messages.
         self._stopped = False
 
+        # Timing variable to measure latency from speech start to final transcript or end of utterance
+        self._speech_start_time: Optional[float] = None
+        self._language = language
+        self._api_version = api_version
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -203,9 +217,47 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
         try:
             json_message: Dict = json.loads(raw_message)
+
+            msg_type = json_message.get("type")
+            if msg_type == "speech_start":
+                self._speech_start_time = time.time()
+
+            elif msg_type == "speech_end":
+                if self._speech_start_time is not None:
+                    duration = time.time() - self._speech_start_time
+                    om1_asr_speech_duration.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).observe(duration)
+                    om1_asr_speech_duration_last.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).set(duration)
+
+            elif msg_type == "end_of_utterance":
+                if self._speech_start_time is not None:
+                    latency = time.time() - self._speech_start_time
+                    om1_asr_utterance_end_latency.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).observe(latency)
+                    om1_asr_utterance_end_latency_last.labels(
+                        model="google", language=self._language, api_version=self._api_version
+                    ).set(latency)
+
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                has_cjk = bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", asr_reply))
+
+                if (has_cjk and len(asr_reply) > 2) or (not has_cjk and len(asr_reply.split()) > 1):
+                    # Observe ASR latency from speech start to final transcript
+                    if self._speech_start_time is not None:
+                        latency = time.time() - self._speech_start_time
+                        om1_asr_latency.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).observe(latency)
+                        om1_asr_latency_last.labels(
+                            model="google", language=self._language, api_version=self._api_version
+                        ).set(latency)
+
+                        self._speech_start_time = None
                     self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
@@ -334,5 +386,19 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
                 logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
 
         if self.session:
-            self.session.close()
-            logging.info("Zenoh ASR session closed")
+            try:
+                self.session.close()
+                logging.info("Zenoh ASR session closed")
+            except Exception as e:
+                logging.warning(f"Failed to close Zenoh ASR session: {e}")
+
+        # TODO:
+        # Consider sending the TTS status multiple times to ASR provider to ensure that
+        # the ASR provider properly receives the interrupt signal,
+        # especially in cases where the mode switch happens during TTS playback
+        # if self.asr:
+        #     try:
+        #         self.asr.stop()
+        #         logging.info("ASR provider stopped")
+        #     except Exception as e:
+        #         logging.warning(f"Failed to stop ASR provider: {e}")

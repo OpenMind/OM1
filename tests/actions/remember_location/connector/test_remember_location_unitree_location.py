@@ -42,6 +42,7 @@ class TestUnitreeG1RememberLocationConfig:
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
+        assert config.use_sim is False
 
     def test_custom_config(self):
         config = UnitreeG1RememberLocationConfig(
@@ -52,6 +53,37 @@ class TestUnitreeG1RememberLocationConfig:
         assert config.base_url == "http://custom:8080"
         assert config.timeout == 10
         assert config.map_name == "custom_map"
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        config = UnitreeG1RememberLocationConfig(use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+        assert config.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        config = UnitreeG1RememberLocationConfig(use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+        assert config.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        config = UnitreeG1RememberLocationConfig(
+            base_url="http://custom:8080/api",
+            use_sim=True,
+        )
+        assert config.base_url == "http://custom:8080/api"
+        assert config.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        config = UnitreeG1RememberLocationConfig(base_url=None, use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        config = UnitreeG1RememberLocationConfig(base_url=None, use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
 
 
 class TestUnitreeG1RememberLocationConnector:
@@ -148,6 +180,7 @@ class TestUnitreeGo2RememberLocationConfig:
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
+        assert config.use_sim is False
 
     def test_custom_config(self):
         config = UnitreeGo2RememberLocationConfig(
@@ -158,6 +191,37 @@ class TestUnitreeGo2RememberLocationConfig:
         assert config.base_url == "http://go2:9090"
         assert config.timeout == 20
         assert config.map_name == "go2_map"
+
+    def test_use_sim_true_sets_cloud_url(self):
+        """Test that use_sim=True sets the cloud simulation URL when base_url is None."""
+        config = UnitreeGo2RememberLocationConfig(use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+        assert config.use_sim is True
+
+    def test_use_sim_false_sets_local_url(self):
+        """Test that use_sim=False sets the local URL when base_url is None."""
+        config = UnitreeGo2RememberLocationConfig(use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
+        assert config.use_sim is False
+
+    def test_explicit_base_url_overrides_use_sim(self):
+        """Test that explicitly providing base_url overrides use_sim behavior."""
+        config = UnitreeGo2RememberLocationConfig(
+            base_url="http://custom:8080/api",
+            use_sim=True,
+        )
+        assert config.base_url == "http://custom:8080/api"
+        assert config.use_sim is True
+
+    def test_base_url_none_with_use_sim_true(self):
+        """Test that base_url=None with use_sim=True sets cloud URL."""
+        config = UnitreeGo2RememberLocationConfig(base_url=None, use_sim=True)
+        assert config.base_url == "https://api.openmind.com/api/core/simulation/orchestrator/maps/locations/add/slam"
+
+    def test_base_url_none_with_use_sim_false(self):
+        """Test that base_url=None with use_sim=False sets local URL."""
+        config = UnitreeGo2RememberLocationConfig(base_url=None, use_sim=False)
+        assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
 
 
 class TestUnitreeGo2RememberLocationConnector:

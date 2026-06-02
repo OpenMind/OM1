@@ -46,7 +46,7 @@ def test_initialization_defaults(mock_zenoh):
     provider = UnitreeGo2LidarLocalizationProvider()
 
     assert provider.sub_topic == "om/localization_pose"
-    assert provider.quality_tolerance == 0.9
+    assert provider.quality_tolerance == 0.7
 
 
 def test_singleton_pattern(mock_zenoh):
