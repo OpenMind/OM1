@@ -17,7 +17,7 @@ Before running any examples, ensure you have the project dependencies installed.
 Examples can be executed using:
 
 ```bash
-uv run src/run.py <example_command>
+make run CONFIG=<example_name>
 ```
 
 Some examples to get started with
