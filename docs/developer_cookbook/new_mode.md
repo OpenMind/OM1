@@ -9,12 +9,12 @@ This guide walks you through creating a new mode for your robot system.
 ## Project Structure
 
 ```bash
-src/runtime/
-├── config.py          # ModeConfig and ModeSystemConfig classes
-├── manager.py         # ModeManager for transitions
-├── cortex.py          # ModeCortexRuntime for execution
-├── hook.py            # Lifecycle hooks
-└── converter.py       # Converts legacy single mode configs to multimode config
+internal/runtime/
+├── config.go          # ModeConfig and ModeSystemConfig types
+├── manager.go         # ModeManager for transitions
+├── cortex.go          # ModeCortexRuntime for execution
+├── hook.go            # Lifecycle hooks
+└── converter.go       # Converts legacy single mode configs to multimode config
 
 config/
 └── your_robot_modes.json5    # Mode configuration file
@@ -76,7 +76,7 @@ Actions define what your agent can do. You can define movement, TTS or any other
 | `name`                | `string`  | Yes      | Human-readable identifier for the action. Example: `"speak"`                                                         |
 | `llm_label`           | `string`  | Yes      | Label the model uses to refer to this action. Example: `"speak"`                                                     |
 | `implementation`      | `string`  | No       | Defines the business logic. If none defined, defaults to `"passthrough"`. Example: `"passthrough"`                   |
-| `connector`           | `string`  | Yes      | Name of the connector. This is the Python file name defined under `actions/action_name/connector`. Example: `"elevenlabs_tts"` |
+| `connector`           | `string`  | Yes      | Name of the connector. This is the Go file name defined under `plugins/actions/action_name/`. Example: `"elevenlabs_tts"` |
 | `config`              | `object`  | No       | Configuration options specific to this action.                                                                       |
 | `exclude_from_prompt` | `boolean` | No       | Whether to exclude this action from the LLM prompt. Default: `false`                                                 |
 
