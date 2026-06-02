@@ -290,18 +290,28 @@ func (c *elevenlabsASRCommon) onWSMessage(msgType int, data []byte) {
 	}
 
 	if msg.Type == "partial" {
-		c.speechStartTime = time.Now()
-		c.speechStarted = true
+		if !c.speechStarted {
+			c.speechStartTime = time.Now()
+			c.speechStarted = true
+		}
+		return
 	}
 
-	if msg.Type != "committed" || msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
+	if msg.Type != "committed" {
+		return
+	}
+
+	speechStarted := c.speechStarted
+	speechStartTime := c.speechStartTime
+	c.speechStarted = false
+
+	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
 		return
 	}
 
 	var latency time.Duration
-	if c.speechStarted {
-		latency = time.Since(c.speechStartTime)
-		c.speechStarted = false
+	if speechStarted {
+		latency = time.Since(speechStartTime)
 		seconds := latency.Seconds()
 		metrics.ASRLatency.WithLabelValues("elevenlabs", c.language, elevenlabsAPIVersion).Observe(seconds)
 		metrics.ASRLatencyLast.WithLabelValues("elevenlabs", c.language, elevenlabsAPIVersion).Set(seconds)

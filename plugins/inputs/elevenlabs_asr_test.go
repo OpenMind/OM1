@@ -146,6 +146,53 @@ func TestOnWSMessagePartialMarksSpeechStart(t *testing.T) {
 	require.False(t, ok, "a partial message must not deliver a transcript")
 }
 
+func partialMsg(t *testing.T, reply string) []byte {
+	t.Helper()
+	b, err := json.Marshal(ASRMessage{Type: "partial", ASRReply: reply})
+	require.NoError(t, err)
+	return b
+}
+
+func TestOnWSMessageRepeatedPartialsKeepFirstStart(t *testing.T) {
+	c := newTestElevenLabsCommon()
+
+	c.onWSMessage(websocket.TextMessage, partialMsg(t, "he"))
+	c.mu.Lock()
+	require.True(t, c.speechStarted)
+	first := c.speechStartTime
+	c.mu.Unlock()
+
+	// A later partial in the same utterance must not move the start time, or the
+	// measured latency would shrink to "time since the last partial".
+	c.onWSMessage(websocket.TextMessage, partialMsg(t, "hello wor"))
+	c.mu.Lock()
+	require.True(t, c.speechStarted)
+	require.Equal(t, first, c.speechStartTime, "start time should be set once per utterance")
+	c.mu.Unlock()
+}
+
+func TestOnWSMessageCommittedResetsForNextUtterance(t *testing.T) {
+	c := newTestElevenLabsCommon()
+	c.speechStarted = true
+	c.speechStartTime = time.Now().Add(-time.Second)
+
+	// A dropped (too-short) committed still ends the segment: speechStarted resets
+	// so the next utterance's first partial starts a fresh timer.
+	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hi"))
+	_, ok := recvTranscript(t, c.transcriptCh)
+	require.False(t, ok)
+	c.mu.Lock()
+	require.False(t, c.speechStarted, "a committed message must end the speech segment")
+	c.mu.Unlock()
+
+	// Next utterance: first partial re-arms the timer with a fresh start time.
+	c.onWSMessage(websocket.TextMessage, partialMsg(t, "how"))
+	c.mu.Lock()
+	require.True(t, c.speechStarted)
+	require.WithinDuration(t, time.Now(), c.speechStartTime, time.Second)
+	c.mu.Unlock()
+}
+
 func TestOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
 	cases := []struct {
 		name    string

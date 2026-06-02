@@ -40,7 +40,7 @@ type ElevenLabsASRSensor struct {
 
 // NewElevenLabsASR constructs an ElevenLabsASRSensor with the given configuration.
 func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
-	var cfg ElevenLabsASRConfig
+	cfg := ElevenLabsASRConfig{MicDeviceIndex: -1}
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
 	}
@@ -52,9 +52,6 @@ func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 	if cfg.Chunk == 0 {
 		cfg.Chunk = 4800
-	}
-	if cfg.MicDeviceIndex == 0 {
-		cfg.MicDeviceIndex = -1
 	}
 
 	core := NewElevenLabsASRCommon("ElevenLabsASRInput", elevenlabsASRCommonConfig{
