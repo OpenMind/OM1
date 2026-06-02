@@ -50,6 +50,7 @@ dependencies = [
 dds = [
     "cyclonedds==0.10.2"
 ]
+litellm = ["litellm>=1.60.0,<2.0.0"]
 macos = ["osascript"]
 
 [dependency-groups]
