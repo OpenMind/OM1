@@ -230,6 +230,9 @@ func (c *googleASRCommon) RawToText(_ context.Context, raw any) (*inputs.Message
 	return inputs.NewMessage(text), nil
 }
 
+// TriggersTick reports that ASR input wakes the cortex loop.
+func (c *googleASRCommon) TriggersTick() bool { return true }
+
 // FormattedLatestBuffer returns the buffered utterance as a Voice block, records
 // it on the IO provider, broadcasts it over zenoh, and clears the buffer.
 func (c *googleASRCommon) FormattedLatestBuffer() string {

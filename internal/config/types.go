@@ -21,6 +21,8 @@ type SystemConfig struct {
 	RobotIP string `json:"robot_ip"`
 	URID    string `json:"URID"`
 
+	UseTracer bool `json:"use_tracer"`
+
 	DefaultMode       string                `json:"default_mode"`
 	AllowManualSwitch bool                  `json:"allow_manual_switching"`
 	ModeMemoryEnabled bool                  `json:"mode_memory_enabled"`
@@ -113,4 +115,5 @@ type RuntimeConfig struct {
 	KnowledgeBase    *KBSpec
 	ActionExecMode   string
 	ActionDeps       map[string][]string
+	UseTracer        bool
 }

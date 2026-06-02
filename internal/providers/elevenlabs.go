@@ -27,6 +27,8 @@ const (
 	DefaultRate         = 16000
 
 	providerQueueDepth = 8
+
+	warmupSilenceMs = 1500
 )
 
 // ElevenLabsConfig holds connection and audio parameters for the provider.
@@ -123,6 +125,9 @@ func (p *ElevenLabsProvider) Stop() {
 // processAudio dequeues text, synthesizes it, and streams audio to ffplay.
 func (p *ElevenLabsProvider) processAudio() {
 	defer p.wg.Done()
+
+	p.warmUp()
+
 	for {
 		select {
 		case <-p.ctx.Done():
@@ -135,7 +140,6 @@ func (p *ElevenLabsProvider) processAudio() {
 				p.log.Error("elevenlabs: ffplay unavailable, dropping utterance")
 				continue
 			}
-			p.streamChunk(silenceBytes(p.cfg.Rate, 10))
 
 			Speaking.Store(true)
 			if err := p.synthesize(req.text, req.voiceID); err != nil && p.ctx.Err() == nil {
@@ -145,6 +149,20 @@ func (p *ElevenLabsProvider) processAudio() {
 			Speaking.Store(false)
 		}
 	}
+}
+
+// warmUp primes the audio device by playing a short burst of silence through ffplay.
+func (p *ElevenLabsProvider) warmUp() {
+	if p.ctx.Err() != nil {
+		return
+	}
+	if !p.initFFPlay() {
+		p.log.Warn("elevenlabs: warm-up skipped, ffplay unavailable")
+		return
+	}
+	p.streamChunk(silenceBytes(p.cfg.Rate, warmupSilenceMs))
+	p.finishPlayback()
+	p.log.Debug("elevenlabs: audio device warmed up")
 }
 
 // synthesize posts text to the ElevenLabs endpoint and streams PCM chunks to ffplay.
