@@ -85,6 +85,11 @@ func (m *modeSetup) loadComponents() error {
 		m.backgroundList = append(m.backgroundList, background)
 	}
 
+	// Load lifecycle hooks
+	for i := range m.cfg.LifecycleHooks {
+		m.cfg.LifecycleHooks[i].HandlerConfig = addMeta(m.cfg.LifecycleHooks[i].HandlerConfig, meta)
+	}
+
 	return nil
 }
 

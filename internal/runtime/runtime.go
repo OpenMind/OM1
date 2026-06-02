@@ -148,7 +148,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			rt.log,
 		),
 		sensors:   modeConfig.sensors,
-		modeHooks: hooks.NewHooks(modeCfg.LifecycleHooks, rt.log),
+		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
 	}
 	if len(modeConfig.backgroundList) > 0 {
 		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)
