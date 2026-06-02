@@ -36,9 +36,7 @@ def mock_cv2_video_capture():
 
 @pytest.fixture
 def vlm_coco_local(mock_model, mock_check_webcam, mock_cv2_video_capture):
-    with patch(
-        "inputs.plugins.vlm_coco_local.torch.cuda.is_available", return_value=False
-    ):
+    with patch("inputs.plugins.vlm_coco_local.torch.cuda.is_available", return_value=False):
         config = VLM_COCO_LocalConfig(camera_index=0)
         return VLM_COCO_Local(config=config)
 
@@ -99,9 +97,7 @@ def test_formatted_latest_buffer_empty(vlm_coco_local):
 async def test_poll_returns_none_on_failed_frame_read(mock_model, mock_check_webcam, mock_cv2_video_capture):
     """Test that _poll returns None when cap.read() fails."""
     mock_cv2_video_capture.read.return_value = (False, None)
-    with patch(
-        "inputs.plugins.vlm_coco_local.torch.cuda.is_available", return_value=False
-    ):
+    with patch("inputs.plugins.vlm_coco_local.torch.cuda.is_available", return_value=False):
         config = VLM_COCO_LocalConfig(camera_index=0)
         sensor = VLM_COCO_Local(config=config)
     result = await sensor._poll()
