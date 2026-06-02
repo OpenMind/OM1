@@ -1,10 +1,11 @@
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     curl \
     unzip \
+    portaudio19-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -33,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libhidapi-hidraw0 \
     iputils-ping \
     libnss-mdns \
+    libportaudio2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
