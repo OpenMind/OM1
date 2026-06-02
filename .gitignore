@@ -28,6 +28,7 @@ junit.xml
 
 # Claude Code
 CLAUDE.md
+.claude/
 
 # Debug files
 front_image.jpg
@@ -50,7 +51,9 @@ logs/
 *.jpg
 /zenohdb
 /locations
+/traces
 
 # Mode system state files
 config/memory
 config/.runtime.json5
+config/cron_job/

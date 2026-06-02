@@ -102,12 +102,25 @@ def _process_scan(raw):
 
 
 def _process_express_scan(data, new_angle, trame):
+    """
+    Process an express scan packet from RPLidar.
+
+    Parameters
+    ----------
+    data : object
+        Scan data containing start angle, angles and distances.
+    new_angle : float
+        The new angle value from the latest packet.
+    trame : int
+        Frame index within the express scan packet.
+
+    Returns
+    -------
+    tuple
+        Tuple of (new_scan, quality, angle, distance).
+    """
     new_scan = (new_angle < data.start_angle) & (trame == 1)
-    angle = (
-        data.start_angle
-        + ((new_angle - data.start_angle) % 360) / 32 * trame
-        - data.angle[trame - 1]
-    ) % 360
+    angle = (data.start_angle + ((new_angle - data.start_angle) % 360) / 32 * trame - data.angle[trame - 1]) % 360
     distance = data.distance[trame - 1]
     # print(
     #     f"Express scan: new_scan={new_scan}, angle={angle}, "
@@ -163,9 +176,7 @@ class RPDriver(object):
                 write_timeout=self.timeout,
             )
         except serial.SerialException as err:
-            raise RPLidarException(
-                "Failed to connect to the sensor " "due to: %s" % err
-            )
+            raise RPLidarException("Failed to connect to the sensor " "due to: %s" % err)
 
     def disconnect(self):
         """Disconnects from the serial port."""
@@ -174,6 +185,14 @@ class RPDriver(object):
         self._serial.close()
 
     def _set_pwm(self, pwm):
+        """
+        Set the PWM value for the RPLidar motor.
+
+        Parameters
+        ----------
+        pwm : int
+            PWM value to set for motor speed control.
+        """
         payload = struct.pack("<H", pwm)
         self._send_payload_cmd(SET_PWM_BYTE, payload)
 
@@ -193,9 +212,7 @@ class RPDriver(object):
             PWM value to set the motor speed to.
         """
         if not (0 <= pwm <= MAX_MOTOR_PWM):
-            raise ValueError(
-                f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}"
-            )
+            raise ValueError(f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}")
         self._motor_speed = pwm
         if self.motor_running:
             self._set_pwm(self._motor_speed)
@@ -353,19 +370,13 @@ class RPDriver(object):
         self.logger.debug("Health status: %s [%d]", status, error_code)
 
         if status == _HEALTH_STATUSES[2]:
-            self.logger.warning(
-                "Trying to reset sensor due to error. Error code: %d", error_code
-            )
+            self.logger.warning("Trying to reset sensor due to error. Error code: %d", error_code)
             self.reset()
             status, error_code = self.get_health()
             if status == _HEALTH_STATUSES[2]:
-                raise RPLidarException(
-                    "RPLidar hardware failure. Error code: %d" % error_code
-                )
+                raise RPLidarException("RPLidar hardware failure. Error code: %d" % error_code)
         elif status == _HEALTH_STATUSES[1]:
-            self.logger.warning(
-                "Warning sensor status detected! Error code: %d", error_code
-            )
+            self.logger.warning("Warning sensor status detected! Error code: %d", error_code)
 
         cmd = _SCAN_TYPE[scan_type]["byte"]
         self.logger.info("Starting scan process in %s mode", scan_type)
@@ -427,8 +438,7 @@ class RPDriver(object):
                 data_in_buf = self._serial.inWaiting()
                 if data_in_buf > max_buf_meas:
                     self.logger.warning(
-                        "Too many bytes in the input buffer: %d/%d. "
-                        "Cleaning buffer...",
+                        "Too many bytes in the input buffer: %d/%d. " "Cleaning buffer...",
                         data_in_buf,
                         max_buf_meas,
                     )
@@ -526,9 +536,7 @@ class RPDriver(object):
             if distance > 0:
                 scan_list.append((quality, angle, distance))
 
-    def iter_scans_local(
-        self, scan_type="normal", max_buf_meas=3000, min_len=5, max_distance_mm=2000
-    ):
+    def iter_scans_local(self, scan_type="normal", max_buf_meas=3000, min_len=5, max_distance_mm=2000):
         """Iterate over scans. Note that consumer must be fast enough,
         otherwise data will accumulate inside buffer and consumer will get
         data with increasing lag.
@@ -563,9 +571,7 @@ class RPDriver(object):
                 scan_list.append((angle, distance))
 
 
-class ExpressPacket(
-    namedtuple("express_packet", "distance angle new_scan start_angle")
-):
+class ExpressPacket(namedtuple("express_packet", "distance angle new_scan start_angle")):
     """
     Class representing an express scan packet from RPLidar.
     """

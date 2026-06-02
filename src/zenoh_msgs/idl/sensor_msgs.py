@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 
 from pycdr2 import IdlStruct
-from pycdr2.types import array, float32, float64, int8, sequence, uint8, uint16, uint32
+from pycdr2.types import array, float32, float64, int8, int32, sequence, uint8, uint16, uint32
 
 from .geometry_msgs import Point32, Quaternion, Vector3
 from .std_msgs import Header, String
@@ -47,7 +47,7 @@ class Image(IdlStruct, typename="Image"):
     encoding: str
     is_bigendian: uint8
     step: uint32
-    data: sequence[uint8]
+    data: bytes
 
 
 @dataclass
@@ -213,17 +213,11 @@ class BatteryState(IdlStruct, typename="BatteryState"):
     power_supply_health: uint8  # The battery health metric. Values defined above
     power_supply_technology: uint8  # The battery chemistry. Values defined above
     present: bool  # True if the battery is present
-    cell_voltage: List[
-        float32
-    ]  # An array of individual cell voltages for each cell in the pack
+    cell_voltage: List[float32]  # An array of individual cell voltages for each cell in the pack
     # If individual voltages unknown but number of cells known set each to NaN
-    cell_temperature: List[
-        float32
-    ]  # An array of individual cell temperatures for each cell in the pack
+    cell_temperature: List[float32]  # An array of individual cell temperatures for each cell in the pack
     # If individual temperatures unknown but number of cells known set each to NaN
-    location: (
-        String  # The location into which the battery is inserted. (slot number or plug)
-    )
+    location: String  # The location into which the battery is inserted. (slot number or plug)
     serial_number: String  # The best approximation of the battery serial number
 
 
@@ -260,3 +254,12 @@ class Paths(IdlStruct, typename="Paths"):
     paths: List[uint32]
     blocked_by_obstacle_idx: List[uint32]
     blocked_by_hazard_idx: List[uint32]
+
+
+@dataclass
+class Joy(IdlStruct, typename="Joy"):
+    """Joy message."""
+
+    header: Header
+    axes: List[float32]
+    buttons: List[int32]

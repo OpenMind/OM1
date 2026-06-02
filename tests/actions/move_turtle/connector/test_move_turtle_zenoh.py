@@ -13,15 +13,9 @@ def mock_dependencies():
     """Mock all external dependencies."""
 
     with (
-        patch(
-            "actions.move_turtle.connector.zenoh.open_zenoh_session"
-        ) as mock_open_session,
-        patch(
-            "actions.move_turtle.connector.zenoh.TurtleBot4RPLidarProvider"
-        ) as mock_lidar,
-        patch(
-            "actions.move_turtle.connector.zenoh.TurtleBot4OdomProvider"
-        ) as mock_odom,
+        patch("actions.move_turtle.connector.zenoh.open_zenoh_session") as mock_open_session,
+        patch("actions.move_turtle.connector.zenoh.TurtleBot4RPLidarProvider") as mock_lidar,
+        patch("actions.move_turtle.connector.zenoh.TurtleBot4OdomProvider") as mock_odom,
     ):
         mock_session = Mock()
         mock_open_session.return_value = mock_session
@@ -86,17 +80,13 @@ class TestMoveZenohConnectorInit:
         ):
             config = MoveZenohConfig(URID=None)
             connector = MoveZenohConnector(config)
-            mock_logging.warning.assert_called_with(
-                "Aborting TurtleBot4 Move system, no URID provided"
-            )
+            mock_logging.warning.assert_called_with("Aborting TurtleBot4 Move system, no URID provided")
             assert connector.session is None
 
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh fails."""
         with (
-            patch(
-                "actions.move_turtle.connector.zenoh.open_zenoh_session"
-            ) as mock_session,
+            patch("actions.move_turtle.connector.zenoh.open_zenoh_session") as mock_session,
             patch("actions.move_turtle.connector.zenoh.TurtleBot4RPLidarProvider"),
             patch("actions.move_turtle.connector.zenoh.TurtleBot4OdomProvider"),
             patch("actions.move_turtle.connector.zenoh.logging") as mock_logging,
@@ -154,9 +144,7 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_pending_movement_queued(self, connector, mock_dependencies):
         """Test connect when movement is already pending."""
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0))
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
         assert connector.pending_movements.qsize() == 1
@@ -228,9 +216,7 @@ class TestMoveZenohConnectorCleanAbort:
 
     def test_clean_abort(self, connector, mock_dependencies):
         connector.movement_attempts = 5
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0))
         connector.clean_abort()
         assert connector.movement_attempts == 0
         assert connector.pending_movements.qsize() == 0

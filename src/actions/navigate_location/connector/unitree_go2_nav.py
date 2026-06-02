@@ -29,6 +29,10 @@ class UnitreeGo2NavConfig(ActionConfig):
         default="http://localhost:5000/maps/locations/list",
         description="The base URL for the locations API.",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
     timeout: int = Field(
         default=5,
         description="Timeout for the HTTP requests in seconds.",
@@ -39,9 +43,7 @@ class UnitreeGo2NavConfig(ActionConfig):
     )
 
 
-class UnitreeGo2NavConnector(
-    ActionConnector[UnitreeGo2NavConfig, NavigateLocationInput]
-):
+class UnitreeGo2NavConnector(ActionConnector[UnitreeGo2NavConfig, NavigateLocationInput]):
     """
     Navigation/location connector for Unitree Go2 robots.
     """
@@ -58,17 +60,14 @@ class UnitreeGo2NavConnector(
         super().__init__(config)
 
         base_url = self.config.base_url
+        api_key = self.config.api_key
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.location_provider = UnitreeGo2LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.location_provider = UnitreeGo2LocationsProvider(base_url, api_key, timeout, refresh_interval)
         self.navigation_provider = UnitreeGo2NavigationProvider()
         self.io_provider = IOProvider()
-        logging.info(
-            "[NavGo2Connector] Using UnitreeGo2 providers for locations and navigation."
-        )
+        logging.info("[NavGo2Connector] Using UnitreeGo2 providers for locations and navigation.")
 
     async def connect(self, output_interface: NavigateLocationInput) -> None:
         """
@@ -92,18 +91,13 @@ class UnitreeGo2NavConnector(
         ]:
             if label.startswith(prefix):
                 label = label[len(prefix) :].strip()
-                logging.info(
-                    f"Cleaned location label: removed '{prefix}' prefix -> '{label}'"
-                )
+                logging.info(f"Cleaned location label: removed '{prefix}' prefix -> '{label}'")
                 break
 
         loc = self.location_provider.get_location(label)
         if loc is None:
             locations = self.location_provider.get_all_locations()
-            locations_list = ", ".join(
-                str(v.get("name") if isinstance(v, dict) else k)
-                for k, v in locations.items()
-            )
+            locations_list = ", ".join(str(v.get("name") if isinstance(v, dict) else k) for k, v in locations.items())
             msg = (
                 f"Location '{label}' not found. Available: {locations_list}"
                 if locations_list

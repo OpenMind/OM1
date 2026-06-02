@@ -21,9 +21,7 @@ class UnitreeGo2FrontierExplorationConfig(BackgroundConfig):
         Context aware text as JSON string.
     """
 
-    topic: str = Field(
-        default="explore/status", description="Topic for exploration status"
-    )
+    topic: str = Field(default="explore/status", description="Topic for exploration status")
     context_aware_text: str = Field(
         default='{"exploration_done": true}',
         description="Context aware text as JSON string",
@@ -55,13 +53,9 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
             logging.error(f"Error decoding context_aware_text JSON: {e}")
             context_aware_text = {"exploration_done": True}
 
-        self.unitree_go2_frontier_exploration_provider = (
-            UnitreeGo2FrontierExplorationProvider(
-                topic=topic,
-                context_aware_text=context_aware_text,
-            )
+        self.unitree_go2_frontier_exploration_provider = UnitreeGo2FrontierExplorationProvider(
+            topic=topic,
+            context_aware_text=context_aware_text,
         )
         self.unitree_go2_frontier_exploration_provider.start()
-        logging.info(
-            "Unitree Go2 Frontier Exploration Provider initialized in background"
-        )
+        logging.info("Unitree Go2 Frontier Exploration Provider initialized in background")

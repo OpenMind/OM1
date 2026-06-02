@@ -113,9 +113,7 @@ def test_speak_worker_success():
     mock_response.json.return_value = {"code": 0}
     mock_response.raise_for_status = MagicMock()
 
-    with patch(
-        "providers.ub_tts_provider.requests.put", return_value=mock_response
-    ) as mock_put:
+    with patch("providers.ub_tts_provider.requests.put", return_value=mock_response) as mock_put:
         result = provider._speak_worker("Hello world")
 
         assert result is True
@@ -135,9 +133,7 @@ def test_speak_worker_with_parameters():
     mock_response.json.return_value = {"code": 0}
     mock_response.raise_for_status = MagicMock()
 
-    with patch(
-        "providers.ub_tts_provider.requests.put", return_value=mock_response
-    ) as mock_put:
+    with patch("providers.ub_tts_provider.requests.put", return_value=mock_response) as mock_put:
         result = provider._speak_worker("Hello", interrupt=False, timestamp=12345)
 
         assert result is True
@@ -156,9 +152,7 @@ def test_speak_worker_default_parameters():
     mock_response.json.return_value = {"code": 0}
     mock_response.raise_for_status = MagicMock()
 
-    with patch(
-        "providers.ub_tts_provider.requests.put", return_value=mock_response
-    ) as mock_put:
+    with patch("providers.ub_tts_provider.requests.put", return_value=mock_response) as mock_put:
         result = provider._speak_worker("Hello")
 
         assert result is True
@@ -230,9 +224,7 @@ def test_get_status_success():
     mock_response = MagicMock()
     mock_response.json.return_value = {"code": 0, "status": "run"}
 
-    with patch(
-        "providers.ub_tts_provider.requests.get", return_value=mock_response
-    ) as mock_get:
+    with patch("providers.ub_tts_provider.requests.get", return_value=mock_response) as mock_get:
         result = provider.get_tts_status(12345)
 
         assert result == "run"
@@ -254,9 +246,7 @@ def test_get_status_all_possible_values():
         mock_response = MagicMock()
         mock_response.json.return_value = {"code": 0, "status": status}
 
-        with patch(
-            "providers.ub_tts_provider.requests.get", return_value=mock_response
-        ):
+        with patch("providers.ub_tts_provider.requests.get", return_value=mock_response):
             result = provider.get_tts_status(12345)
             assert result == status
 

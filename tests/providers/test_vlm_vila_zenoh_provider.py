@@ -45,9 +45,7 @@ def mock_dependencies():
 
 def test_initialization(mock_dependencies):
     """Test VLMVilaZenohProvider initialization."""
-    provider = VLMVilaZenohProvider(
-        ws_url="ws://localhost:8000", topic="test/camera", decode_format="H264"
-    )
+    provider = VLMVilaZenohProvider(ws_url="ws://localhost:8000", topic="test/camera", decode_format="H264")
 
     assert provider.running is False
 
@@ -80,9 +78,7 @@ def test_register_frame_callback(mock_dependencies):
 
     provider.register_frame_callback(callback)
 
-    mock_dependencies[
-        "stream_instance"
-    ].register_frame_callback.assert_called_once_with(callback)
+    mock_dependencies["stream_instance"].register_frame_callback.assert_called_once_with(callback)
 
 
 def test_register_frame_callback_none(mock_dependencies):
@@ -103,9 +99,7 @@ def test_register_message_callback(mock_dependencies):
 
     provider.register_message_callback(callback)
 
-    mock_dependencies["ws_instance"].register_message_callback.assert_called_once_with(
-        callback
-    )
+    mock_dependencies["ws_instance"].register_message_callback.assert_called_once_with(callback)
 
 
 def test_register_message_callback_none(mock_dependencies):
@@ -178,9 +172,7 @@ def test_ws_client_send_message_callback(mock_dependencies):
     VLMVilaZenohProvider(ws_url="ws://localhost:8000")
 
     call_args = mock_dependencies["stream"].call_args
-    assert (
-        call_args[1]["frame_callback"] == mock_dependencies["ws_instance"].send_message
-    )
+    assert call_args[1]["frame_callback"] == mock_dependencies["ws_instance"].send_message
 
 
 def test_default_topic_value(mock_dependencies):
@@ -193,9 +185,7 @@ def test_default_topic_value(mock_dependencies):
 
 def test_video_zenoh_stream_initialization(mock_dependencies):
     """Test VideoZenohStream is initialized correctly."""
-    VLMVilaZenohProvider(
-        ws_url="ws://localhost:8000", topic="custom_topic", decode_format="H265"
-    )
+    VLMVilaZenohProvider(ws_url="ws://localhost:8000", topic="custom_topic", decode_format="H265")
 
     call_args = mock_dependencies["stream"].call_args
     assert call_args[0][0] == "custom_topic"

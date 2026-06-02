@@ -180,9 +180,7 @@ class TestUbtechASRProviderInternal:
         provider.running = True
 
         with (
-            patch.object(
-                provider, "_get_single_utterance", return_value=None
-            ) as mock_get,
+            patch.object(provider, "_get_single_utterance", return_value=None) as mock_get,
             patch("time.sleep") as mock_sleep,
             patch.object(provider, "pause") as mock_pause,
         ):
@@ -225,9 +223,7 @@ class TestUbtechASRProviderInternal:
         provider.register_message_callback(callback)
 
         with (
-            patch.object(
-                provider, "_get_single_utterance", return_value="hello"
-            ) as mock_get,
+            patch.object(provider, "_get_single_utterance", return_value="hello") as mock_get,
             patch("time.sleep") as mock_sleep,
             patch.object(provider, "pause") as mock_pause,
         ):
@@ -249,9 +245,7 @@ class TestUbtechASRProviderInternal:
         provider.running = True
 
         with (
-            patch.object(
-                provider, "_get_single_utterance", return_value=None
-            ) as mock_get,
+            patch.object(provider, "_get_single_utterance", return_value=None) as mock_get,
             patch("time.sleep") as mock_sleep,
             patch.object(provider, "pause") as mock_pause,
         ):
@@ -290,9 +284,7 @@ class TestUbtechASRProviderInternal:
 
             mock_get.assert_called_once()
             mock_pause.assert_called_once()
-            mock_log.assert_called_with(
-                "UbtechASRProvider: RequestException during _get_single_utterance: error"
-            )
+            mock_log.assert_called_with("UbtechASRProvider: RequestException during _get_single_utterance: error")
             mock_sleep.assert_any_call(0.5)
 
     def test_run_with_general_exception(self, mock_requests):
@@ -301,9 +293,7 @@ class TestUbtechASRProviderInternal:
         provider.running = True
 
         with (
-            patch.object(
-                provider, "_get_single_utterance", side_effect=Exception("unexpected")
-            ) as mock_get,
+            patch.object(provider, "_get_single_utterance", side_effect=Exception("unexpected")) as mock_get,
             patch("time.sleep") as mock_sleep,
             patch.object(provider, "pause") as mock_pause,
             patch("logging.error") as mock_log,
@@ -351,9 +341,7 @@ class TestUbtechASRProviderInternal:
             result = provider._get_single_utterance()
 
             assert mock_start.called, "_start_voice_iat was not called"
-            assert (
-                mock_get.call_count == 2
-            ), f"Expected 2 calls to _get_voice_iat, got {mock_get.call_count}"
+            assert mock_get.call_count == 2, f"Expected 2 calls to _get_voice_iat, got {mock_get.call_count}"
             assert result == "hello"
             assert mock_stop.call_count == 2
             mock_start.assert_called_once_with(ts)
@@ -363,9 +351,7 @@ class TestUbtechASRProviderInternal:
         provider = UbtechASRProvider(robot_ip="192.168.1.100")
         with (
             patch.object(provider, "_stop_voice_iat") as mock_stop,
-            patch.object(
-                provider, "_start_voice_iat", return_value=False
-            ) as mock_start,
+            patch.object(provider, "_start_voice_iat", return_value=False) as mock_start,
             patch("time.sleep"),
         ):
             result = provider._get_single_utterance()
@@ -399,16 +385,12 @@ class TestUbtechASRProviderInternal:
         """Test _stop_voice_iat retries on HTTP 500 errors."""
         provider = UbtechASRProvider(robot_ip="192.168.1.100")
         error_response = MagicMock()
-        http_error_500 = requests.exceptions.HTTPError(
-            response=MagicMock(status_code=500)
-        )
+        http_error_500 = requests.exceptions.HTTPError(response=MagicMock(status_code=500))
         error_response.raise_for_status.side_effect = http_error_500
         success_response = MagicMock()
         success_response.raise_for_status.return_value = None
 
-        mock_delete = MagicMock(
-            side_effect=[error_response, error_response, success_response]
-        )
+        mock_delete = MagicMock(side_effect=[error_response, error_response, success_response])
         with (
             patch.object(provider.session, "delete", mock_delete),
             patch("time.sleep") as mock_sleep,
@@ -421,9 +403,7 @@ class TestUbtechASRProviderInternal:
         """Test _stop_voice_iat handles non-retryable HTTP error."""
         provider = UbtechASRProvider(robot_ip="192.168.1.100")
         error_response = MagicMock()
-        http_error_400 = requests.exceptions.HTTPError(
-            response=MagicMock(status_code=400)
-        )
+        http_error_400 = requests.exceptions.HTTPError(response=MagicMock(status_code=400))
         error_response.raise_for_status.side_effect = http_error_400
         mock_delete = MagicMock(return_value=error_response)
         with (
@@ -434,10 +414,7 @@ class TestUbtechASRProviderInternal:
             mock_delete.assert_called_once()
             mock_log.assert_called_once()
             args, _ = mock_log.call_args
-            assert (
-                "UbtechASRProvider: _stop_voice_iat failed with HTTPError (attempt 1): "
-                in args[0]
-            )
+            assert "UbtechASRProvider: _stop_voice_iat failed with HTTPError (attempt 1): " in args[0]
 
     def test_stop_voice_iat_request_exception(self, mock_requests):
         """Test _stop_voice_iat handles RequestException with retries."""
@@ -453,31 +430,21 @@ class TestUbtechASRProviderInternal:
             assert mock_delete.call_count == 3
             assert mock_sleep.call_count == 2
             assert mock_log.call_count == 3
-            mock_log.assert_any_call(
-                "UbtechASRProvider: _stop_voice_iat request failed (attempt 1): connection error"
-            )
-            mock_log.assert_any_call(
-                "UbtechASRProvider: _stop_voice_iat request failed (attempt 2): connection error"
-            )
-            mock_log.assert_any_call(
-                "UbtechASRProvider: _stop_voice_iat request failed (attempt 3): connection error"
-            )
+            mock_log.assert_any_call("UbtechASRProvider: _stop_voice_iat request failed (attempt 1): connection error")
+            mock_log.assert_any_call("UbtechASRProvider: _stop_voice_iat request failed (attempt 2): connection error")
+            mock_log.assert_any_call("UbtechASRProvider: _stop_voice_iat request failed (attempt 3): connection error")
 
     def test_get_voice_iat_http_error_500(self, mock_requests):
         """Test _get_voice_iat retries on HTTP 500 errors."""
         provider = UbtechASRProvider(robot_ip="192.168.1.100")
         error_response = MagicMock()
-        http_error_500 = requests.exceptions.HTTPError(
-            response=MagicMock(status_code=500)
-        )
+        http_error_500 = requests.exceptions.HTTPError(response=MagicMock(status_code=500))
         error_response.raise_for_status.side_effect = http_error_500
         success_response = MagicMock()
         success_response.json.return_value = {"status": "ok"}
         success_response.raise_for_status.return_value = None
 
-        mock_get = MagicMock(
-            side_effect=[error_response, error_response, success_response]
-        )
+        mock_get = MagicMock(side_effect=[error_response, error_response, success_response])
         with (
             patch.object(provider.session, "get", mock_get),
             patch("time.sleep") as mock_sleep,
@@ -491,9 +458,7 @@ class TestUbtechASRProviderInternal:
         """Test _get_voice_iat handles non-retryable HTTP error."""
         provider = UbtechASRProvider(robot_ip="192.168.1.100")
         error_response = MagicMock()
-        http_error_400 = requests.exceptions.HTTPError(
-            response=MagicMock(status_code=400)
-        )
+        http_error_400 = requests.exceptions.HTTPError(response=MagicMock(status_code=400))
         error_response.raise_for_status.side_effect = http_error_400
         mock_get = MagicMock(return_value=error_response)
         with (
@@ -577,9 +542,7 @@ class TestUbtechASRProviderInternal:
         ):
             result = provider._get_voice_iat()
             assert result["data"] == "invalid json"
-            mock_log.assert_called_with(
-                "UbtechASRProvider: Failed to decode JSON from data string: 'invalid json'"
-            )
+            mock_log.assert_called_with("UbtechASRProvider: Failed to decode JSON from data string: 'invalid json'")
 
     def test_start_voice_iat_success(self, mock_requests):
         """Test _start_voice_iat success."""
@@ -616,9 +579,7 @@ class TestUbtechASRProviderInternal:
         ):
             result = provider._start_voice_iat(12345)
             assert result is False
-            mock_log.assert_called_with(
-                "UbtechASRProvider: _start_voice_iat request failed: error"
-            )
+            mock_log.assert_called_with("UbtechASRProvider: _start_voice_iat request failed: error")
 
     def test_set_robot_language_success(self, mock_requests):
         """Test _set_robot_language success."""
@@ -641,6 +602,4 @@ class TestUbtechASRProviderInternal:
             patch("logging.error") as mock_log,
         ):
             provider._set_robot_language("en")
-            mock_log.assert_called_with(
-                "UbtechASRProvider: Failed to set robot language: error"
-            )
+            mock_log.assert_called_with("UbtechASRProvider: Failed to set robot language: error")

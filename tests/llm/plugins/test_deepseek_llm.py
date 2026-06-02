@@ -20,11 +20,7 @@ def config():
 def mock_response():
     """Fixture providing a valid mock API response"""
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=None))]
     return response
 
 
@@ -36,13 +32,7 @@ def mock_response_with_tool_calls():
     tool_call.function.arguments = '{"arg1": "value1"}'
 
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"test_field": "success"}', tool_calls=[tool_call]
-            )
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=[tool_call]))]
     return response
 
 
@@ -59,14 +49,10 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.deepseek_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -160,19 +146,3 @@ async def test_ask_api_error(llm):
 
         result = await llm.ask("test prompt")
         assert result is None
-
-
-@pytest.mark.asyncio
-async def test_io_provider_timing(llm, mock_response):
-    """Test timing metrics collection"""
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.chat.completions,
-            "create",
-            AsyncMock(return_value=mock_response),
-        )
-
-        await llm.ask("test prompt")
-        assert llm.io_provider.llm_start_time is not None
-        assert llm.io_provider.llm_end_time is not None
-        assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time

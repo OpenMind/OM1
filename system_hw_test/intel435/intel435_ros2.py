@@ -117,9 +117,7 @@ class Intel435ObstacleDector(Node):
                         )
 
                         if world_x is not None and world_z > self.obstacle_threshold:
-                            angle_degrees, distance = self.calculate_angle_and_distance(
-                                world_x, world_y
-                            )
+                            angle_degrees, distance = self.calculate_angle_and_distance(world_x, world_y)
                             # Change to the robot coordinate system
                             obstacle.append(
                                 {

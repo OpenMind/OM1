@@ -38,9 +38,7 @@ class TestARMUnitreeSDKConnectorInit:
     def test_init_handles_client_error(self):
         """Test that init handles G1ArmActionClient initialization errors."""
         with (
-            patch(
-                "actions.arm_g1.connector.unitree_sdk.G1ArmActionClient"
-            ) as mock_class,
+            patch("actions.arm_g1.connector.unitree_sdk.G1ArmActionClient") as mock_class,
             patch("actions.arm_g1.connector.unitree_sdk.logging") as mock_logging,
         ):
             mock_class.side_effect = Exception("Hardware not found")
@@ -63,52 +61,58 @@ class TestARMUnitreeSDKConnectorConnect:
             mock_logging.info.assert_any_call("No action to perform, returning.")
             connector.client.ExecuteAction.assert_not_called()
 
+    @pytest.mark.skip(reason="LEFT_KISS enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_left_kiss(self, connector):
         """Test left kiss executes action ID 12."""
-        arm_input = ArmInput(action=ArmAction.LEFT_KISS)
+        arm_input = ArmInput(action=ArmAction.LEFT_KISS)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(12)
 
+    @pytest.mark.skip(reason="RIGHT_KISS enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_right_kiss(self, connector):
         """Test right kiss executes action ID 13."""
-        arm_input = ArmInput(action=ArmAction.RIGHT_KISS)
+        arm_input = ArmInput(action=ArmAction.RIGHT_KISS)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(13)
 
+    @pytest.mark.skip(reason="CLAP enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_clap(self, connector):
         """Test clap executes action ID 17."""
-        arm_input = ArmInput(action=ArmAction.CLAP)
+        arm_input = ArmInput(action=ArmAction.CLAP)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(17)
 
+    @pytest.mark.skip(reason="HIGH_FIVE enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_high_five(self, connector):
         """Test high five executes action ID 18."""
-        arm_input = ArmInput(action=ArmAction.HIGH_FIVE)
+        arm_input = ArmInput(action=ArmAction.HIGH_FIVE)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(18)
 
     @pytest.mark.asyncio
     async def test_connect_shake_hand(self, connector):
         """Test shake hand executes action ID 27."""
-        arm_input = ArmInput(action=ArmAction.SHAKE_HAND)
+        arm_input = ArmInput(action=ArmAction.SHAKE_HAND)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(27)
 
+    @pytest.mark.skip(reason="HEART enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_heart(self, connector):
         """Test heart executes action ID 20."""
-        arm_input = ArmInput(action=ArmAction.HEART)
+        arm_input = ArmInput(action=ArmAction.HEART)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(20)
 
+    @pytest.mark.skip(reason="HIGH_WAVE enum value is currently commented out")
     @pytest.mark.asyncio
     async def test_connect_high_wave(self, connector):
         """Test high wave executes action ID 26."""
-        arm_input = ArmInput(action=ArmAction.HIGH_WAVE)
+        arm_input = ArmInput(action=ArmAction.HIGH_WAVE)  # type: ignore[attr-defined]
         await connector.connect(arm_input)
         connector.client.ExecuteAction.assert_called_once_with(26)
 

@@ -197,9 +197,7 @@ class TestUnitreeG1OdomProvider:
         with caplog.at_level("INFO"):
             UnitreeG1OdomProvider(channel="channel_xyz")
 
-        assert (
-            "Starting Unitree G1 Odom Provider on channel: channel_xyz" in caplog.text
-        )
+        assert "Starting Unitree G1 Odom Provider on channel: channel_xyz" in caplog.text
 
     def test_start_logging_without_channel(self, mock_multiprocessing, caplog):
         """Test that start logs error when channel is None."""
@@ -209,9 +207,7 @@ class TestUnitreeG1OdomProvider:
         assert "Channel must be specified to start the G1 Odom Provider" in caplog.text
 
     @patch("providers.unitree_g1_odom_provider.get_logging_config")
-    def test_start_passes_logging_config(
-        self, mock_get_logging_config, mock_multiprocessing
-    ):
+    def test_start_passes_logging_config(self, mock_get_logging_config, mock_multiprocessing):
         """Test that start passes logging config to the processor."""
         _, _, mock_process, _, _, _ = mock_multiprocessing
 
@@ -225,9 +221,7 @@ class TestUnitreeG1OdomProvider:
         args = call_args[1]["args"]
         assert args[2] == mock_logging_config
 
-    def test_multiple_start_calls_with_running_threads(
-        self, mock_multiprocessing, caplog
-    ):
+    def test_multiple_start_calls_with_running_threads(self, mock_multiprocessing, caplog):
         """Test multiple start calls when threads are already running."""
         _, _, _, mock_process_instance, _, mock_thread_instance = mock_multiprocessing
 

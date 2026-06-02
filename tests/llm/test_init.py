@@ -39,6 +39,120 @@ async def test_llm_ask_not_implemented(base_llm):
         await base_llm.ask("test prompt")
 
 
+@pytest.mark.asyncio
+async def test_llm_ask_stream_yields_result_when_ask_returns_value(config):
+    """Test that ask_stream yields result when ask() returns a value."""
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            return DummyOutputModel(test_field="result")
+
+    llm = TestLLM(config)
+
+    results = []
+    async for output in llm.ask_stream("test prompt"):
+        results.append(output)
+
+    assert len(results) == 1
+    assert results[0].test_field == "result"
+
+
+@pytest.mark.asyncio
+async def test_llm_ask_stream_does_not_yield_when_ask_returns_none(config):
+    """Test that ask_stream doesn't yield when ask() returns None."""
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            return None
+
+    llm = TestLLM(config)
+
+    results = []
+    async for output in llm.ask_stream("test prompt"):
+        results.append(output)
+
+    assert len(results) == 0
+
+
+@pytest.mark.asyncio
+async def test_llm_ask_stream_passes_prompt_to_ask(config):
+    """Test that ask_stream properly passes prompt to ask()."""
+
+    captured_prompts = []
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            captured_prompts.append(prompt)
+            return DummyOutputModel(test_field="result")
+
+    llm = TestLLM(config)
+
+    async for _ in llm.ask_stream("test prompt value"):
+        pass
+
+    assert len(captured_prompts) == 1
+    assert captured_prompts[0] == "test prompt value"
+
+
+@pytest.mark.asyncio
+async def test_llm_ask_stream_passes_messages_to_ask(config):
+    """Test that ask_stream properly passes messages to ask()."""
+
+    captured_messages = []
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            captured_messages.append(messages)
+            return DummyOutputModel(test_field="result")
+
+    llm = TestLLM(config)
+
+    test_messages = [{"role": "user", "content": "Hello"}]
+    async for _ in llm.ask_stream("test prompt", messages=test_messages):
+        pass
+
+    assert len(captured_messages) == 1
+    assert captured_messages[0] == test_messages
+
+
+@pytest.mark.asyncio
+async def test_llm_ask_stream_defaults_messages_to_none(config):
+    """Test that ask_stream defaults messages to None when not provided."""
+
+    captured_messages = []
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            captured_messages.append(messages)
+            return DummyOutputModel(test_field="result")
+
+    llm = TestLLM(config)
+
+    async for _ in llm.ask_stream("test prompt"):
+        pass
+
+    assert len(captured_messages) == 1
+    assert captured_messages[0] is None
+
+
+@pytest.mark.asyncio
+async def test_llm_ask_stream_is_async_generator(config):
+    """Test that ask_stream returns an async generator."""
+
+    class TestLLM(LLM[DummyOutputModel]):
+        async def ask(self, prompt: str, messages=None) -> DummyOutputModel | None:
+            return DummyOutputModel(test_field="result")
+
+    llm = TestLLM(config)
+
+    result = llm.ask_stream("test prompt")
+
+    # Check it's an async generator
+    assert hasattr(result, "__anext__")
+    assert hasattr(result, "asend")
+    assert hasattr(result, "athrow")
+
+
 def test_llm_config():
     llm_config = LLMConfig(
         **add_meta(  # type: ignore
@@ -52,9 +166,7 @@ def test_llm_config():
         )
     )
     assert llm_config.config_key == "config_value"  # type: ignore
-    with pytest.raises(
-        AttributeError, match="'LLMConfig' object has no attribute 'invalid_key'"
-    ):
+    with pytest.raises(AttributeError, match="'LLMConfig' object has no attribute 'invalid_key'"):
         llm_config.invalid_key  # type: ignore
 
 
@@ -102,9 +214,7 @@ def test_load_llm_invalid_type():
         setattr(mock_module, "InvalidLLM", InvalidLLM)
         mock_import.return_value = mock_module
 
-        with pytest.raises(
-            ValueError, match="'InvalidLLM' is not a valid LLM subclass"
-        ):
+        with pytest.raises(ValueError, match="'InvalidLLM' is not a valid LLM subclass"):
             load_llm({"type": "InvalidLLM"})
 
 

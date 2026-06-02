@@ -41,9 +41,7 @@ def mock_dependencies():
 
 def test_initialization(mock_dependencies):
     """Test UnitreeGo2LocationsProvider initialization."""
-    provider = UnitreeGo2LocationsProvider(
-        base_url="http://localhost:5000/locations", timeout=10, refresh_interval=60
-    )
+    provider = UnitreeGo2LocationsProvider(base_url="http://localhost:5000/locations", timeout=10, refresh_interval=60)
 
     assert provider.base_url == "http://localhost:5000/locations"
     assert provider.timeout == 10

@@ -28,18 +28,10 @@ class DIMOTeslaConfig(SensorConfig):
         Token ID for the specific vehicle/device.
     """
 
-    client_id: Optional[str] = Field(
-        default=None, description="Client ID for DIMO authentication"
-    )
-    domain: Optional[str] = Field(
-        default=None, description="Domain for DIMO authentication redirect"
-    )
-    private_key: Optional[str] = Field(
-        default=None, description="Private Key for DIMO authentication"
-    )
-    token_id: Optional[int] = Field(
-        default=None, description="Token ID for the specific vehicle/device"
-    )
+    client_id: Optional[str] = Field(default=None, description="Client ID for DIMO authentication")
+    domain: Optional[str] = Field(default=None, description="Domain for DIMO authentication redirect")
+    private_key: Optional[str] = Field(default=None, description="Private Key for DIMO authentication")
+    token_id: Optional[int] = Field(default=None, description="Token ID for the specific vehicle/device")
 
 
 class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
@@ -83,15 +75,8 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
         domain = self.config.domain
         private_key = self.config.private_key
 
-        if (
-            client_id is None
-            or client_id == ""
-            or domain is None
-            or private_key is None
-        ):
-            logging.info(
-                "DIMOTesla: You did not provide credentials to your Tesla - aborting"
-            )
+        if client_id is None or client_id == "" or domain is None or private_key is None:
+            logging.info("DIMOTesla: You did not provide credentials to your Tesla - aborting")
             return
 
         self.token_id = self.config.token_id
@@ -100,9 +85,7 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
             return
 
         try:
-            auth_header = self.dimo.auth.get_dev_jwt(
-                client_id=client_id, domain=domain, private_key=private_key
-            )
+            auth_header = self.dimo.auth.get_dev_jwt(client_id=client_id, domain=domain, private_key=private_key)
             self.dev_jwt = auth_header["access_token"]
 
             get_vehicle_jwt = self.dimo.token_exchange.exchange(
@@ -188,9 +171,7 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
 
         try:
             tesla_data = latest_tesla_signals["data"]["signalsLatest"]  # type: ignore
-            powertrainTransmissionTravelledDistance = tesla_data[
-                "powertrainTransmissionTravelledDistance"
-            ]["value"]
+            powertrainTransmissionTravelledDistance = tesla_data["powertrainTransmissionTravelledDistance"]["value"]
             exteriorAirTemperature = tesla_data["exteriorAirTemperature"]["value"]
             speed = tesla_data["speed"]["value"]
             powertrainRange = tesla_data["powertrainRange"]["value"]
@@ -266,7 +247,5 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         return result

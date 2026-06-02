@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-latest_runtime_version = "v1.0.3"
+latest_runtime_version = "v1.0.5"
 
 
 def get_runtime_version() -> str:
@@ -46,10 +46,7 @@ def is_version_supported(version: Optional[str]) -> bool:
             input_parts.append(0)
 
         if supported_parts[0] != input_parts[0]:
-            raise ValueError(
-                f"Major version mismatch: expected {supported_parts[0]}, "
-                f"got {input_parts[0]}"
-            )
+            raise ValueError(f"Major version mismatch: expected {supported_parts[0]}, " f"got {input_parts[0]}")
 
         if supported_parts[1] != input_parts[1]:
             logging.warning(
@@ -63,9 +60,7 @@ def is_version_supported(version: Optional[str]) -> bool:
         raise ValueError("Invalid version format")
 
 
-def verify_runtime_version(
-    config_version: Optional[str], config_name: str = "configuration"
-) -> bool:
+def verify_runtime_version(config_version: Optional[str], config_name: str = "configuration") -> bool:
     """
     Verify that the configuration version is compatible with the runtime version.
 
@@ -102,7 +97,5 @@ def verify_runtime_version(
             f"Configuration version '{config_version}' is incompatible with runtime version '{runtime_version}': {e}"
         )
     except Exception as e:
-        logging.error(
-            f"Unexpected error during version verification for {config_name}: {e}"
-        )
+        logging.error(f"Unexpected error during version verification for {config_name}: {e}")
         raise

@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -7,7 +7,7 @@ from providers.vlm_gemini_provider import VLMGeminiProvider
 
 @pytest.fixture
 def base_url():
-    return "https://api.openmind.org/api/core/gemini"
+    return "https://api.openmind.com/api/core/gemini"
 
 
 @pytest.fixture
@@ -55,9 +55,7 @@ def test_initialization(base_url, api_key, fps, mock_dependencies):
     provider = VLMGeminiProvider(base_url, api_key, fps=fps)
 
     mock_client_class.assert_called_once_with(api_key=api_key, base_url=base_url)
-    mock_video_stream_class.assert_called_once_with(
-        frame_callback=provider._process_frame, fps=fps, device_index=0
-    )
+    mock_video_stream_class.assert_called_once_with(frame_callback=provider._process_frame, fps=fps, device_index=0)
 
     assert not provider.running
     assert provider.api_client is mock_client_instance
@@ -95,11 +93,16 @@ async def test_start(base_url, api_key, fps, mock_dependencies):
     assert provider.running
     mock_video_stream_instance.start.assert_called_once()
 
+    # The provider unwraps the raw OpenAI HTTP response with `with_raw_response.create`
+    # and then parses `raw.text` as JSON. Wire the mock to return that shape so the
+    # callback path exercises end-to-end.
+    raw_response = MagicMock()
+    raw_response.text = '{"choices": [{"message": {"content": "ok"}}]}'
+    mock_client_instance.chat.completions.with_raw_response.create = AsyncMock(return_value=raw_response)
+
     # Simulate processing a frame so the async API call is triggered.
-    # (Using "fake_frame" as an example frame.)
     await provider._process_frame("fake_frame")
-    # Now assert the chat.completions.create was called.
-    mock_client_instance.chat.completions.create.assert_called_once()
+    mock_client_instance.chat.completions.with_raw_response.create.assert_called_once()
 
 
 def test_stop(base_url, api_key, fps, mock_dependencies):

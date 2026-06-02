@@ -29,15 +29,13 @@ class UnitreeGo2CameraVLMCloudConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="wss://api-vila.openmind.org",
+        default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
 
 
-class UnitreeGo2CameraVLMCloud(
-    FuserInput[UnitreeGo2CameraVLMCloudConfig, Optional[str]]
-):
+class UnitreeGo2CameraVLMCloud(FuserInput[UnitreeGo2CameraVLMCloudConfig, Optional[str]]):
     """
     Unitree Go2 Air Camera VLM bridge.
 
@@ -70,13 +68,10 @@ class UnitreeGo2CameraVLMCloud(
 
         base_url = self.config.base_url
         stream_base_url = (
-            self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream?api_key={api_key}"
+            self.config.stream_base_url or f"wss://api.openmind.com/api/core/teleops/stream?api_key={api_key}"
         )
 
-        self.vlm: UnitreeCameraVLMProvider = UnitreeCameraVLMProvider(
-            base_url=base_url, stream_url=stream_base_url
-        )
+        self.vlm: UnitreeCameraVLMProvider = UnitreeCameraVLMProvider(base_url=base_url, stream_url=stream_base_url)
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
@@ -189,9 +184,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

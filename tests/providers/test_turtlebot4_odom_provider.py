@@ -199,9 +199,7 @@ class TestTurtleBot4OdomProvider:
         assert "Starting TurtleBot4 Odom Provider with URID: None" in caplog.text
 
     @patch("providers.turtlebot4_odom_provider.get_logging_config")
-    def test_start_passes_logging_config(
-        self, mock_get_logging_config, mock_multiprocessing
-    ):
+    def test_start_passes_logging_config(self, mock_get_logging_config, mock_multiprocessing):
         """Test that start passes logging config to the processor."""
         _, _, mock_process, _, _, _ = mock_multiprocessing
 
@@ -216,9 +214,7 @@ class TestTurtleBot4OdomProvider:
         args = call_args[1]["args"]
         assert args[2] == mock_logging_config
 
-    def test_multiple_start_calls_with_running_threads(
-        self, mock_multiprocessing, caplog
-    ):
+    def test_multiple_start_calls_with_running_threads(self, mock_multiprocessing, caplog):
         """Test multiple start calls when threads are already running."""
         _, _, _, mock_process_instance, _, mock_thread_instance = mock_multiprocessing
 

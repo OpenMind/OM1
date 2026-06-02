@@ -43,10 +43,7 @@ class TestGps:
         with caplog.at_level("INFO"):
             Gps(config)
 
-        assert (
-            "Initiated GPS Provider with serial port: /dev/ttyUSB0 in background"
-            in caplog.text
-        )
+        assert "Initiated GPS Provider with serial port: /dev/ttyUSB0 in background" in caplog.text
 
     @patch("backgrounds.plugins.gps.GpsProvider")
     def test_initialization_with_none_port_early_return(self, mock_provider_class):

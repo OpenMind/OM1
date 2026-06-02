@@ -68,10 +68,7 @@ class AvatarLLMState:
             return False
 
         try:
-            return (
-                self.io_provider.llm_prompt is not None
-                and "INPUT: Voice" in self.io_provider.llm_prompt
-            )
+            return self.io_provider.llm_prompt is not None and "INPUT: Voice" in self.io_provider.llm_prompt
         except Exception:
             return False
 
@@ -129,9 +126,7 @@ class AvatarLLMState:
         return any(getattr(a, "type", "").lower() == "face" for a in actions)
 
     @classmethod
-    def trigger_thinking(
-        cls, func: Optional[Callable[..., Awaitable[T]]] = None
-    ) -> Any:
+    def trigger_thinking(cls, func: Optional[Callable[..., Awaitable[T]]] = None) -> Any:
         """
         Decorator to manage avatar state during LLM processing.
 

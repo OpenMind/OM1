@@ -15,8 +15,6 @@ icon: robot
 
 It's ideal to have at least 128 GB SSD storage for the setup to run smoothly.
 
-Checkout the video walkthrough [here](https://assets.openmind.org/education-video/Gazebo%20Setup%20Tutorial%20%28Part%201%29.mp4). More video tutorials coming soon.
-
 ## Simulation Instructions
 
 To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first. You can find the installation steps [here](../developing/middleware.md).
@@ -55,10 +53,10 @@ sudo apt-get install python3-rosdep
 
 Once you've successfully completed above steps, follow the following steps to start the gazebo simulation, generate SLAM map of the surrounding and start navigation.
 
-Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
+Step 1: Clone the [OM1-sim](https://github.com/OpenMind/OM1-sim) repository:
 
 ```bash
-git clone https://github.com/OpenMind/OM1-ros2-sdk.git
+git clone https://github.com/OpenMind/OM1-sim.git
 ```
 
 Step 2:  Initialize rosdep by setting up the source list (this is only needed once per machine)
@@ -66,7 +64,7 @@ Step 2:  Initialize rosdep by setting up the source list (this is only needed on
 > **Note:**  Run 'sudo rosdep init' only if rosdep has not been initialized on this machine before. If it has, skip this line and start from 'rosdep update'.
 
 ```bash
-cd OM1-ros2-sdk
+cd OM1-sim
 sudo rosdep init
 rosdep update
 rosdep install --from-paths . --ignore-src -r -y
@@ -97,26 +95,7 @@ source install/setup.bash
 ros2 launch go2_gazebo_sim go2_launch.py
 ```
 
-Step 5: Open a new terminal and run:
-
-```bash
-source install/setup.bash
-ros2 launch go2_sdk sensor_launch.py use_sim:=true
-```
-
-This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
-
-Step 6: Open a new terminal and run:
-
-```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
-source install/setup.bash
-ros2 launch orchestrator orchestrator_launch.py use_sim:=true
-```
-
-This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
-
-Step 7: Run Zenoh Ros2 Bridge
+Step 5: Run Zenoh Ros2 Bridge
 
 To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
@@ -126,7 +105,7 @@ After installing the Zenoh ROS 2 bridge, you can run it with the following comma
 zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
 ```
 
-Step 8: Start OM1
+Step 6: Start OM1
 
 Refer to the [Installation Guide](../developing/1_get-started.md) for detailed instructions.
 
@@ -138,7 +117,7 @@ uv pip install -r pyproject.toml --extra dds
 
 Setup your API key in `.bashrc` file and run your simulation agent:
 
-Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.com), and add it to `bashrc`
 
 ```bash
 vi ~/.bashrc
@@ -154,11 +133,11 @@ Now, run the simulation agent
 uv run src/run.py simulation
 ```
 
-Step 9: Teleoperate the robot in simulation
+Step 7: Teleoperate the robot in simulation
 
 You can also use teleoperation to control the robot through your keyboard.
 
-Switch back to `OM1-ros2-sdk` in a new terminal and run the following commands
+Open `OM1-sim` directory in a new terminal and run the following commands
 
 ```bash
 source install/setup.bash
@@ -175,4 +154,6 @@ k - Stop
 U/O/M/> - Move diagonally
 ```
 
-> **Note**: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
+> **Note**:
+> 1. Auto charging feature is not supported with Gazebo but it will be launched soon. Stay tuned!
+> 2. SLAM Map generation and Navigation are only offered as part of Premium features and would require an active subscription to Enterprise Plan on [OpenMind Portal](https://portal.openmind.com).

@@ -25,9 +25,7 @@ async def test_poll():
         config = PersonFollowingStatusConfig()
         sensor = PersonFollowingStatus(config=config)
 
-        with patch(
-            "inputs.plugins.person_following_status.asyncio.sleep", new=AsyncMock()
-        ):
+        with patch("inputs.plugins.person_following_status.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
             assert result is None
 

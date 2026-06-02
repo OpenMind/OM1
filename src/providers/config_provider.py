@@ -44,9 +44,7 @@ class ConfigProvider:
             self.session = open_zenoh_session()
 
             # Publisher for config responses
-            self.config_response_publisher = self.session.declare_publisher(
-                "om/config/response"
-            )
+            self.config_response_publisher = self.session.declare_publisher("om/config/response")
 
             # Subscriber for config requests
             self.config_request_subscriber = self.session.declare_subscriber(
@@ -67,9 +65,7 @@ class ConfigProvider:
         str
             Path to config/memory/.runtime.json5
         """
-        memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../config", "memory"
-        )
+        memory_folder_path = os.path.join(os.path.dirname(__file__), "../../config", "memory")
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
 
     def _handle_config_request(self, sample: zenoh.Sample):
@@ -167,9 +163,7 @@ class ConfigProvider:
         """
         try:
             if not os.path.exists(self.config_path):
-                logging.warning(
-                    f"ConfigProvider: Config file not found: {self.config_path}"
-                )
+                logging.warning(f"ConfigProvider: Config file not found: {self.config_path}")
                 return {}
 
             with open(self.config_path, "r") as f:

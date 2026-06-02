@@ -69,18 +69,6 @@ async def test_summarize_messages_empty(history_manager):
 
 
 @pytest.mark.asyncio
-async def test_summarize_messages_api_error(history_manager):
-    # Mock API error
-    history_manager.client.chat.completions.create.side_effect = Exception("API Error")
-
-    messages = [ChatMessage(role="user", content="Test")]
-    result = await history_manager.summarize_messages(messages)
-
-    assert result.role == "system"
-    assert "Error summarizing state" == result.content
-
-
-@pytest.mark.asyncio
 async def test_start_summary_task(history_manager):
     # Create test messages that we'll modify in-place
     messages = [
@@ -91,9 +79,7 @@ async def test_start_summary_task(history_manager):
 
     # Replace summarize_messages with a mock
     history_manager.summarize_messages = AsyncMock()
-    history_manager.summarize_messages.return_value = ChatMessage(
-        role="assistant", content="New summary"
-    )
+    history_manager.summarize_messages.return_value = ChatMessage(role="assistant", content="New summary")
 
     # Run the summary task
     await history_manager.start_summary_task(messages)
@@ -388,9 +374,7 @@ async def test_summarization_failure_truncates_to_history_length(history_manager
 
     # Mock summarization to return an error
     history_manager.summarize_messages = AsyncMock()
-    history_manager.summarize_messages.return_value = ChatMessage(
-        role="system", content="Error: API request timed out"
-    )
+    history_manager.summarize_messages.return_value = ChatMessage(role="system", content="Error: API request timed out")
 
     # Run the summary task
     await history_manager.start_summary_task(messages)
@@ -611,3 +595,371 @@ def test_get_messages_multiple_roles(history_manager):
     assert result[0] == {"role": "system", "content": "You are a robot"}
     assert result[1] == {"role": "user", "content": "Hello"}
     assert result[2] == {"role": "assistant", "content": "Hi there"}
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_non_standard_length():
+    """Test summarization with non-standard message length (not 4)."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = "Summary of non-standard messages"
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [
+        ChatMessage(role="user", content="First message"),
+        ChatMessage(role="assistant", content="Second message"),
+        ChatMessage(role="user", content="Third message"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+    assert result.role == "assistant"
+    assert "Previously, Summary of non-standard messages" == result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_with_sync_client():
+    """Test summarization using synchronous OpenAI client."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "SyncBot"
+
+    client = MagicMock(spec=openai.OpenAI)
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = "Sync summary"
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = MagicMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+    assert result.role == "assistant"
+    assert "Previously, Sync summary" == result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_invalid_response_no_choices():
+    """Test handling of API response with no choices."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+    response = MagicMock()
+    response.choices = []  # Empty choices
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "Error: Received invalid response from API" == result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_empty_content():
+    """Test handling of API response with None content."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = None  # None content
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "Error: Received empty summary from API" == result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_timeout():
+    """Test handling of API timeout."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+
+    async def timeout_coroutine(*args, **kwargs):
+        await asyncio.sleep(20)  # Sleep longer than timeout
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(side_effect=timeout_coroutine)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "Error: API request timed out" == result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_api_error():
+    """Test handling of OpenAI APIError."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+
+    error = openai.APIError(message="Service unavailable", request=MagicMock(), body=None)
+    completions_mock.create = AsyncMock(side_effect=error)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "Error: API service unavailable" in result.content
+
+
+@pytest.mark.asyncio
+async def test_start_summary_task_previous_task_running():
+    """Test that a new summary task is not started if previous task is still running."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+
+    async def long_summarize(*args, **kwargs):
+        await asyncio.sleep(1)
+        return ChatMessage(role="assistant", content="Summary")
+
+    history_manager.summarize_messages = AsyncMock(side_effect=long_summarize)
+
+    await history_manager.start_summary_task(messages)
+    first_task = history_manager._summary_task
+
+    await history_manager.start_summary_task(messages)
+    second_task = history_manager._summary_task
+
+    assert first_task is second_task
+    await asyncio.sleep(1.5)
+
+
+@pytest.mark.asyncio
+async def test_start_summary_task_unexpected_summary_result():
+    """Test handling of unexpected summary result (not assistant or system error)."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+    ]
+
+    history_manager.summarize_messages = AsyncMock()
+    history_manager.summarize_messages.return_value = ChatMessage(role="user", content="Unexpected user role")
+
+    await history_manager.start_summary_task(messages)
+    await asyncio.sleep(0.1)
+
+    assert len(messages) == 2
+    assert messages[0].content == "Message 1"
+
+
+@pytest.mark.asyncio
+async def test_start_summary_task_cancelled():
+    """Test handling of cancelled summary task."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [ChatMessage(role="user", content="Test")]
+
+    async def cancellable_summarize(*args, **kwargs):
+        await asyncio.sleep(10)
+
+    history_manager.summarize_messages = AsyncMock(side_effect=cancellable_summarize)
+
+    await history_manager.start_summary_task(messages)
+    task = history_manager._summary_task
+    assert task is not None
+
+    task.cancel()
+    await asyncio.sleep(0.1)
+    assert task.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_start_summary_task_exception_in_start():
+    """Test exception handling when starting summary task."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+    ]
+
+    # Mock summarize_messages to raise an exception during task creation
+    history_manager.summarize_messages = MagicMock(side_effect=Exception("Task creation failed"))
+
+    # This should handle the exception gracefully
+    await history_manager.start_summary_task(messages)
+
+    # Messages should have first two removed as fallback
+    assert len(messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_update_history_skip_state_management():
+    """Test that update_history decorator skips when _skip_state_management is True."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = True  # Skip state management
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list):
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello")]
+            return response
+
+    provider = MockLLMProvider()
+    provider.io_provider.add_input("audio", "Test input", 1234.0)
+
+    await provider.process("test prompt")
+    assert len(history_manager.history) == 0
+
+
+@pytest.mark.asyncio
+async def test_update_history_zero_history_length():
+    """Test that update_history handles history_length=0."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 0  # Zero history length
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list):
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello")]
+            return response
+
+    provider = MockLLMProvider()
+    provider.io_provider.add_input("audio", "Test input", 1234.0)
+
+    await provider.process("test prompt")
+
+    assert len(history_manager.history) == 0
+    assert history_manager.frame_index == 1
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_with_4_messages():
+    """Test the standard 4-message summarization path."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.agent_name = "TestBot"
+
+    client = MagicMock(spec=openai.AsyncClient)
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = "Standard 4-message summary"
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
+    history_manager = LLMHistoryManager(config, client)
+
+    messages = [
+        ChatMessage(role="assistant", content="Previous summary"),
+        ChatMessage(role="assistant", content="Actions taken"),
+        ChatMessage(role="user", content="New input"),
+        ChatMessage(role="user", content="More new input"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+    assert result.role == "assistant"
+    assert "Previously, Standard 4-message summary" == result.content

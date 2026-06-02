@@ -55,8 +55,7 @@ class MockUnitreeGo2Odom(UnitreeGo2Odom):
         data = get_next_odometry()
         if data is not None:
             logging.info(
-                f"MockUnitreeGo2Odom: Position x={data.get('x')}, y={data.get('y')}, "
-                f"moving={data.get('moving')}"
+                f"MockUnitreeGo2Odom: Position x={data.get('x')}, y={data.get('y')}, " f"moving={data.get('moving')}"
             )
             # Convert body_attitude string to RobotState enum if present
             if "body_attitude" in data and isinstance(data["body_attitude"], str):
@@ -107,14 +106,9 @@ class MockUnitreeGo2Odom(UnitreeGo2Odom):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

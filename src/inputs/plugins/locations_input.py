@@ -29,6 +29,10 @@ class LocationsSensorConfig(SensorConfig):
         default="http://localhost:5000/maps/locations/list",
         description="Base URL for the locations service",
     )
+    api_key: str = Field(
+        default="",
+        description="API key for OpenMind cloud system",
+    )
     timeout: int = Field(default=5, description="Timeout in seconds")
     refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
@@ -52,12 +56,11 @@ class LocationsInput(FuserInput[LocationsSensorConfig, Optional[str]]):
         super().__init__(config)
 
         base_url = self.config.base_url
+        api_key = self.config.api_key
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.locations_provider = UnitreeGo2LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.locations_provider = UnitreeGo2LocationsProvider(base_url, api_key, timeout, refresh_interval)
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []

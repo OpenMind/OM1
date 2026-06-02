@@ -67,26 +67,19 @@ def test_initialization_creates_providers_and_buffers(
     mock_zenoh,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
     config = GoogleASRRTSPSensorConfig()
     api_key = config.api_key
     rtsp_url = config.rtsp_url
     rate = config.rate
+    chunk = config.chunk
     enable_tts_interrupt = config.enable_tts_interrupt
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             new=mock_sleep_ticker_constructor,
@@ -105,8 +98,10 @@ def test_initialization_creates_providers_and_buffers(
     mock_asr_constructor.assert_called_once_with(
         rtsp_url=rtsp_url,
         rate=rate,
-        ws_url=f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+        chunk=chunk,
+        ws_url=f"wss://api.openmind.com/api/core/google/asr/v2?api_key={api_key}",
         language_code="en-US",
+        alternative_language_codes=[],
         enable_tts_interrupt=enable_tts_interrupt,
     )
     mock_asr_instance.start.assert_called_once()
@@ -141,9 +136,7 @@ async def test_poll_returns_message_from_buffer(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -185,9 +178,7 @@ async def test_poll_returns_none_if_buffer_empty(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -226,9 +217,7 @@ async def test_poll_has_delay(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -266,9 +255,7 @@ def test_handle_asr_message_processes_valid_json_with_asr_reply_longer_than_one_
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -311,9 +298,7 @@ def test_handle_asr_message_ignores_json_without_asr_reply(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -355,9 +340,7 @@ def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -386,6 +369,172 @@ def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
     assert final_size == initial_size
 
 
+def test_handle_asr_message_cjk_chinese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Chinese text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你好吗"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "你好吗"
+
+
+def test_handle_asr_message_cjk_chinese_too_short_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Chinese text with 2 or fewer characters is rejected."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你好"}')
+
+    assert instance.message_buffer.qsize() == 0
+
+
+def test_handle_asr_message_cjk_japanese_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Japanese hiragana text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "こんにちは"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "こんにちは"
+
+
+def test_handle_asr_message_cjk_korean_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that Korean hangul text longer than 2 characters is accepted."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "안녕하세요"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "안녕하세요"
+
+
+def test_handle_asr_message_cjk_single_char_rejected(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that a single CJK character is rejected."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "你"}')
+
+    assert instance.message_buffer.qsize() == 0
+
+
+def test_handle_asr_message_cjk_mixed_with_latin_accepted(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that mixed CJK and Latin text longer than 2 chars is accepted via CJK path."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", return_value=mock_asr_instance),
+        patch("inputs.plugins.google_asr_rtsp.SleepTickerProvider", return_value=mock_sleep_ticker_instance),
+        patch("inputs.plugins.google_asr_rtsp.TeleopsConversationProvider", return_value=mock_teleops_conv_instance),
+        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session", mock_zenoh["open_session"]),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+    instance._handle_asr_message('{"asr_reply": "hello你好"}')
+
+    assert instance.message_buffer.qsize() == 1
+    assert instance.message_buffer.get_nowait() == "hello你好"
+
+
 def test_handle_asr_message_ignores_invalid_json(
     mock_io_provider,
     mock_asr_provider,
@@ -399,9 +548,7 @@ def test_handle_asr_message_ignores_invalid_json(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -444,9 +591,7 @@ async def test_raw_to_text_converts_string_to_message(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -491,9 +636,7 @@ async def test_raw_to_text_returns_none_if_input_none(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -531,9 +674,7 @@ async def test_raw_to_text_adds_message_to_buffer(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -577,9 +718,7 @@ async def test_raw_to_text_appends_to_existing_message(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -622,9 +761,7 @@ async def test_raw_to_text_sets_skip_sleep_if_none_input_and_messages_exist(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -666,9 +803,7 @@ async def test_raw_to_text_does_not_set_skip_sleep_if_none_input_and_messages_em
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -709,9 +844,7 @@ def test_formatted_latest_buffer_empty(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -749,9 +882,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     config = GoogleASRRTSPSensorConfig()
     fixed_timestamp = 1234.0
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -781,9 +912,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     assert "Voice" in result
     assert msg_content in result
     assert len(instance.messages) == 0
-    mock_io_provider.add_input.assert_called_once_with(
-        "Voice", msg_content, fixed_timestamp
-    )
+    mock_io_provider.add_input.assert_called_once_with("Voice", msg_content, fixed_timestamp)
     mock_io_provider.add_mode_transition_input.assert_called_once_with(msg_content)
     mock_teleops_conv_instance.store_user_message.assert_called_once_with(msg_content)
     if instance.asr_publisher:
@@ -804,9 +933,7 @@ def test_stop_clears_buffers_and_stops_asr(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -852,9 +979,7 @@ def test_stop_handles_exceptions_gracefully(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -874,9 +999,7 @@ def test_stop_handles_exceptions_gracefully(
     ):
         instance = GoogleASRRTSPInput(config=config)
 
-    mock_asr_instance.unregister_message_callback.side_effect = Exception(
-        "Unregister failed"
-    )
+    mock_asr_instance.unregister_message_callback.side_effect = Exception("Unregister failed")
     mock_asr_instance.stop.side_effect = Exception("Stop failed")
     mock_zenoh["publisher"].undeclare.side_effect = Exception("Undeclare failed")
 
@@ -899,9 +1022,7 @@ async def test_poll_returns_none_when_stopped(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -943,12 +1064,8 @@ def test_initialization_with_unsupported_language(
     config = GoogleASRRTSPSensorConfig(language="unsupported_language")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -983,12 +1100,8 @@ def test_initialization_with_supported_language_chinese(
     config = GoogleASRRTSPSensorConfig(language="chinese")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1024,12 +1137,8 @@ def test_initialization_with_custom_base_url(
     config = GoogleASRRTSPSensorConfig(base_url=custom_base_url)
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1063,12 +1172,8 @@ def test_initialization_with_zenoh_failure(
     config = GoogleASRRTSPSensorConfig()
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1101,9 +1206,7 @@ def test_formatted_latest_buffer_handles_zenoh_publish_exception(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -1147,9 +1250,7 @@ def test_formatted_latest_buffer_without_zenoh_publisher(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -1195,12 +1296,8 @@ def test_initialization_with_enable_tts_interrupt_true(
     config = GoogleASRRTSPSensorConfig(enable_tts_interrupt=True)
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1219,3 +1316,603 @@ def test_initialization_with_enable_tts_interrupt_true(
     mock_asr_constructor.assert_called_once()
     call_kwargs = mock_asr_constructor.call_args[1]
     assert call_kwargs["enable_tts_interrupt"] is True
+
+
+def test_initialization_with_api_version_v1(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v1", api_key="test_key")
+
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
+
+
+def test_initialization_with_api_version_v2(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v2", api_key="test_key")
+
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+
+
+def test_initialization_with_invalid_api_version_defaults_to_v2(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v3", api_key="test_key")
+
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+
+
+def test_initialization_with_alternative_languages_v1(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(
+        api_version="v1",
+        language="english",
+        alternative_languages=["chinese", "spanish"],
+    )
+
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+
+    assert call_kwargs["language_code"] == "en-US"
+    assert "cmn-Hans-CN" in call_kwargs["alternative_language_codes"]
+    assert "es-ES" in call_kwargs["alternative_language_codes"]
+
+
+def test_initialization_with_alternative_languages_v2_ignored(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(
+        api_version="v2",
+        language="english",
+        alternative_languages=["chinese", "spanish"],
+    )
+
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+
+    assert call_kwargs["language_code"] == "en-US"
+    assert call_kwargs["alternative_language_codes"] == []
+
+
+def test_handle_asr_message_speech_start_sets_timer(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """speech_start event sets _speech_start_time."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.time.time", return_value=100.0),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        assert instance._speech_start_time is None
+
+        instance._handle_asr_message('{"type": "speech_start"}')
+
+        assert instance._speech_start_time == 100.0
+
+
+def test_handle_asr_message_speech_end_records_duration_metrics(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """speech_end event records speech duration histogram and gauge."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration_last") as mock_gauge,
+        patch("inputs.plugins.google_asr_rtsp.time.time", return_value=105.0),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = 100.0
+
+        instance._handle_asr_message('{"type": "speech_end"}')
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(5.0)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(5.0)
+
+
+def test_handle_asr_message_speech_end_no_op_without_start_time(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """speech_end event is ignored when _speech_start_time is None."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration_last") as mock_gauge,
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+        instance._handle_asr_message('{"type": "speech_end"}')
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_end_of_utterance_records_latency_metrics(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """end_of_utterance event records utterance latency histogram and gauge."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency_last") as mock_gauge,
+        patch("inputs.plugins.google_asr_rtsp.time.time", return_value=103.5),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = 100.0
+
+        instance._handle_asr_message('{"type": "end_of_utterance"}')
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(3.5)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(3.5)
+
+
+def test_handle_asr_message_end_of_utterance_no_op_without_start_time(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """end_of_utterance event is ignored when _speech_start_time is None."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency_last") as mock_gauge,
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+        instance._handle_asr_message('{"type": "end_of_utterance"}')
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_asr_reply_records_latency_and_resets_timer(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """asr_reply with speech_start set records ASR latency and resets _speech_start_time."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_gauge,
+        patch("inputs.plugins.google_asr_rtsp.time.time", return_value=102.0),
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = 100.0
+
+        instance._handle_asr_message('{"asr_reply": "hello world"}')
+
+        mock_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(2.0)
+        mock_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(2.0)
+        assert instance._speech_start_time is None
+
+
+def test_handle_asr_message_asr_reply_no_latency_without_start_time(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """asr_reply without prior speech_start does not record latency metrics."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_gauge,
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+
+        instance._handle_asr_message('{"asr_reply": "hello world"}')
+
+        mock_hist.labels().observe.assert_not_called()
+        mock_gauge.labels().set.assert_not_called()
+
+
+def test_handle_asr_message_full_sequence_records_all_metrics(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Full speech_start -> speech_end -> asr_reply sequence records all three metric pairs."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration") as mock_dur_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_speech_duration_last") as mock_dur_gauge,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_lat_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_lat_gauge,
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = None
+
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=100.0):
+            instance._handle_asr_message('{"type": "speech_start"}')
+        assert instance._speech_start_time == 100.0
+
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=104.0):
+            instance._handle_asr_message('{"type": "speech_end"}')
+        mock_dur_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(4.0)
+        mock_dur_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(4.0)
+
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=106.0):
+            instance._handle_asr_message('{"asr_reply": "hello world"}')
+        mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(6.0)
+        mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(6.0)
+        assert instance._speech_start_time is None
+
+
+def test_handle_asr_message_end_of_utterance_and_asr_reply_sequence(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """speech_start -> end_of_utterance -> asr_reply sequence records utterance and ASR latency."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(language="english", api_version="v2")
+    with (
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency") as mock_utt_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_utterance_end_latency_last") as mock_utt_gauge,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency") as mock_lat_hist,
+        patch("inputs.plugins.google_asr_rtsp.om1_asr_latency_last") as mock_lat_gauge,
+    ):
+        instance = GoogleASRRTSPInput(config=config)
+        instance._speech_start_time = None
+
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=100.0):
+            instance._handle_asr_message('{"type": "speech_start"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=101.5):
+            instance._handle_asr_message('{"type": "end_of_utterance"}')
+        with patch("inputs.plugins.google_asr_rtsp.time.time", return_value=103.0):
+            instance._handle_asr_message('{"asr_reply": "hello world"}')
+
+        mock_utt_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(1.5)
+        mock_utt_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(1.5)
+        mock_lat_hist.labels(language="english", api_version="v2").observe.assert_called_once_with(3.0)
+        mock_lat_gauge.labels(language="english", api_version="v2").set.assert_called_once_with(3.0)

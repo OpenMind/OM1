@@ -10,11 +10,11 @@ The cloud docker management service allows remote management of Docker container
 
 ### Step 1: Sign up
 
-Sign up for an account on [OpenMind Portal](https://portal.openmind.org/).
+Sign up for an account on [OpenMind Portal](https://portal.openmind.com/).
 
 ### Step 2: Get OpenMind API key
 
-Get your API key from the [Dashboard](https://portal.openmind.org/) page.
+Get your API key from the [Dashboard](https://portal.openmind.com/) page.
 
 ### Step 3: Set the API key
 
@@ -32,7 +32,7 @@ export OM_API_KEY="your_api_key_here"
 
 ### Step 4: Get the API Key ID
 
-Get API_KEY_ID from the [Dashboard](https://portal.openmind.org/) page. The API Key ID is a 16-digit character string, such as `om1_live_<16 characters>`. Now, export the API Key ID as an environment variable:
+Get API_KEY_ID from the [Dashboard](https://portal.openmind.com/) page. The API Key ID is a 16-digit character string, such as `om1_live_<16 characters>`. Now, export the API Key ID as an environment variable:
 
 ```bash
 vim ~/.bashrc
@@ -111,7 +111,7 @@ docker ps | grep ota_agent
 
 Expected output: Both `ota_updater` and `ota_agent` containers listed.
 
-You can now manage and update your Docker containers remotely via the [OpenMind Portal](https://portal.openmind.org/).
+You can now manage and update your Docker containers remotely via the [OpenMind Portal](https://portal.openmind.com/).
 
 ### Model Downloads
 
@@ -213,7 +213,7 @@ poetry install
 python3 -m om1_speech.main --remote-url=ws://localhost:6790
 
 # Test TTS
-poetry run om1_tts --tts-url=https://api-dev.openmind.org/api/core/tts --device=<optional> --rate=<optional>
+poetry run om1_tts --tts-url=https://api-dev.openmind.com/api/core/tts --device=<optional> --rate=<optional>
 ```
 
 ## Port Reference

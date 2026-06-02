@@ -2,9 +2,7 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-import zenoh
-
-from zenoh_msgs import open_zenoh_session
+from zenoh_msgs import ZenohSessionType, open_zenoh_session
 
 from .singleton import singleton
 
@@ -23,7 +21,7 @@ class ContextProvider:
         Initialize the ContextProvider.
         """
         self.context_update_topic = "om/mode/context"
-        self.session: Optional[zenoh.Session] = None
+        self.session: Optional[ZenohSessionType] = None
         self.publisher = None
         self._initialize_zenoh()
 

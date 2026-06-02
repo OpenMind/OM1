@@ -35,7 +35,7 @@ angles_blanked = [[-180.0, -160.0], [32.0, 46.6]]
 
 - `sensor_mounting_angle`: The `sensor_mounting_angle` refers to the angle between the LIDAR sensor's scanning plane and the horizontal plane of your robot or platform. The `sensor_mounting_angle` can be read physically from the LIDAR. Refer to the following image for guidance:
 
-![sensor_mounting_angle](../assets/lidar_angle.png)
+![sensor_mounting_angle](../.gitbook/assets/lidar_angle.png)
 
 - `angles_blanked`: The `angles_blanked` array can be used to prevent fixed obstructions in the field of view of the LIDAR from producing erroneous object avoidance messages.
 

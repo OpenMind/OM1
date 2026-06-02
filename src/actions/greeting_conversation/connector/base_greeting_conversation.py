@@ -85,9 +85,7 @@ def normalize_tts_text(text: str) -> str:
 ConfigT = TypeVar("ConfigT", bound=ActionConfig)
 
 
-class BaseGreetingConversationConnector(
-    ActionConnector[ConfigT, GreetingConversationInput], Generic[ConfigT]
-):
+class BaseGreetingConversationConnector(ActionConnector[ConfigT, GreetingConversationInput], Generic[ConfigT]):
     """
     Base connector that manages greeting conversations for the robot.
 
@@ -131,9 +129,7 @@ class BaseGreetingConversationConnector(
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self._on_audio_status)
-            logging.info(
-                "Zenoh session opened for AudioStatus and PersonGreetingStatus"
-            )
+            logging.info("Zenoh session opened for AudioStatus and PersonGreetingStatus")
         except Exception as e:
             logging.error(f"Error opening Zenoh session: {e}")
             self.audio_pub = None
@@ -162,12 +158,8 @@ class BaseGreetingConversationConnector(
             logging.info(f"TTS playback completed for UUID: {self.tts_request_id}")
 
             if self.pending_finished_update:
-                logging.info(
-                    "TTS completed. Updating context: greeting_conversation_finished = True"
-                )
-                self.context_provider.update_context(
-                    {"greeting_conversation_finished": True}
-                )
+                logging.info("TTS completed. Updating context: greeting_conversation_finished = True")
+                self.context_provider.update_context({"greeting_conversation_finished": True})
                 self.pending_finished_update = False
 
     @abstractmethod
@@ -233,22 +225,16 @@ class BaseGreetingConversationConnector(
 
         logging.info(f"Greeting Conversation Response: {state_update}")
 
-        if (
-            self.greeting_status == ConversationState.FINISHED.value
-            and not self.conversation_finished_sent
-        ):
+        if self.greeting_status == ConversationState.FINISHED.value and not self.conversation_finished_sent:
             self.conversation_finished_sent = True
             if self.tts_playing:
                 logging.info(
-                    "Greeting conversation has finished. "
-                    "Waiting for TTS to complete before updating context."
+                    "Greeting conversation has finished. " "Waiting for TTS to complete before updating context."
                 )
                 self.pending_finished_update = True
             else:
                 logging.info("Greeting conversation has finished.")
-                self.context_provider.update_context(
-                    {"greeting_conversation_finished": True}
-                )
+                self.context_provider.update_context({"greeting_conversation_finished": True})
 
     def tick(self) -> None:
         """
@@ -263,9 +249,7 @@ class BaseGreetingConversationConnector(
         if self.tts_playing:
             tts_playing_time = time.time() - self.tts_playing_start_time
             if tts_playing_time > self.tts_timeout:
-                logging.warning(
-                    f"TTS playback timed out after {tts_playing_time:.1f}s. "
-                )
+                logging.warning(f"TTS playback timed out after {tts_playing_time:.1f}s. ")
                 self.tts_playing = False
             else:
                 logging.info("Skipping tick update due to active TTS playback.")
@@ -276,15 +260,10 @@ class BaseGreetingConversationConnector(
         self.greeting_status = current_state
         self.publish_countdown_status(self.greeting_status)
 
-        if (
-            current_state == ConversationState.FINISHED.value
-            and not self.conversation_finished_sent
-        ):
+        if current_state == ConversationState.FINISHED.value and not self.conversation_finished_sent:
             logging.info("Greeting conversation has finished (detected in tick).")
             self.conversation_finished_sent = True
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
-            )
+            self.context_provider.update_context({"greeting_conversation_finished": True})
 
         logging.info(
             f"State: {current_state}, "
@@ -310,9 +289,7 @@ class BaseGreetingConversationConnector(
 
         if self.session:
             request_id = str(uuid4())
-            message_text = json.dumps(
-                {"seconds_until_finished": seconds_until_finished}
-            )
+            message_text = json.dumps({"seconds_until_finished": seconds_until_finished})
 
             try:
                 self.session.put(

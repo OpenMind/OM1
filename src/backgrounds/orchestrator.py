@@ -32,9 +32,7 @@ class BackgroundOrchestrator:
             Configuration object for the runtime.
         """
         self._config = config
-        self._background_workers = (
-            min(12, len(config.backgrounds)) if config.backgrounds else 1
-        )
+        self._background_workers = min(12, len(config.backgrounds)) if config.backgrounds else 1
         self._background_executor = ThreadPoolExecutor(
             max_workers=self._background_workers,
         )
@@ -56,9 +54,7 @@ class BackgroundOrchestrator:
         """
         for background in self._config.backgrounds:
             if any(bg.name == background.name for bg in self._background_instances):
-                logging.warning(
-                    f"Background {background.name} already submitted, skipping."
-                )
+                logging.warning(f"Background {background.name} already submitted, skipping.")
                 continue
 
             background.set_stop_event(self._stop_event)
