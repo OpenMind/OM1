@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/coder/hnsw"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/metrics"
 )
 
 // defaultTopK is the default number of results to return for a query if not specified in the KB spec.
@@ -78,12 +80,20 @@ func NewKnowledgeBase(spec *config.KBSpec) (*KnowledgeBase, error) {
 }
 
 // Query embeds the question, searches the graph for the nearest documents.
-func (kb *KnowledgeBase) Query(ctx context.Context, question string, topK int) ([]string, error) {
+func (kb *KnowledgeBase) Query(ctx context.Context, question string, topK int) (results []string, err error) {
+	start := time.Now()
+	embedSeconds := -1.0
+	defer func() {
+		metrics.RecordKBQuery(embedSeconds, time.Since(start).Seconds(), err == nil)
+	}()
+
 	if topK <= 0 {
 		topK = kb.topK
 	}
 
+	embedStart := time.Now()
 	queryVec, err := kb.embedder.Embed(ctx, question)
+	embedSeconds = time.Since(embedStart).Seconds()
 	if err != nil {
 		return nil, fmt.Errorf("embed query: %w", err)
 	}
@@ -98,7 +108,7 @@ func (kb *KnowledgeBase) Query(ctx context.Context, question string, topK int) (
 
 	nodes := kb.graph.Search(queryVec, searchK)
 
-	results := make([]string, 0, topK)
+	results = make([]string, 0, topK)
 	seen := make(map[string]struct{}, topK)
 	for _, node := range nodes {
 		doc, ok := kb.docs[node.Key]

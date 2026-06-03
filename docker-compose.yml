@@ -10,10 +10,6 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      - ROS_DOMAIN_ID=0
-      - CYCLONEDDS_HOME=/app/cyclonedds/install
-      - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
-      - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
       - OM1_COMMAND=${OM1_COMMAND:-unitree_g1_conversation}
       - OM1_SKIP_INTERNET_CHECK=${OM1_SKIP_INTERNET_CHECK:-false}
@@ -23,7 +19,6 @@ services:
       - ALSA_CARD=0
     volumes:
       - ./config:/app/OM1/config
-      - ./cyclonedds:/cyclonedds
       - ${HOME}/shared_data/locations:/app/OM1/locations:rw
       - ./traces:/app/OM1/traces:rw
       - /dev/snd:/dev/snd:rw

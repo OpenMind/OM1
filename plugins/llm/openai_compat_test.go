@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// captureServer starts an httptest server that records the last request body,
-// path and Authorization header, and replies with the given JSON body.
 func captureServer(t *testing.T, status int, responseJSON string) (*httptest.Server, *capturedRequest) {
 	t.Helper()
 	cap := &capturedRequest{}
@@ -100,7 +98,6 @@ func TestOpenAICompatCallParsesResponse(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	// Request shape.
 	require.Equal(t, "/chat/completions", cap.path)
 	require.Equal(t, "Bearer test-key", cap.auth)
 	require.Equal(t, "test-model", cap.body["model"])
@@ -114,7 +111,6 @@ func TestOpenAICompatCallParsesResponse(t *testing.T) {
 	require.Equal(t, "user", last["role"])
 	require.Equal(t, "hello", last["content"])
 
-	// Parsed response.
 	require.Equal(t, "hi there", resp.TextContent)
 	require.Len(t, resp.ToolCalls, 1)
 	require.Equal(t, "speak", resp.ToolCalls[0].Name)
