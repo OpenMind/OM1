@@ -1,0 +1,56 @@
+{
+  // PIR Guard / Security Mode
+  // Run with: python -m run --config pir_guard
+  //
+  // connector options:
+  //   "mock"   → no hardware needed (default, safe for any machine)
+  //   "serial" → Arduino via USB, set port to your device path
+  //   "gpio"   → Raspberry Pi / Jetson direct GPIO
+  //   "zenoh"  → network-distributed PIR publisher
+  version: "v1.0.3",
+  hertz: 0.5,
+  name: "pir_guard",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are a security guard robot. Your role is to monitor the environment for unexpected motion. When motion is detected by the PIR sensor, alert clearly and calmly. When there is no motion, remain on standby and stay quiet.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection does not conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. PIR sensor detects motion:\n    Speak: 'Motion detected. Identifying presence.'\n\n2. No motion for a long time:\n    Speak: 'All clear. Continuing to monitor.'",
+  agent_inputs: [
+    {
+      type: "PIRMotionInput",
+      config: {
+        // Change to "serial", "gpio", or "zenoh" for real hardware
+        connector: "mock",
+
+        // serial connector settings (connector="serial")
+        // port: "/dev/ttyUSB0",          // Linux
+        // port: "COM3",                  // Windows
+        // port: "/dev/cu.usbmodem1101",  // macOS
+        // baudrate: 9600,
+
+        // gpio connector settings (connector="gpio")
+        // gpio_pin: 17,                  // BCM GPIO17 = physical pin 11 on RPi
+
+        // zenoh connector settings (connector="zenoh")
+        // zenoh_topic: "om/sensors/pir",
+
+        // minimum seconds between motion alerts sent to LLM
+        // increase if robot speaks too frequently when sensor stays HIGH
+        cooldown: 5.0,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Guard",
+      history_length: 5,
+    },
+  },
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+    },
+  ],
+}
