@@ -81,9 +81,7 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 	// 3b. Long-term memory context.
 	if f.memory != nil {
 		userID := memory.ResolveCurrentUser()
-		if userID != "" {
-			providers.IO().SetDynamicVar("current_user_id", userID)
-		}
+		providers.IO().SetDynamicVar("current_user_id", userID)
 
 		if question := f.voiceQuery(); question != "" {
 			memCtx := f.memory.SearchAndFormat(ctx, question, userID)

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DefaultMinScore          = 0.3
+	DefaultMinScore          = 0.5
 	DefaultValidDurationDays = 14
 )
 
