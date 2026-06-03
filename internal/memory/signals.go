@@ -22,7 +22,7 @@ const (
 	wRecency       = 0.15
 	wConsolidation = 0.15
 
-	promotionThreshold = 0.75
+	promotionThreshold = 0.30
 )
 
 // RecallSignal tracks accumulated retrieval signals for a single chunk.

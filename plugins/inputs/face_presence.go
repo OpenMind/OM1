@@ -85,8 +85,18 @@ func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 	}, nil
 }
 
-// Listen polls the face-presence service at the configured cadence and yields
-// each formatted presence line on the returned channel until ctx is cancelled.
+// Listen polls the face-presence service at the configured cadence and
+// updates the sensor's internal buffer (so FormattedLatestBuffer renders
+// the face line into the cortex prompt) plus the shared IO provider —
+// but does NOT push to the output channel. That makes FacePresence a
+// *passive* input: it keeps prompt context fresh so the LLM sees the
+// latest face state on its next tick, but it doesn't itself trigger a
+// cortex tick. Only triggering inputs (e.g. ASR) wake the LLM. Without
+// this, the LLM would be invoked on every poll (5 Hz) and the robot
+// would monologue.
+//
+// The returned channel is closed when ctx is cancelled. It never
+// produces values — by design.
 func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
@@ -103,7 +113,7 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 			case <-ticker.C:
 			}
 
-			raw, err := s.Poll(ctx)
+			snap, err := s.provider.FetchSnapshot(ctx)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -113,11 +123,27 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 				continue
 			}
 
-			select {
-			case out <- raw:
-			case <-ctx.Done():
-				return
+			text := snap.ToText()
+			if text == "" {
+				continue
 			}
+
+			// Populate the same in-memory buffer that RawToText used to
+			// fill. The runtime calls FormattedLatestBuffer() each tick
+			// to render "Current observations" — without entries in
+			// s.messages, the prompt's FacePresence line would be empty.
+			msg := inputs.NewMessage(text)
+			s.mu.Lock()
+			s.messages = append(s.messages, *msg)
+			if len(s.messages) > facePresenceMaxMessages {
+				s.messages = s.messages[len(s.messages)-facePresenceMaxMessages:]
+			}
+			s.mu.Unlock()
+
+			// Also refresh the shared IO entry directly. Belt and braces:
+			// some prompt-builder paths read from IO instead of (or in
+			// addition to) FormattedLatestBuffer.
+			providers.IO().AddInput(facePresenceIOKey, text, time.Now())
 		}
 	}()
 	return out, nil
@@ -132,8 +158,10 @@ func (s *FacePresenceSensor) Poll(ctx context.Context) (any, error) {
 	return snap.ToText(), nil
 }
 
-// RawToText converts a raw presence line into a timestamped Message and appends
-// it to the bounded in-memory history.
+// RawToText is part of the inputs.Sensor interface. In passive mode the
+// channel from Listen never produces values, so this should not be called
+// by the runtime. We keep it as a defensive no-op that still appends to
+// the in-memory history if the runtime ever does drive it (e.g. tests).
 func (s *FacePresenceSensor) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
@@ -153,7 +181,10 @@ func (s *FacePresenceSensor) RawToText(_ context.Context, raw any) (*inputs.Mess
 }
 
 // FormattedLatestBuffer returns the newest presence line as a compact,
-// prompt-ready block and clears the history. It returns "" when empty.
+// prompt-ready block and clears the history. In passive mode this is
+// rarely (if ever) populated, because Listen no longer pushes to the
+// channel that drives RawToText. The LLM sees FacePresence via the
+// shared IO entry that Listen updates directly.
 func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
