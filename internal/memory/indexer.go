@@ -183,7 +183,6 @@ func (idx *MemoryIndex) HybridSearch(ctx context.Context, query string, topK int
 		final := fusionAlpha*normalize(e.embeddingScore, eMin, eMax) +
 			fusionBeta*normalize(e.bm25Score, bMin, bMax)
 
-		// User partition boost (§5.2.3): soft filter, not hard partition.
 		if userID != "" && e.doc.Metadata["user_id"] == userID {
 			final += userBoost
 		}
@@ -291,8 +290,6 @@ func (idx *MemoryIndex) AddChunk(ctx context.Context, chunk MemoryEntry) (bool, 
 	idx.log.Debug("memory index: hot updated", zap.Int("total", idx.Size()))
 	return true, nil
 }
-
-// --- persistence ---
 
 type persistedEntry struct {
 	ID       int               `json:"id"`
