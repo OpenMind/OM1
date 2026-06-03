@@ -19,6 +19,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/ws"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
@@ -121,6 +122,7 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 		zap.String("language_code", cfg.LanguageCode),
 		zap.String("api_version", cfg.APIVersion),
 		zap.Int("rate", cfg.Rate),
+		zap.Bool("enable_tts_interrupt", cfg.EnableTTSInterrupt),
 	)
 
 	c := &asrCommon{
@@ -309,6 +311,11 @@ func (c *asrCommon) onWSMessage(msgType int, data []byte) {
 	}
 
 	c.log.Info(c.name+": transcript accepted", zap.String("text", transcript))
+
+	if c.enableTTSInterrupt && tts.Speaking.Load() {
+		tts.Interrupt.Store(true)
+		c.log.Info(c.name + ": interrupting TTS due to detected speech")
+	}
 
 	select {
 	case c.transcriptCh <- transcript:

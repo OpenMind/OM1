@@ -14,6 +14,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -240,7 +241,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
 		}
 
-		if providers.Speaking.Load() {
+		if tts.Speaking.Load() && !s.enableTTSInterrupt {
 			continue
 		}
 

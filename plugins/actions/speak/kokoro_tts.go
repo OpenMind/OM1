@@ -10,7 +10,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -31,7 +31,7 @@ type KokoroConfig struct {
 // KokoroConnector is a "speak" connector that streams Text-to-Speech audio from a
 // Kokoro (OpenAI-compatible) TTS endpoint.
 type KokoroConnector struct {
-	kokoro *providers.KokoroProvider
+	kokoro *tts.KokoroProvider
 	log    *zap.Logger
 
 	silenceMu      sync.Mutex
@@ -46,23 +46,23 @@ func NewKokoroTTS(configMap map[string]any) (actions.Connector, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = providers.DefaultKokoroBaseURL
+		cfg.BaseURL = tts.DefaultKokoroBaseURL
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultKokoroVoiceID
+		cfg.VoiceID = tts.DefaultKokoroVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultKokoroModelID
+		cfg.ModelID = tts.DefaultKokoroModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultKokoroOutputFormat
+		cfg.OutputFormat = tts.DefaultKokoroOutputFormat
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = providers.DefaultKokoroRate
+		cfg.Rate = tts.DefaultKokoroRate
 	}
 
 	log := logger.Get()
-	kokoro := providers.Kokoro(providers.KokoroConfig{
+	kokoro := tts.Kokoro(tts.KokoroConfig{
 		BaseURL:      cfg.BaseURL,
 		APIKey:       cfg.APIKey,
 		VoiceID:      cfg.VoiceID,

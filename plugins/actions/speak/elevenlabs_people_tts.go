@@ -11,6 +11,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -50,7 +51,7 @@ func NewElevenLabsPeopleTTS(configMap map[string]any) (actions.Connector, error)
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 
 	return &ElevenLabsPeopleConnector{

@@ -12,7 +12,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 type SpeakInput struct {
@@ -39,7 +39,7 @@ type ElevenLabsConfig struct {
 }
 
 type ElevenLabsConnector struct {
-	elevenlabs *providers.ElevenLabsProvider
+	elevenlabs *tts.ElevenLabsProvider
 	log        *zap.Logger
 
 	silenceMu      sync.Mutex
@@ -57,20 +57,20 @@ func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
 		return nil, fmt.Errorf("speak/elevenlabs_tts: api_key required")
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if cfg.Rate == 0 {
 		cfg.Rate = rateFromFormat(cfg.OutputFormat)
 	}
 
 	log := logger.Get()
-	elevenlabs := providers.ElevenLabs(providers.ElevenLabsConfig{
+	elevenlabs := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
 		VoiceID:          cfg.VoiceID,
@@ -94,7 +94,7 @@ func rateFromFormat(format string) int {
 			return r
 		}
 	}
-	return providers.DefaultRate
+	return tts.DefaultRate
 }
 
 // Connect enqueues the spoken text without blocking the action pipeline.

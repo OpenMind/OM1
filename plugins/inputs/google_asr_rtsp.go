@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -190,7 +190,7 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 			return fmt.Errorf("read pcm: %w", err)
 		}
 
-		if providers.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 
