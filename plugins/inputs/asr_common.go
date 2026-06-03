@@ -406,7 +406,15 @@ func (c *asrCommon) closeZenoh() {
 	}
 }
 
-// serializeASRText encodes an ASRText message in CDR little-endian format, matching the pycdr2 serialization used by the Python ASR plugins.
+// serializeASRText encodes an ASRText message in CDR little-endian format.
+//
+// Wire layout (offsets from start of buffer):
+//
+//	[0]   CDR encapsulation header: 0x00 0x01 0x00 0x00
+//	[4]   stamp.sec:    int32 LE   (data offset 0)
+//	[8]   stamp.nanosec: uint32 LE (data offset 4)
+//	[12]  frame_id:     CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
+//	[...]  text:         CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
 func serializeASRText(text string) []byte {
 	now := time.Now()
 	frameID := uuid.New().String()

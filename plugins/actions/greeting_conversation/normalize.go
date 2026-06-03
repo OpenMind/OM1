@@ -43,8 +43,7 @@ var ttsCorrections = []struct {
 	{regexp.MustCompile(`\bW\b\.?(\s+[A-Z])`), "West${1}"},
 }
 
-// normalizeTTSText expands abbreviations and reformats times for cleaner TTS
-// output. It is a Go port of the Python normalize_tts_text helper.
+// normalizeTTSText applies regex corrections to expand common abbreviations in TTS text.
 func normalizeTTSText(text string) string {
 	text = timeOnHour.ReplaceAllString(text, "${1}")
 	text = timeWithMinutes.ReplaceAllString(text, "${1} ${2}")

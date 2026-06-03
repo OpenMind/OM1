@@ -133,7 +133,7 @@ func (p *AvatarProvider) SendAvatarCommand(command string) error {
 }
 
 // serializeAvatarRequest encodes an AvatarFaceRequest (SWITCH_FACE) in CDR
-// little-endian format, matching the Python pycdr2 wire layout.
+// little-endian format.
 //
 // Wire layout (absolute offsets from start of buffer):
 //
@@ -175,7 +175,7 @@ func serializeAvatarRequest(faceText string) []byte {
 }
 
 // serializeAvatarResponse encodes an AvatarFaceResponse in CDR little-endian
-// format, matching the Python pycdr2 wire layout.
+// format.
 //
 // Wire layout:
 //

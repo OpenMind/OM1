@@ -215,9 +215,9 @@ func (m *ModeManager) checkInputTriggered(latestInputs []string) string {
 	return highestPriorityTarget(matching)
 }
 
-// highestPriorityTarget returns the ToMode of the highest-priority rule, or ""
-// if the slice is empty. Stable sort keeps configuration order among equal
-// priorities, matching Python's sort(..., reverse=True) on a preserved list.
+// highestPriorityTarget returns the ToMode of the rule with the highest Priority value,
+// or "" if the list is empty. When multiple rules have the same Priority, the first
+// one in the list wins (which preserves the original order in the config file).
 func highestPriorityTarget(rules []config.TransitionRule) string {
 	if len(rules) == 0 {
 		return ""
