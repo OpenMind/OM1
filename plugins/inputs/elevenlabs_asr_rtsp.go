@@ -31,9 +31,9 @@ type ElevenLabsASRRTSPConfig struct {
 }
 
 // ElevenLabsASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
-// forwards PCM to the ElevenLabs ASR websocket through the shared elevenlabsASRCommon.
+// forwards PCM to the ElevenLabs ASR websocket through the shared asrCommon.
 type ElevenLabsASRRTSPSensor struct {
-	*elevenlabsASRCommon
+	*asrCommon
 
 	cfg ElevenLabsASRRTSPConfig
 }
@@ -57,11 +57,13 @@ func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.Chunk = 1600
 	}
 
-	core := NewElevenLabsASRCommon("ElevenLabsASRRTSPInput", elevenlabsASRCommonConfig{
-		APIKey:   cfg.APIKey,
-		BaseURL:  cfg.BaseURL,
-		Rate:     cfg.Rate,
-		Language: cfg.Language,
+	core := newElevenLabsASRCommon(elevenlabsASRParams{
+		name:               "ElevenLabsASRRTSPInput",
+		apiKey:             cfg.APIKey,
+		baseURL:            cfg.BaseURL,
+		rate:               cfg.Rate,
+		language:           cfg.Language,
+		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
 	core.log.Info("ElevenLabsASRRTSPInput: rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
@@ -69,8 +71,8 @@ func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 	)
 
 	return &ElevenLabsASRRTSPSensor{
-		elevenlabsASRCommon: core,
-		cfg:                 cfg,
+		asrCommon: core,
+		cfg:       cfg,
 	}, nil
 }
 

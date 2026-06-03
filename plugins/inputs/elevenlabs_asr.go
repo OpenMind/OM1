@@ -5,17 +5,42 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/gordonklaus/portaudio"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
 func init() {
 	inputs.Register("ElevenLabsASRInput", NewElevenLabsASR)
 }
+
+// elevenlabsLanguageCodeMap maps friendly language names to the short codes
+// accepted by the ElevenLabs ASR service. "auto" enables language detection.
+var elevenlabsLanguageCodeMap = map[string]string{
+	"auto":       "auto",
+	"english":    "en",
+	"spanish":    "es",
+	"french":     "fr",
+	"german":     "de",
+	"italian":    "it",
+	"portuguese": "pt",
+	"japanese":   "ja",
+	"korean":     "ko",
+	"chinese":    "zh",
+	"dutch":      "nl",
+	"polish":     "pl",
+	"russian":    "ru",
+}
+
+// elevenlabsAPIVersion is the fixed api_version label used for ElevenLabs ASR metrics.
+const elevenlabsAPIVersion = "v1"
 
 // ElevenLabsASRConfig configures the local microphone-sourced ElevenLabs ASR sensor.
 type ElevenLabsASRConfig struct {
@@ -28,10 +53,20 @@ type ElevenLabsASRConfig struct {
 	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
 }
 
+// elevenlabsASRParams carries the vendor inputs needed to build an ElevenLabs asrCommon.
+type elevenlabsASRParams struct {
+	name               string
+	apiKey             string
+	baseURL            string
+	rate               int
+	language           string
+	enableTTSInterrupt bool
+}
+
 // ElevenLabsASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the ElevenLabs ASR websocket through the shared elevenlabsASRCommon.
+// streams it to the ElevenLabs ASR websocket through the shared asrCommon.
 type ElevenLabsASRSensor struct {
-	*elevenlabsASRCommon
+	*asrCommon
 
 	cfg        ElevenLabsASRConfig
 	paStream   *portaudio.Stream
@@ -54,18 +89,20 @@ func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.Chunk = 4800
 	}
 
-	core := NewElevenLabsASRCommon("ElevenLabsASRInput", elevenlabsASRCommonConfig{
-		APIKey:   cfg.APIKey,
-		BaseURL:  cfg.BaseURL,
-		Rate:     cfg.Rate,
-		Language: cfg.Language,
+	core := newElevenLabsASRCommon(elevenlabsASRParams{
+		name:               "ElevenLabsASRInput",
+		apiKey:             cfg.APIKey,
+		baseURL:            cfg.BaseURL,
+		rate:               cfg.Rate,
+		language:           cfg.Language,
+		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
 	core.log.Info("ElevenLabsASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &ElevenLabsASRSensor{
-		elevenlabsASRCommon: core,
-		cfg:                 cfg,
-		audioChunk:          make([]int16, cfg.Chunk),
+		asrCommon:  core,
+		cfg:        cfg,
+		audioChunk: make([]int16, cfg.Chunk),
 	}, nil
 }
 
@@ -214,4 +251,67 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 
 		s.sendChunk(pcm)
 	}
+}
+
+// newElevenLabsASRCommon resolves ElevenLabs-specific config and builds the shared asrCommon with the ElevenLabs parser.
+func newElevenLabsASRCommon(p elevenlabsASRParams) *asrCommon {
+	language := strings.TrimSpace(strings.ToLower(p.language))
+	if language == "" {
+		language = "auto"
+	}
+
+	languageCode, ok := elevenlabsLanguageCodeMap[language]
+	if !ok {
+		logger.Get().Error(p.name+": unsupported language, defaulting to auto",
+			zap.String("language", language))
+		language = "auto"
+		languageCode = "auto"
+	}
+
+	wsURL := p.baseURL
+	if wsURL == "" {
+		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/elevenlabs/asr?api_key=%s", p.apiKey)
+	}
+
+	return newASRCommon(asrCommonConfig{
+		Name:               p.name,
+		Model:              "elevenlabs",
+		APIVersion:         elevenlabsAPIVersion,
+		WSURL:              wsURL,
+		Rate:               p.rate,
+		Language:           language,
+		LanguageCode:       languageCode,
+		EnableTTSInterrupt: p.enableTTSInterrupt,
+		ParseMessage:       elevenlabsParseMessage,
+	})
+}
+
+// elevenlabsParseMessage implements the ElevenLabs ASR protocol (partial marks speech start, committed carries the transcript) and records its latency metric.
+func elevenlabsParseMessage(c *asrCommon, msg ASRMessage) string {
+	if msg.Type == "partial" {
+		// Record the start time only on the first partial of an utterance, else latency shrinks to time-since-last-partial.
+		if !c.speechStarted {
+			c.speechStartTime = time.Now()
+			c.speechStarted = true
+		}
+		return ""
+	}
+
+	if msg.Type != "committed" {
+		return ""
+	}
+
+	// A committed message ends the segment, so reset the timer even when the transcript is dropped.
+	speechStarted := c.speechStarted
+	speechStartTime := c.speechStartTime
+	c.speechStarted = false
+
+	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
+		return ""
+	}
+
+	if speechStarted {
+		c.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(speechStartTime))
+	}
+	return msg.ASRReply
 }

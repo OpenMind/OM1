@@ -12,21 +12,20 @@ import (
 	"go.uber.org/zap"
 )
 
-// newTestElevenLabsCommon builds an elevenlabsASRCommon without touching the
-// network: no websocket dial, no zenoh session, no PortAudio. This lets us
-// exercise the message-handling and buffering logic in isolation.
-func newTestElevenLabsCommon() *elevenlabsASRCommon {
-	return &elevenlabsASRCommon{
+func newTestElevenLabsCommon() *asrCommon {
+	return &asrCommon{
 		name:         "ElevenLabsASRInputTest",
 		log:          zap.NewNop(),
 		rate:         16000,
+		model:        "elevenlabs",
+		apiVersion:   elevenlabsAPIVersion,
 		language:     "english",
 		languageCode: "en",
 		transcriptCh: make(chan string, 8),
+		parseMessage: elevenlabsParseMessage,
 	}
 }
 
-// committedMsg encodes an ElevenLabs "committed" transcript message.
 func committedMsg(t *testing.T, reply string) []byte {
 	t.Helper()
 	b, err := json.Marshal(ASRMessage{Type: "committed", ASRReply: reply})
@@ -34,10 +33,13 @@ func committedMsg(t *testing.T, reply string) []byte {
 	return b
 }
 
-// recvTranscript reads one transcript from the channel, or reports that none is
-// queued. onWSMessage delivers synchronously before returning, so by the time it
-// returns the transcript is either already buffered or was never sent — a
-// non-blocking read is therefore deterministic.
+func partialMsg(t *testing.T, reply string) []byte {
+	t.Helper()
+	b, err := json.Marshal(ASRMessage{Type: "partial", ASRReply: reply})
+	require.NoError(t, err)
+	return b
+}
+
 func recvTranscript(t *testing.T, ch chan string) (string, bool) {
 	t.Helper()
 	select {
@@ -72,8 +74,6 @@ func TestAcceptASRTranscript(t *testing.T) {
 }
 
 func TestElevenLabsLanguageCodeMap(t *testing.T) {
-	// Spot-check the friendly-name -> short-code mapping that distinguishes
-	// ElevenLabs from the Google ASR (which uses BCP-47 codes).
 	require.Equal(t, "auto", elevenlabsLanguageCodeMap["auto"])
 	require.Equal(t, "en", elevenlabsLanguageCodeMap["english"])
 	require.Equal(t, "zh", elevenlabsLanguageCodeMap["chinese"])
@@ -97,11 +97,9 @@ func TestPackageAudio(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(packet), 4+len(pcm))
 
-	// First 4 bytes: big-endian header length.
 	hLen := binary.BigEndian.Uint32(packet[0:4])
 	require.Equal(t, len(packet), 4+int(hLen)+len(pcm))
 
-	// Header is JSON with rate, language_code, timestamp; no alternative codes.
 	var header map[string]any
 	require.NoError(t, json.Unmarshal(packet[4:4+hLen], &header))
 	require.EqualValues(t, 16000, header["rate"])
@@ -110,7 +108,6 @@ func TestPackageAudio(t *testing.T) {
 	require.NotContains(t, header, "alternative_language_codes",
 		"ElevenLabs sends no alternative language codes; omitempty must drop the field")
 
-	// PCM payload is appended verbatim after the header.
 	require.Equal(t, pcm, packet[4+hLen:])
 }
 
@@ -133,9 +130,7 @@ func TestOnWSMessageCommittedDelivers(t *testing.T) {
 func TestOnWSMessagePartialMarksSpeechStart(t *testing.T) {
 	c := newTestElevenLabsCommon()
 
-	b, err := json.Marshal(ASRMessage{Type: "partial", ASRReply: "partial text"})
-	require.NoError(t, err)
-	c.onWSMessage(websocket.TextMessage, b)
+	c.onWSMessage(websocket.TextMessage, partialMsg(t, "partial text"))
 
 	c.mu.Lock()
 	started := c.speechStarted
@@ -144,13 +139,6 @@ func TestOnWSMessagePartialMarksSpeechStart(t *testing.T) {
 
 	_, ok := recvTranscript(t, c.transcriptCh)
 	require.False(t, ok, "a partial message must not deliver a transcript")
-}
-
-func partialMsg(t *testing.T, reply string) []byte {
-	t.Helper()
-	b, err := json.Marshal(ASRMessage{Type: "partial", ASRReply: reply})
-	require.NoError(t, err)
-	return b
 }
 
 func TestOnWSMessageRepeatedPartialsKeepFirstStart(t *testing.T) {
@@ -162,8 +150,6 @@ func TestOnWSMessageRepeatedPartialsKeepFirstStart(t *testing.T) {
 	first := c.speechStartTime
 	c.mu.Unlock()
 
-	// A later partial in the same utterance must not move the start time, or the
-	// measured latency would shrink to "time since the last partial".
 	c.onWSMessage(websocket.TextMessage, partialMsg(t, "hello wor"))
 	c.mu.Lock()
 	require.True(t, c.speechStarted)
@@ -176,8 +162,6 @@ func TestOnWSMessageCommittedResetsForNextUtterance(t *testing.T) {
 	c.speechStarted = true
 	c.speechStartTime = time.Now().Add(-time.Second)
 
-	// A dropped (too-short) committed still ends the segment: speechStarted resets
-	// so the next utterance's first partial starts a fresh timer.
 	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hi"))
 	_, ok := recvTranscript(t, c.transcriptCh)
 	require.False(t, ok)
@@ -185,7 +169,6 @@ func TestOnWSMessageCommittedResetsForNextUtterance(t *testing.T) {
 	require.False(t, c.speechStarted, "a committed message must end the speech segment")
 	c.mu.Unlock()
 
-	// Next utterance: first partial re-arms the timer with a fresh start time.
 	c.onWSMessage(websocket.TextMessage, partialMsg(t, "how"))
 	c.mu.Lock()
 	require.True(t, c.speechStarted)
@@ -200,10 +183,7 @@ func TestOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
 		data    []byte
 	}{
 		{"too short (single word)", websocket.TextMessage, committedMsg(t, "hi")},
-		{"non-committed type", websocket.TextMessage, func() []byte {
-			b, _ := json.Marshal(ASRMessage{Type: "partial", ASRReply: "hello world"})
-			return b
-		}()},
+		{"non-committed type", websocket.TextMessage, partialMsg(t, "hello world")},
 		{"empty reply", websocket.TextMessage, committedMsg(t, "")},
 		{"invalid json", websocket.TextMessage, []byte("{not json")},
 		{"binary message", websocket.BinaryMessage, committedMsg(t, "hello world")},
@@ -232,7 +212,6 @@ func TestRawToText(t *testing.T) {
 	c := newTestElevenLabsCommon()
 	ctx := context.Background()
 
-	// Non-string and empty inputs are dropped.
 	msg, err := c.RawToText(ctx, 123)
 	require.NoError(t, err)
 	require.Nil(t, msg)
@@ -241,13 +220,11 @@ func TestRawToText(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, msg)
 
-	// First transcript starts the utterance.
 	msg, err = c.RawToText(ctx, "hello")
 	require.NoError(t, err)
 	require.NotNil(t, msg)
 	require.Equal(t, "hello", msg.Message)
 
-	// Subsequent transcripts are space-joined into the same utterance.
 	_, err = c.RawToText(ctx, "world")
 	require.NoError(t, err)
 
@@ -259,7 +236,6 @@ func TestRawToText(t *testing.T) {
 func TestFormattedLatestBuffer(t *testing.T) {
 	c := newTestElevenLabsCommon()
 
-	// Empty buffer yields an empty string.
 	require.Equal(t, "", c.FormattedLatestBuffer())
 
 	_, err := c.RawToText(context.Background(), "hello world")
@@ -267,7 +243,6 @@ func TestFormattedLatestBuffer(t *testing.T) {
 
 	require.Equal(t, "\nVoice: \"hello world\"\n", c.FormattedLatestBuffer())
 
-	// Flushing clears the buffer, so a second call is empty again.
 	require.Equal(t, "", c.FormattedLatestBuffer())
 	c.mu.Lock()
 	require.Empty(t, c.messages)

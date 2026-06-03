@@ -36,9 +36,9 @@ type GoogleASRRTSPConfig struct {
 }
 
 // GoogleASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
-// forwards PCM to the Google ASR websocket through the shared googleASRCommon.
+// forwards PCM to the Google ASR websocket through the shared asrCommon.
 type GoogleASRRTSPSensor struct {
-	*googleASRCommon
+	*asrCommon
 
 	cfg GoogleASRRTSPConfig
 }
@@ -62,13 +62,15 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.Chunk = 1600
 	}
 
-	core := NewGoogleASRCommon("GoogleASRRTSPInput", googleASRCommonConfig{
-		APIKey:               cfg.APIKey,
-		APIVersion:           cfg.APIVersion,
-		BaseURL:              cfg.BaseURL,
-		Rate:                 cfg.Rate,
-		Language:             cfg.Language,
-		AlternativeLanguages: cfg.AlternativeLanguages,
+	core := newGoogleASRCommon(googleASRParams{
+		name:                 "GoogleASRRTSPInput",
+		apiKey:               cfg.APIKey,
+		apiVersion:           cfg.APIVersion,
+		baseURL:              cfg.BaseURL,
+		rate:                 cfg.Rate,
+		language:             cfg.Language,
+		alternativeLanguages: cfg.AlternativeLanguages,
+		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
 	})
 	core.log.Info("GoogleASRRTSPInput: rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
@@ -76,8 +78,8 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 	)
 
 	return &GoogleASRRTSPSensor{
-		googleASRCommon: core,
-		cfg:             cfg,
+		asrCommon: core,
+		cfg:       cfg,
 	}, nil
 }
 

@@ -18,33 +18,24 @@ import (
 
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
-	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
-
-// languageCodeMap maps friendly language names to BCP-47 codes accepted by the
-// Google ASR service.
-var languageCodeMap = map[string]string{
-	"english":    "en-US",
-	"chinese":    "cmn-Hans-CN",
-	"german":     "de-DE",
-	"french":     "fr-FR",
-	"japanese":   "ja-JP",
-	"korean":     "ko-KR",
-	"spanish":    "es-ES",
-	"italian":    "it-IT",
-	"portuguese": "pt-BR",
-	"russian":    "ru-RU",
-	"arabic":     "ar-SA",
-}
 
 // cjkRegex matches CJK characters (Chinese, Japanese kana, Hangul) used to decide
 // the minimum-length threshold for accepting a transcript.
 var cjkRegex = regexp.MustCompile(`[\x{4e00}-\x{9fff}\x{3040}-\x{30ff}\x{ac00}-\x{d7af}]`)
 
 const asrZenohTopic = "om/asr/text"
+
+// acceptASRTranscript reports whether a transcript is long enough to keep.
+func acceptASRTranscript(text string) bool {
+	if cjkRegex.MatchString(text) {
+		return utf8.RuneCountInString(text) > 2
+	}
+	return len(strings.Fields(text)) > 1
+}
 
 // ASRMessage is a transcript/status message received from the ASR websocket.
 type ASRMessage struct {
@@ -70,35 +61,43 @@ type ASRStatistics struct {
 	mu              sync.RWMutex
 }
 
-// googleASRCommonConfig holds the configuration parameters for googleASRCommon.
-type googleASRCommonConfig struct {
-	APIKey               string
-	APIVersion           string
-	BaseURL              string
-	Rate                 int
-	Language             string
-	AlternativeLanguages []string
+// asrMessageParser handles one decoded ASR message under c.mu and returns the transcript to deliver ("" if none).
+type asrMessageParser func(c *asrCommon, msg ASRMessage) string
+
+// asrCommonConfig holds the vendor-resolved configuration for an asrCommon.
+type asrCommonConfig struct {
+	Name               string // log prefix, e.g. "GoogleASRInput"
+	Model              string // metric label, e.g. "google" / "elevenlabs"
+	APIVersion         string // metric label, e.g. "v1" / "v2"
+	WSURL              string // fully-built websocket endpoint
+	Rate               int
+	Language           string // friendly name, used as a metric label
+	LanguageCode       string
+	AltCodes           []string
+	EnableTTSInterrupt bool
+	ParseMessage       asrMessageParser
 }
 
-// googleASRCommon encapsulates the shared logic for Google ASR sensors.
-type googleASRCommon struct {
-	name         string // log prefix, e.g. "GoogleASRInput"
-	log          *zap.Logger
-	rate         int
-	language     string // friendly name, used as a metric label
-	languageCode string
-	altCodes     []string
-	apiVersion   string
+// asrCommon holds the logic shared by every ASR sensor; vendor differences are injected via config and the ParseMessage hook.
+type asrCommon struct {
+	name               string
+	log                *zap.Logger
+	rate               int
+	language           string
+	languageCode       string
+	altCodes           []string
+	apiVersion         string
+	model              string
+	enableTTSInterrupt bool
+
+	parseMessage asrMessageParser
 
 	wsClient *ws.Client
 
-	// captureDone is closed when the capture loop has fully stopped.
 	captureDone chan struct{}
 
-	// transcriptCh carries accepted transcripts from the WS callback to the main loop.
 	transcriptCh chan string
 
-	// messages accumulates transcripts between fuser ticks.
 	messages []string
 
 	mu              sync.Mutex
@@ -112,69 +111,46 @@ type googleASRCommon struct {
 	zenohPublisher *zenohsession.Publisher
 }
 
-// NewGoogleASRCommon constructs a googleASRCommon with the given configuration.
-func NewGoogleASRCommon(name string, cfg googleASRCommonConfig) *googleASRCommon {
-	apiVersion := strings.TrimSpace(strings.ToLower(cfg.APIVersion))
-	if apiVersion != "v1" && apiVersion != "v2" {
-		apiVersion = "v2"
-	}
-	language := strings.TrimSpace(strings.ToLower(cfg.Language))
-	if language == "" {
-		language = "english"
-	}
-	languageCode, ok := languageCodeMap[language]
-	if !ok {
-		languageCode = "en-US"
-	}
-	var altCodes []string
-	if apiVersion == "v1" {
-		for _, alt := range cfg.AlternativeLanguages {
-			alt = strings.TrimSpace(strings.ToLower(alt))
-			if code, ok := languageCodeMap[alt]; ok {
-				altCodes = append(altCodes, code)
-			}
-		}
-	}
-
-	wsURL := cfg.BaseURL
-	if wsURL == "" {
-		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/google/asr/%s?api_key=%s",
-			apiVersion, cfg.APIKey)
-	}
-
+// newASRCommon constructs an asrCommon, connecting the websocket client and the
+// (optional) zenoh publisher used to broadcast transcripts.
+func newASRCommon(cfg asrCommonConfig) *asrCommon {
 	log := logger.Get()
-	log.Info(name+": initializing",
-		zap.String("language", language),
-		zap.String("language_code", languageCode),
-		zap.String("api_version", apiVersion),
+	log.Info(cfg.Name+": initializing",
+		zap.String("model", cfg.Model),
+		zap.String("language", cfg.Language),
+		zap.String("language_code", cfg.LanguageCode),
+		zap.String("api_version", cfg.APIVersion),
 		zap.Int("rate", cfg.Rate),
 	)
 
-	c := &googleASRCommon{
-		name:         name,
-		log:          log,
-		rate:         cfg.Rate,
-		language:     language,
-		languageCode: languageCode,
-		altCodes:     altCodes,
-		apiVersion:   apiVersion,
-		transcriptCh: make(chan string, 32),
+	c := &asrCommon{
+		name:               cfg.Name,
+		log:                log,
+		rate:               cfg.Rate,
+		language:           cfg.Language,
+		languageCode:       cfg.LanguageCode,
+		altCodes:           cfg.AltCodes,
+		apiVersion:         cfg.APIVersion,
+		model:              cfg.Model,
+		enableTTSInterrupt: cfg.EnableTTSInterrupt,
+		parseMessage:       cfg.ParseMessage,
+		transcriptCh:       make(chan string, 32),
 	}
 
-	c.wsClient = ws.New(ws.Config{URL: wsURL, Reconnect: true}, log, c.onWSMessage)
+	c.wsClient = ws.New(ws.Config{URL: cfg.WSURL, Reconnect: true}, log, c.onWSMessage)
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		log.Warn(name+": zenoh unavailable, ASR broadcast disabled", zap.Error(err))
+		log.Warn(cfg.Name+": zenoh unavailable, ASR broadcast disabled", zap.Error(err))
 	} else {
 		pub, err := sess.DeclarePublisher(asrZenohTopic)
 		if err != nil {
 			sess.Close()
-			log.Warn(name+": failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
+			log.Warn(cfg.Name+": failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
 		} else {
 			c.zenohSession = sess
 			c.zenohPublisher = pub
-			log.Info(name+": zenoh publisher initialized", zap.String("topic", asrZenohTopic))
+			log.Info(cfg.Name+": zenoh publisher initialized", zap.String("topic", asrZenohTopic))
 		}
 	}
 
@@ -183,7 +159,7 @@ func NewGoogleASRCommon(name string, cfg googleASRCommonConfig) *googleASRCommon
 
 // Poll returns the next accepted transcript, blocking until one is available or
 // ctx is cancelled.
-func (c *googleASRCommon) Poll(ctx context.Context) (any, error) {
+func (c *asrCommon) Poll(ctx context.Context) (any, error) {
 	select {
 	case text, ok := <-c.transcriptCh:
 		if !ok {
@@ -197,7 +173,7 @@ func (c *googleASRCommon) Poll(ctx context.Context) (any, error) {
 
 // pollLoop forwards transcripts from Poll onto out until ctx is cancelled or the
 // transcript channel closes.
-func (c *googleASRCommon) pollLoop(ctx context.Context, out chan any) {
+func (c *asrCommon) pollLoop(ctx context.Context, out chan any) {
 	for {
 		raw, err := c.Poll(ctx)
 		if err != nil {
@@ -212,7 +188,7 @@ func (c *googleASRCommon) pollLoop(ctx context.Context, out chan any) {
 }
 
 // RawToText appends an accepted transcript to the current utterance buffer.
-func (c *googleASRCommon) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
+func (c *asrCommon) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
 		return nil, nil
@@ -231,11 +207,11 @@ func (c *googleASRCommon) RawToText(_ context.Context, raw any) (*inputs.Message
 }
 
 // TriggersTick reports that ASR input wakes the cortex loop.
-func (c *googleASRCommon) TriggersTick() bool { return true }
+func (c *asrCommon) TriggersTick() bool { return true }
 
 // FormattedLatestBuffer returns the buffered utterance as a Voice block, records
 // it on the IO provider, broadcasts it over zenoh, and clears the buffer.
-func (c *googleASRCommon) FormattedLatestBuffer() string {
+func (c *asrCommon) FormattedLatestBuffer() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -264,7 +240,7 @@ func (c *googleASRCommon) FormattedLatestBuffer() string {
 }
 
 // packageAudio prepends the JSON audio header (length-prefixed) to a PCM chunk.
-func (c *googleASRCommon) packageAudio(pcm []byte) ([]byte, error) {
+func (c *asrCommon) packageAudio(pcm []byte) ([]byte, error) {
 	meta := AudioMetadata{
 		Rate:                     c.rate,
 		LanguageCode:             c.languageCode,
@@ -286,7 +262,7 @@ func (c *googleASRCommon) packageAudio(pcm []byte) ([]byte, error) {
 }
 
 // sendChunk packages and sends a PCM chunk over the websocket, updating statistics.
-func (c *googleASRCommon) sendChunk(pcm []byte) {
+func (c *asrCommon) sendChunk(pcm []byte) {
 	packet, err := c.packageAudio(pcm)
 	if err != nil {
 		c.log.Warn(c.name+": package error", zap.Error(err))
@@ -308,9 +284,10 @@ func (c *googleASRCommon) sendChunk(pcm []byte) {
 	c.stats.mu.Unlock()
 }
 
-// onWSMessage parses ASR websocket messages, records timing metrics, and forwards
-// accepted transcripts to the main loop.
-func (c *googleASRCommon) onWSMessage(msgType int, data []byte) {
+// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing
+// and metric recording to parseMessage, and forwards any accepted transcript to
+// the main loop.
+func (c *asrCommon) onWSMessage(msgType int, data []byte) {
 	if msgType != websocket.TextMessage {
 		return
 	}
@@ -326,75 +303,29 @@ func (c *googleASRCommon) onWSMessage(msgType int, data []byte) {
 		return
 	}
 
-	switch msg.Type {
-	case "speech_start":
-		c.speechStartTime = time.Now()
-		c.speechStarted = true
-		c.log.Debug(c.name+": speech start",
-			zap.Time("receive time", c.speechStartTime),
-			zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
-		)
-	case "speech_end":
-		if c.speechStarted {
-			duration := time.Since(c.speechStartTime)
-			c.log.Debug(c.name+": speech end",
-				zap.Duration("latency", duration),
-				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
-			)
-			c.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, duration)
-		}
-	case "end_of_utterance":
-		if c.speechStarted {
-			latency := time.Since(c.speechStartTime)
-			c.log.Debug(c.name+": end of utterance",
-				zap.Duration("latency", latency),
-				zap.Int64("client latency ms", time.Since(time.UnixMilli(msg.Time)).Milliseconds()),
-			)
-			c.observeASR(metrics.ASRUtteranceEndLatency, metrics.ASRUtteranceEndLatencyLast, latency)
-		}
-	}
-
-	if msg.ASRReply == "" || !c.acceptTranscript(msg.ASRReply) {
+	transcript := c.parseMessage(c, msg)
+	if transcript == "" {
 		return
 	}
 
-	var latency time.Duration
-	if c.speechStarted {
-		latency = time.Since(c.speechStartTime)
-		c.speechStarted = false
-		c.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, latency)
-	}
-	c.log.Info(c.name+": transcript accepted",
-		zap.String("text", msg.ASRReply),
-		zap.Duration("asr_latency", latency),
-	)
+	c.log.Info(c.name+": transcript accepted", zap.String("text", transcript))
 
 	select {
-	case c.transcriptCh <- msg.ASRReply:
+	case c.transcriptCh <- transcript:
 	default:
-		c.log.Warn(c.name+": transcript buffer full, dropping",
-			zap.String("text", msg.ASRReply))
+		c.log.Warn(c.name+": transcript buffer full, dropping", zap.String("text", transcript))
 	}
 }
 
-// observeASR records ASR latency metrics with the appropriate labels for this sensor's configuration.
-func (c *googleASRCommon) observeASR(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, d time.Duration) {
+// observeASR records an ASR latency metric pair with this sensor's labels.
+func (c *asrCommon) observeASR(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, d time.Duration) {
 	seconds := d.Seconds()
-	hist.WithLabelValues("google", c.language, c.apiVersion).Observe(seconds)
-	gauge.WithLabelValues("google", c.language, c.apiVersion).Set(seconds)
-}
-
-// acceptTranscript reports whether a transcript is long enough to keep: more than
-// one word, or more than two characters for CJK text.
-func (c *googleASRCommon) acceptTranscript(text string) bool {
-	if cjkRegex.MatchString(text) {
-		return utf8.RuneCountInString(text) > 2
-	}
-	return len(strings.Fields(text)) > 1
+	hist.WithLabelValues(c.model, c.language, c.apiVersion).Observe(seconds)
+	gauge.WithLabelValues(c.model, c.language, c.apiVersion).Set(seconds)
 }
 
 // statsLoop logs send statistics every 15 seconds until ctx is cancelled.
-func (c *googleASRCommon) statsLoop(ctx context.Context) {
+func (c *asrCommon) statsLoop(ctx context.Context) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -410,7 +341,7 @@ func (c *googleASRCommon) statsLoop(ctx context.Context) {
 }
 
 // PrintStatistics logs the cumulative audio send counters.
-func (c *googleASRCommon) PrintStatistics() {
+func (c *asrCommon) PrintStatistics() {
 	c.stats.mu.RLock()
 	totalChunks := c.stats.TotalChunksSent
 	totalBytes := c.stats.TotalBytesSent
@@ -432,7 +363,7 @@ func (c *googleASRCommon) PrintStatistics() {
 
 // markStopped flips the stopped flag exactly once. It returns whether this call
 // was the first to stop the sensor and a snapshot of captureDone to wait on.
-func (c *googleASRCommon) markStopped() (firstStop bool, captureDone chan struct{}) {
+func (c *asrCommon) markStopped() (firstStop bool, captureDone chan struct{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.stopped {
@@ -443,7 +374,7 @@ func (c *googleASRCommon) markStopped() (firstStop bool, captureDone chan struct
 }
 
 // waitCapture waits up to 5s for the capture loop to finish.
-func (c *googleASRCommon) waitCapture(captureDone chan struct{}) {
+func (c *asrCommon) waitCapture(captureDone chan struct{}) {
 	if captureDone == nil {
 		return
 	}
@@ -455,14 +386,14 @@ func (c *googleASRCommon) waitCapture(captureDone chan struct{}) {
 }
 
 // closeWS closes the ASR websocket client.
-func (c *googleASRCommon) closeWS() {
+func (c *asrCommon) closeWS() {
 	if c.wsClient != nil {
 		c.wsClient.Close()
 	}
 }
 
 // closeZenoh drops the zenoh publisher and closes the session.
-func (c *googleASRCommon) closeZenoh() {
+func (c *asrCommon) closeZenoh() {
 	if c.zenohPublisher != nil {
 		c.zenohPublisher.Drop()
 		c.zenohPublisher = nil
@@ -475,16 +406,7 @@ func (c *googleASRCommon) closeZenoh() {
 	}
 }
 
-// serializeASRText encodes an ASRText message in CDR little-endian format,
-// matching the pycdr2 serialization used by the Python google_asr plugins.
-//
-// Wire layout (offsets from start of buffer):
-//
-//	[0]   CDR encapsulation header: 0x00 0x01 0x00 0x00
-//	[4]   stamp.sec:    int32 LE   (data offset 0)
-//	[8]   stamp.nanosec: uint32 LE (data offset 4)
-//	[12]  frame_id:     CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
-//	[...]  text:         CDR string (uint32 length + bytes + null, padded to 4-byte data boundary)
+// serializeASRText encodes an ASRText message in CDR little-endian format, matching the pycdr2 serialization used by the Python ASR plugins.
 func serializeASRText(text string) []byte {
 	now := time.Now()
 	frameID := uuid.New().String()
