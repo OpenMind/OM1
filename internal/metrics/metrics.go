@@ -78,6 +78,32 @@ var (
 	}, []string{"model", "endpoint"})
 )
 
+// Knowledge base metrics.
+var (
+	KBQueryLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "om1_kb_query_latency_seconds",
+		Help: "Latency of a knowledge base query (embedding plus search) in seconds",
+	})
+	KBQueryLatencyLast = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_kb_query_latency_last_seconds",
+		Help: "Most recent knowledge base query latency in seconds",
+	})
+
+	KBEmbedLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "om1_kb_embed_latency_seconds",
+		Help: "Latency of the embedding step of a knowledge base query in seconds",
+	})
+	KBEmbedLatencyLast = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_kb_embed_latency_last_seconds",
+		Help: "Most recent knowledge base embedding-step latency in seconds",
+	})
+
+	KBQueries = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_kb_queries_total",
+		Help: "Total number of knowledge base queries by outcome",
+	}, []string{"status"})
+)
+
 // HTTP metrics.
 var (
 	HTTPProxyParse = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -124,6 +150,9 @@ func init() {
 		ASRSpeechDuration, ASRSpeechDurationLast,
 		ASRUtteranceEndLatency, ASRUtteranceEndLatencyLast,
 		TTSLatency, TTSLatencyLast,
+		KBQueryLatency, KBQueryLatencyLast,
+		KBEmbedLatency, KBEmbedLatencyLast,
+		KBQueries,
 		HTTPProxyParse, HTTPProxyParseLast,
 		HTTPUpstreamTotal, HTTPUpstreamTotalLast,
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
@@ -148,6 +177,26 @@ func RecordHTTPTiming(host, path, method string, statusCode int, proxyParseMs, u
 	observe(HTTPUpstreamTotal, HTTPUpstreamTotalLast, upstreamTotalMs)
 	observe(HTTPUpstreamTTFB, HTTPUpstreamTTFBLast, upstreamTTFBMs)
 	observe(HTTPProxyTotal, HTTPProxyTotalLast, proxyTotalMs)
+}
+
+// RecordKBQuery records metrics for a single knowledge base query.
+// querySeconds is the total query latency; ok reports whether the query
+// succeeded. embedSeconds is the latency of the embedding step, or a negative
+// value when the embedding step did not complete (so it is not recorded).
+func RecordKBQuery(embedSeconds, querySeconds float64, ok bool) {
+	status := "success"
+	if !ok {
+		status = "error"
+	}
+	KBQueries.WithLabelValues(status).Inc()
+
+	KBQueryLatency.Observe(querySeconds)
+	KBQueryLatencyLast.Set(querySeconds)
+
+	if embedSeconds >= 0 {
+		KBEmbedLatency.Observe(embedSeconds)
+		KBEmbedLatencyLast.Set(embedSeconds)
+	}
 }
 
 // StartServer starts the HTTP server that exposes the Prometheus metrics on port 9090.
