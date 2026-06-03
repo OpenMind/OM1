@@ -179,10 +179,7 @@ func RecordHTTPTiming(host, path, method string, statusCode int, proxyParseMs, u
 	observe(HTTPProxyTotal, HTTPProxyTotalLast, proxyTotalMs)
 }
 
-// RecordKBQuery records metrics for a single knowledge base query.
-// querySeconds is the total query latency; ok reports whether the query
-// succeeded. embedSeconds is the latency of the embedding step, or a negative
-// value when the embedding step did not complete (so it is not recorded).
+// RecordKBQuery records the latency of a knowledge base query.
 func RecordKBQuery(embedSeconds, querySeconds float64, ok bool) {
 	status := "success"
 	if !ok {
