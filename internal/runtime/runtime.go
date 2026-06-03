@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -34,6 +36,7 @@ type modeState struct {
 	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
+	memory             *memory.Manager
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -141,9 +144,14 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		}
 	}
 
+	var memoryManager *memory.Manager
+	if rt.systemConfig.Memory != nil && rt.systemConfig.Memory.Enabled {
+		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.log)
+	}
+
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, rt.log),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, memoryManager, rt.log),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,
@@ -157,6 +165,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		),
 		sensors:   modeConfig.sensors,
 		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
+		memory:    memoryManager,
 	}
 	if len(modeConfig.backgroundList) > 0 {
 		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)
@@ -435,6 +444,15 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 				}
 			}
 		}
+	}
+
+	if current.memory != nil {
+		voice := rt.ioProvider.GetInput("Voice")
+		if voice != nil && voice.Input != "" && voice.Tick == rt.ioProvider.TickCounter() {
+			userID, _ := rt.ioProvider.GetDynamicVar("current_user_id")
+			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), userID)
+		}
+		current.memory.Summarize()
 	}
 
 	rt.ioProvider.RecordTick(tickStart)

@@ -19,6 +19,7 @@ type IOProvider struct {
 	totalTicks    int64
 
 	inputs      map[string]Input
+	dynamicVars map[string]string
 	tickCounter int
 }
 
@@ -26,8 +27,28 @@ var ioOnce sync.Once
 var ioInstance *IOProvider
 
 func IO() *IOProvider {
-	ioOnce.Do(func() { ioInstance = &IOProvider{inputs: make(map[string]Input)} })
+	ioOnce.Do(func() {
+		ioInstance = &IOProvider{
+			inputs:      make(map[string]Input),
+			dynamicVars: make(map[string]string),
+		}
+	})
 	return ioInstance
+}
+
+// SetDynamicVar stores a dynamic variable under key.
+func (p *IOProvider) SetDynamicVar(key, value string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.dynamicVars[key] = value
+}
+
+// GetDynamicVar returns the dynamic variable for key. The bool is false if absent.
+func (p *IOProvider) GetDynamicVar(key string) (string, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	v, ok := p.dynamicVars[key]
+	return v, ok
 }
 
 func (p *IOProvider) RecordTick(start time.Time) {
