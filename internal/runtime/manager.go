@@ -60,11 +60,8 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 	return manager
 }
 
-// Close releases resources held by the manager.
 func (m *ModeManager) Close() {}
 
-// UpdateUserContext merges the given key/value pairs into the user context used
-// for context-aware transitions.
 func (m *ModeManager) UpdateUserContext(update map[string]any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -72,6 +69,13 @@ func (m *ModeManager) UpdateUserContext(update map[string]any) {
 	for k, v := range update {
 		m.userContext[k] = v
 	}
+}
+
+func (m *ModeManager) ResetUserContext() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.userContext = make(map[string]any)
 }
 
 func (m *ModeManager) CurrentMode() string {

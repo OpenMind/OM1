@@ -134,6 +134,8 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
 
+	rt.manager.ResetUserContext()
+
 	var knowledgeBase fuser.KnowledgeBase
 	if runtimeConfig.KnowledgeBase != nil {
 		kb, err := knowledgebase.NewKnowledgeBase(runtimeConfig.KnowledgeBase)
