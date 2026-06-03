@@ -33,7 +33,6 @@ func TestParseQwenToolCalls(t *testing.T) {
 	require.Equal(t, "move", calls[1].Name)
 	require.Equal(t, "forward", calls[1].Arguments["dir"])
 
-	// Malformed JSON and nameless blocks are skipped.
 	require.Empty(t, parseQwenToolCalls(`<tool_call>{bad json}</tool_call><tool_call>{"arguments":{}}</tool_call>`))
 }
 

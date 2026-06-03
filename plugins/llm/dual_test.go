@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// stubLLM is a controllable llm.LLM used to exercise DualLLM selection logic
-// without real network calls.
 type stubLLM struct {
 	resp    *llm.Response
 	err     error
@@ -65,8 +63,6 @@ func TestDualCallBothInTimeCloudHasCalls(t *testing.T) {
 }
 
 func TestDualCallBothInTimeEvalPicksCloud(t *testing.T) {
-	// Both sub-LLMs return tool calls, so DualLLM consults the eval model,
-	// which answers "B" → cloud wins.
 	srv, _ := captureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"B"}}]}`)
 	d := &dualLLM{
 		local: &stubLLM{resp: respWithCalls("speak")},

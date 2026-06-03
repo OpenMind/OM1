@@ -43,7 +43,6 @@ func TestOllamaCallRequestAndParse(t *testing.T) {
 	resp, err := o.Call(context.Background(), "hello", nil)
 	require.NoError(t, err)
 
-	// Request shape: native /api/chat protocol.
 	require.Equal(t, "/api/chat", cap.path)
 	require.Equal(t, "test-model", cap.body["model"])
 	require.Equal(t, false, cap.body["stream"])
@@ -52,7 +51,6 @@ func TestOllamaCallRequestAndParse(t *testing.T) {
 	require.Equal(t, defaultOllamaTemp, options["temperature"])
 	require.Equal(t, float64(defaultOllamaNumCtx), options["num_ctx"])
 
-	// Parsed response, including token counts mapped to Usage.
 	require.Equal(t, "woof", resp.TextContent)
 	require.Len(t, resp.ToolCalls, 1)
 	require.Equal(t, "emotion", resp.ToolCalls[0].Name)
