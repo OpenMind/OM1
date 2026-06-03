@@ -68,7 +68,7 @@ func (e *HTTPEmbedder) Embed(ctx context.Context, query string) ([]float32, erro
 	if err != nil {
 		return nil, fmt.Errorf("embed request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 512))

@@ -20,7 +20,7 @@ func echoServer(t *testing.T) string {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		for {
 			mt, msg, err := conn.ReadMessage()
 			if err != nil {

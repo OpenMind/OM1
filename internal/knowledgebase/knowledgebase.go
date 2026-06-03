@@ -142,7 +142,7 @@ func loadGraph(path string) (*hnsw.Graph[int], error) {
 	if err != nil {
 		return nil, fmt.Errorf("open index %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	graph := hnsw.NewGraph[int]()
 	if err := graph.Import(bufio.NewReader(f)); err != nil {

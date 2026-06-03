@@ -12,7 +12,6 @@ type moveInput struct {
 	Distance  int           `json:"distance"`
 	Speed     float64       `json:"speed"`
 	Urgent    bool          `json:"urgent"`
-	internal  string
 }
 
 type directionEnum string

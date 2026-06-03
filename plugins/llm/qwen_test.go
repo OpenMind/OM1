@@ -89,7 +89,6 @@ func TestQwenCallParsesTextToolCalls(t *testing.T) {
 }
 
 func TestQwenCallPrefersStructuredToolCalls(t *testing.T) {
-	// Structured tool_calls present: the text fallback must not run.
 	srv, _ := captureServer(t, http.StatusOK, `{"choices":[{"message":{
 		"content":"<tool_call>{\"name\":\"ignored\",\"arguments\":{}}</tool_call>",
 		"tool_calls":[{"function":{"name":"speak","arguments":"{\"text\":\"hi\"}"}}]
