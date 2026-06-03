@@ -9,19 +9,26 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager bundles the memory Reader, Writer, and Summarizer into
-// a single facade used by the runtime.
+// Manager bundles the memory Reader, Writer, and Summarizer.
 type Manager struct {
 	reader     *Reader
 	writer     *Writer
 	summarizer *Summarizer
+	signals    *SignalStore
+	indexDir   string
 	log        *zap.Logger
 }
 
-// NewManager creates a fully initialized Manager. Returns nil if the
-// index build fails (matching the KB pattern of warn-and-continue).
+// NewManager creates a fully initialized Manager.
 func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 	reader := NewReader(memoryRoot, "", DefaultMinScore, log)
+
+	indexDir := filepath.Join(memoryRoot, "index")
+	if err := reader.Index().LoadFromDisk(indexDir); err != nil {
+		log.Info("memory: no persisted index, will build from scratch")
+	} else {
+		log.Info("memory: loaded persisted index", zap.Int("chunks", reader.Index().Size()))
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -30,7 +37,15 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 		return nil
 	}
 
-	m := &Manager{reader: reader, log: log}
+	if err := reader.Index().SaveToDisk(indexDir); err != nil {
+		log.Warn("memory: failed to persist index", zap.Error(err))
+	}
+
+	m := &Manager{reader: reader, signals: NewSignalStore(memoryRoot), indexDir: indexDir, log: log}
+
+	if pruned := m.signals.PruneStale(DefaultValidDurationDays); pruned > 0 {
+		log.Info("memory: pruned stale signals", zap.Int("count", pruned))
+	}
 
 	writer, err := NewWriter(memoryRoot, log)
 	if err != nil {
@@ -40,7 +55,7 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 	}
 
 	if apiKey != "" {
-		m.summarizer = NewSummarizer(memoryRoot, apiKey, log)
+		m.summarizer = NewSummarizer(memoryRoot, apiKey, m.signals, log)
 		m.summarizer.Run(context.Background())
 	}
 
@@ -48,19 +63,22 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 	return m
 }
 
-// SearchAndFormat resolves the current user, searches memory, and returns
-// a formatted context string ready for prompt injection.
+// SearchAndFormat resolves the current user, searches memory, and returns a formatted context string.
 func (m *Manager) SearchAndFormat(ctx context.Context, query string, userID string) string {
 	results, err := m.reader.SearchDaily(ctx, query, 3, userID)
 	if err != nil {
 		m.log.Warn("memory search failed", zap.Error(err))
 		return ""
 	}
+
+	for _, r := range results {
+		m.signals.Record(r.Text, r.Score, query)
+	}
+
 	return m.reader.FormatContext(results, 0, userID)
 }
 
-// RecordInteraction writes the user message to the daily log and hot-updates
-// the index. No-op if the writer was not initialized.
+// RecordInteraction writes the user message to the daily log and hot-updates the index.
 func (m *Manager) RecordInteraction(ctx context.Context, voiceInput string, userID string) {
 	if m.writer == nil {
 		return
@@ -71,11 +89,15 @@ func (m *Manager) RecordInteraction(ctx context.Context, voiceInput string, user
 	}
 }
 
-// MaybeSummarize triggers background summarization if enough new
-// interactions have accumulated. No-op if the summarizer is nil.
+// MaybeSummarize triggers background summarization.
 func (m *Manager) Summarize() {
 	if m.summarizer != nil && m.summarizer.CheckEligibility() {
-		go m.summarizer.Run(context.Background())
+		go func() {
+			m.summarizer.Run(context.Background())
+			if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
+				m.log.Warn("memory: failed to persist index", zap.Error(err))
+			}
+		}()
 	}
 }
 

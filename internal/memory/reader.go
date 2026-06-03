@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -66,7 +67,7 @@ func (r *Reader) IndexReady() bool {
 	return r.indexReady
 }
 
-// SearchDaily searches daily logs using cosine similarity.
+// SearchDaily searches daily logs using hybrid retrieval (embedding + BM25).
 func (r *Reader) SearchDaily(ctx context.Context, queryText string, topK int, userID string) ([]MemoryEntry, error) {
 	if strings.TrimSpace(queryText) == "" {
 		return nil, nil
@@ -74,10 +75,12 @@ func (r *Reader) SearchDaily(ctx context.Context, queryText string, topK int, us
 	if topK <= 0 {
 		topK = 3
 	}
-	return r.index.Search(ctx, queryText, topK, r.minScore, userID)
+	return r.index.HybridSearch(ctx, queryText, topK, r.minScore, userID)
 }
 
-// FormatContext formats memory into a prompt-ready context string.
+// FormatContext assembles memory context for prompt injection.
+// L1: User profile + facts summary — when user_id is available
+// L2: Hybrid search results — fills remaining budget
 func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID string) string {
 	if maxChars <= 0 {
 		maxChars = defaultContextMaxChars
@@ -86,15 +89,30 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 	var parts []string
 	totalChars := 0
 
+	// L1: User-specific context.
 	if userID != "" {
+		var l1Parts []string
+
+		// Profile visit info.
+		visitInfo := r.readProfileVisitInfo(userID)
+		if visitInfo != "" {
+			l1Parts = append(l1Parts, visitInfo)
+		}
+
+		// Facts summary.
 		userFacts := r.ReadUserFacts(userID)
 		if userFacts != "" {
-			section := fmt.Sprintf("[User: %s]\n%s", userID, userFacts)
+			l1Parts = append(l1Parts, userFacts)
+		}
+
+		if len(l1Parts) > 0 {
+			section := fmt.Sprintf("[User: %s]\n%s", userID, strings.Join(l1Parts, "\n"))
 			parts = append(parts, section)
 			totalChars += len(section)
 		}
 	}
 
+	// L2: Relevant history from hybrid search.
 	for _, doc := range searchResults {
 		if totalChars >= maxChars {
 			break
@@ -109,7 +127,46 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 	return strings.Join(parts, "\n\n")
 }
 
-// ReadUserFacts reads a user's facts.json and formats as a prompt string.
+
+
+// readProfileVisitInfo reads profile.json and formats visit info.
+func (r *Reader) readProfileVisitInfo(userID string) string {
+	profilePath := filepath.Join(r.usersDir, userID, "profile.json")
+	raw, err := os.ReadFile(profilePath)
+	if err != nil {
+		return ""
+	}
+
+	var profile struct {
+		VisitCount int    `json:"visit_count"`
+		LastSeen   string `json:"last_seen"`
+	}
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		return ""
+	}
+
+	if profile.VisitCount == 0 {
+		return ""
+	}
+
+	info := fmt.Sprintf("Visited %d times.", profile.VisitCount)
+	if profile.LastSeen != "" {
+		if t, err := time.Parse(time.RFC3339, profile.LastSeen); err == nil {
+			days := int(time.Since(t).Hours() / 24)
+			switch {
+			case days == 0:
+				info += " Last seen: today."
+			case days == 1:
+				info += " Last seen: yesterday."
+			default:
+				info += fmt.Sprintf(" Last seen: %d days ago.", days)
+			}
+		}
+	}
+	return info
+}
+
+// ReadUserFacts reads a user's facts.json and returns the summary field.
 func (r *Reader) ReadUserFacts(userID string) string {
 	factsPath := filepath.Join(r.usersDir, userID, "facts.json")
 	raw, err := os.ReadFile(factsPath)
@@ -118,7 +175,8 @@ func (r *Reader) ReadUserFacts(userID string) string {
 	}
 
 	var data struct {
-		Facts []struct {
+		Summary string `json:"summary"`
+		Facts   []struct {
 			Fact     string `json:"fact"`
 			Category string `json:"category"`
 		} `json:"facts"`
@@ -128,10 +186,13 @@ func (r *Reader) ReadUserFacts(userID string) string {
 		return ""
 	}
 
+	if data.Summary != "" {
+		return data.Summary
+	}
+
 	if len(data.Facts) == 0 {
 		return ""
 	}
-
 	var lines []string
 	for _, f := range data.Facts {
 		if f.Fact == "" {

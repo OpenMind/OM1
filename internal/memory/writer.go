@@ -14,10 +14,11 @@ import (
 
 // Writer appends interactions to daily markdown files and manages
 type Writer struct {
-	memoryRoot string
-	dailyDir   string
-	usersDir   string
-	log        *zap.Logger
+	memoryRoot         string
+	dailyDir           string
+	usersDir           string
+	log                *zap.Logger
+	visitedThisSession map[string]struct{}
 }
 
 // NewWriter creates a Writer, ensuring the required directories exist.
@@ -33,10 +34,11 @@ func NewWriter(memoryRoot string, log *zap.Logger) (*Writer, error) {
 	}
 
 	return &Writer{
-		memoryRoot: memoryRoot,
-		dailyDir:   dailyDir,
-		usersDir:   usersDir,
-		log:        log,
+		memoryRoot:         memoryRoot,
+		dailyDir:           dailyDir,
+		usersDir:           usersDir,
+		log:                log,
+		visitedThisSession: make(map[string]struct{}),
 	}, nil
 }
 
@@ -115,6 +117,7 @@ func (w *Writer) ensureUserDir(userID string) {
 			"first_seen":        now,
 			"last_seen":         now,
 			"interaction_count": 0,
+			"visit_count":       0,
 		}
 		data, _ := json.MarshalIndent(profile, "", "  ")
 		_ = os.WriteFile(profilePath, data, 0o644)
@@ -147,6 +150,12 @@ func (w *Writer) updateUserProfile(userID string) {
 	profile["last_seen"] = time.Now().Format(time.RFC3339)
 	count, _ := profile["interaction_count"].(float64)
 	profile["interaction_count"] = count + 1
+
+	if _, visited := w.visitedThisSession[userID]; !visited {
+		vc, _ := profile["visit_count"].(float64)
+		profile["visit_count"] = vc + 1
+		w.visitedThisSession[userID] = struct{}{}
+	}
 
 	data, _ := json.MarshalIndent(profile, "", "  ")
 	_ = os.WriteFile(profilePath, data, 0o644)

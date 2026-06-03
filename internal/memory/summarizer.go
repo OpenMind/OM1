@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,38 +48,7 @@ Output format (one per line):
 If no meaningful facts, respond with exactly "NONE"
 `)
 
-var scorePromptTmpl = strings.TrimSpace(`
-You are a memory manager for a robot. Evaluate each candidate fact against the current memory and decide what to do.
-
-Score each candidate on three dimensions (1-5):
-- durability: will this matter in future conversations?
-- novelty: is this new information not already in memory?
-- significance: how important is this for understanding the user?
-
-Category must be one of: IDENTITY, PREFERENCE, FACT
-
-Decision rules:
-- Total score >= 12 AND fact is not in memory → "PROMOTE"
-- Fact contradicts or updates existing memory → "UPDATE" (specify which line to replace)
-- Total score < 12 or already known → "SKIP"
-
-Current memory:
-%s
-
-Candidate facts:
-%s
-
-Respond with a JSON array (no extra text):
-[
-  {"fact": "...", "category": "IDENTITY", "user_id": "alice", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"},
-  {"fact": "...", "category": "FACT", "user_id": null, "durability": 5, "novelty": 5, "significance": 5, "decision": "UPDATE", "replaces": "old fact text"},
-  {"fact": "...", "category": "PREFERENCE", "user_id": "bob", "durability": 1, "novelty": 1, "significance": 1, "decision": "SKIP"}
-]
-
-Include "user_id" if the fact is associated with a specific user, otherwise set it to null.
-`)
-
-// Summarizer runs the two-stage LLM fact extraction pipeline.
+// Summarizer runs the LLM fact extraction + signal-based scoring pipeline.
 type Summarizer struct {
 	memoryRoot string
 	dailyDir   string
@@ -87,6 +57,7 @@ type Summarizer struct {
 	apiKey     string
 	baseURL    string
 	model      string
+	signals    *SignalStore
 	client     *http.Client
 	log        *zap.Logger
 
@@ -95,7 +66,7 @@ type Summarizer struct {
 }
 
 // NewSummarizer creates a Summarizer.
-func NewSummarizer(memoryRoot, apiKey string, log *zap.Logger) *Summarizer {
+func NewSummarizer(memoryRoot, apiKey string, signals *SignalStore, log *zap.Logger) *Summarizer {
 	return &Summarizer{
 		memoryRoot: memoryRoot,
 		dailyDir:   filepath.Join(memoryRoot, "daily"),
@@ -104,6 +75,7 @@ func NewSummarizer(memoryRoot, apiKey string, log *zap.Logger) *Summarizer {
 		apiKey:     apiKey,
 		baseURL:    defaultSummarizerBaseURL,
 		model:      defaultSummarizerModel,
+		signals:    signals,
 		client:     httpclient.Default(),
 		log:        log,
 	}
@@ -197,26 +169,34 @@ func (s *Summarizer) Run(ctx context.Context) {
 		return
 	}
 
-	decisions, err := s.scoreCandidates(ctx, candidates)
-	if err != nil {
-		s.log.Error("memory summarization: score failed", zap.Error(err))
-		return
-	}
+	decisions := s.scoreCandidatesLocal(candidates)
 	if len(decisions) == 0 {
 		s.writeLastSummary()
 		return
 	}
 
-	s.applyDecisions(decisions)
+	changedUsers := s.applyDecisions(decisions)
+
+	expiredUsers := s.expireStaleFacts()
+	for _, uid := range expiredUsers {
+		if !containsStr(changedUsers, uid) {
+			changedUsers = append(changedUsers, uid)
+		}
+	}
+
+	for _, uid := range changedUsers {
+		if err := s.generateSummary(ctx, uid); err != nil {
+			s.log.Warn("memory: summary generation failed", zap.String("user", uid), zap.Error(err))
+		}
+	}
+
 	s.writeLastSummary()
 
 	s.log.Info("memory summarization complete",
 		zap.Int("files", len(unprocessed)),
-		zap.Int("candidates", len(decisions)),
+		zap.Int("promoted", len(decisions)),
 	)
 }
-
-// --- LLM calls ---
 
 type chatMessage struct {
 	Role    string `json:"role"`
@@ -295,39 +275,91 @@ type scoredDecision struct {
 	Replaces string  `json:"replaces"`
 }
 
-func (s *Summarizer) scoreCandidates(ctx context.Context, candidates string) ([]scoredDecision, error) {
-	existing := s.readAllUserFacts()
-	prompt := fmt.Sprintf(scorePromptTmpl, existing, candidates)
-
-	result, err := s.llmCall(ctx, []chatMessage{
-		{Role: "user", Content: prompt},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Strip markdown code fences if present.
-	cleaned := strings.TrimSpace(result)
-	if strings.HasPrefix(cleaned, "```") {
-		lines := strings.SplitN(cleaned, "\n", 2)
-		if len(lines) > 1 {
-			cleaned = lines[1]
-		}
-		if idx := strings.LastIndex(cleaned, "```"); idx >= 0 {
-			cleaned = cleaned[:idx]
-		}
-		cleaned = strings.TrimSpace(cleaned)
-	}
+// scoreCandidatesLocal scores extracted candidates.
+func (s *Summarizer) scoreCandidatesLocal(candidates string) []scoredDecision {
+	catRe := regexp.MustCompile(`^-\s*\[(\w+)\]\s*(?:\[user:(\w+)\]\s*)?(.+)$`)
 
 	var decisions []scoredDecision
-	if err := json.Unmarshal([]byte(cleaned), &decisions); err != nil {
-		s.log.Warn("memory summarization: failed to parse score response", zap.Error(err))
-		return nil, nil
+	for _, line := range strings.Split(candidates, "\n") {
+		line = strings.TrimSpace(line)
+		m := catRe.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		category := strings.ToUpper(m[1])
+		userID := strings.ToLower(strings.TrimSpace(m[2]))
+		fact := strings.TrimSpace(m[3])
+
+		if fact == "" {
+			continue
+		}
+
+		if s.signals.LookupSignal(fact) == nil {
+			s.signals.InjectColdStart(fact)
+		}
+
+		score := s.signals.Score(fact)
+		s.log.Debug("memory candidate score",
+			zap.String("fact", truncate(fact, 60)),
+			zap.Float64("score", score),
+		)
+
+		if score >= promotionThreshold {
+			var uid *string
+			if userID != "" {
+				uid = &userID
+			}
+			decisions = append(decisions, scoredDecision{
+				Fact:     fact,
+				Category: category,
+				UserID:   uid,
+				Decision: "PROMOTE",
+			})
+		}
 	}
-	return decisions, nil
+	return decisions
 }
 
-// --- file helpers ---
+// generateSummary creates a concise natural-language summary of a user's facts.
+func (s *Summarizer) generateSummary(ctx context.Context, userID string) error {
+	factsPath := filepath.Join(s.usersDir, userID, "facts.json")
+	raw, err := os.ReadFile(factsPath)
+	if err != nil {
+		return err
+	}
+
+	var data struct {
+		UserID  string `json:"user_id"`
+		Summary string `json:"summary"`
+		Facts   []struct {
+			Fact     string `json:"fact"`
+			Category string `json:"category"`
+			AddedAt  string `json:"added_at"`
+		} `json:"facts"`
+	}
+	if err := json.Unmarshal(raw, &data); err != nil || len(data.Facts) == 0 {
+		return nil
+	}
+
+	var factLines []string
+	for _, f := range data.Facts {
+		factLines = append(factLines, fmt.Sprintf("- [%s] %s", f.Category, f.Fact))
+	}
+
+	prompt := fmt.Sprintf(
+		"Summarize these facts about user %q in one concise paragraph (max 50 words):\n%s",
+		userID, strings.Join(factLines, "\n"),
+	)
+
+	summary, err := s.llmCall(ctx, []chatMessage{{Role: "user", Content: prompt}})
+	if err != nil {
+		return err
+	}
+
+	data.Summary = strings.TrimSpace(summary)
+	out, _ := json.MarshalIndent(data, "", "  ")
+	return os.WriteFile(factsPath, out, 0o644)
+}
 
 func (s *Summarizer) readLastSummary() *time.Time {
 	raw, err := os.ReadFile(s.markerFile)
@@ -470,7 +502,7 @@ func (s *Summarizer) readAllUserFacts() string {
 	return strings.Join(parts, "\n\n")
 }
 
-func (s *Summarizer) applyDecisions(decisions []scoredDecision) {
+func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
 	// Group by user_id.
 	type factOp struct {
 		fact     string
@@ -562,4 +594,87 @@ func (s *Summarizer) applyDecisions(decisions []scoredDecision) {
 			s.log.Info("memory: updated facts", zap.String("user", uid), zap.Int("added", added))
 		}
 	}
+
+	var changedUsers []string
+	for uid := range userFacts {
+		changedUsers = append(changedUsers, uid)
+	}
+	return changedUsers
+}
+
+const (
+	expirationRecencyThreshold = 0.1
+	expirationRecallMinimum    = 2
+)
+
+// expireStaleFacts removes facts where recency < 0.1 AND recall_count < 2.
+func (s *Summarizer) expireStaleFacts() []string {
+	entries, err := os.ReadDir(s.usersDir)
+	if err != nil {
+		return nil
+	}
+
+	var changedUsers []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		uid := e.Name()
+		factsPath := filepath.Join(s.usersDir, uid, "facts.json")
+		raw, err := os.ReadFile(factsPath)
+		if err != nil {
+			continue
+		}
+
+		var data struct {
+			UserID  string `json:"user_id"`
+			Summary string `json:"summary"`
+			Facts   []struct {
+				Fact     string `json:"fact"`
+				Category string `json:"category"`
+				AddedAt  string `json:"added_at"`
+			} `json:"facts"`
+		}
+		if err := json.Unmarshal(raw, &data); err != nil || len(data.Facts) == 0 {
+			continue
+		}
+
+		var kept = data.Facts[:0]
+		expired := 0
+		for _, f := range data.Facts {
+			sig := s.signals.LookupSignal(f.Fact)
+			if sig != nil && sig.RecallCount < expirationRecallMinimum {
+				ageDays := time.Since(sig.LastRecalled).Hours() / 24
+				recency := math.Exp(-0.693 * ageDays / 14)
+				if recency < expirationRecencyThreshold {
+					s.log.Info("memory: expired fact",
+						zap.String("user", uid),
+						zap.String("fact", truncate(f.Fact, 50)),
+						zap.Float64("recency", recency),
+					)
+					expired++
+					continue
+				}
+			}
+			kept = append(kept, f)
+		}
+
+		if expired > 0 {
+			data.Facts = kept
+			out, _ := json.MarshalIndent(data, "", "  ")
+			_ = os.WriteFile(factsPath, out, 0o644)
+			changedUsers = append(changedUsers, uid)
+			s.log.Info("memory: expired facts", zap.String("user", uid), zap.Int("removed", expired))
+		}
+	}
+	return changedUsers
+}
+
+func containsStr(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
