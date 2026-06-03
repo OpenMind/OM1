@@ -5,16 +5,35 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/gordonklaus/portaudio"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
 func init() {
 	inputs.Register("GoogleASRInput", NewGoogleASR)
+}
+
+// googleLanguageCodeMap maps friendly language names to the BCP-47 codes accepted
+// by the Google ASR service.
+var googleLanguageCodeMap = map[string]string{
+	"english":    "en-US",
+	"chinese":    "cmn-Hans-CN",
+	"german":     "de-DE",
+	"french":     "fr-FR",
+	"japanese":   "ja-JP",
+	"korean":     "ko-KR",
+	"spanish":    "es-ES",
+	"italian":    "it-IT",
+	"portuguese": "pt-BR",
+	"russian":    "ru-RU",
+	"arabic":     "ar-SA",
 }
 
 // GoogleASRConfig configures the local microphone-sourced Google ASR sensor.
@@ -30,10 +49,22 @@ type GoogleASRConfig struct {
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
 }
 
+// googleASRParams carries the vendor inputs needed to build a Google asrCommon.
+type googleASRParams struct {
+	name                 string
+	apiKey               string
+	apiVersion           string
+	baseURL              string
+	rate                 int
+	language             string
+	alternativeLanguages []string
+	enableTTSInterrupt   bool
+}
+
 // GoogleASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the Google ASR websocket through the shared googleASRCommon.
+// streams it to the Google ASR websocket through the shared asrCommon.
 type GoogleASRSensor struct {
-	*googleASRCommon
+	*asrCommon
 
 	cfg        GoogleASRConfig
 	paStream   *portaudio.Stream
@@ -42,7 +73,7 @@ type GoogleASRSensor struct {
 
 // NewGoogleASR constructs a GoogleASRSensor with the given configuration.
 func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
-	var cfg GoogleASRConfig
+	cfg := GoogleASRConfig{MicDeviceIndex: -1}
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
 	}
@@ -55,24 +86,23 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 	if cfg.Chunk == 0 {
 		cfg.Chunk = 4800
 	}
-	if cfg.MicDeviceIndex == 0 {
-		cfg.MicDeviceIndex = -1
-	}
 
-	core := NewGoogleASRCommon("GoogleASRInput", googleASRCommonConfig{
-		APIKey:               cfg.APIKey,
-		APIVersion:           cfg.APIVersion,
-		BaseURL:              cfg.BaseURL,
-		Rate:                 cfg.Rate,
-		Language:             cfg.Language,
-		AlternativeLanguages: cfg.AlternativeLanguages,
+	core := newGoogleASRCommon(googleASRParams{
+		name:                 "GoogleASRInput",
+		apiKey:               cfg.APIKey,
+		apiVersion:           cfg.APIVersion,
+		baseURL:              cfg.BaseURL,
+		rate:                 cfg.Rate,
+		language:             cfg.Language,
+		alternativeLanguages: cfg.AlternativeLanguages,
+		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
 	})
 	core.log.Info("GoogleASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &GoogleASRSensor{
-		googleASRCommon: core,
-		cfg:             cfg,
-		audioChunk:      make([]int16, cfg.Chunk),
+		asrCommon:  core,
+		cfg:        cfg,
+		audioChunk: make([]int16, cfg.Chunk),
 	}, nil
 }
 
@@ -221,4 +251,76 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 
 		s.sendChunk(pcm)
 	}
+}
+
+// newGoogleASRCommon resolves Google-specific config and builds the shared asrCommon with the Google parser.
+func newGoogleASRCommon(p googleASRParams) *asrCommon {
+	apiVersion := strings.TrimSpace(strings.ToLower(p.apiVersion))
+	if apiVersion != "v1" && apiVersion != "v2" {
+		apiVersion = "v2"
+	}
+
+	language := strings.TrimSpace(strings.ToLower(p.language))
+	if language == "" {
+		language = "english"
+	}
+	languageCode, ok := googleLanguageCodeMap[language]
+	if !ok {
+		languageCode = "en-US"
+	}
+
+	var altCodes []string
+	if apiVersion == "v1" {
+		for _, alt := range p.alternativeLanguages {
+			alt = strings.TrimSpace(strings.ToLower(alt))
+			if code, ok := googleLanguageCodeMap[alt]; ok {
+				altCodes = append(altCodes, code)
+			}
+		}
+	}
+
+	wsURL := p.baseURL
+	if wsURL == "" {
+		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/google/asr/%s?api_key=%s", apiVersion, p.apiKey)
+	}
+
+	return newASRCommon(asrCommonConfig{
+		Name:               p.name,
+		Model:              "google",
+		APIVersion:         apiVersion,
+		WSURL:              wsURL,
+		Rate:               p.rate,
+		Language:           language,
+		LanguageCode:       languageCode,
+		AltCodes:           altCodes,
+		EnableTTSInterrupt: p.enableTTSInterrupt,
+		ParseMessage:       googleParseMessage,
+	})
+}
+
+// googleParseMessage implements the Google ASR protocol (speech_start/speech_end/end_of_utterance events plus asr_reply) and records its latency metrics.
+func googleParseMessage(c *asrCommon, msg ASRMessage) string {
+	switch msg.Type {
+	case "speech_start":
+		c.speechStartTime = time.Now()
+		c.speechStarted = true
+	case "speech_end":
+		if c.speechStarted {
+			c.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, time.Since(c.speechStartTime))
+		}
+	case "end_of_utterance":
+		if c.speechStarted {
+			c.observeASR(metrics.ASRUtteranceEndLatency, metrics.ASRUtteranceEndLatencyLast, time.Since(c.speechStartTime))
+		}
+	}
+
+	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
+		return ""
+	}
+
+	if c.speechStarted {
+		c.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(c.speechStartTime))
+		c.speechStarted = false
+	}
+	return msg.ASRReply
 }

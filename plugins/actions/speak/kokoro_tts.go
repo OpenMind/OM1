@@ -39,8 +39,7 @@ type KokoroConnector struct {
 	silenceRate    int
 }
 
-// NewKokoroTTS creates a new KokoroConnector with the provided configuration,
-// applying defaults that match the Python SpeakKokoroTTSConfig.
+// NewKokoroTTS creates a new KokoroConnector with the provided configuration.
 func NewKokoroTTS(configMap map[string]any) (actions.Connector, error) {
 	var cfg KokoroConfig
 	if b, err := json.Marshal(configMap); err == nil {

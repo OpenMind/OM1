@@ -7,7 +7,6 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -17,40 +16,36 @@ import (
 )
 
 func init() {
-	inputs.Register("GoogleASRRTSPInput", NewGoogleASRRTSP)
+	inputs.Register("ElevenLabsASRRTSPInput", NewElevenLabsASRRTSP)
 }
 
-const rtspReconnectDelay = 2 * time.Second
-
-// GoogleASRRTSPConfig configures the RTSP-sourced Google ASR sensor.
-type GoogleASRRTSPConfig struct {
-	APIKey               string   `json:"api_key"`
-	APIVersion           string   `json:"api_version"`           // "v1" or "v2" (default "v2")
-	RTSPURL              string   `json:"rtsp_url"`              // RTSP audio source
-	Rate                 int      `json:"rate"`                  // sample rate Hz (default 16000)
-	Chunk                int      `json:"chunk"`                 // samples per chunk (default 1600)
-	BaseURL              string   `json:"base_url"`              // override WS endpoint
-	Language             string   `json:"language"`              // default "english"
-	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
-	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
+// ElevenLabsASRRTSPConfig configures the RTSP-sourced ElevenLabs ASR sensor.
+type ElevenLabsASRRTSPConfig struct {
+	APIKey             string `json:"api_key"`
+	RTSPURL            string `json:"rtsp_url"` // RTSP audio source
+	Rate               int    `json:"rate"`     // sample rate Hz (default 16000)
+	Chunk              int    `json:"chunk"`    // samples per chunk (default 1600)
+	BaseURL            string `json:"base_url"` // override WS endpoint
+	Language           string `json:"language"` // default "auto"
+	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
 }
 
-// GoogleASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
-// forwards PCM to the Google ASR websocket through the shared asrCommon.
-type GoogleASRRTSPSensor struct {
+// ElevenLabsASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
+// forwards PCM to the ElevenLabs ASR websocket through the shared asrCommon.
+type ElevenLabsASRRTSPSensor struct {
 	*asrCommon
 
-	cfg GoogleASRRTSPConfig
+	cfg ElevenLabsASRRTSPConfig
 }
 
-// NewGoogleASRRTSP constructs a GoogleASRRTSPSensor with the given configuration.
-func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
-	var cfg GoogleASRRTSPConfig
+// NewElevenLabsASRRTSP constructs an ElevenLabsASRRTSPSensor with the given configuration.
+func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
+	var cfg ElevenLabsASRRTSPConfig
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.APIKey == "" {
-		return nil, fmt.Errorf("GoogleASRRTSPInput: api_key required")
+		return nil, fmt.Errorf("ElevenLabsASRRTSPInput: api_key required")
 	}
 	if cfg.RTSPURL == "" {
 		cfg.RTSPURL = "rtsp://localhost:8554/audio"
@@ -62,36 +57,34 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.Chunk = 1600
 	}
 
-	core := newGoogleASRCommon(googleASRParams{
-		name:                 "GoogleASRRTSPInput",
-		apiKey:               cfg.APIKey,
-		apiVersion:           cfg.APIVersion,
-		baseURL:              cfg.BaseURL,
-		rate:                 cfg.Rate,
-		language:             cfg.Language,
-		alternativeLanguages: cfg.AlternativeLanguages,
-		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
+	core := newElevenLabsASRCommon(elevenlabsASRParams{
+		name:               "ElevenLabsASRRTSPInput",
+		apiKey:             cfg.APIKey,
+		baseURL:            cfg.BaseURL,
+		rate:               cfg.Rate,
+		language:           cfg.Language,
+		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("GoogleASRRTSPInput: rtsp config",
+	core.log.Info("ElevenLabsASRRTSPInput: rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.Int("chunk", cfg.Chunk),
 	)
 
-	return &GoogleASRRTSPSensor{
+	return &ElevenLabsASRRTSPSensor{
 		asrCommon: core,
 		cfg:       cfg,
 	}, nil
 }
 
 // Listen starts the sensor by connecting to the ASR websocket and running the RTSP capture loop.
-func (s *GoogleASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
+func (s *ElevenLabsASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
 		defer close(out)
 		defer s.Stop()
 
 		if err := s.wsClient.Connect(); err != nil {
-			s.log.Error("GoogleASRRTSPInput: ws connect failed", zap.Error(err))
+			s.log.Error("ElevenLabsASRRTSPInput: ws connect failed", zap.Error(err))
 			return
 		}
 
@@ -107,23 +100,23 @@ func (s *GoogleASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 }
 
 // Stop signals the capture loop to stop, waits for it to finish, and cleans up resources.
-func (s *GoogleASRRTSPSensor) Stop() {
+func (s *ElevenLabsASRRTSPSensor) Stop() {
 	first, captureDone := s.markStopped()
 	if !first {
 		return
 	}
 
-	s.log.Info("GoogleASRRTSPInput: stopping sensor")
+	s.log.Info("ElevenLabsASRRTSPInput: stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
 
-	s.log.Info("GoogleASRRTSPInput: sensor stopped")
+	s.log.Info("ElevenLabsASRRTSPInput: sensor stopped")
 }
 
 // captureLoop runs the RTSP stream and reconnects on failure until ctx is cancelled.
-func (s *GoogleASRRTSPSensor) captureLoop(ctx context.Context) {
+func (s *ElevenLabsASRRTSPSensor) captureLoop(ctx context.Context) {
 	defer func() {
 		s.mu.Lock()
 		done := s.captureDone
@@ -139,8 +132,8 @@ func (s *GoogleASRRTSPSensor) captureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("GoogleASRRTSPInput: RTSP audio error", zap.Error(err))
-			s.log.Info("GoogleASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("ElevenLabsASRRTSPInput: RTSP audio error", zap.Error(err))
+			s.log.Info("ElevenLabsASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -150,7 +143,7 @@ func (s *GoogleASRRTSPSensor) captureLoop(ctx context.Context) {
 
 // streamRTSP runs ffmpeg to capture PCM audio from the RTSP URL and
 // sends it to the ASR websocket until an error occurs or ctx is cancelled.
-func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
+func (s *ElevenLabsASRRTSPSensor) streamRTSP(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-rtsp_transport", "tcp",
 		"-i", s.cfg.RTSPURL,
@@ -177,7 +170,7 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("GoogleASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("ElevenLabsASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)

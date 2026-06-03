@@ -7,7 +7,7 @@ import (
 )
 
 // serializePersonGreetingStatus encodes a PersonGreetingStatus in CDR
-// little-endian format, matching the Python pycdr2 wire layout.
+// little-endian format.
 //
 // Wire layout (absolute offsets from start of buffer):
 //

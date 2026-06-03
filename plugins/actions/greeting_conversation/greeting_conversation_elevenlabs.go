@@ -18,16 +18,12 @@ import (
 )
 
 const (
-	// personGreetingTopic carries countdown / conversation status updates.
 	personGreetingTopic = "om/person_greeting"
 
-	// statusConversation is PersonGreetingStatus.STATUS.CONVERSATION.
 	statusConversation = byte(3)
 
-	// tickInterval matches the Python connector's per-tick sleep.
 	tickInterval = 10 * time.Second
-	// ttsTimeout caps how long we wait for TTS playback before resuming ticks.
-	ttsTimeout = 30 * time.Second
+	ttsTimeout   = 30 * time.Second
 )
 
 // ConversationStateEnum is the LLM-facing enum for the conversation_state field.
@@ -71,8 +67,7 @@ type Config struct {
 	Rate             int    `json:"rate"`
 }
 
-// Connector manages a greeting conversation using ElevenLabs TTS. It is a Go
-// port of the Python BaseGreetingConversationConnector + ElevenLabs subclass.
+// Connector implements the greeting conversation action using the ElevenLabs TTS provider.
 type Connector struct {
 	log      *zap.Logger
 	tts      *providers.ElevenLabsProvider

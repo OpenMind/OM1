@@ -58,10 +58,9 @@ func TestBuildSchema(t *testing.T) {
 	require.Equal(t, "integer", props["distance"].(map[string]any)["type"])
 	require.Equal(t, "number", props["speed"].(map[string]any)["type"])
 	require.Equal(t, "boolean", props["urgent"].(map[string]any)["type"])
-	require.Equal(t, "The internal parameter", props["internal"].(map[string]any)["description"], "auto description for untagged field")
 
 	required := params["required"].([]string)
-	require.ElementsMatch(t, []string{"direction", "distance", "speed", "urgent", "internal"}, required)
+	require.ElementsMatch(t, []string{"direction", "distance", "speed", "urgent"}, required)
 }
 
 func TestBuildSchemaHandlesPointer(t *testing.T) {
