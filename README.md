@@ -21,11 +21,11 @@
 
 ## Getting Started
 
-If you are new to OM1, this is the fastest path to a successful first run using the `spot` agent.
+If you are new to OM1, this is the fastest path to a successful first run using the `conversation` agent.
 
-Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs as logs and API responses.
+The conversation agent uses your webcam and microphone to enable natural voice interactions with an AI. The model processes visual and audio inputs and responds through speech.
 
-Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and does not execute robot hardware actions.
+This quick start uses the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and demonstrates the input-LLM-action flow.
 
 ### Quick Start (5 Minutes)
 
@@ -88,26 +88,26 @@ OM_API_KEY=<your_api_key>
 ```
 in `.env`.
 
-You can also verify or adjust the fallback key location in `config/spot.json5`.
+You can also verify or adjust the fallback key location in `config/conversation.json5`.
 
-### 4. Launch Spot
+### 4. Launch the Agent
 
 ```bash
-make run CONFIG=spot
+make run CONFIG=conversation
 ```
 
 Or for development with debug logging:
 ```bash
-make dev CONFIG=spot
+make dev CONFIG=conversation
 ```
 
 #### Verify It Is Working
 
 Your setup is successful if:
 
-- The terminal shows the Spot agent has started successfully.
+- The terminal shows the agent has started successfully.
 - You see input processing and LLM responses logged in the terminal.
-- The agent responds to camera input and generates appropriate outputs.
+- The agent responds to voice and camera input with speech output.
 
 ### 5. Monitor with Grafana (Optional)
 
@@ -134,7 +134,7 @@ Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
 For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-> **Note:** This quick start uses the Spot starter configuration. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
+> **Note:** For voice interactions, ensure ASR and TTS are configured in `config/conversation.json5`.
 
 ## What's Next?
 

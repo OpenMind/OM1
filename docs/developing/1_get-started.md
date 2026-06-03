@@ -105,10 +105,10 @@ make build
 
 2. Set the configuration variables
 
-Locate the `config` folder and add your OpenMind API key to `/config/spot.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.com/.
+Locate the `config` folder and add your OpenMind API key to `/config/conversation.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.com/.
 
 ```bash
-# /config/spot.json5
+# /config/conversation.json5
 ...
 "api_key": "om1_live_..."
 ...
@@ -122,19 +122,19 @@ Or, create a `.env` file in the project directory and add the following:
 OM_API_KEY=om1_live_...
 ```
 
-3. Run the Spot Agent
+3. Run the Conversation Agent
 
-Run the following command to start the Spot Agent:
+Run the following command to start the Conversation Agent:
 
 ```bash
-make run CONFIG=spot
+make run CONFIG=conversation
 ```
 
 > **Note:** Agent configuration names are only required when switching between different agents.
 
-Spot is just an example agent configuration.
+The conversation agent is just an example agent configuration.
 
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `conversation.json5`.
 
 ASR configuration (check in agent_inputs)
 ```json5
@@ -168,7 +168,7 @@ Upon successful initialization, a `.runtime.json5` file will be generated in the
 After the initial build, you can start the agent using:
 
 ```bash
-make run CONFIG=spot
+make run CONFIG=conversation
 ```
 
 ![ ](../.gitbook/assets/hot_reload.png)
@@ -197,7 +197,7 @@ Then navigate to [http://localhost:3000](http://localhost:3000) (default login: 
 
 ### Understanding the Log Data
 
-The log data provide insight into how the `spot` agent makes sense of its environment and decides on its next actions.
+The log data provide insight into how the `conversation` agent makes sense of its environment and decides on its next actions.
 
   - First, it detects a person using vision.
   - Communicates with an external AI API for response generation.
@@ -237,10 +237,10 @@ INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), C
 
 There are more pre-configured agents in the `/config` folder. They can be run with the following command:
 
-For example, to run the `cubly` agent:
+For example, to run the `greeting_conversation` agent:
 
 ```bash
-make run CONFIG=cubly
+make run CONFIG=greeting_conversation
 ```
 
 If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
