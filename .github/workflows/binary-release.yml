@@ -185,7 +185,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.setup.outputs.version }}
-          name: ${{ needs.setup.outputs.version == 'nightly' && 'Nightly (latest main)' || needs.setup.outputs.version }}
+          name: ${{ needs.setup.outputs.version == 'nightly' && 'Development Build' || needs.setup.outputs.version }}
           prerelease: ${{ needs.setup.outputs.prerelease == 'true' }}
           generate_release_notes: true
           files: release/*
