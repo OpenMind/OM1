@@ -160,7 +160,7 @@ jobs:
     permissions:
       contents: write
     environment:
-      name: ${{ needs.setup.outputs.version == 'nightly' && 'development' || 'production' }}
+      name: ${{ needs.setup.outputs.version == 'nightly' && 'staging' || 'production' }}
       url: ${{ steps.gh_release.outputs.url }}
     steps:
       - name: Download all artifacts
