@@ -45,22 +45,23 @@ all: lint build
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  all             - Run lint and build"
-	@echo "  build           - Build the binary"
-	@echo "  run             - Build and run with config (CONFIG=greeting by default)"
-	@echo "  dev             - Run without building (go run)"
-	@echo "  lint            - Run linter (golangci-lint)"
-	@echo "  fmt             - Format Go code"
-	@echo "  vet             - Run go vet"
-	@echo "  test            - Run tests with coverage"
-	@echo "  test-coverage   - Generate HTML coverage report"
-	@echo "  clean           - Clean build artifacts"
-	@echo "  deps            - Download and tidy dependencies"
-	@echo "  deps-update     - Update dependencies"
-	@echo "  install         - Install binary to GOPATH/bin"
-	@echo "  check           - Run fmt, vet, lint, and test"
-	@echo "  download-zenohc - Download and extract zenohc library"
-	@echo "  list-configs    - List available configuration files"
+	@echo "  all              - Run lint and build"
+	@echo "  build            - Build the binary"
+	@echo "  run              - Build and run with config (CONFIG=greeting by default)"
+	@echo "  dev              - Run without building (go run)"
+	@echo "  lint             - Run linter (golangci-lint)"
+	@echo "  fmt              - Format Go code"
+	@echo "  vet              - Run go vet"
+	@echo "  test             - Run tests with coverage"
+	@echo "  test-integration - Run end-to-end integration tests"
+	@echo "  test-coverage    - Generate HTML coverage report"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  deps             - Download and tidy dependencies"
+	@echo "  deps-update      - Update dependencies"
+	@echo "  install          - Install binary to GOPATH/bin"
+	@echo "  check            - Run fmt, vet, lint, and test"
+	@echo "  download-zenohc  - Download and extract zenohc library"
+	@echo "  list-configs     - List available configuration files"
 
 download-zenohc:
 	@echo "Downloading zenoh-c $(ZENOH_C_VERSION) for $(ZENOH_PLATFORM)..."
@@ -121,6 +122,11 @@ vet: download-zenohc
 test: download-zenohc
 	@echo "Running tests..."
 	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) test -v -race -coverprofile=coverage.out ./...
+
+.PHONY: test-integration
+test-integration: download-zenohc
+	@echo "Running integration tests..."
+	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) test -v -tags=integration ./test/integration/...
 
 .PHONY: test-coverage
 test-coverage: test
