@@ -134,7 +134,8 @@ Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
 For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-> **Note:** For voice interactions, ensure ASR and TTS are configured in `config/conversation.json5`.
+> [!NOTE]
+> For voice interactions, ensure ASR and TTS are configured in `config/conversation.json5`.
 
 ## What's Next?
 
@@ -215,4 +216,4 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 
 ## License
 
-This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+This project is licensed under the terms of the [MIT License](./LICENSE), which is a permissive free software license that allows users to freely use, modify, and distribute the software. The [MIT License](./LICENSE) is a widely used and well-established license that is known for its simplicity and flexibility. By using the [MIT License](./LICENSE), this project aims to encourage collaboration, modification, and distribution of the software.
