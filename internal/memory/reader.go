@@ -127,8 +127,6 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 	return strings.Join(parts, "\n\n")
 }
 
-
-
 // readProfileVisitInfo reads profile.json and formats visit info.
 func (r *Reader) readProfileVisitInfo(userID string) string {
 	profilePath := filepath.Join(r.usersDir, userID, "profile.json")
