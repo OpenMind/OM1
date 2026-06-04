@@ -93,12 +93,12 @@ You can also verify or adjust the fallback key location in `config/conversation.
 ### 4. Launch the Agent
 
 ```bash
-make run CONFIG=conversation
+CONFIG=conversation make run
 ```
 
 Or for development with debug logging:
 ```bash
-make dev CONFIG=conversation
+CONFIG=conversation make dev
 ```
 
 #### Verify It Is Working

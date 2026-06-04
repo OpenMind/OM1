@@ -32,7 +32,7 @@ Ensure you have the following installed on your machine:
 #### Go Installation
 
 ```bash
-# Mac
+# macOS
 brew install go
 
 # Linux - download from https://go.dev/dl/ or use your package manager
@@ -40,12 +40,14 @@ sudo apt-get update
 sudo apt-get install golang-go
 ```
 
+For other platforms, download from https://go.dev/dl/
+
 #### PortAudio Library
 
 For audio functionality, install `portaudio`:
 
 ```bash
-# Mac
+# macOS
 brew install portaudio
 
 # Linux
@@ -58,7 +60,7 @@ sudo apt-get install portaudio19-dev
 For video functionality, install FFmpeg:
 
 ```bash
-# Mac
+# macOS
 brew install ffmpeg
 
 # Linux
@@ -77,17 +79,15 @@ source $HOME/.cargo/env
 
 OM1 provides a command-line interface (CLI). The main entry point is the `om1` binary built from `cmd/main.go` which provides the following options:
 
-- `-config`: Path to the config file
-
 ```bash
-make run CONFIG=[config_name]
+CONFIG=[config_name] make run
 ```
 
 - `config_name`: Name of the config file (without `.json5` extension) in the `/config` directory.
 
 For development with debug logging:
 ```bash
-make dev CONFIG=[config_name]
+CONFIG=[config_name] make dev
 ```
 
 ## Installation and Setup
@@ -102,6 +102,27 @@ cd OM1
 make deps
 make build
 ```
+
+**What these commands do:**
+
+- `make deps` - Downloads and installs all Go module dependencies, fetches the zenoh-c library, and ensures your environment is ready for building.
+- `make build` - Compiles the OM1 binary from source code.
+
+Dependencies are managed via Go modules (`go.mod` and `go.sum`).
+
+**Adding New Dependencies**
+
+To add a new Go package:
+
+```bash
+go get <package>    # Add the dependency
+make deps           # Tidy and verify modules
+```
+
+**Best Practices:**
+- Keep dependencies minimal and prefer well-maintained packages
+- Run `make check` before committing (runs fmt, vet, lint, and test)
+- Use `make fmt` to format code and `make lint` to check for issues
 
 2. Set the configuration variables
 
@@ -127,7 +148,7 @@ OM_API_KEY=om1_live_...
 Run the following command to start the Conversation Agent:
 
 ```bash
-make run CONFIG=conversation
+CONFIG=conversation make run
 ```
 
 > **Note:** Agent configuration names are only required when switching between different agents.
@@ -158,30 +179,6 @@ TTS configuration (check in agent_actions)
 ```
 
 During the first build, the system will automatically download the zenoh-c library and resolve all Go dependencies. This process may take several minutes to complete.
-
-**Runtime Configuration**
-
-Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
-
-**Subsequent Executions**
-
-After the initial build, you can start the agent using:
-
-```bash
-make run CONFIG=conversation
-```
-
-![ ](../.gitbook/assets/hot_reload.png)
-
-The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
-
-**Switching Agent Configurations**
-
-To run a different agent (for example, the conversation agent), specify the configuration name:
-
-```bash
-make run CONFIG=conversation
-```
 
 ### Prometheus and Grafana Monitoring
 
@@ -240,13 +237,13 @@ There are more pre-configured agents in the `/config` folder. They can be run wi
 For example, to run the `greeting_conversation` agent:
 
 ```bash
-make run CONFIG=greeting_conversation
+CONFIG=greeting_conversation make run
 ```
 
 If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
 
 ```bash
-make run CONFIG=<agent_name>
+CONFIG=<agent_name> make run
 ```
 
 To get started with development, refer [here](../developer_cookbook/introduction.md)
