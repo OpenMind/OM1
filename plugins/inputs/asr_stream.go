@@ -33,8 +33,7 @@ type ASRStatistics struct {
 }
 
 // transcriberStream is one vendor ASR connection: it packages and streams PCM to
-// a websocket, parses the vendor's transcript protocol, and hands accepted
-// transcripts to onTranscript.
+// a websocket, parses the vendor's protocol, and hands accepted transcripts to onTranscript.
 type transcriberStream struct {
 	name string
 	log  *zap.Logger
@@ -133,9 +132,8 @@ func (s *transcriberStream) sendChunk(pcm []byte) {
 	s.stats.mu.Unlock()
 }
 
-// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing
-// (and metric recording) to parseMessage, and forwards any accepted transcript to
-// onTranscript.
+// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing to parseMessage, 
+// and forwards any accepted transcript to onTranscript.
 func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
 	if msgType != websocket.TextMessage {
 		return
