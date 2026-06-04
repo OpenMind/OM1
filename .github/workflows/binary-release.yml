@@ -65,7 +65,7 @@ jobs:
             runner: macos-14
             os: darwin
           - name: darwin-amd64
-            runner: macos-13
+            runner: macos-15-intel
             os: darwin
     steps:
       - name: Checkout repository
@@ -152,98 +152,10 @@ jobs:
             ${{ steps.pkg.outputs.archive }}.sha256
           if-no-files-found: error
 
-  build-windows:
-    name: Build windows-amd64
-    needs: setup
-    runs-on: windows-latest
-    continue-on-error: true
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up MSYS2 (mingw64)
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-go
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-portaudio
-            curl
-            unzip
-            zip
-
-      - name: Download zenoh-c (windows-gnu)
-        run: |
-          set -euo pipefail
-          URL="https://github.com/eclipse-zenoh/zenoh-c/releases/download/${ZENOH_C_VERSION}/zenoh-c-${ZENOH_C_VERSION}-x86_64-pc-windows-gnu-standalone.zip"
-          mkdir -p .zenoh-c
-          curl -sSL -o /tmp/zenoh-c.zip "$URL"
-          unzip -q -o /tmp/zenoh-c.zip -d .zenoh-c
-
-      - name: Build binary
-        run: |
-          set -euo pipefail
-          export CGO_ENABLED=1
-          export CGO_CFLAGS="-I$(pwd)/.zenoh-c/include"
-          export CGO_LDFLAGS="-L$(pwd)/.zenoh-c/lib -lzenohc"
-          mkdir -p build
-          go build -v -ldflags "-s -w" -o build/om1.exe ./cmd
-
-      - name: Package archive
-        id: pkg
-        env:
-          VERSION: ${{ needs.setup.outputs.version }}
-        run: |
-          set -euo pipefail
-          PLATFORM="windows-amd64"
-          STAGE="dist/om1-${VERSION}-${PLATFORM}"
-          mkdir -p "$STAGE"
-
-          cp build/om1.exe "$STAGE/om1.exe"
-          cp .zenoh-c/bin/zenohc.dll "$STAGE/"
-
-          # Bundle the mingw + portaudio runtime DLLs the exe links against.
-          for dll in libportaudio*.dll libgcc_s_seh-1.dll libwinpthread-1.dll libstdc++-6.dll; do
-            cp /mingw64/bin/$dll "$STAGE/" 2>/dev/null || true
-          done
-
-          cp -R config "$STAGE/config"
-          [ -d knowledge_base ] && cp -R knowledge_base "$STAGE/knowledge_base" || true
-
-          cat > "$STAGE/INSTALL.txt" <<EOF
-          OM1 ${VERSION} (${PLATFORM}) - experimental build
-
-          Run:
-            om1.exe -config config\\conversation.json5
-
-          Keep all bundled .dll files next to om1.exe.
-          You may also need ffmpeg on your PATH for audio/video features.
-          EOF
-
-          ARCHIVE="om1-${VERSION}-${PLATFORM}.zip"
-          (cd dist && zip -qr "../${ARCHIVE}" "om1-${VERSION}-${PLATFORM}")
-          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
-          echo "archive=${ARCHIVE}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-amd64
-          path: |
-            ${{ steps.pkg.outputs.archive }}
-            ${{ steps.pkg.outputs.archive }}.sha256
-          if-no-files-found: warn
-
   release:
     name: Publish Release
     runs-on: ubuntu-latest
-    needs: [setup, build-unix, build-windows]
+    needs: [setup, build-unix]
     if: ${{ needs.setup.outputs.publish == 'true' }}
     permissions:
       contents: write
