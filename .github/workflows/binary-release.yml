@@ -2,7 +2,7 @@ name: "OM1 Binary Release"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "go" ]
     tags: [ "v*" ]
   workflow_dispatch:
     inputs:
