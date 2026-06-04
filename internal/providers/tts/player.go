@@ -116,7 +116,12 @@ func (p *ttsBase) processAudio() {
 				if err != nil && p.ctx.Err() == nil {
 					p.log.Error(p.name+": synthesis failed", zap.Error(err))
 				}
+
 				p.finishPlayback()
+
+				if Interrupt.Load() {
+					p.handleInterrupt()
+				}
 			}
 			Speaking.Store(false)
 		}
@@ -253,15 +258,31 @@ func (p *ttsBase) finishPlayback() {
 		_ = p.ffplay.Wait()
 		close(done)
 	}()
-	select {
-	case <-done:
-		p.log.Debug(p.name + ": ffplay finished")
-	case <-time.After(10 * time.Second):
-		p.log.Warn(p.name + ": ffplay timeout, killing")
-		_ = p.ffplay.Process.Kill()
-		<-done
+
+	poll := time.NewTicker(50 * time.Millisecond)
+	defer poll.Stop()
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case <-done:
+			p.log.Debug(p.name + ": ffplay finished")
+			p.ffplay = nil
+			return
+		case <-poll.C:
+			if Interrupt.Load() {
+				_ = p.ffplay.Process.Kill()
+				<-done
+				p.ffplay = nil
+				return
+			}
+		case <-timeout:
+			p.log.Warn(p.name + ": ffplay timeout, killing")
+			_ = p.ffplay.Process.Kill()
+			<-done
+			p.ffplay = nil
+			return
+		}
 	}
-	p.ffplay = nil
 }
 
 // cleanupFFPlay force-terminates ffplay from outside the lock.
