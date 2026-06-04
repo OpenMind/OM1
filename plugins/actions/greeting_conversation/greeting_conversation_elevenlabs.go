@@ -13,6 +13,7 @@ import (
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 	"github.com/openmind/om1/internal/zenoh"
 )
@@ -70,7 +71,7 @@ type Config struct {
 // Connector implements the greeting conversation action using the ElevenLabs TTS provider.
 type Connector struct {
 	log      *zap.Logger
-	tts      *providers.ElevenLabsProvider
+	tts      *tts.ElevenLabsProvider
 	greeting *providers.GreetingConversationStateMachineProvider
 	session  *zenoh.Session
 
@@ -92,21 +93,21 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 		return nil, fmt.Errorf("greeting_conversation/greeting_conversation_elevenlabs: api_key required")
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = providers.DefaultRate
+		cfg.Rate = tts.DefaultRate
 	}
 
 	log := logger.Get()
 
-	tts := providers.ElevenLabs(providers.ElevenLabsConfig{
+	tts := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
 		VoiceID:          cfg.VoiceID,
@@ -268,7 +269,7 @@ func (c *Connector) waitingOnTTS() bool {
 		return false
 	}
 	elapsed := time.Since(c.ttsPlayingStart)
-	stillSpeaking := providers.Speaking.Load()
+	stillSpeaking := tts.Speaking.Load()
 
 	if stillSpeaking && elapsed <= ttsTimeout {
 		c.mu.Unlock()

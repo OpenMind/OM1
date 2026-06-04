@@ -10,6 +10,7 @@ import (
 
 	"github.com/openmind/om1/internal/llm"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -182,13 +183,13 @@ func (r *Runner) greetingEndHook(_ context.Context, cfg, _ map[string]any) error
 }
 
 // greetingTTSProvider resolves the TTS provider for a greeting hook.
-func (r *Runner) greetingTTSProvider(cfg map[string]any) (*providers.ElevenLabsProvider, error) {
-	tts := strings.ToLower(stringVal(cfg, "tts_provider"))
+func (r *Runner) greetingTTSProvider(cfg map[string]any) (*tts.ElevenLabsProvider, error) {
+	ttsName := strings.ToLower(stringVal(cfg, "tts_provider"))
 
-	if tts != "" && tts != "elevenlabs" {
+	if ttsName != "" && ttsName != "elevenlabs" {
 		r.log.Warn("greeting hook: TTS provider not supported, falling back to elevenlabs",
-			zap.String("tts_provider", tts))
+			zap.String("tts_provider", ttsName))
 	}
 
-	return providers.ElevenLabs(elevenLabsConfigFrom(cfg), r.log), nil
+	return tts.ElevenLabs(elevenLabsConfigFrom(cfg), r.log), nil
 }

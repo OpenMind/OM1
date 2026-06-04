@@ -8,13 +8,14 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func TestRateFromFormat(t *testing.T) {
 	require.Equal(t, 44100, rateFromFormat("pcm_44100"))
 	require.Equal(t, 22050, rateFromFormat("mp3_44100_22050"), "takes the trailing numeric segment")
-	require.Equal(t, providers.DefaultRate, rateFromFormat("pcm"), "no numeric suffix → default rate")
-	require.Equal(t, providers.DefaultRate, rateFromFormat("pcm_abc"), "non-numeric suffix → default rate")
+	require.Equal(t, tts.DefaultRate, rateFromFormat("pcm"), "no numeric suffix → default rate")
+	require.Equal(t, tts.DefaultRate, rateFromFormat("pcm_abc"), "non-numeric suffix → default rate")
 }
 
 func newPeopleConnector(defaultVoice string, voiceIDs map[string]string) *ElevenLabsPeopleConnector {
