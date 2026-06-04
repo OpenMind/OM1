@@ -207,7 +207,7 @@ export OM_API_KEY="<your_api_key>"
 Now, run the simulation agent
 
 ```bash
-uv run src/run.py simulation
+make run CONFIG=simulation
 ```
 
 > **Note**: Update your agent name depending on robot type.

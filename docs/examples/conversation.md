@@ -11,7 +11,7 @@ This section provides various examples for integrating and using multiple cloud-
 This example uses your `default` audio in (microphone) and your `default` audio output (speaker). Please test both your microphone and speaker in your system settings to make sure they are connected and working. On a Mac, the system may request permission to access your audio - Allow permissions.
 
 ```bash
-uv run src/run.py conversation
+make run CONFIG=conversation
 ```
 
 Especially on Linux, such as on Ubuntu 20.04 on the Nvidia Orin, audio support can be marginal. Expect some audio inputs and outputs to not work correctly, or to advertise incorrect hardware capabilities, such as USB microphones that report zero input channels etc.

@@ -11,7 +11,7 @@ Before contributing, please take a moment to read through the following guidelin
 *   **Report Bugs:** If you find a bug, please [open an issue](https://github.com/OpenMind/OM1/issues) on GitHub. Be sure to include:
     *   A clear and concise description of the bug.
     *   Steps to reproduce the bug.
-    *   Your operating system and Python version.
+    *   Your operating system and Go version.
     *   Relevant error messages or stack traces.
     *   Screenshots (if applicable).
 
@@ -73,9 +73,10 @@ Before contributing, please take a moment to read through the following guidelin
     pre-commit run --all-files
     ```
 
-    To unit test the system, run
+    To run the linter and tests, use:
     ```bash
-    uv run pytest --log-cli-level=DEBUG -s
+    make lint
+    make test
     ```
 
 8.  **Push Changes:** Once all the tests pass locally, push your branch to your forked repository.
@@ -97,10 +98,10 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Coding Style and Conventions:**
 
-*   **Code Style:**  Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide.  We may use a code formatter like `black` or `ruff` (check the `pyproject.toml` or `setup.cfg` for project-specific configuration).  Run `pre-commit run --all-files` before committing.
-*   **Docstrings:**  Write clear and comprehensive docstrings for all functions, classes, and modules.  We may use a specific docstring format (e.g., Google style, NumPy style).
-*   **Tests:** Write unit tests to ensure your code works as expected.  Use a testing framework like `pytest`.
-*   **Type Hints:** Use type hints (PEP 484) to improve code readability and maintainability.
+*   **Code Style:**  Follow standard Go conventions and use `gofmt` for formatting. Run `make fmt` before committing, or let `pre-commit` handle it.
+*   **Documentation:**  Write clear and comprehensive comments for exported functions and types.
+*   **Tests:** Write unit tests to ensure your code works as expected. Use the standard Go testing package.
+*   **Naming:** Use idiomatic Go naming conventions (e.g., camelCase for unexported, PascalCase for exported).
 
 **Code of Conduct:**
 
