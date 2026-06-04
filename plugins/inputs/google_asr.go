@@ -245,7 +245,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
 		}
 
-		if tts.Speaking.Load() && !s.enableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 

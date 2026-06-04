@@ -18,6 +18,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -31,12 +32,13 @@ const defaultParallelDedupWindow = 3 * time.Second
 
 // ParallelASRProviderConfig configures one ASR provider within a parallel sensor.
 type ParallelASRProviderConfig struct {
-	Model                string   `json:"model"`   // "riva" | "google" | "elevenlabs"
+	Model                string   `json:"model"`   // provider type: "riva" | "google" | "elevenlabs"
 	APIKey               string   `json:"api_key"` // required for google/elevenlabs
 	APIVersion           string   `json:"api_version"`
 	BaseURL              string   `json:"base_url"` // override WS endpoint
 	Language             string   `json:"language"`
 	AlternativeLanguages []string `json:"alternative_languages"` // google v1 only
+	GoogleModel          string   `json:"google_model"`          // optional Google ASR model query param (google only)
 }
 
 // ParallelASRConfig configures a sensor that captures audio once and streams it to
@@ -112,7 +114,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrAggregator: newAggregator("ParallelASRInput"),
+		asrAggregator: newAggregator("ParallelASRInput", cfg.EnableTTSInterrupt),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
 	}
@@ -169,6 +171,7 @@ func (s *ParallelASRSensor) buildStreamConfig(p ParallelASRProviderConfig) (asrC
 			apiKey:               apiKey,
 			apiVersion:           p.APIVersion,
 			baseURL:              p.BaseURL,
+			model:                p.GoogleModel,
 			rate:                 s.cfg.Rate,
 			language:             p.Language,
 			alternativeLanguages: p.AlternativeLanguages,
@@ -386,7 +389,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			s.log.Warn("ParallelASRInput: read error", zap.Error(err))
 		}
 
-		if providers.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 
@@ -467,7 +470,7 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 			return fmt.Errorf("read pcm: %w", err)
 		}
 
-		if providers.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 

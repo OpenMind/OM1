@@ -139,7 +139,7 @@ func TestOnWSMessageCommittedDelivers(t *testing.T) {
 	s.speechStarted = true
 	s.speechStartTime = time.Now().Add(-50 * time.Millisecond)
 
-	s.onWSMessage(websocket.TextMessage, committedMsg(t, "hello world"))
+	s.onWSMessage(websocket.TextMessage, committedMsg(t, "hello there world"))
 
 	got, ok := recvTranscript(t, ch)
 	require.True(t, ok, "expected a transcript to be delivered")

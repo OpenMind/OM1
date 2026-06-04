@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -69,6 +70,8 @@ type asrAggregator struct {
 	name string
 	log  *zap.Logger
 
+	enableTTSInterrupt bool
+
 	transcriptCh chan string
 
 	messages []string
@@ -83,13 +86,14 @@ type asrAggregator struct {
 
 // newAggregator constructs an asrAggregator, opening the (optional) zenoh publisher
 // used to broadcast transcripts on om/asr/text.
-func newAggregator(name string) *asrAggregator {
+func newAggregator(name string, enableTTSInterrupt bool) *asrAggregator {
 	log := logger.Get()
 
 	a := &asrAggregator{
-		name:         name,
-		log:          log,
-		transcriptCh: make(chan string, 32),
+		name:               name,
+		log:                log,
+		enableTTSInterrupt: enableTTSInterrupt,
+		transcriptCh:       make(chan string, 32),
 	}
 
 	sess, err := zenohsession.Open()
@@ -121,6 +125,11 @@ func (a *asrAggregator) pushTranscript(text string) {
 	}
 
 	a.log.Info(a.name+": transcript accepted", zap.String("text", text))
+
+	if a.enableTTSInterrupt && tts.Speaking.Load() {
+		tts.RequestInterrupt()
+		a.log.Info(a.name + ": interrupting TTS due to detected speech")
+	}
 
 	select {
 	case a.transcriptCh <- text:
@@ -258,13 +267,14 @@ func (a *asrAggregator) closeZenoh() {
 // newASRCommon constructs an asrCommon from a vendor-resolved config, building the
 // aggregator (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
-	agg := newAggregator(cfg.Name)
+	agg := newAggregator(cfg.Name, cfg.EnableTTSInterrupt)
 	agg.log.Info(cfg.Name+": initializing",
 		zap.String("model", cfg.Model),
 		zap.String("language", cfg.Language),
 		zap.String("language_code", cfg.LanguageCode),
 		zap.String("api_version", cfg.APIVersion),
 		zap.Int("rate", cfg.Rate),
+		zap.Bool("enable_tts_interrupt", cfg.EnableTTSInterrupt),
 	)
 
 	stream := newTranscriberStream(cfg, agg.log, agg.deliver)

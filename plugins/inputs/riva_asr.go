@@ -12,6 +12,7 @@ import (
 
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -233,7 +234,7 @@ func (s *RivaASRSensor) captureLoop(ctx context.Context, stream *portaudio.Strea
 			s.log.Warn("RivaASRInput: read error", zap.Error(err))
 		}
 
-		if providers.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 
