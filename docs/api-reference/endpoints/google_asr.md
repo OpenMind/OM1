@@ -63,6 +63,7 @@ Establish a persistent WebSocket connection for streaming audio data and receivi
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `api_key` | string | Yes | Your OpenMind API key for authentication |
+| `model` | string | No | Override the speech recognition model (e.g. `chirp_3`, `latest_long`). Defaults to the chrip_3. |
 
 ### Connection Example
 
