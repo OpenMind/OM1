@@ -21,8 +21,9 @@ const providerQueueDepth = 8
 
 // ttsRequest is a queued utterance with an optional per-request voice override.
 type ttsRequest struct {
-	text    string
-	voiceID string
+	text       string
+	voiceID    string
+	generation uint64
 }
 
 // ttsBase provides common TTS playback functionality.
@@ -64,7 +65,7 @@ func (p *ttsBase) AddText(text string) {
 // AddTextWithVoice enqueues text for TTS synthesis with a specific voice ID if supported by the provider.
 func (p *ttsBase) AddTextWithVoice(text, voiceID string) {
 	select {
-	case p.queue <- ttsRequest{text: text, voiceID: voiceID}:
+	case p.queue <- ttsRequest{text: text, voiceID: voiceID, generation: generation.Load()}:
 	default:
 		p.log.Warn(p.name+": queue full, dropping", zap.String("text", text))
 	}
@@ -93,10 +94,16 @@ func (p *ttsBase) processAudio() {
 			if !ok {
 				return
 			}
+
+			if req.generation < generation.Load() {
+				continue
+			}
+
 			if !p.initFFPlay() {
 				p.log.Error(p.name + ": ffplay unavailable, dropping utterance")
 				continue
 			}
+
 			if p.preRollSilenceMs > 0 {
 				p.streamChunk(silenceBytes(p.rate, p.preRollSilenceMs))
 			}
@@ -179,19 +186,7 @@ func (p *ttsBase) postAndStream(req *http.Request, modelID, metricURL string) er
 func (p *ttsBase) handleInterrupt() {
 	p.log.Info(p.name + ": TTS interrupted by user speech")
 	p.cleanupFFPlay()
-	p.drainQueue()
 	Interrupt.Store(false)
-}
-
-// drainQueue removes all pending utterances from the queue without blocking.
-func (p *ttsBase) drainQueue() {
-	for {
-		select {
-		case <-p.queue:
-		default:
-			return
-		}
-	}
 }
 
 // initFFPlay starts a new ffplay process if one is not already running.

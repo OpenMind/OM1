@@ -313,7 +313,7 @@ func (c *asrCommon) onWSMessage(msgType int, data []byte) {
 	c.log.Info(c.name+": transcript accepted", zap.String("text", transcript))
 
 	if c.enableTTSInterrupt && tts.Speaking.Load() {
-		tts.Interrupt.Store(true)
+		tts.RequestInterrupt()
 		c.log.Info(c.name + ": interrupting TTS due to detected speech")
 	}
 
