@@ -132,7 +132,7 @@ func (s *transcriberStream) sendChunk(pcm []byte) {
 	s.stats.mu.Unlock()
 }
 
-// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing to parseMessage, 
+// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing to parseMessage,
 // and forwards any accepted transcript to onTranscript.
 func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
 	if msgType != websocket.TextMessage {
