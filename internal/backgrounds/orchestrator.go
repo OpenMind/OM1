@@ -8,10 +8,6 @@ import (
 )
 
 // Orchestrator runs Background tasks in separate goroutines.
-//
-// Each goroutine calls background.Run(ctx) in a continuous loop (one iteration
-// per call), recovers from panics, and calls background.Stop() when the context
-// is cancelled — exactly matching Python's _run_background_loop pattern.
 type Orchestrator struct {
 	backgrounds []Background
 	log         *zap.Logger
@@ -59,8 +55,7 @@ func (o *Orchestrator) runLoop(ctx context.Context, background Background) {
 	}
 }
 
-// safeRun calls background.Run(ctx) and recovers from any panic so the loop
-// can continue, matching Python's per-iteration try/except in _run_background_loop.
+// safeRun calls background.Run(ctx) and recovers from any panics, logging the error.
 func (o *Orchestrator) safeRun(ctx context.Context, background Background) {
 	defer func() {
 		if r := recover(); r != nil {

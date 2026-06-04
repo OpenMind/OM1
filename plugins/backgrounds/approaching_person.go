@@ -134,8 +134,7 @@ func (a *ApproachingPerson) Stop() {
 }
 
 // serializePersonGreetingStatus encodes a PersonGreetingStatus in CDR
-// little-endian format, matching the Python pycdr2 wire layout. The header's
-// frame_id and the request_id field both carry requestID, as in the Python task.
+// little-endian format.
 //
 // Wire layout (absolute offsets from start of buffer):
 //

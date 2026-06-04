@@ -15,10 +15,8 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
-// DefaultBaseURL is the embedding service endpoint used when none is configured.
 const DefaultBaseURL = "http://localhost:8100"
 
-// embedTimeout bounds a single embedding request, matching the Python client.
 const embedTimeout = 30 * time.Second
 
 // Embedder converts query text into an embedding vector.

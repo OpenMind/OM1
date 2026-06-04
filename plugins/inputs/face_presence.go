@@ -47,8 +47,7 @@ type FacePresenceSensor struct {
 	stopped  bool
 }
 
-// NewFacePresence constructs a FacePresenceSensor from the decoded config map,
-// applying defaults that match the Python FacePresenceConfig.
+// NewFacePresence constructs a FacePresenceSensor from the decoded config map.
 func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 	var cfg FacePresenceConfig
 	if b, err := json.Marshal(configMap); err == nil {
