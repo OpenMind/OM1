@@ -111,7 +111,7 @@ func (s *RivaASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 			return
 		}
 
-		if err := s.wsClient.Connect(); err != nil {
+		if err := s.connect(); err != nil {
 			s.log.Error("RivaASRInput: ws connect failed", zap.Error(err))
 			return
 		}
@@ -248,6 +248,11 @@ func (s *RivaASRSensor) captureLoop(ctx context.Context, stream *portaudio.Strea
 
 // newRivaASRCommon resolves Riva-specific config and builds the shared asrCommon with the Riva parser.
 func newRivaASRCommon(p rivaASRParams) *asrCommon {
+	return newASRCommon(resolveRivaASRConfig(p))
+}
+
+// resolveRivaASRConfig maps Riva vendor parameters to a transcriberStream config.
+func resolveRivaASRConfig(p rivaASRParams) asrCommonConfig {
 	language := strings.TrimSpace(strings.ToLower(p.language))
 	if language == "" {
 		language = "english"
@@ -262,7 +267,7 @@ func newRivaASRCommon(p rivaASRParams) *asrCommon {
 		wsURL = rivaDefaultBaseURL
 	}
 
-	return newASRCommon(asrCommonConfig{
+	return asrCommonConfig{
 		Name:               p.name,
 		Model:              "riva",
 		APIVersion:         rivaAPIVersion,
@@ -272,7 +277,7 @@ func newRivaASRCommon(p rivaASRParams) *asrCommon {
 		LanguageCode:       languageCode,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       rivaParseMessage,
-	})
+	}
 }
 
 // acceptRivaTranscript reports whether a Riva transcript is long enough to keep.
@@ -281,7 +286,7 @@ func acceptRivaTranscript(text string) bool {
 }
 
 // rivaParseMessage simply forwards any reply that clears the length threshold.
-func rivaParseMessage(_ *asrCommon, msg ASRMessage) string {
+func rivaParseMessage(_ *transcriberStream, msg ASRMessage) string {
 	if msg.ASRReply == "" || !acceptRivaTranscript(msg.ASRReply) {
 		return ""
 	}

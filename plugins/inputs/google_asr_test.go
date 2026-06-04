@@ -15,13 +15,13 @@ func TestGoogleLanguageCodeMap(t *testing.T) {
 }
 
 func TestGoogleParseMessage(t *testing.T) {
-	c := &asrCommon{log: zap.NewNop(), model: "google", language: "english", apiVersion: "v2"}
+	s := &transcriberStream{log: zap.NewNop(), model: "google", language: "english", apiVersion: "v2"}
 
-	require.Empty(t, googleParseMessage(c, ASRMessage{Type: "speech_start"}))
-	require.True(t, c.speechStarted)
+	require.Empty(t, googleParseMessage(s, ASRMessage{Type: "speech_start"}))
+	require.True(t, s.speechStarted)
 
-	require.Equal(t, "hello world", googleParseMessage(c, ASRMessage{ASRReply: "hello world"}))
-	require.False(t, c.speechStarted)
+	require.Equal(t, "hello world", googleParseMessage(s, ASRMessage{ASRReply: "hello world"}))
+	require.False(t, s.speechStarted)
 
-	require.Empty(t, googleParseMessage(c, ASRMessage{ASRReply: "hi"}))
+	require.Empty(t, googleParseMessage(s, ASRMessage{ASRReply: "hi"}))
 }

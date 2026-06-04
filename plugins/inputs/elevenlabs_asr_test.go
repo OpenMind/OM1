@@ -12,17 +12,38 @@ import (
 	"go.uber.org/zap"
 )
 
-func newTestElevenLabsCommon() *asrCommon {
-	return &asrCommon{
-		name:         "ElevenLabsASRInputTest",
+// newTestStream builds a transcriberStream whose accepted transcripts are pushed
+// onto ch, for testing a vendor's parser and audio packaging in isolation.
+func newTestStream(model, languageCode string, parser asrMessageParser, ch chan string) *transcriberStream {
+	return &transcriberStream{
+		name:         model + "Test",
 		log:          zap.NewNop(),
 		rate:         16000,
-		model:        "elevenlabs",
+		model:        model,
 		apiVersion:   elevenlabsAPIVersion,
 		language:     "english",
-		languageCode: "en",
+		languageCode: languageCode,
+		parseMessage: parser,
+		onTranscript: func(_ string, text string) {
+			select {
+			case ch <- text:
+			default:
+			}
+		},
+	}
+}
+
+func newTestElevenLabsStream(ch chan string) *transcriberStream {
+	return newTestStream("elevenlabs", "en", elevenlabsParseMessage, ch)
+}
+
+// newTestAggregator builds an asrAggregator with a no-op logger and no zenoh, for
+// testing the transcript buffer independent of any vendor stream.
+func newTestAggregator() *asrAggregator {
+	return &asrAggregator{
+		name:         "test",
+		log:          zap.NewNop(),
 		transcriptCh: make(chan string, 8),
-		parseMessage: elevenlabsParseMessage,
 	}
 }
 
@@ -88,12 +109,12 @@ func TestElevenLabsLanguageCodeMap(t *testing.T) {
 }
 
 func TestPackageAudio(t *testing.T) {
-	c := newTestElevenLabsCommon()
-	c.rate = 16000
-	c.languageCode = "zh"
+	s := newTestElevenLabsStream(make(chan string, 1))
+	s.rate = 16000
+	s.languageCode = "zh"
 
 	pcm := []byte{0x01, 0x02, 0x03, 0x04}
-	packet, err := c.packageAudio(pcm)
+	packet, err := s.packageAudio(pcm)
 	require.NoError(t, err)
 	require.Greater(t, len(packet), 4+len(pcm))
 
@@ -112,68 +133,72 @@ func TestPackageAudio(t *testing.T) {
 }
 
 func TestOnWSMessageCommittedDelivers(t *testing.T) {
-	c := newTestElevenLabsCommon()
-	c.speechStarted = true
-	c.speechStartTime = time.Now().Add(-50 * time.Millisecond)
+	ch := make(chan string, 1)
+	s := newTestElevenLabsStream(ch)
+	s.speechStarted = true
+	s.speechStartTime = time.Now().Add(-50 * time.Millisecond)
 
-	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hello world"))
+	s.onWSMessage(websocket.TextMessage, committedMsg(t, "hello world"))
 
-	got, ok := recvTranscript(t, c.transcriptCh)
+	got, ok := recvTranscript(t, ch)
 	require.True(t, ok, "expected a transcript to be delivered")
 	require.Equal(t, "hello world", got)
 
-	c.mu.Lock()
-	require.False(t, c.speechStarted, "speech timing should reset after a transcript is accepted")
-	c.mu.Unlock()
+	s.mu.Lock()
+	require.False(t, s.speechStarted, "speech timing should reset after a transcript is accepted")
+	s.mu.Unlock()
 }
 
 func TestOnWSMessagePartialMarksSpeechStart(t *testing.T) {
-	c := newTestElevenLabsCommon()
+	ch := make(chan string, 1)
+	s := newTestElevenLabsStream(ch)
 
-	c.onWSMessage(websocket.TextMessage, partialMsg(t, "partial text"))
+	s.onWSMessage(websocket.TextMessage, partialMsg(t, "partial text"))
 
-	c.mu.Lock()
-	started := c.speechStarted
-	c.mu.Unlock()
+	s.mu.Lock()
+	started := s.speechStarted
+	s.mu.Unlock()
 	require.True(t, started, "a partial message should mark the start of speech")
 
-	_, ok := recvTranscript(t, c.transcriptCh)
+	_, ok := recvTranscript(t, ch)
 	require.False(t, ok, "a partial message must not deliver a transcript")
 }
 
 func TestOnWSMessageRepeatedPartialsKeepFirstStart(t *testing.T) {
-	c := newTestElevenLabsCommon()
+	ch := make(chan string, 1)
+	s := newTestElevenLabsStream(ch)
 
-	c.onWSMessage(websocket.TextMessage, partialMsg(t, "he"))
-	c.mu.Lock()
-	require.True(t, c.speechStarted)
-	first := c.speechStartTime
-	c.mu.Unlock()
+	s.onWSMessage(websocket.TextMessage, partialMsg(t, "he"))
+	s.mu.Lock()
+	require.True(t, s.speechStarted)
+	first := s.speechStartTime
+	s.mu.Unlock()
 
-	c.onWSMessage(websocket.TextMessage, partialMsg(t, "hello wor"))
-	c.mu.Lock()
-	require.True(t, c.speechStarted)
-	require.Equal(t, first, c.speechStartTime, "start time should be set once per utterance")
-	c.mu.Unlock()
+	s.onWSMessage(websocket.TextMessage, partialMsg(t, "hello wor"))
+	s.mu.Lock()
+	require.True(t, s.speechStarted)
+	require.Equal(t, first, s.speechStartTime, "start time should be set once per utterance")
+	s.mu.Unlock()
 }
 
 func TestOnWSMessageCommittedResetsForNextUtterance(t *testing.T) {
-	c := newTestElevenLabsCommon()
-	c.speechStarted = true
-	c.speechStartTime = time.Now().Add(-time.Second)
+	ch := make(chan string, 1)
+	s := newTestElevenLabsStream(ch)
+	s.speechStarted = true
+	s.speechStartTime = time.Now().Add(-time.Second)
 
-	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hi"))
-	_, ok := recvTranscript(t, c.transcriptCh)
+	s.onWSMessage(websocket.TextMessage, committedMsg(t, "hi"))
+	_, ok := recvTranscript(t, ch)
 	require.False(t, ok)
-	c.mu.Lock()
-	require.False(t, c.speechStarted, "a committed message must end the speech segment")
-	c.mu.Unlock()
+	s.mu.Lock()
+	require.False(t, s.speechStarted, "a committed message must end the speech segment")
+	s.mu.Unlock()
 
-	c.onWSMessage(websocket.TextMessage, partialMsg(t, "how"))
-	c.mu.Lock()
-	require.True(t, c.speechStarted)
-	require.WithinDuration(t, time.Now(), c.speechStartTime, time.Second)
-	c.mu.Unlock()
+	s.onWSMessage(websocket.TextMessage, partialMsg(t, "how"))
+	s.mu.Lock()
+	require.True(t, s.speechStarted)
+	require.WithinDuration(t, time.Now(), s.speechStartTime, time.Second)
+	s.mu.Unlock()
 }
 
 func TestOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
@@ -190,61 +215,65 @@ func TestOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := newTestElevenLabsCommon()
-			c.onWSMessage(tc.msgType, tc.data)
-			_, ok := recvTranscript(t, c.transcriptCh)
+			ch := make(chan string, 1)
+			s := newTestElevenLabsStream(ch)
+			s.onWSMessage(tc.msgType, tc.data)
+			_, ok := recvTranscript(t, ch)
 			require.False(t, ok, "no transcript should be delivered for %q", tc.name)
 		})
 	}
 }
 
-func TestOnWSMessageStoppedIgnores(t *testing.T) {
-	c := newTestElevenLabsCommon()
-	c.stopped = true
+func TestAggregatorStoppedIgnores(t *testing.T) {
+	a := newTestAggregator()
+	a.stopped = true
 
-	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hello world"))
+	a.pushTranscript("hello world")
 
-	_, ok := recvTranscript(t, c.transcriptCh)
-	require.False(t, ok, "a stopped sensor must ignore incoming messages")
+	select {
+	case <-a.transcriptCh:
+		t.Fatal("a stopped aggregator must drop transcripts")
+	default:
+	}
 }
 
 func TestRawToText(t *testing.T) {
-	c := newTestElevenLabsCommon()
+	a := newTestAggregator()
 	ctx := context.Background()
 
-	msg, err := c.RawToText(ctx, 123)
+	msg, err := a.RawToText(ctx, 123)
 	require.NoError(t, err)
 	require.Nil(t, msg)
 
-	msg, err = c.RawToText(ctx, "")
+	msg, err = a.RawToText(ctx, "")
 	require.NoError(t, err)
 	require.Nil(t, msg)
 
-	msg, err = c.RawToText(ctx, "hello")
+	msg, err = a.RawToText(ctx, "hello")
 	require.NoError(t, err)
 	require.NotNil(t, msg)
 	require.Equal(t, "hello", msg.Message)
 
-	_, err = c.RawToText(ctx, "world")
+	_, err = a.RawToText(ctx, "world")
 	require.NoError(t, err)
 
-	c.mu.Lock()
-	require.Equal(t, []string{"hello world"}, c.messages)
-	c.mu.Unlock()
+	a.mu.Lock()
+	require.Equal(t, []string{"hello world"}, a.messages)
+	a.mu.Unlock()
 }
 
 func TestFormattedLatestBuffer(t *testing.T) {
-	c := newTestElevenLabsCommon()
+	a := newTestAggregator()
 
-	require.Equal(t, "", c.FormattedLatestBuffer())
+	require.Equal(t, "", a.FormattedLatestBuffer())
 
-	_, err := c.RawToText(context.Background(), "hello world")
+	_, err := a.RawToText(context.Background(), "hello world")
 	require.NoError(t, err)
 
-	require.Equal(t, "\nVoice: \"hello world\"\n", c.FormattedLatestBuffer())
+	require.Equal(t, "\nVoice: \"hello world\"\n", a.FormattedLatestBuffer())
 
-	require.Equal(t, "", c.FormattedLatestBuffer())
-	c.mu.Lock()
-	require.Empty(t, c.messages)
-	c.mu.Unlock()
+	require.Equal(t, "", a.FormattedLatestBuffer())
+	a.mu.Lock()
+	require.Empty(t, a.messages)
+	a.mu.Unlock()
 }

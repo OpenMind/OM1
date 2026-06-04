@@ -7,21 +7,13 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
-func newTestRivaCommon() *asrCommon {
-	return &asrCommon{
-		name:         "RivaASRInputTest",
-		log:          zap.NewNop(),
-		rate:         48000,
-		model:        "riva",
-		apiVersion:   rivaAPIVersion,
-		language:     "english",
-		languageCode: "en-US",
-		transcriptCh: make(chan string, 8),
-		parseMessage: rivaParseMessage,
-	}
+func newTestRivaStream(ch chan string) *transcriberStream {
+	s := newTestStream("riva", "en-US", rivaParseMessage, ch)
+	s.rate = 48000
+	s.apiVersion = rivaAPIVersion
+	return s
 }
 
 func rivaReplyMsg(t *testing.T, reply string) []byte {
@@ -64,20 +56,18 @@ func TestRivaLanguageCodeMap(t *testing.T) {
 }
 
 func TestRivaParseMessage(t *testing.T) {
-	c := newTestRivaCommon()
-
-	require.Equal(t, "hello there world", rivaParseMessage(c, ASRMessage{ASRReply: "hello there world"}))
-	require.Empty(t, rivaParseMessage(c, ASRMessage{ASRReply: "hello world"}), "two words must be rejected")
-	require.Empty(t, rivaParseMessage(c, ASRMessage{ASRReply: ""}), "empty reply must be rejected")
+	require.Equal(t, "hello there world", rivaParseMessage(nil, ASRMessage{ASRReply: "hello there world"}))
+	require.Empty(t, rivaParseMessage(nil, ASRMessage{ASRReply: "hello world"}), "two words must be rejected")
+	require.Empty(t, rivaParseMessage(nil, ASRMessage{ASRReply: ""}), "empty reply must be rejected")
 }
 
 func TestRivaPackageAudioHeader(t *testing.T) {
-	c := newTestRivaCommon()
-	c.rate = 48000
-	c.languageCode = "en-US"
+	s := newTestRivaStream(make(chan string, 1))
+	s.rate = 48000
+	s.languageCode = "en-US"
 
 	pcm := []byte{0x01, 0x02, 0x03, 0x04}
-	packet, err := c.packageAudio(pcm)
+	packet, err := s.packageAudio(pcm)
 	require.NoError(t, err)
 
 	hLen := binary.BigEndian.Uint32(packet[0:4])
@@ -95,11 +85,12 @@ func TestRivaPackageAudioHeader(t *testing.T) {
 }
 
 func TestRivaOnWSMessageDelivers(t *testing.T) {
-	c := newTestRivaCommon()
+	ch := make(chan string, 1)
+	s := newTestRivaStream(ch)
 
-	c.onWSMessage(websocket.TextMessage, rivaReplyMsg(t, "hello there world"))
+	s.onWSMessage(websocket.TextMessage, rivaReplyMsg(t, "hello there world"))
 
-	got, ok := recvTranscript(t, c.transcriptCh)
+	got, ok := recvTranscript(t, ch)
 	require.True(t, ok, "expected a transcript to be delivered")
 	require.Equal(t, "hello there world", got)
 }
@@ -117,20 +108,11 @@ func TestRivaOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := newTestRivaCommon()
-			c.onWSMessage(tc.msgType, tc.data)
-			_, ok := recvTranscript(t, c.transcriptCh)
+			ch := make(chan string, 1)
+			s := newTestRivaStream(ch)
+			s.onWSMessage(tc.msgType, tc.data)
+			_, ok := recvTranscript(t, ch)
 			require.False(t, ok, "no transcript should be delivered for %q", tc.name)
 		})
 	}
-}
-
-func TestRivaOnWSMessageStoppedIgnores(t *testing.T) {
-	c := newTestRivaCommon()
-	c.stopped = true
-
-	c.onWSMessage(websocket.TextMessage, rivaReplyMsg(t, "hello there world"))
-
-	_, ok := recvTranscript(t, c.transcriptCh)
-	require.False(t, ok, "a stopped sensor must ignore incoming messages")
 }

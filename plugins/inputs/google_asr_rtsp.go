@@ -90,7 +90,7 @@ func (s *GoogleASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer close(out)
 		defer s.Stop()
 
-		if err := s.wsClient.Connect(); err != nil {
+		if err := s.connect(); err != nil {
 			s.log.Error("GoogleASRRTSPInput: ws connect failed", zap.Error(err))
 			return
 		}

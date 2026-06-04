@@ -2,8 +2,6 @@ package inputs
 
 import (
 	"context"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,14 +10,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
-	"github.com/openmind/om1/internal/ws"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -44,27 +39,11 @@ type ASRMessage struct {
 	Time     int64  `json:"time"`
 }
 
-// AudioMetadata is the JSON header prepended to each audio chunk sent to the ASR websocket.
-type AudioMetadata struct {
-	Rate                     int      `json:"rate"`
-	LanguageCode             string   `json:"language_code"`
-	AlternativeLanguageCodes []string `json:"alternative_language_codes,omitempty"`
-	Timestamp                int64    `json:"timestamp"`
-}
+// asrMessageParser handles one decoded ASR message under the stream's mu and
+// returns the transcript to deliver ("" if none).
+type asrMessageParser func(s *transcriberStream, msg ASRMessage) string
 
-// ASRStatistics tracks audio chunk send counters for periodic logging.
-type ASRStatistics struct {
-	TotalChunksSent uint64
-	TotalBytesSent  uint64
-	FailedChunks    uint64
-	LastSendTime    time.Time
-	mu              sync.RWMutex
-}
-
-// asrMessageParser handles one decoded ASR message under c.mu and returns the transcript to deliver ("" if none).
-type asrMessageParser func(c *asrCommon, msg ASRMessage) string
-
-// asrCommonConfig holds the vendor-resolved configuration for an asrCommon.
+// asrCommonConfig holds the vendor-resolved configuration for a transcriberStream.
 type asrCommonConfig struct {
 	Name               string // log prefix, e.g. "GoogleASRInput"
 	Model              string // metric label, e.g. "google" / "elevenlabs"
@@ -78,90 +57,89 @@ type asrCommonConfig struct {
 	ParseMessage       asrMessageParser
 }
 
-// asrCommon holds the logic shared by every ASR sensor; vendor differences are injected via config and the ParseMessage hook.
+// asrCommon couples the aggregator with a single vendor stream.
 type asrCommon struct {
-	name               string
-	log                *zap.Logger
-	rate               int
-	language           string
-	languageCode       string
-	altCodes           []string
-	apiVersion         string
-	model              string
-	enableTTSInterrupt bool
+	*asrAggregator
+	stream *transcriberStream
+}
 
-	parseMessage asrMessageParser
-
-	wsClient *ws.Client
-
-	captureDone chan struct{}
+// asrAggregator owns the ASR sensor parts: the transcript channel read by the cortex loop,
+// the current-utterance buffer, lifecycle state, and the zenoh broadcast
+type asrAggregator struct {
+	name string
+	log  *zap.Logger
 
 	transcriptCh chan string
 
 	messages []string
 
-	mu              sync.Mutex
-	stopped         bool
-	speechStartTime time.Time
-	speechStarted   bool
-
-	stats ASRStatistics
+	mu          sync.Mutex
+	stopped     bool
+	captureDone chan struct{}
 
 	zenohSession   *zenohsession.Session
 	zenohPublisher *zenohsession.Publisher
 }
 
-// newASRCommon constructs an asrCommon, connecting the websocket client and the
-// (optional) zenoh publisher used to broadcast transcripts.
-func newASRCommon(cfg asrCommonConfig) *asrCommon {
+// newAggregator constructs an asrAggregator, opening the (optional) zenoh publisher
+// used to broadcast transcripts on om/asr/text.
+func newAggregator(name string) *asrAggregator {
 	log := logger.Get()
-	log.Info(cfg.Name+": initializing",
-		zap.String("model", cfg.Model),
-		zap.String("language", cfg.Language),
-		zap.String("language_code", cfg.LanguageCode),
-		zap.String("api_version", cfg.APIVersion),
-		zap.Int("rate", cfg.Rate),
-	)
 
-	c := &asrCommon{
-		name:               cfg.Name,
-		log:                log,
-		rate:               cfg.Rate,
-		language:           cfg.Language,
-		languageCode:       cfg.LanguageCode,
-		altCodes:           cfg.AltCodes,
-		apiVersion:         cfg.APIVersion,
-		model:              cfg.Model,
-		enableTTSInterrupt: cfg.EnableTTSInterrupt,
-		parseMessage:       cfg.ParseMessage,
-		transcriptCh:       make(chan string, 32),
+	a := &asrAggregator{
+		name:         name,
+		log:          log,
+		transcriptCh: make(chan string, 32),
 	}
-
-	c.wsClient = ws.New(ws.Config{URL: cfg.WSURL, Reconnect: true}, log, c.onWSMessage)
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		log.Warn(cfg.Name+": zenoh unavailable, ASR broadcast disabled", zap.Error(err))
-	} else {
-		pub, err := sess.DeclarePublisher(asrZenohTopic)
-		if err != nil {
-			sess.Close()
-			log.Warn(cfg.Name+": failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
-		} else {
-			c.zenohSession = sess
-			c.zenohPublisher = pub
-			log.Info(cfg.Name+": zenoh publisher initialized", zap.String("topic", asrZenohTopic))
-		}
+		log.Warn(name+": zenoh unavailable, ASR broadcast disabled", zap.Error(err))
+		return a
+	}
+	pub, err := sess.DeclarePublisher(asrZenohTopic)
+	if err != nil {
+		sess.Close()
+		log.Warn(name+": failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
+		return a
+	}
+	a.zenohSession = sess
+	a.zenohPublisher = pub
+	log.Info(name+": zenoh publisher initialized", zap.String("topic", asrZenohTopic))
+
+	return a
+}
+
+// pushTranscript delivers an accepted transcript to the cortex loop unless the
+// sensor has stopped.
+func (a *asrAggregator) pushTranscript(text string) {
+	a.mu.Lock()
+	stopped := a.stopped
+	a.mu.Unlock()
+	if stopped {
+		return
 	}
 
-	return c
+	a.log.Info(a.name+": transcript accepted", zap.String("text", text))
+
+	select {
+	case a.transcriptCh <- text:
+	default:
+		a.log.Warn(a.name+": transcript buffer full, dropping", zap.String("text", text))
+	}
+}
+
+// deliver is the default onTranscript handler for a single-provider stream: it
+// ignores the provider label and forwards every accepted transcript.
+func (a *asrAggregator) deliver(_ string, text string) {
+	a.pushTranscript(text)
 }
 
 // Poll returns the next accepted transcript, blocking until one is available or
 // ctx is cancelled.
-func (c *asrCommon) Poll(ctx context.Context) (any, error) {
+func (a *asrAggregator) Poll(ctx context.Context) (any, error) {
 	select {
-	case text, ok := <-c.transcriptCh:
+	case text, ok := <-a.transcriptCh:
 		if !ok {
 			return nil, context.Canceled
 		}
@@ -173,9 +151,9 @@ func (c *asrCommon) Poll(ctx context.Context) (any, error) {
 
 // pollLoop forwards transcripts from Poll onto out until ctx is cancelled or the
 // transcript channel closes.
-func (c *asrCommon) pollLoop(ctx context.Context, out chan any) {
+func (a *asrAggregator) pollLoop(ctx context.Context, out chan any) {
 	for {
-		raw, err := c.Poll(ctx)
+		raw, err := a.Poll(ctx)
 		if err != nil {
 			return
 		}
@@ -188,223 +166,123 @@ func (c *asrCommon) pollLoop(ctx context.Context, out chan any) {
 }
 
 // RawToText appends an accepted transcript to the current utterance buffer.
-func (c *asrCommon) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
+func (a *asrAggregator) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
 		return nil, nil
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
-	if len(c.messages) == 0 {
-		c.messages = append(c.messages, text)
+	if len(a.messages) == 0 {
+		a.messages = append(a.messages, text)
 	} else {
-		c.messages[len(c.messages)-1] = c.messages[len(c.messages)-1] + " " + text
+		a.messages[len(a.messages)-1] = a.messages[len(a.messages)-1] + " " + text
 	}
 
 	return inputs.NewMessage(text), nil
 }
 
 // TriggersTick reports that ASR input wakes the cortex loop.
-func (c *asrCommon) TriggersTick() bool { return true }
+func (a *asrAggregator) TriggersTick() bool { return true }
 
 // FormattedLatestBuffer returns the buffered utterance as a Voice block, records
 // it on the IO provider, broadcasts it over zenoh, and clears the buffer.
-func (c *asrCommon) FormattedLatestBuffer() string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (a *asrAggregator) FormattedLatestBuffer() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
-	if len(c.messages) == 0 {
+	if len(a.messages) == 0 {
 		return ""
 	}
 
-	latest := c.messages[len(c.messages)-1]
+	latest := a.messages[len(a.messages)-1]
 	result := fmt.Sprintf("\nVoice: %q\n", latest)
 
-	c.log.Info(c.name+": flushing buffer", zap.String("text", latest))
-	c.messages = nil
+	a.log.Info(a.name+": flushing buffer", zap.String("text", latest))
+	a.messages = nil
 
 	providers.IO().AddInput("Voice", latest, time.Time{})
 
-	if c.zenohPublisher != nil {
+	if a.zenohPublisher != nil {
 		payload := serializeASRText(latest)
-		if err := c.zenohPublisher.Put(payload); err != nil {
-			c.log.Warn(c.name+": zenoh publish failed", zap.Error(err))
+		if err := a.zenohPublisher.Put(payload); err != nil {
+			a.log.Warn(a.name+": zenoh publish failed", zap.Error(err))
 		} else {
-			c.log.Info(c.name+": published ASR to zenoh", zap.String("text", latest))
+			a.log.Info(a.name+": published ASR to zenoh", zap.String("text", latest))
 		}
 	}
 
 	return result
 }
 
-// packageAudio prepends the JSON audio header (length-prefixed) to a PCM chunk.
-func (c *asrCommon) packageAudio(pcm []byte) ([]byte, error) {
-	meta := AudioMetadata{
-		Rate:                     c.rate,
-		LanguageCode:             c.languageCode,
-		AlternativeLanguageCodes: c.altCodes,
-		Timestamp:                time.Now().UnixMilli(),
-	}
-
-	headerBytes, err := json.Marshal(meta)
-	if err != nil {
-		return nil, err
-	}
-	hLen := len(headerBytes)
-	packet := make([]byte, 4+hLen+len(pcm))
-	binary.BigEndian.PutUint32(packet[0:4], uint32(hLen))
-	copy(packet[4:4+hLen], headerBytes)
-	copy(packet[4+hLen:], pcm)
-
-	return packet, nil
-}
-
-// sendChunk packages and sends a PCM chunk over the websocket, updating statistics.
-func (c *asrCommon) sendChunk(pcm []byte) {
-	packet, err := c.packageAudio(pcm)
-	if err != nil {
-		c.log.Warn(c.name+": package error", zap.Error(err))
-		return
-	}
-
-	if err := c.wsClient.Send(packet); err != nil {
-		c.log.Warn(c.name+": send error", zap.Error(err))
-		c.stats.mu.Lock()
-		c.stats.FailedChunks++
-		c.stats.mu.Unlock()
-		return
-	}
-
-	c.stats.mu.Lock()
-	c.stats.TotalChunksSent++
-	c.stats.TotalBytesSent += uint64(len(packet))
-	c.stats.LastSendTime = time.Now()
-	c.stats.mu.Unlock()
-}
-
-// onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing
-// and metric recording to parseMessage, and forwards any accepted transcript to
-// the main loop.
-func (c *asrCommon) onWSMessage(msgType int, data []byte) {
-	if msgType != websocket.TextMessage {
-		return
-	}
-	var msg ASRMessage
-	if err := json.Unmarshal(data, &msg); err != nil {
-		return
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.stopped {
-		return
-	}
-
-	transcript := c.parseMessage(c, msg)
-	if transcript == "" {
-		return
-	}
-
-	c.log.Info(c.name+": transcript accepted", zap.String("text", transcript))
-
-	select {
-	case c.transcriptCh <- transcript:
-	default:
-		c.log.Warn(c.name+": transcript buffer full, dropping", zap.String("text", transcript))
-	}
-}
-
-// observeASR records an ASR latency metric pair with this sensor's labels.
-func (c *asrCommon) observeASR(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, d time.Duration) {
-	seconds := d.Seconds()
-	hist.WithLabelValues(c.model, c.language, c.apiVersion).Observe(seconds)
-	gauge.WithLabelValues(c.model, c.language, c.apiVersion).Set(seconds)
-}
-
-// statsLoop logs send statistics every 15 seconds until ctx is cancelled.
-func (c *asrCommon) statsLoop(ctx context.Context) {
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			c.PrintStatistics()
-			return
-		case <-ticker.C:
-			c.PrintStatistics()
-		}
-	}
-}
-
-// PrintStatistics logs the cumulative audio send counters.
-func (c *asrCommon) PrintStatistics() {
-	c.stats.mu.RLock()
-	totalChunks := c.stats.TotalChunksSent
-	totalBytes := c.stats.TotalBytesSent
-	failed := c.stats.FailedChunks
-	lastSendTime := c.stats.LastSendTime
-	c.stats.mu.RUnlock()
-
-	fields := []zap.Field{
-		zap.Uint64("total_chunks_sent", totalChunks),
-		zap.String("total_bytes_mb", fmt.Sprintf("%.2f", float64(totalBytes)/(1024*1024))),
-		zap.Uint64("failed_chunks", failed),
-	}
-	if !lastSendTime.IsZero() {
-		fields = append(fields, zap.Duration("time_since_last_send", time.Since(lastSendTime)))
-	}
-
-	c.log.Info(c.name+": statistics", fields...)
-}
-
 // markStopped flips the stopped flag exactly once. It returns whether this call
 // was the first to stop the sensor and a snapshot of captureDone to wait on.
-func (c *asrCommon) markStopped() (firstStop bool, captureDone chan struct{}) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.stopped {
+func (a *asrAggregator) markStopped() (firstStop bool, captureDone chan struct{}) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.stopped {
 		return false, nil
 	}
-	c.stopped = true
-	return true, c.captureDone
+	a.stopped = true
+	return true, a.captureDone
 }
 
 // waitCapture waits up to 5s for the capture loop to finish.
-func (c *asrCommon) waitCapture(captureDone chan struct{}) {
+func (a *asrAggregator) waitCapture(captureDone chan struct{}) {
 	if captureDone == nil {
 		return
 	}
 	select {
 	case <-captureDone:
 	case <-time.After(5 * time.Second):
-		c.log.Warn(c.name + ": capture loop did not stop within timeout")
-	}
-}
-
-// closeWS closes the ASR websocket client.
-func (c *asrCommon) closeWS() {
-	if c.wsClient != nil {
-		c.wsClient.Close()
+		a.log.Warn(a.name + ": capture loop did not stop within timeout")
 	}
 }
 
 // closeZenoh drops the zenoh publisher and closes the session.
-func (c *asrCommon) closeZenoh() {
-	if c.zenohPublisher != nil {
-		c.zenohPublisher.Drop()
-		c.zenohPublisher = nil
-		c.log.Info(c.name + ": zenoh publisher dropped")
+func (a *asrAggregator) closeZenoh() {
+	if a.zenohPublisher != nil {
+		a.zenohPublisher.Drop()
+		a.zenohPublisher = nil
+		a.log.Info(a.name + ": zenoh publisher dropped")
 	}
-	if c.zenohSession != nil {
-		c.zenohSession.Close()
-		c.zenohSession = nil
-		c.log.Info(c.name + ": zenoh session closed")
+	if a.zenohSession != nil {
+		a.zenohSession.Close()
+		a.zenohSession = nil
+		a.log.Info(a.name + ": zenoh session closed")
 	}
 }
+
+// newASRCommon constructs an asrCommon from a vendor-resolved config, building the
+// aggregator (with zenoh publisher) and the single websocket stream.
+func newASRCommon(cfg asrCommonConfig) *asrCommon {
+	agg := newAggregator(cfg.Name)
+	agg.log.Info(cfg.Name+": initializing",
+		zap.String("model", cfg.Model),
+		zap.String("language", cfg.Language),
+		zap.String("language_code", cfg.LanguageCode),
+		zap.String("api_version", cfg.APIVersion),
+		zap.Int("rate", cfg.Rate),
+	)
+
+	stream := newTranscriberStream(cfg, agg.log, agg.deliver)
+
+	return &asrCommon{asrAggregator: agg, stream: stream}
+}
+
+// connect dials the single stream's ASR websocket.
+func (c *asrCommon) connect() error { return c.stream.connect() }
+
+// sendChunk forwards a PCM chunk to the single stream's websocket.
+func (c *asrCommon) sendChunk(pcm []byte) { c.stream.sendChunk(pcm) }
+
+// statsLoop logs the single stream's send statistics until ctx is cancelled.
+func (c *asrCommon) statsLoop(ctx context.Context) { c.stream.statsLoop(ctx) }
+
+// closeWS closes the single stream's websocket client.
+func (c *asrCommon) closeWS() { c.stream.closeWS() }
 
 // serializeASRText encodes an ASRText message in CDR little-endian format.
 //
