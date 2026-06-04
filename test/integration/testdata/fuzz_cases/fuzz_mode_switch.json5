@@ -1,0 +1,55 @@
+{
+  // Two modes that ping-pong via context-aware rules. The fuzz driver publishes a
+  // `target` flag onto the mode-context bus at randomized times; the runtime
+  // transitions to whichever mode is currently targeted. Each mode emits its own
+  // action when it is *not* transitioning, so recorded actions reveal which mode
+  // was active. Used only by FuzzModeSwitching (not by the discovery runner — it
+  // lives outside testdata/test_cases/).
+  name: "fuzz mode switching",
+  default_mode: "alpha",
+
+  transition_rules: [
+    { from_mode: "alpha", to_mode: "beta", transition_type: "context_aware", context_conditions: { target: "beta" }, priority: 1 },
+    { from_mode: "beta", to_mode: "alpha", transition_type: "context_aware", context_conditions: { target: "alpha" }, priority: 1 },
+  ],
+
+  modes: {
+    alpha: {
+      name: "alpha",
+      hertz: 50,
+      agent_inputs: [
+        { type: "mock_input", config: { text: "alpha mode running", triggers_tick: true } },
+      ],
+      cortex_llm: {
+        type: "scripted_llm",
+        config: {
+          rules: [
+            { when_contains: "alpha", tool_calls: [ { name: "alpha_act", arguments: { mode: "alpha" } } ] },
+          ],
+        },
+      },
+      agent_actions: [
+        { name: "alpha_act", llm_label: "alpha_act", connector: "recording" },
+      ],
+    },
+
+    beta: {
+      name: "beta",
+      hertz: 50,
+      agent_inputs: [
+        { type: "mock_input", config: { text: "beta mode running", triggers_tick: true } },
+      ],
+      cortex_llm: {
+        type: "scripted_llm",
+        config: {
+          rules: [
+            { when_contains: "beta", tool_calls: [ { name: "beta_act", arguments: { mode: "beta" } } ] },
+          ],
+        },
+      },
+      agent_actions: [
+        { name: "beta_act", llm_label: "beta_act", connector: "recording" },
+      ],
+    },
+  },
+}

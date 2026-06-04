@@ -36,12 +36,11 @@ func TestMergePrompt(t *testing.T) {
 }
 
 func TestBuildMeta(t *testing.T) {
-	m := &modeSetup{sys: &config.SystemConfig{APIKey: "k", RobotIP: "1.2.3.4", URID: "urid"}}
+	m := &modeSetup{sys: &config.SystemConfig{APIKey: "k", RobotIP: "1.2.3.4"}}
 	meta := m.buildMeta("greeting")
 	require.Equal(t, map[string]string{
 		"api_key":  "k",
 		"robot_ip": "1.2.3.4",
-		"URID":     "urid",
 		"mode":     "greeting",
 	}, meta)
 }
