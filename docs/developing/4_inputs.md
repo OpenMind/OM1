@@ -8,22 +8,38 @@ icon: pen
 
 ## Basic Architecture
 
-- `Sensor<T>` is the base abstract class that defines the core interface
-- `FuserInput<T>` extends `Sensor<T>` and implements the polling mechanism
+- `Sensor` interface defines the core contract for all input plugins ([internal/inputs/sensor.go](https://github.com/OpenMind/OM1/blob/main/internal/inputs/sensor.go))
 - `InputOrchestrator` manages multiple input sources
-- `YourCustomCode` extends `FuserInput<T>` and implements the specific input functionality
+- Custom input plugins implement the `Sensor` interface
+
+```go
+// Sensor is the base interface for all input sensors.
+type Sensor interface {
+    // Listen creates a channel that continuously yields raw input events.
+    Listen(ctx context.Context) (<-chan any, error)
+
+    // Poll retrieves a single raw input event.
+    Poll(ctx context.Context) (any, error)
+
+    // RawToText converts raw input data into Message format.
+    RawToText(ctx context.Context, rawInput any) (*Message, error)
+
+    // FormattedLatestBuffer returns the formatted buffer string.
+    FormattedLatestBuffer() string
+
+    // Stop signals the sensor to stop listening and clean up resources.
+    Stop()
+}
+```
 
 ## Examples
 
-[Input plugin code examples](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins)
+[Input plugin code examples](https://github.com/OpenMind/OM1/blob/main/plugins/inputs)
 
 Here are a few examples for you to reuse and build on:
 
-- [Google ASR](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/google_asr.py)
-- [Riva ASR](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/riva_asr.py)
-- [RPLidar](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/rplidar.py)
-- [VLM_COCO_Local](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_coco_local.py)
-- [VLM_Vila](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_vila.py)
-- [Arduino GPS](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/gps.py)
+- [Google ASR](https://github.com/openmind/OM1/blob/main/plugins/inputs/google_asr/google_asr.go)
+- [Face Presence](https://github.com/openmind/OM1/blob/main/plugins/inputs/face_presence/face_presence.go)
+- [VLM COCO Local](https://github.com/openmind/OM1/blob/main/plugins/inputs/vlm_coco_local/vlm_coco_local.go)
 
 Learn how to build a new input plugin [here](../developer_cookbook/input.md)

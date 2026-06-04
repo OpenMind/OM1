@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func TestFormatTemplate(t *testing.T) {
@@ -28,10 +28,10 @@ func TestStringVal(t *testing.T) {
 
 func TestElevenLabsConfigFromDefaults(t *testing.T) {
 	cfg := elevenLabsConfigFrom(map[string]any{})
-	require.Equal(t, providers.DefaultVoiceID, cfg.VoiceID)
-	require.Equal(t, providers.DefaultModelID, cfg.ModelID)
-	require.Equal(t, providers.DefaultOutputFormat, cfg.OutputFormat)
-	require.Equal(t, providers.DefaultRate, cfg.Rate)
+	require.Equal(t, tts.DefaultVoiceID, cfg.VoiceID)
+	require.Equal(t, tts.DefaultModelID, cfg.ModelID)
+	require.Equal(t, tts.DefaultOutputFormat, cfg.OutputFormat)
+	require.Equal(t, tts.DefaultRate, cfg.Rate)
 }
 
 func TestElevenLabsConfigFromOverrides(t *testing.T) {

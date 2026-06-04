@@ -8,7 +8,7 @@ OM1's LLM integration is intended to make it easy to (1) send `input` informatio
 
 OM1 also supports per-mode LLM configuration. If a mode specifies its own LLM, it takes precedence over the top-level cortex_llm setting. This allows different modes to use different models based on their specific requirements.
 
-The plugins handle authentication, API communication, prompt formatting, response parsing, and conversation history management. LLM plugin examples are located in `src/llm/plugins`: [**Code**](https://github.com/OpenMind/OM1/tree/main/src/llm/plugins).
+The plugins handle authentication, API communication, prompt formatting, response parsing, and conversation history management. LLM plugin examples are located in `plugins/llm`: [**Code**](https://github.com/OpenMind/OM1/tree/main/plugins/llm).
 
 ## Endpoint Overview
 
@@ -31,27 +31,25 @@ OM1 supports three LLM execution strategies depending on your latency, quality, 
 
 ### Single LLM Integration
 
-For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and provided to `runtime/cortex.py` for distribution to the system actions:
+For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and provided to `internal/runtime/cortex.go` for distribution to the system actions:
 
-```python
-response = await self._client.beta.chat.completions.parse(
-    model=self._config.model,
-    messages=[*messages, {"role": "user", "content": prompt}],
-    response_format=self._output_model,
-    timeout=self._config.timeout,
-)
+```go
+response, err := client.ChatCompletions(ctx, &ChatRequest{
+    Model:    config.Model,
+    Messages: messages,
+    ResponseFormat: outputModel,
+    Timeout:  config.Timeout,
+})
 
-message_content = response.choices[0].message.content
-parsed_response = self._output_model.model_validate_json(message_content)
-
-return parsed_response
+parsedResponse := outputModel.Validate(response.Choices[0].Message.Content)
+return parsedResponse
 ```
 
-The standard `pydantic` output model is defined in `src/llm/output_model.py`.
+The standard output model is defined in `internal/llm/output_model.go`.
 
 Example config:
 
-```bash
+```json5
   "cortex_llm": {
     "type": "OpenAILLM",     // The class name of the LLM plugin you wish to use
     "config": {
@@ -72,7 +70,7 @@ OM1 implements a dual-LLM response mechanism that combines both local and cloud-
 
 Example config:
 
-```bash
+```json5
   "cortex_llm": {
     "type": "DualLLM",      // The class name of the LLM plugin you wish to use
     "config": {
@@ -108,7 +106,7 @@ Multiple LLMs run in parallel, each handling specific actions they are capable o
 
 Example config:
 
-```bash
+```json5
   "cortex_llm": {
     "type": "ParallelLLM",      // The class name of the LLM plugin you wish to use
     "config": {
@@ -163,7 +161,7 @@ The system supports on-device inference using the Qwen3-30B local LLM. This enab
 
 **Run with Ollama:**
 ```bash
-uv run src/run.py ollama
+make run CONFIG=ollama
 ```
 
 ### Agent Architecture
@@ -177,69 +175,61 @@ The system employs four primary agents that work together:
 
 ### Main API Endpoint
 
-```python
-    self.endpoint = "/api/core/{provider}/chat/completions"
+```go
+endpoint := "/api/core/{provider}/chat/completions"
 
-    headers = {
-        "Authorization": f"Bearer {self._config.api_key}",
-        "Content-Type": "application/json",
-    }
+headers := map[string]string{
+    "Authorization": "Bearer " + config.APIKey,
+    "Content-Type":  "application/json",
+}
 
-    request = {
-        "system_prompt": self.io_provider.fuser_system_prompt,
-        "inputs": self.io_provider.fuser_inputs,
-        "model": self._config.model,
-        "response_format": self._output_model.model_json_schema(),
-        "structured_outputs": True,
-    }
+request := ChatRequest{
+    SystemPrompt:      ioProvider.FuserSystemPrompt,
+    Inputs:            ioProvider.FuserInputs,
+    Model:             config.Model,
+    ResponseFormat:    outputModel.JSONSchema(),
+    StructuredOutputs: true,
+}
 
-    logging.debug(f"System_prompt: {request['system_prompt']}")
-    logging.debug(f"Inputs: {request['inputs']}")
-    logging.debug(f"Available_actions: {request['available_actions']}")
-
-    response = requests.post(
-        self.endpoint,
-        json=request,
-        headers=headers,
-    )
-
-    output = response.json().get("content")
-    return self._output_model.model_validate_json(output)
+response, err := httpClient.Post(endpoint, request, headers)
+output := response.Content
+return outputModel.Validate(output)
 ```
 
 ### Supported Models
 
-```python
-OPENAI_SUPPORTED_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-5", "gpt-5-mini", "gpt-5-nano"]
+```go
+var OpenAISupportedModels = []string{"gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-5", "gpt-5-mini", "gpt-5-nano"}
 ```
 
-```python
-DEEPSEEK_SUPPORTED_MODELS = ["deepseek-chat"]
+```go
+var DeepSeekSupportedModels = []string{"deepseek-chat"}
 ```
 
-```python
-GEMINI_SUPPORTED_MODELS = ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite",  "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
+```go
+var GeminiSupportedModels = []string{"gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"}
 ```
 
-```python
-X_AI_SUPPORTED_MODELS = ["grok-2-latest", "grok-3-beta", "grok-4-latest", "grok-4"]
+```go
+var XAISupportedModels = []string{"grok-2-latest", "grok-3-beta", "grok-4-latest", "grok-4"}
 ```
 
-```python
-NEAR_AI_SUPPORTED_MODELS = ["qwen3-30b-a3b-instruct-2507", "qwen2.5-vl-72b-instruct", "qwen-2.5-7b-instruct"]
+```go
+var NearAISupportedModels = []string{"qwen3-30b-a3b-instruct-2507", "qwen2.5-vl-72b-instruct", "qwen-2.5-7b-instruct"}
 ```
 
-```python
-OPENROUTER_SUPPORTED_MODELS = ["meta-llama/llama-3.1-70b-instruct", "meta-llama/llama-3.3-70b-instruct", "anthropic/claude-sonnet-4.5", "anthropic/claude-opus-4.1"]
+```go
+var OpenRouterSupportedModels = []string{"meta-llama/llama-3.1-70b-instruct", "meta-llama/llama-3.3-70b-instruct", "anthropic/claude-sonnet-4.5", "anthropic/claude-opus-4.1"}
 ```
 
-```python
-# Ollama supports any model from https://ollama.ai/library
-OLLAMA_SUPPORTED_MODELS = ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5", "codellama", "llava"]
+```go
+// Ollama supports any model from https://ollama.ai/library
+var OllamaSupportedModels = []string{"llama3.2", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5", "codellama", "llava"}
 ```
 
-```python
-Local LLM = ["Qwen3-30B"]
+```go
+// Local LLM
+var LocalLLMModels = []string{"Qwen3-30B"}
 ```
 
 ## Examples
@@ -248,6 +238,6 @@ Local LLM = ["Qwen3-30B"]
 
 Imagine you would like to program a smart dog. Describe the desired capabilities and behaviors of the dog in `system_prompt_base`. For example:
 
-```bash
+```json5
 "system_prompt_base": "You are an intelligent robotic dog companion designed to be helpful, loyal, and engaging. Your primary goals are to: (1) Provide companionship through interactive play and conversation, (2) Assist with basic household tasks and monitoring, (3) Learn and adapt to your owner's preferences and routines, and (4) Maintain a playful yet responsible demeanor. You can move around, speak clearly, express emotions through body language, and respond to voice commands. Always prioritize safety and be eager to please while maintaining your dog-like personality traits of curiosity, loyalty, and enthusiasm."
 ```

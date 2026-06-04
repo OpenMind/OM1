@@ -195,10 +195,17 @@ func (c *Client) readLoop() {
 			continue
 		}
 
-		c.log.Debug("ws: message received",
-			zap.String("type", messageTypeName(msgType)),
-			zap.Int("bytes", len(msg)),
-		)
+		if msgType == websocket.TextMessage {
+			c.log.Debug("ws: message received",
+				zap.String("type", messageTypeName(msgType)),
+				zap.String("data", string(msg)),
+			)
+		} else {
+			c.log.Debug("ws: message received",
+				zap.String("type", messageTypeName(msgType)),
+				zap.ByteString("data", msg),
+			)
+		}
 
 		if c.onMessage != nil {
 			c.onMessage(msgType, msg)

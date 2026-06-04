@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -240,7 +241,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 			s.log.Warn("ElevenLabsASRInput: read error", zap.Error(err))
 		}
 
-		if providers.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 

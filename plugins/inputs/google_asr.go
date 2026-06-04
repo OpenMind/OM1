@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 func init() {
@@ -43,6 +45,7 @@ type GoogleASRConfig struct {
 	Rate                 int      `json:"rate"`                  // sample rate Hz (default 48000)
 	Chunk                int      `json:"chunk"`                 // frames per buffer (default 4800)
 	BaseURL              string   `json:"base_url"`              // override WS endpoint
+	Model                string   `json:"model"`                 // optional Google ASR model query param
 	MicDeviceIndex       int      `json:"microphone_device_id"`  // -1 = default
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
@@ -55,6 +58,7 @@ type googleASRParams struct {
 	apiKey               string
 	apiVersion           string
 	baseURL              string
+	model                string
 	rate                 int
 	language             string
 	alternativeLanguages []string
@@ -92,6 +96,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 		apiKey:               cfg.APIKey,
 		apiVersion:           cfg.APIVersion,
 		baseURL:              cfg.BaseURL,
+		model:                cfg.Model,
 		rate:                 cfg.Rate,
 		language:             cfg.Language,
 		alternativeLanguages: cfg.AlternativeLanguages,
@@ -240,7 +245,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
 		}
 
-		if providers.Speaking.Load() {
+		if tts.Speaking.Load() && !s.enableTTSInterrupt {
 			continue
 		}
 
@@ -286,7 +291,10 @@ func resolveGoogleASRConfig(p googleASRParams) asrCommonConfig {
 
 	wsURL := p.baseURL
 	if wsURL == "" {
-		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/google/asr/%s?api_key=%s", apiVersion, p.apiKey)
+		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/google/asr/%s?api_key=%s", apiVersion, url.QueryEscape(p.apiKey))
+		if model := strings.TrimSpace(p.model); model != "" {
+			wsURL += "&model=" + url.QueryEscape(model)
+		}
 	}
 
 	return asrCommonConfig{

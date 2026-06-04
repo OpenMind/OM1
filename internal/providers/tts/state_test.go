@@ -1,4 +1,4 @@
-package providers
+package tts
 
 import (
 	"testing"

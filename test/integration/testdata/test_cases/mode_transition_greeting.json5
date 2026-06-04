@@ -1,0 +1,73 @@
+{
+  // Multi-mode scenario. The robot starts in `patrol`; the patrol input mentions
+  // a "person", which fires an input-triggered transition into `greet`. The greet
+  // mode then reacts to its own input and speaks a welcome — proving the runtime
+  // tears down one mode and brings up the next end-to-end.
+  name: "patrol transitions to greeting",
+  description: "input keyword triggers a mode transition; new mode produces an action",
+  default_mode: "patrol",
+  wait_for_calls: 1,
+  timeout_ms: 5000,
+
+  transition_rules: [
+    {
+      from_mode: "patrol",
+      to_mode: "greet",
+      transition_type: "input_triggered",
+      trigger_keywords: ["person"],
+      priority: 1,
+    },
+  ],
+
+  modes: {
+    patrol: {
+      name: "patrol",
+      hertz: 50,
+      system_prompt_base: "You are patrolling.",
+      agent_inputs: [
+        {
+          type: "mock_input",
+          config: { text: "I see a person approaching", triggers_tick: true },
+        },
+      ],
+      // No rules: patrol never emits an action on its own, so the only recorded
+      // call must come from the greet mode after the transition.
+      cortex_llm: { type: "scripted_llm", config: { rules: [] } },
+      agent_actions: [],
+    },
+
+    greet: {
+      name: "greet",
+      hertz: 50,
+      system_prompt_base: "You are greeting a visitor.",
+      agent_inputs: [
+        {
+          type: "mock_input",
+          config: { text: "Hello!", triggers_tick: true },
+        },
+      ],
+      cortex_llm: {
+        type: "scripted_llm",
+        config: {
+          rules: [
+            {
+              when_contains: "Hello",
+              tool_calls: [
+                { name: "speak", arguments: { sentence: "Welcome, visitor!" } },
+              ],
+            },
+          ],
+        },
+      },
+      agent_actions: [
+        { name: "speak", llm_label: "speak", connector: "recording" },
+      ],
+    },
+  },
+
+  expected: {
+    action_calls: [
+      { action: "speak", arg_contains: { sentence: "Welcome" } },
+    ],
+  },
+}

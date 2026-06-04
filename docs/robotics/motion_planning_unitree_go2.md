@@ -13,7 +13,7 @@ The autonomous exploration capability requires a laserscan sensor to be mounted 
 Using OM1, the Unitree Go2 is able to autonomously explore spaces such as your home. There are several parts to this capability. To get started, launch OM1:
 
 ```bash Run OM1
-uv run src/run.py unitree_go2_autonomy
+make run CONFIG=unitree_go2_autonomy
 ```
 
 ### RPLIDAR Laserscan Data

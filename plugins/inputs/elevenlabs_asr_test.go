@@ -79,7 +79,8 @@ func TestAcceptASRTranscript(t *testing.T) {
 	}{
 		{"empty", "", false},
 		{"single english word", "hello", false},
-		{"two english words", "hello world", true},
+		{"two english words", "hello world", false},
+		{"three english words", "hello there world", true},
 		{"leading/trailing spaces single word", "   hello   ", false},
 		{"single CJK char", "好", false},
 		{"two CJK chars", "你好", false},
@@ -142,7 +143,7 @@ func TestOnWSMessageCommittedDelivers(t *testing.T) {
 
 	got, ok := recvTranscript(t, ch)
 	require.True(t, ok, "expected a transcript to be delivered")
-	require.Equal(t, "hello world", got)
+	require.Equal(t, "hello there world", got)
 
 	s.mu.Lock()
 	require.False(t, s.speechStarted, "speech timing should reset after a transcript is accepted")

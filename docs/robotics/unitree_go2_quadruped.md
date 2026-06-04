@@ -209,7 +209,7 @@ In this configuration, the quadruped observes its environment, listens and speak
 
 Run
 ```bash
-uv run src/run.py unitree_go2_basic
+make run CONFIG=unitree_go2_basic
 ```
 
 Press:
