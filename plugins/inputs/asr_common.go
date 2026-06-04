@@ -114,9 +114,9 @@ func newAggregator(name string) *asrAggregator {
 // sensor has stopped.
 func (a *asrAggregator) pushTranscript(text string) {
 	a.mu.Lock()
-	stopped := a.stopped
-	a.mu.Unlock()
-	if stopped {
+	defer a.mu.Unlock()
+
+	if a.stopped {
 		return
 	}
 

@@ -26,19 +26,17 @@ func init() {
 }
 
 // defaultParallelDedupWindow is how long, after one provider's transcript is
-// accepted, transcripts from the *other* providers are suppressed as duplicates
-// of the same utterance. The winning provider is never suppressed.
+// accepted, transcripts from the *other* providers are suppressed.
 const defaultParallelDedupWindow = 3 * time.Second
 
 // ParallelASRProviderConfig configures one ASR provider within a parallel sensor.
 type ParallelASRProviderConfig struct {
-	Model                string   `json:"model"`    // "riva" | "google" | "elevenlabs"
-	APIKey               string   `json:"api_key"`  // required for google/elevenlabs
+	Model                string   `json:"model"`   // "riva" | "google" | "elevenlabs"
+	APIKey               string   `json:"api_key"` // required for google/elevenlabs
 	APIVersion           string   `json:"api_version"`
 	BaseURL              string   `json:"base_url"` // override WS endpoint
 	Language             string   `json:"language"`
 	AlternativeLanguages []string `json:"alternative_languages"` // google v1 only
-	DelayMS              int      `json:"delay_ms"`              // artificially delay this provider's transcripts (handicap for testing/biasing the race)
 }
 
 // ParallelASRConfig configures a sensor that captures audio once and streams it to
@@ -50,14 +48,13 @@ type ParallelASRConfig struct {
 	Chunk              int                         `json:"chunk"`                // frames/samples per chunk
 	MicDeviceIndex     int                         `json:"microphone_device_id"` // -1 = default (mic source)
 	RTSPURL            string                      `json:"rtsp_url"`             // rtsp source
-	DedupWindowMS      int                         `json:"dedup_window_ms"`      // first-wins suppression window (default 1000)
+	DedupWindowMS      int                         `json:"dedup_window_ms"`      // first-wins suppression window (default 3000)
 	EnableTTSInterrupt bool                        `json:"enable_tts_interrupt"`
 	Providers          []ParallelASRProviderConfig `json:"providers"`
 }
 
-// ParallelASRSensor captures audio from a single source (mic or RTSP), fans the PCM
-// out to every configured provider's websocket stream, and forwards the first
-// transcript per utterance to the cortex loop while suppressing the slower duplicates.
+// ParallelASRSensor captures audio from source, fans the PCM out, and forwards the first
+// transcript to the cortex loop while suppressing the slower duplicates.
 type ParallelASRSensor struct {
 	*asrAggregator
 
@@ -128,8 +125,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 		if err != nil {
 			return nil, fmt.Errorf("ParallelASRInput: provider %d: %w", i, err)
 		}
-		delay := time.Duration(p.DelayMS) * time.Millisecond
-		s.streams = append(s.streams, newTranscriberStream(streamCfg, s.log, s.deliverWithDelay(delay)))
+		s.streams = append(s.streams, newTranscriberStream(streamCfg, s.log, s.deliver))
 	}
 
 	s.log.Info("ParallelASRInput: configured",
@@ -192,20 +188,6 @@ func (s *ParallelASRSensor) buildStreamConfig(p ParallelASRProviderConfig) (asrC
 		}), nil
 	default:
 		return asrCommonConfig{}, fmt.Errorf("unknown provider model %q (want riva, google, or elevenlabs)", p.Model)
-	}
-}
-
-// deliverWithDelay returns an onTranscript handler that optionally postpones a
-// provider's transcripts by delay before they enter first-wins dedup. A delay
-// handicaps an otherwise-dominant provider so slower ones can win — useful for
-// testing and for biasing the race toward a preferred provider. The delivery is
-// scheduled (not slept inline) so the websocket read loop is never blocked.
-func (s *ParallelASRSensor) deliverWithDelay(delay time.Duration) func(model, text string) {
-	if delay <= 0 {
-		return s.deliver
-	}
-	return func(model, text string) {
-		time.AfterFunc(delay, func() { s.deliver(model, text) })
 	}
 }
 
