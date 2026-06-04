@@ -16,7 +16,7 @@ import (
 )
 
 // DefaultBaseURL is the embedding service endpoint used when none is configured.
-const DefaultBaseURL = "http://10.1.10.221:8100"
+const DefaultBaseURL = "http://localhost:8100"
 
 // embedTimeout bounds a single embedding request, matching the Python client.
 const embedTimeout = 30 * time.Second
