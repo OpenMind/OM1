@@ -20,7 +20,6 @@ except ImportError:
 from .thermal_provider_base import ThermalProviderBase, RobotState
 from .singleton import singleton
 
-
 def g1_thermal_processor(
     channel: str,
     data_queue: mp.Queue,
@@ -153,8 +152,12 @@ class UnitreeG1ThermalProvider(ThermalProviderBase):
             # temperature_ntc2: types.uint8
 
             # Update current temperature
-            self.m0 = round(low_data.motor_state[0], 2)
-            self.m1 = round(low_data.motor_state[1], 2)
+            # temperature: types.uint8 - no idea wehat the units are conversion are
+            # how many motors are there? 20? 29?
+            self.m0 = low_data.motor_state[0].temperature
+            self.m1 = low_data.motor_state[1].temperature
+
+            # convert that to Celsius
 
             logging.debug(
                 f"G1 Thermal: M0:{self.m0} M1:{self.m1}"

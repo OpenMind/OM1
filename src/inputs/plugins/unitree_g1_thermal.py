@@ -12,7 +12,7 @@ from providers.io_provider import IOProvider
 from providers.unitree_g1_thermal_provider import UnitreeG1ThermalProvider
 
 
-class UnitreeG1OdomConfig(SensorConfig):
+class UnitreeG1ThermalConfig(SensorConfig):
     """
     Configuration for Unitree G1 Thermal Sensor.
 
