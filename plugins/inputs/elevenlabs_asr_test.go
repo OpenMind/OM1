@@ -58,7 +58,8 @@ func TestAcceptASRTranscript(t *testing.T) {
 	}{
 		{"empty", "", false},
 		{"single english word", "hello", false},
-		{"two english words", "hello world", true},
+		{"two english words", "hello world", false},
+		{"three english words", "hello there world", true},
 		{"leading/trailing spaces single word", "   hello   ", false},
 		{"single CJK char", "好", false},
 		{"two CJK chars", "你好", false},
@@ -116,11 +117,11 @@ func TestOnWSMessageCommittedDelivers(t *testing.T) {
 	c.speechStarted = true
 	c.speechStartTime = time.Now().Add(-50 * time.Millisecond)
 
-	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hello world"))
+	c.onWSMessage(websocket.TextMessage, committedMsg(t, "hello there world"))
 
 	got, ok := recvTranscript(t, c.transcriptCh)
 	require.True(t, ok, "expected a transcript to be delivered")
-	require.Equal(t, "hello world", got)
+	require.Equal(t, "hello there world", got)
 
 	c.mu.Lock()
 	require.False(t, c.speechStarted, "speech timing should reset after a transcript is accepted")

@@ -20,7 +20,7 @@ func TestGoogleParseMessage(t *testing.T) {
 	require.Empty(t, googleParseMessage(c, ASRMessage{Type: "speech_start"}))
 	require.True(t, c.speechStarted)
 
-	require.Equal(t, "hello world", googleParseMessage(c, ASRMessage{ASRReply: "hello world"}))
+	require.Equal(t, "hello there world", googleParseMessage(c, ASRMessage{ASRReply: "hello there world"}))
 	require.False(t, c.speechStarted)
 
 	require.Empty(t, googleParseMessage(c, ASRMessage{ASRReply: "hi"}))
