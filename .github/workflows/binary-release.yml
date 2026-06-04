@@ -159,6 +159,9 @@ jobs:
     if: ${{ needs.setup.outputs.publish == 'true' }}
     permissions:
       contents: write
+    environment:
+      name: ${{ needs.setup.outputs.version == 'nightly' && 'development' || 'production' }}
+      url: ${{ steps.gh_release.outputs.url }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -182,6 +185,7 @@ jobs:
             -f ref="refs/tags/nightly" -f sha="${{ github.sha }}"
 
       - name: Create / update GitHub Release
+        id: gh_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.setup.outputs.version }}
@@ -189,3 +193,18 @@ jobs:
           prerelease: ${{ needs.setup.outputs.prerelease == 'true' }}
           generate_release_notes: true
           files: release/*
+
+      - name: Write release summary
+        run: |
+          {
+            echo "## OM1 ${{ needs.setup.outputs.version }} published"
+            echo ""
+            echo "- **Release:** ${{ steps.gh_release.outputs.url }}"
+            echo "- **Channel:** ${{ needs.setup.outputs.version == 'nightly' && 'development (prerelease)' || 'production' }}"
+            echo "- **Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "### Assets"
+            echo '```'
+            ls -1 release/*.tar.gz
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
