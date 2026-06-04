@@ -30,6 +30,7 @@ type GoogleASRRTSPConfig struct {
 	Rate                 int      `json:"rate"`                  // sample rate Hz (default 16000)
 	Chunk                int      `json:"chunk"`                 // samples per chunk (default 1600)
 	BaseURL              string   `json:"base_url"`              // override WS endpoint
+	Model                string   `json:"model"`                 // optional Google ASR model query param
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
@@ -67,6 +68,7 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		apiKey:               cfg.APIKey,
 		apiVersion:           cfg.APIVersion,
 		baseURL:              cfg.BaseURL,
+		model:                cfg.Model,
 		rate:                 cfg.Rate,
 		language:             cfg.Language,
 		alternativeLanguages: cfg.AlternativeLanguages,

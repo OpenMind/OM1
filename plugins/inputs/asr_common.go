@@ -35,7 +35,7 @@ func acceptASRTranscript(text string) bool {
 	if cjkRegex.MatchString(text) {
 		return utf8.RuneCountInString(text) > 2
 	}
-	return len(strings.Fields(text)) > 1
+	return len(strings.Fields(text)) > 2
 }
 
 // ASRMessage is a transcript/status message received from the ASR websocket.
