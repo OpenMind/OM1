@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 type HookType string
@@ -89,7 +89,7 @@ func (r *Runner) execute(ctx context.Context, h config.HookSpec, vars map[string
 		r.log.Info("lifecycle message", zap.String("message", formatted))
 
 		cfg := elevenLabsConfigFrom(h.HandlerConfig)
-		providers.ElevenLabs(cfg, r.log).AddText(formatted)
+		tts.ElevenLabs(cfg, r.log).AddText(formatted)
 		return nil
 
 	case "function":
@@ -132,8 +132,8 @@ func stringVal(m map[string]any, key string) string {
 
 // elevenLabsConfigFrom builds an ElevenLabsConfig from a hook handler_config map,
 // applying provider defaults for any field that is missing or empty.
-func elevenLabsConfigFrom(m map[string]any) providers.ElevenLabsConfig {
-	cfg := providers.ElevenLabsConfig{
+func elevenLabsConfigFrom(m map[string]any) tts.ElevenLabsConfig {
+	cfg := tts.ElevenLabsConfig{
 		APIKey:           stringVal(m, "api_key"),
 		ElevenLabsAPIKey: stringVal(m, "elevenlabs_api_key"),
 		VoiceID:          stringVal(m, "voice_id"),
@@ -141,18 +141,18 @@ func elevenLabsConfigFrom(m map[string]any) providers.ElevenLabsConfig {
 		OutputFormat:     stringVal(m, "output_format"),
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if rv, ok := m["rate"].(float64); ok && rv > 0 {
 		cfg.Rate = int(rv)
 	} else {
-		cfg.Rate = providers.DefaultRate
+		cfg.Rate = tts.DefaultRate
 	}
 	return cfg
 }

@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/httpclient"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -222,8 +222,8 @@ func (r *Runner) setModeHook(ctx context.Context, cfg, _ map[string]any) error {
 }
 
 // personFollowTTS returns the shared ElevenLabs provider used for spoken feedback.
-func (r *Runner) personFollowTTS() *providers.ElevenLabsProvider {
-	return providers.ElevenLabs(elevenLabsConfigFrom(nil), r.log)
+func (r *Runner) personFollowTTS() *tts.ElevenLabsProvider {
+	return tts.ElevenLabs(elevenLabsConfigFrom(nil), r.log)
 }
 
 // stringValDefault returns the string at key, or def if missing/empty.

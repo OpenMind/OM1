@@ -85,6 +85,11 @@ func (m *modeSetup) loadComponents() error {
 		m.backgroundList = append(m.backgroundList, background)
 	}
 
+	// Load lifecycle hooks
+	for i := range m.cfg.LifecycleHooks {
+		m.cfg.LifecycleHooks[i].HandlerConfig = addMeta(m.cfg.LifecycleHooks[i].HandlerConfig, meta)
+	}
+
 	return nil
 }
 
@@ -100,6 +105,7 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 		KnowledgeBase:    m.sys.KnowledgeBase,
 		ActionExecMode:   m.cfg.ActionExecMode,
 		ActionDeps:       m.cfg.ActionDeps,
+		UseTracer:        m.sys.UseTracer,
 	}
 	if rc.Hertz == 0 {
 		rc.Hertz = 1.0
@@ -180,4 +186,16 @@ func toolCallsToMaps(toolCalls []llm.ToolCall) []map[string]any {
 		}
 	}
 	return result
+}
+
+// traceOutput converts an LLM response's tool calls into a slice of maps for structured tracing.
+func traceOutput(response *llm.Response) []map[string]any {
+	out := make([]map[string]any, 0, len(response.ToolCalls))
+	for _, tc := range response.ToolCalls {
+		out = append(out, map[string]any{
+			"type":  tc.Name,
+			"value": tc.Arguments,
+		})
+	}
+	return out
 }

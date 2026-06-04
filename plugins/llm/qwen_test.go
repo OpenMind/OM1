@@ -33,7 +33,6 @@ func TestParseQwenToolCalls(t *testing.T) {
 	require.Equal(t, "move", calls[1].Name)
 	require.Equal(t, "forward", calls[1].Arguments["dir"])
 
-	// Malformed JSON and nameless blocks are skipped.
 	require.Empty(t, parseQwenToolCalls(`<tool_call>{bad json}</tool_call><tool_call>{"arguments":{}}</tool_call>`))
 }
 
@@ -90,7 +89,6 @@ func TestQwenCallParsesTextToolCalls(t *testing.T) {
 }
 
 func TestQwenCallPrefersStructuredToolCalls(t *testing.T) {
-	// Structured tool_calls present: the text fallback must not run.
 	srv, _ := captureServer(t, http.StatusOK, `{"choices":[{"message":{
 		"content":"<tool_call>{\"name\":\"ignored\",\"arguments\":{}}</tool_call>",
 		"tool_calls":[{"function":{"name":"speak","arguments":"{\"text\":\"hi\"}"}}]

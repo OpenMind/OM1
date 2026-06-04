@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/fuser"
 	"github.com/openmind/om1/internal/hooks"
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
 	"github.com/openmind/om1/internal/providers"
 )
@@ -47,11 +48,13 @@ type Runtime struct {
 	log          *zap.Logger
 	manager      *ModeManager
 	ioProvider   *providers.IOProvider
+	tracer       *providers.Tracer
 
 	mu                        sync.Mutex
 	current                   *modeState
 	isReloading               bool
-	modeTransitionHandlerOnce bool // ensures handleModeTransitions goroutine starts only once
+	generation                int
+	modeTransitionHandlerOnce bool
 
 	modeTransitionCh chan string
 }
@@ -63,6 +66,7 @@ func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runt
 		log:              log,
 		manager:          NewModeManager(systemConfig, log),
 		ioProvider:       providers.IO(),
+		tracer:           providers.TracerProvider(),
 		modeTransitionCh: make(chan string, 1),
 	}
 }
@@ -103,6 +107,7 @@ func (rt *Runtime) Run(ctx context.Context) error {
 
 	rt.stopOrchestrators()
 	rt.manager.Close()
+	rt.tracer.Stop()
 	return ctx.Err()
 }
 
@@ -120,11 +125,27 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	runtimeConfig := modeConfig.toRuntimeConfig()
 
+	if runtimeConfig.UseTracer {
+		rt.tracer.Enable()
+	}
+
 	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
+
+	rt.manager.ResetUserContext()
+
+	var knowledgeBase fuser.KnowledgeBase
+	if runtimeConfig.KnowledgeBase != nil {
+		kb, err := knowledgebase.NewKnowledgeBase(runtimeConfig.KnowledgeBase)
+		if err != nil {
+			rt.log.Warn("knowledge base disabled", zap.Error(err))
+		} else {
+			knowledgeBase = kb
+		}
+	}
 
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, nil),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, rt.log),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,
@@ -137,7 +158,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			rt.log,
 		),
 		sensors:   modeConfig.sensors,
-		modeHooks: hooks.NewHooks(modeCfg.LifecycleHooks, rt.log),
+		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
 	}
 	if len(modeConfig.backgroundList) > 0 {
 		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)
@@ -307,38 +328,40 @@ func (rt *Runtime) handleModeTransitions(ctx context.Context) {
 // and also allowing immediate ticks when signaled by the InputOrchestrator.
 func (rt *Runtime) runCortexLoop(ctx context.Context) {
 	modeName := rt.manager.CurrentMode()
-	rt.log.Info("cortex loop started", zap.String("mode", modeName))
 
 	rt.mu.Lock()
+	rt.generation++
+	generation := rt.generation
 	current := rt.current
 	rt.mu.Unlock()
+
+	rt.tracer.SetGeneration(generation)
+	rt.log.Info("cortex loop started", zap.String("mode", modeName), zap.Int("generation", generation))
 
 	if current == nil {
 		return
 	}
 
 	tickInterval := time.Duration(float64(time.Second) / current.runtimeConfig.Hertz)
-	ticker := time.NewTicker(tickInterval)
-	defer ticker.Stop()
 
 	for {
+		timer := time.NewTimer(tickInterval)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			rt.log.Info("cortex loop exiting", zap.String("mode", modeName))
 			return
-		case tickStart := <-ticker.C:
-			rt.tick(ctx, current, tickStart)
+		case <-timer.C:
 		case <-current.inputOrchestrator.TickNow():
-			select {
-			case <-ticker.C:
-			default:
-			}
-			ticker.Reset(tickInterval)
-			rt.tick(ctx, current, time.Now())
+			timer.Stop()
 		case update := <-providers.ModeContext().Updates():
+			timer.Stop()
 			rt.manager.UpdateUserContext(update)
 			rt.scheduleTransition(rt.manager.CheckTransitions(ctx, current.inputOrchestrator.Buffers()))
+			continue
 		}
+
+		rt.tick(ctx, current, time.Now())
 	}
 }
 
@@ -397,6 +420,8 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return
 	}
+
+	rt.tracer.Gauge(prompt, traceOutput(response))
 
 	if len(response.ToolCalls) > 0 {
 		calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(response.ToolCalls))

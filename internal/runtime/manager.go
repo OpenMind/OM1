@@ -60,11 +60,8 @@ func NewModeManager(systemConfig *config.SystemConfig, log *zap.Logger) *ModeMan
 	return manager
 }
 
-// Close releases resources held by the manager.
 func (m *ModeManager) Close() {}
 
-// UpdateUserContext merges the given key/value pairs into the user context used
-// for context-aware transitions.
 func (m *ModeManager) UpdateUserContext(update map[string]any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -72,6 +69,13 @@ func (m *ModeManager) UpdateUserContext(update map[string]any) {
 	for k, v := range update {
 		m.userContext[k] = v
 	}
+}
+
+func (m *ModeManager) ResetUserContext() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.userContext = make(map[string]any)
 }
 
 func (m *ModeManager) CurrentMode() string {
@@ -215,9 +219,9 @@ func (m *ModeManager) checkInputTriggered(latestInputs []string) string {
 	return highestPriorityTarget(matching)
 }
 
-// highestPriorityTarget returns the ToMode of the highest-priority rule, or ""
-// if the slice is empty. Stable sort keeps configuration order among equal
-// priorities, matching Python's sort(..., reverse=True) on a preserved list.
+// highestPriorityTarget returns the ToMode of the rule with the highest Priority value,
+// or "" if the list is empty. When multiple rules have the same Priority, the first
+// one in the list wins (which preserves the original order in the config file).
 func highestPriorityTarget(rules []config.TransitionRule) string {
 	if len(rules) == 0 {
 		return ""

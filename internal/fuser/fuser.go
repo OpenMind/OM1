@@ -6,6 +6,8 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/providers"
+	"go.uber.org/zap"
 )
 
 // Fuser is responsible for fusing various prompt components (system persona, sensory inputs, knowledge base context, available actions, examples) into a single prompt string to be sent to the LLM.
@@ -13,6 +15,7 @@ type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
+	log           *zap.Logger
 }
 
 // KnowledgeBase defines an interface for querying a knowledge base with a question and retrieving relevant documents.
@@ -20,9 +23,9 @@ type KnowledgeBase interface {
 	Query(ctx context.Context, question string, topK int) ([]string, error)
 }
 
-// NewFuser creates a new Fuser instance with the provided runtime configuration, agent actions, and knowledge base.
-func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase) *Fuser {
-	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase}
+// NewFuser constructs a Fuser with the given runtime configuration, agent actions, knowledge base, and logger.
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, log *zap.Logger) *Fuser {
+	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, log: log}
 }
 
 // Fuse combines the prompt components into a single string to be sent to the LLM.
@@ -57,16 +60,19 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 
 	// 3. Knowledge-base context (RAG).
 	if f.knowledgeBase != nil && f.runtimeConfig.KnowledgeBase != nil {
-		question := f.buildQuestion()
-		documents, err := f.knowledgeBase.Query(ctx, question, f.runtimeConfig.KnowledgeBase.TopK)
-		if err == nil && len(documents) > 0 {
-			builder.WriteString("Relevant context:\n")
-			for _, document := range documents {
-				builder.WriteString("- ")
-				builder.WriteString(document)
+		if question := f.voiceQuery(); question != "" {
+			documents, err := f.knowledgeBase.Query(ctx, question, f.runtimeConfig.KnowledgeBase.TopK)
+			if err != nil {
+				f.log.Warn("knowledge base query failed", zap.Error(err))
+			} else if len(documents) > 0 {
+				builder.WriteString("Relevant context:\n")
+				for _, document := range documents {
+					builder.WriteString("- ")
+					builder.WriteString(document)
+					builder.WriteString("\n")
+				}
 				builder.WriteString("\n")
 			}
-			builder.WriteString("\n")
 		}
 	}
 
@@ -105,7 +111,12 @@ func (f *Fuser) visibleActions() []*actions.AgentAction {
 	return visible
 }
 
-// buildQuestion constructs a question to query the knowledge base.
-func (f *Fuser) buildQuestion() string {
-	return "What should " + f.runtimeConfig.Name + " do next?"
+// voiceQuery retrieves the latest voice input from the IOProvider for the current tick.
+func (f *Fuser) voiceQuery() string {
+	io := providers.IO()
+	voice := io.GetInput("Voice")
+	if voice == nil || voice.Input == "" || voice.Tick != io.TickCounter() {
+		return ""
+	}
+	return strings.TrimSpace(voice.Input)
 }

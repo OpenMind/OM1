@@ -67,6 +67,10 @@ func (o *Orchestrator) runSensor(ctx context.Context, sensorIndex int, sensor Se
 				continue
 			}
 
+			if !triggersTick(sensor) {
+				continue
+			}
+
 			select {
 			case o.tickNow <- struct{}{}:
 			default:

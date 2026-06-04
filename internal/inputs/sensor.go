@@ -37,6 +37,18 @@ type Sensor interface {
 	Stop()
 }
 
+// TickTrigger is an optional interface that sensors can implement to indicate
+// whether they should wake the cortex loop when new input is available.
+type TickTrigger interface {
+	TriggersTick() bool
+}
+
+// triggersTick reports whether a sensor has opted in to waking the cortex loop.
+func triggersTick(sensor Sensor) bool {
+	t, ok := sensor.(TickTrigger)
+	return ok && t.TriggersTick()
+}
+
 // Factory is a function type for creating Sensor instances with a given configuration.
 type Factory func(cfg map[string]any) (Sensor, error)
 

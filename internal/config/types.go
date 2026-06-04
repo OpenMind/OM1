@@ -21,6 +21,8 @@ type SystemConfig struct {
 	RobotIP string `json:"robot_ip"`
 	URID    string `json:"URID"`
 
+	UseTracer bool `json:"use_tracer"`
+
 	DefaultMode       string                `json:"default_mode"`
 	AllowManualSwitch bool                  `json:"allow_manual_switching"`
 	ModeMemoryEnabled bool                  `json:"mode_memory_enabled"`
@@ -94,7 +96,9 @@ type MCPSpec struct {
 
 // KBSpec describes the optional knowledge base (RAG).
 type KBSpec struct {
-	Path     string  `json:"path"`
+	Name     string  `json:"knowledge_base_name"`
+	Root     string  `json:"knowledge_base_root"`
+	BaseURL  string  `json:"base_url"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
 }
@@ -111,4 +115,5 @@ type RuntimeConfig struct {
 	KnowledgeBase    *KBSpec
 	ActionExecMode   string
 	ActionDeps       map[string][]string
+	UseTracer        bool
 }
