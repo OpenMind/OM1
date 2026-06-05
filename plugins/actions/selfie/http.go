@@ -1,16 +1,3 @@
-// Package selfie implements the face-enrollment action.
-//
-// Connector calls the multi-frame /selfie endpoint exposed by
-// om1_video_processor and translates each response code into:
-//   - a SelfieStatus update for the LLM (via providers.IO().AddInput)
-//   - a brief neutral TTS confirmation via ElevenLabs
-//   - light connector-side state (lastEnrolledID, lastMatchName) as
-//     debugging breadcrumbs
-//
-// The connector does NOT own conversational persona or correction logic.
-// Persona is the LLM's job on the next turn after reading SelfieStatus.
-// Corrections (correct_identity / forget_last) are separate actions
-// governed by the API's own 60s TTL.
 package selfie
 
 import (
