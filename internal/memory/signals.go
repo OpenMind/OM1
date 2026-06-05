@@ -22,7 +22,10 @@ const (
 	wRecency       = 0.15
 	wConsolidation = 0.15
 
-	promotionThreshold = 0.30
+	promotionThreshold = 0.5
+
+	expirationRecencyThreshold = 0.1
+	expirationRecallMinimum    = 2
 )
 
 // RecallSignal tracks accumulated retrieval signals for a single chunk.
@@ -33,6 +36,16 @@ type RecallSignal struct {
 	RecallDays   []string  `json:"recall_days"`
 	LastRecalled time.Time `json:"last_recalled"`
 	FirstSeen    time.Time `json:"first_seen"`
+	// Candidate metadata (empty for plain chunk signals).
+	Text   string `json:"text,omitempty"`
+	UserID string `json:"user_id,omitempty"`
+}
+
+// CandidateResult is a promotable candidate with its score.
+type CandidateResult struct {
+	Text   string
+	UserID string
+	Score  float64
 }
 
 // SignalStore manages recall signals persisted to disk.
@@ -201,7 +214,78 @@ func (s *SignalStore) save() {
 
 func hashChunk(text string) string {
 	h := sha256.Sum256([]byte(text))
-	return fmt.Sprintf("%x", h[:16])
+	return fmt.Sprintf("%x", h)
+}
+
+// MarkCandidate tags a chunk as a candidate in the signal store.
+func (s *SignalStore) MarkCandidate(chunkText, userID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	h := hashChunk(chunkText)
+	sig, ok := s.signals[h]
+	if !ok {
+		now := time.Now()
+		sig = &RecallSignal{
+			RecallCount:  1,
+			TotalScore:   0.5,
+			QueryHashes:  []string{hashChunk("extract_" + chunkText)},
+			RecallDays:   []string{now.Format("2006-01-02")},
+			LastRecalled: now,
+			FirstSeen:    now,
+		}
+		s.signals[h] = sig
+	}
+	sig.Text = chunkText
+	sig.UserID = userID
+	s.save()
+}
+
+// PromotableCandidates returns candidates with score >= promotionThreshold.
+func (s *SignalStore) PromotableCandidates() []CandidateResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var results []CandidateResult
+	for _, sig := range s.signals {
+		if sig.Text == "" {
+			continue
+		}
+		score := computeScore(sig)
+		if score >= promotionThreshold {
+			results = append(results, CandidateResult{
+				Text:   sig.Text,
+				UserID: sig.UserID,
+				Score:  score,
+			})
+		}
+	}
+	return results
+}
+
+// ExpireCandidates removes candidate entries where recency < 0.1 AND recall_count < 2.
+func (s *SignalStore) ExpireCandidates() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	expired := 0
+	for h, sig := range s.signals {
+		if sig.Text == "" {
+			continue
+		}
+		if sig.RecallCount < expirationRecallMinimum {
+			ageDays := time.Since(sig.LastRecalled).Hours() / 24
+			recency := math.Exp(-0.693 * ageDays / 14)
+			if recency < expirationRecencyThreshold {
+				delete(s.signals, h)
+				expired++
+			}
+		}
+	}
+	if expired > 0 {
+		s.save()
+	}
+	return expired
 }
 
 func contains(slice []string, item string) bool {

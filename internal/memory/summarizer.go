@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
+
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,31 +21,30 @@ import (
 )
 
 const (
-	summaryThreshold = 2
+	summaryThreshold = 10
 
 	defaultSummarizerModel   = "gemini-3.1-flash-lite-preview"
 	defaultSummarizerBaseURL = "https://api.openmind.com/api/core/gemini"
 )
 
-var extractPrompt = strings.TrimSpace(`
-Extract candidate facts from the robot-human interaction log below.
+var selectPrompt = strings.TrimSpace(`
+Below are numbered conversation sections from a robot-human interaction log.
+Identify which sections contain information worth remembering long-term
+(user identity, preferences, important facts).
 
-The log may contain [User: xxx] tags indicating which user said what.
-Preserve this association: if a fact comes from a tagged section,
-include the user_id in your output.
+Output the section numbers worth remembering, one per line.
+If none, respond with "NONE"
+`)
 
-For each fact, assign a category tag:
-- [IDENTITY] user identity (name, age, occupation)
-- [PREFERENCE] user preference (language, style, habits)
-- [FACT] important facts (decisions, agreements, locations)
+var comparePrompt = strings.TrimSpace(`
+Given the user's existing facts and new conversation records, integrate the new information.
 
-Output format (one per line):
-- [IDENTITY] [user:alice] User's name is Alice
-- [PREFERENCE] [user:bob] User prefers casual tone
-- [FACT] [user:alice] User lives in Beijing
-- [FACT] User asked about the weather (no user tag if unknown)
+For each piece of new information, output one of:
+- ADD [CATEGORY] fact text
+- UPDATE [CATEGORY] new fact text | replaces: old fact text
+- SKIP (if already covered by existing facts)
 
-If no meaningful facts, respond with exactly "NONE"
+Keep facts concise (one sentence each). If no changes needed, respond with "NONE"
 `)
 
 // Summarizer runs the LLM fact extraction + signal-based scoring pipeline.
@@ -134,7 +133,6 @@ func (s *Summarizer) CheckEligibility() bool {
 	return count >= summaryThreshold
 }
 
-// Run executes the two-stage summarization pipeline.
 func (s *Summarizer) Run(ctx context.Context) {
 	s.mu.Lock()
 	if s.running {
@@ -157,44 +155,52 @@ func (s *Summarizer) Run(ctx context.Context) {
 		return
 	}
 
-	logContent := s.readFiles(unprocessed, lastSummary)
+	newChunks := s.parseNewChunks(unprocessed, lastSummary)
+	if len(newChunks) == 0 {
+		s.writeLastSummary()
+		return
+	}
 
-	candidates, err := s.extractCandidates(ctx, logContent)
+	promptContent := formatNumberedChunks(newChunks)
+	selected, err := s.selectCandidates(ctx, promptContent)
 	if err != nil {
-		s.log.Error("memory summarization: extract failed", zap.Error(err))
-		return
-	}
-	if candidates == "" {
-		s.writeLastSummary()
+		s.log.Error("memory: candidate selection failed", zap.Error(err))
 		return
 	}
 
-	decisions := s.scoreCandidatesLocal(candidates)
-	if len(decisions) == 0 {
-		s.writeLastSummary()
-		return
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(newChunks) {
+			continue
+		}
+		chunk := newChunks[idx]
+		userID := parseUserFromChunk(chunk.Text)
+		s.signals.MarkCandidate(chunk.Text, userID)
+		s.log.Debug("memory: marked candidate",
+			zap.Int("section", idx+1),
+			zap.String("user", userID),
+		)
 	}
 
-	changedUsers := s.applyDecisions(decisions)
-
-	expiredUsers := s.expireStaleFacts()
-	for _, uid := range expiredUsers {
-		if !containsStr(changedUsers, uid) {
-			changedUsers = append(changedUsers, uid)
+	promotable := s.signals.PromotableCandidates()
+	if len(promotable) > 0 {
+		changedUsers := s.promoteAndSummarize(ctx, promotable)
+		for _, uid := range changedUsers {
+			if err := s.generateSummary(ctx, uid); err != nil {
+				s.log.Warn("memory: summary generation failed", zap.String("user", uid), zap.Error(err))
+			}
 		}
 	}
 
-	for _, uid := range changedUsers {
-		if err := s.generateSummary(ctx, uid); err != nil {
-			s.log.Warn("memory: summary generation failed", zap.String("user", uid), zap.Error(err))
-		}
+	if expired := s.signals.ExpireCandidates(); expired > 0 {
+		s.log.Info("memory: expired candidates", zap.Int("count", expired))
 	}
 
 	s.writeLastSummary()
 
 	s.log.Info("memory summarization complete",
 		zap.Int("files", len(unprocessed)),
-		zap.Int("promoted", len(decisions)),
+		zap.Int("selected", len(selected)),
+		zap.Int("promotable", len(promotable)),
 	)
 }
 
@@ -253,20 +259,6 @@ func (s *Summarizer) llmCall(ctx context.Context, messages []chatMessage) (strin
 	return strings.TrimSpace(cr.Choices[0].Message.Content), nil
 }
 
-func (s *Summarizer) extractCandidates(ctx context.Context, log string) (string, error) {
-	result, err := s.llmCall(ctx, []chatMessage{
-		{Role: "system", Content: extractPrompt},
-		{Role: "user", Content: log},
-	})
-	if err != nil {
-		return "", err
-	}
-	if strings.EqualFold(result, "NONE") {
-		return "", nil
-	}
-	return result, nil
-}
-
 type scoredDecision struct {
 	Fact     string  `json:"fact"`
 	Category string  `json:"category"`
@@ -275,44 +267,192 @@ type scoredDecision struct {
 	Replaces string  `json:"replaces"`
 }
 
-// scoreCandidatesLocal scores extracted candidates.
-func (s *Summarizer) scoreCandidatesLocal(candidates string) []scoredDecision {
-	catRe := regexp.MustCompile(`^-\s*\[(\w+)\]\s*(?:\[user:(\w+)\]\s*)?(.+)$`)
+// selectCandidates asks the LLM which chunks are worth remembering.
+func (s *Summarizer) selectCandidates(ctx context.Context, promptContent string) ([]int, error) {
+	result, err := s.llmCall(ctx, []chatMessage{
+		{Role: "system", Content: selectPrompt},
+		{Role: "user", Content: promptContent},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if strings.EqualFold(strings.TrimSpace(result), "NONE") || result == "" {
+		return nil, nil
+	}
+	return parseSelectOutput(result), nil
+}
+
+// parseSelectOutput parses LLM output of section numbers into 0-based indices.
+func parseSelectOutput(output string) []int {
+	numRe := regexp.MustCompile(`^\d+$`)
+	var indices []int
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if numRe.MatchString(line) {
+			n := 0
+			fmt.Sscanf(line, "%d", &n)
+			if n > 0 {
+				indices = append(indices, n-1)
+			}
+		}
+	}
+	return indices
+}
+
+// formatNumberedChunks formats chunks as numbered sections for the LLM prompt.
+func formatNumberedChunks(chunks []MemoryEntry) string {
+	var parts []string
+	for i, c := range chunks {
+		parts = append(parts, fmt.Sprintf("[%d]\n%s", i+1, c.Text))
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+// parseUserFromChunk extracts user ID from chunk text (e.g. "[User: alice]").
+func parseUserFromChunk(text string) string {
+	userRe := regexp.MustCompile(`\[User:\s*(\w+)\]`)
+	m := userRe.FindStringSubmatch(text)
+	if m == nil {
+		return ""
+	}
+	return strings.ToLower(m[1])
+}
+
+// parseNewChunks parses daily logs into chunks, filtering by lastSummary.
+func (s *Summarizer) parseNewChunks(files []string, lastSummary *time.Time) []MemoryEntry {
+	sectionRe := regexp.MustCompile(`^## (\d{2}:\d{2}:\d{2})`)
+	var result []MemoryEntry
+
+	for _, f := range files {
+		chunks, err := ParseDailyFile(f)
+		if err != nil {
+			continue
+		}
+
+		stem := strings.TrimSuffix(filepath.Base(f), ".md")
+		fileDate, _ := time.Parse("2006-01-02", stem)
+
+		for _, chunk := range chunks {
+			if lastSummary != nil {
+				lines := strings.SplitN(chunk.Text, "\n", 3)
+				skip := false
+				for _, line := range lines {
+					m := sectionRe.FindStringSubmatch(line)
+					if m != nil {
+						t, err := time.Parse("15:04:05", m[1])
+						if err == nil {
+							sectionDT := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(),
+								t.Hour(), t.Minute(), t.Second(), 0, time.Local)
+							if !sectionDT.After(*lastSummary) {
+								skip = true
+							}
+						}
+						break
+					}
+				}
+				if skip {
+					continue
+				}
+			}
+			result = append(result, chunk)
+		}
+	}
+	return result
+}
+
+// promoteAndSummarize takes promotable candidates, groups by user,
+func (s *Summarizer) promoteAndSummarize(ctx context.Context, candidates []CandidateResult) []string {
+	grouped := make(map[string][]CandidateResult)
+	for _, c := range candidates {
+		uid := c.UserID
+		if uid == "" || uid == "unknown" {
+			continue
+		}
+		grouped[uid] = append(grouped[uid], c)
+	}
+
+	var changedUsers []string
+	for uid, chunks := range grouped {
+		existingFacts := s.readUserFactsList(uid)
+
+		var chunkTexts []string
+		for _, c := range chunks {
+			chunkTexts = append(chunkTexts, c.Text)
+		}
+
+		promptContent := fmt.Sprintf("Existing facts for user %q:\n%s\n\nNew conversation records:\n%s",
+			uid, existingFacts, strings.Join(chunkTexts, "\n\n"))
+
+		result, err := s.llmCall(ctx, []chatMessage{
+			{Role: "system", Content: comparePrompt},
+			{Role: "user", Content: promptContent},
+		})
+		if err != nil {
+			s.log.Error("memory: compare LLM failed", zap.String("user", uid), zap.Error(err))
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(result), "NONE") || result == "" {
+			continue
+		}
+
+		decisions := s.parseCompareOutput(result, uid)
+		if len(decisions) > 0 {
+			s.applyDecisions(decisions)
+			changedUsers = append(changedUsers, uid)
+		}
+	}
+	return changedUsers
+}
+
+// readUserFactsList returns formatted existing facts for a user.
+func (s *Summarizer) readUserFactsList(userID string) string {
+	factsPath := filepath.Join(s.usersDir, userID, "facts.json")
+	raw, err := os.ReadFile(factsPath)
+	if err != nil {
+		return "(no existing facts)"
+	}
+
+	var data struct {
+		Facts []struct {
+			Fact     string `json:"fact"`
+			Category string `json:"category"`
+		} `json:"facts"`
+	}
+	if err := json.Unmarshal(raw, &data); err != nil || len(data.Facts) == 0 {
+		return "(no existing facts)"
+	}
+
+	var lines []string
+	for _, f := range data.Facts {
+		lines = append(lines, fmt.Sprintf("- [%s] %s", f.Category, f.Fact))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// parseCompareOutput parses LLM ADD/UPDATE output.
+func (s *Summarizer) parseCompareOutput(output, userID string) []scoredDecision {
+	addRe := regexp.MustCompile(`^-\s*ADD\s+\[(\w+)\]\s+(.+)$`)
+	updateRe := regexp.MustCompile(`^-\s*UPDATE\s+\[(\w+)\]\s+(.+?)\s*\|\s*replaces:\s*(.+)$`)
 
 	var decisions []scoredDecision
-	for _, line := range strings.Split(candidates, "\n") {
+	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
-		m := catRe.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		category := strings.ToUpper(m[1])
-		userID := strings.ToLower(strings.TrimSpace(m[2]))
-		fact := strings.TrimSpace(m[3])
 
-		if fact == "" {
-			continue
-		}
-
-		if s.signals.LookupSignal(fact) == nil {
-			s.signals.InjectColdStart(fact)
-		}
-
-		score := s.signals.Score(fact)
-		s.log.Debug("memory candidate score",
-			zap.String("fact", truncate(fact, 60)),
-			zap.Float64("score", score),
-		)
-
-		if score >= promotionThreshold {
-			var uid *string
-			if userID != "" {
-				uid = &userID
-			}
+		if m := updateRe.FindStringSubmatch(line); m != nil {
+			uid := userID
 			decisions = append(decisions, scoredDecision{
-				Fact:     fact,
-				Category: category,
-				UserID:   uid,
+				Category: strings.ToUpper(m[1]),
+				Fact:     strings.TrimSpace(m[2]),
+				Replaces: strings.TrimSpace(m[3]),
+				UserID:   &uid,
+				Decision: "UPDATE",
+			})
+		} else if m := addRe.FindStringSubmatch(line); m != nil {
+			uid := userID
+			decisions = append(decisions, scoredDecision{
+				Category: strings.ToUpper(m[1]),
+				Fact:     strings.TrimSpace(m[2]),
+				UserID:   &uid,
 				Decision: "PROMOTE",
 			})
 		}
@@ -598,74 +738,6 @@ func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
 	var changedUsers []string
 	for uid := range userFacts {
 		changedUsers = append(changedUsers, uid)
-	}
-	return changedUsers
-}
-
-const (
-	expirationRecencyThreshold = 0.1
-	expirationRecallMinimum    = 2
-)
-
-// expireStaleFacts removes facts where recency < 0.1 AND recall_count < 2.
-func (s *Summarizer) expireStaleFacts() []string {
-	entries, err := os.ReadDir(s.usersDir)
-	if err != nil {
-		return nil
-	}
-
-	var changedUsers []string
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		uid := e.Name()
-		factsPath := filepath.Join(s.usersDir, uid, "facts.json")
-		raw, err := os.ReadFile(factsPath)
-		if err != nil {
-			continue
-		}
-
-		var data struct {
-			UserID  string `json:"user_id"`
-			Summary string `json:"summary"`
-			Facts   []struct {
-				Fact     string `json:"fact"`
-				Category string `json:"category"`
-				AddedAt  string `json:"added_at"`
-			} `json:"facts"`
-		}
-		if err := json.Unmarshal(raw, &data); err != nil || len(data.Facts) == 0 {
-			continue
-		}
-
-		var kept = data.Facts[:0]
-		expired := 0
-		for _, f := range data.Facts {
-			sig := s.signals.LookupSignal(f.Fact)
-			if sig != nil && sig.RecallCount < expirationRecallMinimum {
-				ageDays := time.Since(sig.LastRecalled).Hours() / 24
-				recency := math.Exp(-0.693 * ageDays / 14)
-				if recency < expirationRecencyThreshold {
-					s.log.Info("memory: expired fact",
-						zap.String("user", uid),
-						zap.String("fact", truncate(f.Fact, 50)),
-						zap.Float64("recency", recency),
-					)
-					expired++
-					continue
-				}
-			}
-			kept = append(kept, f)
-		}
-
-		if expired > 0 {
-			data.Facts = kept
-			out, _ := json.MarshalIndent(data, "", "  ")
-			_ = os.WriteFile(factsPath, out, 0o644)
-			changedUsers = append(changedUsers, uid)
-			s.log.Info("memory: expired facts", zap.String("user", uid), zap.Int("removed", expired))
-		}
 	}
 	return changedUsers
 }

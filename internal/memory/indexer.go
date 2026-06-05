@@ -21,7 +21,7 @@ import (
 
 const (
 	DefaultMinScore          = 0.5
-	DefaultValidDurationDays = 14
+	DefaultValidDurationDays = 60
 )
 
 // MemoryIndex is an in-memory HNSW index for memory chunks.
