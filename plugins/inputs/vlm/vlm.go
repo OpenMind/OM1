@@ -25,6 +25,7 @@ const (
 	vlmDescriptor  = "Vision"
 	vlmMaxMessages = 10
 	defaultFPS     = 10
+	defaultRTSPURL = "rtsp://localhost:8554/top_camera_raw"
 )
 
 type providerDefaults struct {
@@ -62,8 +63,7 @@ type VLMConfig struct {
 	CameraIndex int `json:"camera_index"`
 
 	// RTSP-only.
-	RTSPURL      string `json:"rtsp_url"`
-	DecodeFormat string `json:"decode_format"`
+	RTSPURL string `json:"rtsp_url"`
 }
 
 // vlmSensor implements the inputs.Sensor interface, capturing video frames, sending them to a vision API for description, and emitting the descriptions as messages.
@@ -111,13 +111,15 @@ func NewRTSPSensor(name string, defaults providerDefaults, configMap map[string]
 	if err != nil {
 		return nil, err
 	}
+	if cfg.RTSPURL == "" {
+		cfg.RTSPURL = defaultRTSPURL
+	}
 	source := video.NewVideoRTSPStream(video.VideoRTSPStreamConfig{
-		RTSPURL:      cfg.RTSPURL,
-		DecodeFormat: cfg.DecodeFormat,
-		FPS:          cfg.FPS,
-		Width:        cfg.Width,
-		Height:       cfg.Height,
-		JPEGQuality:  cfg.JPEGQuality,
+		RTSPURL:     cfg.RTSPURL,
+		FPS:         cfg.FPS,
+		Width:       cfg.Width,
+		Height:      cfg.Height,
+		JPEGQuality: cfg.JPEGQuality,
 	})
 	return NewSensor(name, cfg, source), nil
 }
