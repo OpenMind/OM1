@@ -1,12 +1,30 @@
 // Package correct_identity implements the identity-rename action.
 //
-// Calls /gallery/move_samples on the face API to move all samples from
-// one id to another. Used when the LLM/user wants to correct a recently-
-// enrolled label (typo, mishearing) — NOT for wrong-person captures
-// (use forget_last for that) or look-alikes (use selfie with force=true).
+// Calls /set_name on the face API to rename an existing identity.
+// Used when the LLM/user wants to correct a recently-enrolled label
+// (typo, mishearing) — NOT for wrong-person captures (use forget_last)
+// or look-alikes (use selfie with force=true).
 //
-// The API enforces the 60s TTL on last_enrollment, so this connector
-// can't accidentally rename an old identity even if the LLM asks it to.
+// FROM-ID RESOLUTION
+// ------------------
+// The LLM gives us the from_id by name (e.g. "wendi"). The face API
+// uses UUIDs as primary keys, so we first query /gallery/identities to
+// resolve "wendi" -> {uuid}. Cases:
+//
+//   0 matches  -> "result=name_not_found"
+//   1 match    -> /set_name {uuid, name=to_id}
+//   N matches  -> "result=ambiguous count=N"
+//                 (the LLM needs to disambiguate — usually it shouldn't
+//                  happen since correct_identity is for fixing a recent
+//                  typo, and the typo is unlikely to collide with another
+//                  identity. If it does, the LLM should fall back to
+//                  asking the user which one.)
+//
+// NAME COLLISIONS ARE ALLOWED
+// ---------------------------
+// /set_name does NOT auto-merge same-name UUIDs (by design — different
+// people can share a name). After this action, gallery may have two
+// "wendy" UUIDs. That's fine; recognition uses face, not name.
 package correct_identity
 
 import (
@@ -25,6 +43,7 @@ import (
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 // CorrectIdentityInput is the LLM-facing schema for this action.
@@ -42,7 +61,7 @@ func init() {
 			"use selfie(force=true); for wrong-person captures use forget_last().",
 		CorrectIdentityInput{},
 	)
-	actions.Register("correct_identity/http", NewHTTPConnector)
+	actions.Register("correct_identity", NewHTTPConnector)
 }
 
 type Config struct {
@@ -60,7 +79,7 @@ type Connector struct {
 	log    *zap.Logger
 	cfg    Config
 	client *http.Client
-	tts    *providers.ElevenLabsProvider
+	tts    *tts.ElevenLabsProvider
 }
 
 var dedupSuffixRE = regexp.MustCompile(`_\d+$`)
@@ -80,20 +99,20 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		cfg.HTTPTimeoutSec = 5.0
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = providers.DefaultRate
+		cfg.Rate = tts.DefaultRate
 	}
 
 	log := logger.Get()
-	tts := providers.ElevenLabs(providers.ElevenLabsConfig{
+	ttsClient := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
 		VoiceID:          cfg.VoiceID,
@@ -106,7 +125,7 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		log:    log,
 		cfg:    cfg,
 		client: &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec * float64(time.Second))},
-		tts:    tts,
+		tts:    ttsClient,
 	}, nil
 }
 
@@ -132,14 +151,68 @@ func (c *Connector) Connect(_ context.Context, input actions.Input) (actions.Out
 		return nil, nil
 	}
 
-	resp := c.postJSON("/gallery/move_samples",
-		map[string]any{"from_id": fromID, "to_id": toID})
-	c.dispatchResponse(resp, fromID, toID)
+	// 1. Resolve from_id (name) → uuid via /gallery/identities.
+	uuid, count, err := c.resolveNameToUUID(fromID)
+	if err != nil {
+		c.writeStatus("result=network_error")
+		c.speak("I had trouble updating that.")
+		return nil, nil
+	}
+	switch count {
+	case 0:
+		c.writeStatus(fmt.Sprintf("result=name_not_found from=%s", fromID))
+		c.speak(fmt.Sprintf("I don't have anyone named %s saved.", displayName(fromID)))
+		return nil, nil
+	case 1:
+		// fall through to rename
+	default:
+		// Ambiguous — multiple UUIDs share this name. We refuse to guess.
+		c.writeStatus(fmt.Sprintf("result=ambiguous from=%s count=%d", fromID, count))
+		c.speak(fmt.Sprintf("I have more than one %s saved — I can't tell which one you meant.", displayName(fromID)))
+		return nil, nil
+	}
+
+	// 2. Rename the resolved UUID to to_id via /set_name.
+	resp := c.postJSON("/set_name", map[string]any{"uuid": uuid, "name": toID})
+	c.dispatchSetNameResponse(resp, fromID, toID, uuid)
 	return nil, nil
 }
 
 func (c *Connector) Tick(ctx context.Context) { <-ctx.Done() }
 func (c *Connector) Stop()                    {}
+
+// resolveNameToUUID looks up identities matching a display name (case-
+// insensitive). Returns (uuid, count, err); only uuid is meaningful when
+// count == 1.
+func (c *Connector) resolveNameToUUID(name string) (string, int, error) {
+	resp := c.postJSON("/gallery/identities", map[string]any{})
+	if resp == nil {
+		return "", 0, fmt.Errorf("network error")
+	}
+	rawList, _ := resp["identities"].([]any)
+	target := strings.ToLower(strings.TrimSpace(name))
+	matches := []string{}
+	for _, item := range rawList {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		n, _ := m["name"].(string)
+		if strings.ToLower(strings.TrimSpace(n)) == target {
+			u, _ := m["uuid"].(string)
+			if u != "" {
+				matches = append(matches, u)
+			}
+		}
+	}
+	if len(matches) == 0 {
+		return "", 0, nil
+	}
+	if len(matches) > 1 {
+		return "", len(matches), nil
+	}
+	return matches[0], 1, nil
+}
 
 func (c *Connector) postJSON(path string, body map[string]any) map[string]any {
 	url := c.cfg.FaceHTTPBaseURL + path
@@ -187,37 +260,35 @@ func displayName(id string) string {
 	return strings.Title(strings.ToLower(cleaned))
 }
 
-func (c *Connector) dispatchResponse(resp map[string]any, fromID, toID string) {
+func (c *Connector) dispatchSetNameResponse(resp map[string]any, fromID, toID, uuid string) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
 		c.speak("I had trouble updating that.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		moved := intOr(resp, "moved", 0)
-		fromRemoved := boolOr(resp, "from_removed", false)
-		c.writeStatus(fmt.Sprintf("result=success from=%s to=%s moved=%d from_removed=%t",
-			fromID, toID, moved, fromRemoved))
+		// /set_name returned ok=true + name/sample_count fields.
+		samples := intOr(resp, "sample_count", 0)
+		c.writeStatus(fmt.Sprintf(
+			"result=success from=%s to=%s uuid=%s samples=%d",
+			fromID, toID, shortUUID(uuid), samples,
+		))
 		c.speak(fmt.Sprintf("Got it, I've updated your name to %s.", displayName(toID)))
 		c.log.Info("correct_identity/http: ok",
-			zap.String("from", fromID), zap.String("to", toID), zap.Int("moved", moved))
+			zap.String("from", fromID), zap.String("to", toID),
+			zap.String("uuid", uuid), zap.Int("samples", samples))
 		return
 	}
 	errStr := strOr(resp, "error", "unknown")
 	switch errStr {
-	case "no_recent_enrollment", "stale_enrollment":
-		c.writeStatus("result=" + errStr)
-		c.speak("I can't change that — too much time has passed since I remembered you.")
-	case "bad_id":
+	case "uuid_not_found":
+		// Race: someone deleted the UUID between our lookup and set_name.
+		c.writeStatus(fmt.Sprintf("result=uuid_not_found uuid=%s", shortUUID(uuid)))
+		c.speak("I couldn't find that identity anymore — maybe it was deleted.")
+	case "bad_name":
 		detail := strOr(resp, "detail", "")
 		c.writeStatus(fmt.Sprintf("result=bad_id detail=%s", detail))
 		// Silent — LLM should re-prompt
-	case "same_id":
-		c.writeStatus(fmt.Sprintf("result=same_id id=%s", fromID))
-		// Silent
-	case "no_safe_files":
-		c.writeStatus("result=no_safe_files")
-		c.speak("I couldn't find the right files to update.")
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
 		c.speak("I can't update names right now.")
@@ -227,6 +298,14 @@ func (c *Connector) dispatchResponse(resp map[string]any, fromID, toID string) {
 	}
 }
 
+// shortUUID returns the first 8 chars of a UUID for compact logging.
+func shortUUID(uuid string) string {
+	if len(uuid) >= 8 {
+		return uuid[:8]
+	}
+	return uuid
+}
+
 func normID(args map[string]any, k string) string {
 	s, _ := args[k].(string)
 	return strings.ToLower(strings.TrimSpace(s))
@@ -234,12 +313,6 @@ func normID(args map[string]any, k string) string {
 func strOr(m map[string]any, k, d string) string {
 	if s, ok := m[k].(string); ok {
 		return s
-	}
-	return d
-}
-func boolOr(m map[string]any, k string, d bool) bool {
-	if v, ok := m[k].(bool); ok {
-		return v
 	}
 	return d
 }

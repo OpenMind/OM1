@@ -30,6 +30,7 @@ import (
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
 // SelfieInput is the LLM-facing schema for this action.
@@ -49,7 +50,7 @@ func init() {
 			"via SelfieStatus with a brief TTS confirmation to the user.",
 		SelfieInput{},
 	)
-	actions.Register("selfie/http", NewHTTPConnector)
+	actions.Register("selfie", NewHTTPConnector)
 }
 
 // Config holds the connector's settings, parsed from JSON5 `config` block.
@@ -75,7 +76,7 @@ type Connector struct {
 	log    *zap.Logger
 	cfg    Config
 	client *http.Client
-	tts    *providers.ElevenLabsProvider
+	tts    *tts.ElevenLabsProvider
 
 	mu             sync.Mutex
 	lastEnrolledID string // breadcrumb for debugging; API owns the real TTL
@@ -111,20 +112,20 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		cfg.HTTPTimeoutSec = 5.0
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = providers.DefaultRate
+		cfg.Rate = tts.DefaultRate
 	}
 
 	log := logger.Get()
-	tts := providers.ElevenLabs(providers.ElevenLabsConfig{
+	ttsClient := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
 		VoiceID:          cfg.VoiceID,
@@ -137,7 +138,7 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		log:    log,
 		cfg:    cfg,
 		client: &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec * float64(time.Second))},
-		tts:    tts,
+		tts:    ttsClient,
 	}, nil
 }
 

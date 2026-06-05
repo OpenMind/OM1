@@ -1,12 +1,27 @@
 // Package forget_last implements the undo-last-enrollment action.
 //
-// Calls /gallery/forget_last on the face API to delete the most recent
-// enrollment's samples. Used when the WRONG PERSON was captured (someone
-// walked in front of the camera, or the user wasn't actually facing it).
+// Calls /gallery/forget_last on the face API. Soft-deletes the UUID
+// that was created or claimed by the most recent /selfie within ~60s
+// (API enforces the TTL). Used when the WRONG PERSON was captured:
+// someone walked in front of the camera, or the user wasn't actually
+// facing it.
 //
-// NOT for typos (use correct_identity) or look-alikes (use selfie with
-// force=true). The API enforces a 60s TTL so this can't accidentally
-// forget an old enrollment.
+// NOT for typos (use correct_identity) and NOT for look-alikes (use
+// selfie with force=true).
+//
+// LLM workflow
+// ------------
+// The action takes NO arguments — the API server knows which UUID is
+// the "last enrollment" via its internal last_enrollment state, set
+// by the most recent successful /selfie call. The LLM doesn't need to
+// supply any identifier.
+//
+// Reversibility
+// -------------
+// The forgotten UUID is moved to _trash/, not hard-deleted. The
+// /gallery/restore endpoint (without arguments) restores the most
+// recently soft-deleted UUID. Not currently exposed to the LLM —
+// operator-level recovery only.
 package forget_last
 
 import (
@@ -24,23 +39,27 @@ import (
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 )
 
-// ForgetLastInput is the LLM-facing schema for this action.
-type ForgetLastInput struct {
-	ID string `json:"id" description:"Optional id of the enrollment to forget. If omitted, forgets the most recent one. The API will reject with id_mismatch if this doesn't match what was just enrolled."`
-}
+// ForgetLastInput — empty schema. Action takes no LLM-facing arguments.
+// The server identifies the "last enrollment" from its own state
+// (set by the most recent /selfie call).
+type ForgetLastInput struct{}
 
 func init() {
 	actions.RegisterInterface(
 		"forget_last",
-		"Undo the most recent /selfie enrollment by deleting its samples. "+
-			"Use when SelfieStatus showed result=success within ~60s AND the user "+
-			"indicates the WRONG PERSON was captured (e.g. 'someone walked in front', "+
-			"'that wasn't me'). NOT for typos (use correct_identity) or look-alikes.",
+		"Undo the most recent /selfie enrollment by soft-deleting its UUID. "+
+			"Use when SelfieStatus showed result=success or result=merged within "+
+			"~60s AND the user indicates the WRONG PERSON was captured (e.g. "+
+			"'someone walked in front', 'that wasn't me'). NOT for typos (use "+
+			"correct_identity). NOT for look-alikes (use selfie with force=true). "+
+			"Takes no arguments — the server already knows which enrollment was "+
+			"last.",
 		ForgetLastInput{},
 	)
-	actions.Register("forget_last/http", NewHTTPConnector)
+	actions.Register("forget_last", NewHTTPConnector)
 }
 
 type Config struct {
@@ -58,7 +77,7 @@ type Connector struct {
 	log    *zap.Logger
 	cfg    Config
 	client *http.Client
-	tts    *providers.ElevenLabsProvider
+	tts    *tts.ElevenLabsProvider
 }
 
 func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
@@ -76,20 +95,20 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		cfg.HTTPTimeoutSec = 5.0
 	}
 	if cfg.VoiceID == "" {
-		cfg.VoiceID = providers.DefaultVoiceID
+		cfg.VoiceID = tts.DefaultVoiceID
 	}
 	if cfg.ModelID == "" {
-		cfg.ModelID = providers.DefaultModelID
+		cfg.ModelID = tts.DefaultModelID
 	}
 	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = providers.DefaultOutputFormat
+		cfg.OutputFormat = tts.DefaultOutputFormat
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = providers.DefaultRate
+		cfg.Rate = tts.DefaultRate
 	}
 
 	log := logger.Get()
-	tts := providers.ElevenLabs(providers.ElevenLabsConfig{
+	ttsClient := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
 		VoiceID:          cfg.VoiceID,
@@ -102,22 +121,15 @@ func NewHTTPConnector(configMap map[string]any) (actions.Connector, error) {
 		log:    log,
 		cfg:    cfg,
 		client: &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec * float64(time.Second))},
-		tts:    tts,
+		tts:    ttsClient,
 	}, nil
 }
 
-func (c *Connector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
-	args, _ := input.(map[string]any)
-	idCheck, _ := args["id"].(string)
-	idCheck = strings.ToLower(strings.TrimSpace(idCheck))
-
-	body := map[string]any{}
-	if idCheck != "" {
-		body["id"] = idCheck
-	}
-
-	resp := c.postJSON("/gallery/forget_last", body)
-	c.dispatchResponse(resp, idCheck)
+func (c *Connector) Connect(_ context.Context, _ actions.Input) (actions.Output, error) {
+	// No arguments — empty body. The server identifies the target via
+	// its own last_enrollment state.
+	resp := c.postJSON("/gallery/forget_last", map[string]any{})
+	c.dispatchResponse(resp)
 	return nil, nil
 }
 
@@ -148,9 +160,9 @@ func (c *Connector) postJSON(path string, body map[string]any) map[string]any {
 	return out
 }
 
-// writeStatus surfaces a SelfieStatus line to the LLM. All three
-// face-memory actions write to the same key — the LLM disambiguates by
-// reading the `result=...` prefix.
+// writeStatus surfaces a SelfieStatus line to the LLM. All face-memory
+// actions write to the same key — the LLM disambiguates by reading
+// the `result=...` prefix.
 func (c *Connector) writeStatus(line string) {
 	providers.IO().AddInput("SelfieStatus", line, time.Time{})
 	c.log.Info("forget_last/http: status", zap.String("line", line))
@@ -163,36 +175,69 @@ func (c *Connector) speak(message string) {
 	c.tts.AddText(message)
 }
 
-func (c *Connector) dispatchResponse(resp map[string]any, requestedID string) {
+// shortUUID returns the first 8 chars of a UUID for compact logging.
+func shortUUID(uuid string) string {
+	if len(uuid) >= 8 {
+		return uuid[:8]
+	}
+	return uuid
+}
+
+// displayName converts a snake_case / dash id back to a readable name.
+// "wendy" → "Wendy", "jerin-peter" → "Jerin Peter".
+func displayName(id string) string {
+	if id == "" {
+		return ""
+	}
+	cleaned := strings.ReplaceAll(id, "-", " ")
+	cleaned = strings.ReplaceAll(cleaned, "_", " ")
+	// Title-case each word
+	words := strings.Fields(cleaned)
+	for i, w := range words {
+		if len(w) > 0 {
+			words[i] = strings.ToUpper(w[:1]) + strings.ToLower(w[1:])
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func (c *Connector) dispatchResponse(resp map[string]any) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
 		c.speak("I couldn't undo that.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		forgotten := strOr(resp, "id", "")
-		deleted := intOr(resp, "files_deleted", 0)
-		identityRemoved := boolOr(resp, "identity_removed", false)
-		c.writeStatus(fmt.Sprintf("result=success id=%s files_deleted=%d identity_removed=%t",
-			forgotten, deleted, identityRemoved))
-		c.speak("OK, I've forgotten that one. Let's try again.")
+		// Python returns: {ok, uuid, name, identities, took_sec}
+		uuid := strOr(resp, "uuid", "")
+		name := strOr(resp, "name", "")
+		c.writeStatus(fmt.Sprintf(
+			"result=success uuid=%s name=%s",
+			shortUUID(uuid), name,
+		))
+		if name != "" {
+			c.speak(fmt.Sprintf("OK, I've forgotten %s. Let's try again.", displayName(name)))
+		} else {
+			// Anon UUID was forgotten — no name to say
+			c.speak("OK, I've forgotten that one. Let's try again.")
+		}
 		c.log.Info("forget_last/http: ok",
-			zap.String("id", forgotten), zap.Int("deleted", deleted),
-			zap.Bool("identity_removed", identityRemoved))
+			zap.String("uuid", uuid), zap.String("name", name))
 		return
 	}
 	errStr := strOr(resp, "error", "unknown")
 	switch errStr {
-	case "no_recent_enrollment", "stale_enrollment":
-		c.writeStatus("result=" + errStr)
+	case "no_recent_enrollment":
+		c.writeStatus("result=no_recent_enrollment")
 		c.speak("There's nothing recent for me to forget.")
-	case "id_mismatch":
+	case "stale_enrollment":
+		c.writeStatus("result=stale_enrollment")
+		c.speak("Too much time has passed — I can't undo that anymore.")
+	case "uuid_mismatch":
+		// The action no longer sends a uuid, so this shouldn't fire
+		// in normal use. Surface defensively in case of unexpected payload.
 		detail := strOr(resp, "detail", "")
-		c.writeStatus(fmt.Sprintf("result=id_mismatch requested=%s detail=%s", requestedID, detail))
-		c.speak("That name doesn't match what I just remembered.")
-	case "no_safe_files":
-		c.writeStatus("result=no_safe_files")
-		c.speak("I couldn't find the right files to remove.")
+		c.writeStatus(fmt.Sprintf("result=uuid_mismatch detail=%s", detail))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
 		c.speak("I can't undo that right now.")
@@ -205,18 +250,6 @@ func (c *Connector) dispatchResponse(resp map[string]any, requestedID string) {
 func strOr(m map[string]any, k, d string) string {
 	if s, ok := m[k].(string); ok {
 		return s
-	}
-	return d
-}
-func boolOr(m map[string]any, k string, d bool) bool {
-	if v, ok := m[k].(bool); ok {
-		return v
-	}
-	return d
-}
-func intOr(m map[string]any, k string, d int) int {
-	if v, ok := m[k].(float64); ok {
-		return int(v)
 	}
 	return d
 }

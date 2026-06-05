@@ -1,0 +1,387 @@
+{
+  "version": "v1.0.6",
+  "default_mode": "greeting",
+  "allow_manual_switching": true,
+  "mode_memory_enabled": true,
+  "api_key": "${OM_API_KEY:-openmind_free}",
+  "unitree_ethernet": "${UNITREE_ETHERNET:-enP2p1s0}",
+  "system_governance": "",
+  "cortex_llm": {
+    "type": "GeminiLLM",
+    "config": {
+      "agent_name": "${ROBOT_NAME:-Bits}",
+      "history_length": 10
+    }
+  },
+  "knowledge_base": {
+    "knowledge_base_name": "om",
+    "base_url": "${KB_BASE_URL:-http://localhost:8100}",
+    "min_score": 0.6
+  },
+  "modes": {
+    "approaching": {
+      "display_name": "Approaching Person Mode",
+      "description": "Robot approaches detected humans autonomously.",
+      "system_prompt_base": "You are ${ROBOT_NAME:-Bits}, a friendly and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform.",
+      "hertz": 0.001,
+      "agent_inputs": [
+        {
+          "type": "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          "config": {
+            "api_version": "v2",
+            "enable_tts_interrupt": false,
+            "rate": 16000,
+            "chunk": 1600
+          }
+        }
+      ],
+      "action_execution_mode": "concurrent",
+      "agent_actions": [],
+      "backgrounds": [
+        {
+          "type": "ApproachingPerson"
+        }
+      ],
+      "lifecycle_hooks": []
+    },
+    "greeting": {
+      "display_name": "Greeting Conversation Mode",
+      "description": "Robot engages in greeting conversations with users upon approach. Supports enrollment so it can remember visitors by name.",
+      "system_prompt_base": "You are Unitree G1, a polite humanoid robot by OpenMind, presenting the OM1 robotics stack at a KraneShares event (a firm focused on thematic/innovation investing). Your name is ${ROBOT_NAME:-Pam}. Speak clearly and concisely; stay calm, friendly, professional; if unsure, say so.\n\nFACE MEMORY actions: selfie, correct_identity, forget_last, gallery_find_similar, gallery_merge. After you call one, its outcome appears on your NEXT turn as a SelfieStatus line (or a SimilarMatches line for gallery_find_similar). Read that line and respond accordingly.\n\nREADING FacePresence (one label per visible face):\n- 'name (recognized)' = seen within a day: 'Welcome back, Name!'\n- 'name (recognized, N days ago)': 'Hi Name, I saw you N days ago!'\n- 'name (recognized, last seen DATE)' = 7+ days: greet warmly and mention the date.\n- 'anon_XXXX (newcomer)' = just spotted: 'Hi there! What is your name?'\n- 'anon_XXXX (met before, last seen DATE)': 'I think we have met but I never got your name.'\nA face with no FacePresence entry does not exist for you. If the visitor speaks first, respond to that.\n\nENROLL via selfie(action=<id>) ONLY when a visitor explicitly asks to be remembered or gives their name to save ('remember me', 'I am <name>', 'my name is <name>'). A plain greeting is NOT enrollment. Make the id lowercase ASCII with dashes for spaces (Wendy->wendy, Jerin Peter->jerin-peter); for a non-Latin name, ask for an English/Pinyin spelling first; never add a trailing _digit.\n\nAFTER selfie, read SelfieStatus:\n- success -> 'Nice to meet you, Name! I will remember you.'\n- merged -> 'Welcome back, Name!' (already known, or an anon was just claimed)\n- face_belongs_to matched=X -> 'You look a lot like X. Are you X, or someone different?'\n- ambiguous -> ask them to step closer so you can focus on one face.\n- low_quality -> ask them to look at you directly.\n- busy or partial -> wait briefly; it retries.\n- bad_id, network_error, or unknown -> apologize and ask their name again.\n\n'DO YOU REMEMBER ME?' from an anon face: call gallery_find_similar() with NO arguments (the server uses the largest visible face). NEXT turn read SimilarMatches:\n- success best=name(sim): if sim >= 0.45 and name is a real name, ask 'Are you Name?'. If they confirm, call gallery_merge(target_name='name', confirmed_by='user_voice'). Never merge on similarity alone.\n- no_match or no_visible_face -> treat as a new visitor.\nAFTER gallery_merge read SelfieStatus: success -> 'Welcome back, Name!'; target_name_not_found -> offer to enroll them fresh; ambiguous_target -> ask which person they mean.\n\nCORRECTIONS within ~60s of enrolling:\n- Wrong person captured ('that was not me', 'someone walked in front') -> forget_last(), then ask them to face you and try selfie again.\n- You misheard the name ('it is John, not Joan') -> correct_identity(from_id=<what you enrolled>, to_id=<corrected id>).\n- A different look-alike person ('I am John, not Wendy') -> selfie(action=<name>, force=true).\nOtherwise ask a clarifying question before acting.\n\nPrioritize safe, comfortable, positive interaction.",
+      "hertz": 0.001,
+      "agent_inputs": [
+        {
+          "type": "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          "config": {
+            "api_version": "v2",
+            "enable_tts_interrupt": false,
+            "rate": 16000,
+            "chunk": 1600
+          }
+        },
+        {
+          "type": "ConversationHistoryInput",
+          "config": {
+            "max_rounds": 3
+          }
+        },
+        {
+          "type": "FacePresence",
+          "config": {
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "face_recent_sec": 1,
+            "face_poll_interval_sec": 0.2
+          }
+        }
+      ],
+      "cortex_llm": {
+        "type": "GeminiLLM",
+        "config": {
+          "agent_name": "${ROBOT_NAME:-Bits}",
+          "history_length": 3
+        }
+      },
+      "action_execution_mode": "concurrent",
+      "agent_actions": [
+        {
+          "name": "greeting_conversation",
+          "llm_label": "greeting_conversation",
+          "connector": "greeting_conversation_elevenlabs",
+          "config": {
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          }
+        },
+        {
+          "name": "emotion",
+          "llm_label": "emotion",
+          "connector": "zenoh"
+        },
+        {
+          "name": "selfie",
+          "llm_label": "selfie",
+          "connector": "selfie",
+          "config": {
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            "http_timeout_sec": 8
+          }
+        },
+        {
+          "name": "correct_identity",
+          "llm_label": "correct_identity",
+          "connector": "correct_identity",
+          "config": {
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            "http_timeout_sec": 5
+          }
+        },
+        {
+          "name": "forget_last",
+          "llm_label": "forget_last",
+          "connector": "forget_last",
+          "config": {
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            "http_timeout_sec": 5
+          }
+        },
+        {
+          "name": "gallery_find_similar",
+          "llm_label": "gallery_find_similar",
+          "connector": "gallery_find_similar",
+          "config": {
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "http_timeout_sec": 5,
+            "default_top_k": 3,
+            "default_min_sim": 0.3
+          }
+        },
+        {
+          "name": "gallery_merge",
+          "llm_label": "gallery_merge",
+          "connector": "http",
+          "config": {
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "face_http_base_url": "${FACE_HTTP_BASE_URL:-http://127.0.0.1:6793}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            "http_timeout_sec": 5
+          }
+        }
+      ],
+      "backgrounds": [],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "greeting_hook",
+            "function": "greeting_start_hook",
+            "tts_provider": "elevenlabs",
+            "robot_name": "${ROBOT_NAME:-Bits}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          }
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "greeting_hook",
+            "function": "greeting_start_hook",
+            "tts_provider": "elevenlabs",
+            "robot_name": "${ROBOT_NAME:-Bits}",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          }
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "greeting_hook",
+            "function": "greeting_end_hook",
+            "tts_provider": "elevenlabs",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          }
+        }
+      ]
+    },
+    "conversation": {
+      "display_name": "Conversation Mode",
+      "description": "Robot general conversation mode.",
+      "system_prompt_base": "You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\n\nYour responsibilities:\n- Speak clearly, politely, and naturally.\n- Answer questions helpfully and respectfully.\n- Keep responses concise and easy to understand.\n- Remain calm, friendly, and professional at all times.\n- If you do not know the answer, politely say so instead of guessing.\n- Respond in the same language the visitor is speaking whenever possible.\n\nIdentity:\n- You are Unitree G1, a humanoid robot.\n- Your name is ${ROBOT_NAME:-Pam}.\n- You are presenting OpenMind's OM1 robotics software stack.\n- You are currently attending a KraneShares event as part of a live robotics and AI demonstration.\n- OpenMind develops robotics and AI systems for human interaction, automation, and embodied intelligence.\n- KraneShares is hosting the event and focuses on thematic and innovation-related investment strategies.\n\nYou are allowed to perform the following physical actions when appropriate during interaction: shake_hand, face_wave, hands_up, IDLE, stand_still, show_hand, wave.\n\nBehavior Guidelines:\n- Use gestures naturally to improve interaction.\n- For greetings, you may use WAVE or FACE_WAVE.\n- When meeting someone new, you may offer SHAKE_HAND.\n- When idle or explaining things, prefer STAND_STILL.\n- Avoid excessive or repetitive motions.\n- Never perform unsafe, aggressive, or inappropriate actions.\n\nConversation Guidelines:\n- Primarily answer questions about OpenMind, OM1, robotics, AI, humanoid interaction, and technology demonstrations.\n- If visitors ask about KraneShares, answer politely and professionally at a high level.\n- You may explain that KraneShares focuses on thematic and innovation-related investment strategies.\n- Do not provide personalized financial advice or investment recommendations.\n- If asked detailed financial or investment questions, politely suggest speaking with a KraneShares representative.\n- Keep conversations engaging, friendly, and suitable for a public event environment.\n\nYou should prioritize safe, comfortable, and positive human interaction.",
+      "hertz": 0.001,
+      "agent_inputs": [
+        {
+          "type": "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
+          "config": {
+            "api_version": "v2",
+            "enable_tts_interrupt": false,
+            "rate": 16000,
+            "chunk": 1600
+          }
+        },
+        {
+          "type": "FacePresence"
+        }
+      ],
+      "cortex_llm": {
+        "type": "GeminiLLM",
+        "config": {
+          "agent_name": "${ROBOT_NAME:-Bits}",
+          "history_length": 5
+        }
+      },
+      "action_execution_mode": "concurrent",
+      "agent_actions": [
+        {
+          "name": "speak",
+          "llm_label": "speak",
+          "connector": "elevenlabs_people_tts",
+          "config": {
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            "voice_ids": {
+              "boyuan": "mr9qrgzgp98Y3CKLQHa5",
+              "jerin": "XOhISZ8S2JCoAAhPLE4t",
+              "lifan": "RK1vBUdUjL4AGgQCaxpi",
+              "wendy": "usX0EPrPwf8ZC4BJpllM",
+              "shicai": "m2txcO7RSY7jbTbO0PS4",
+              "jan": "rPwOfJSzVUxWlm2ZLSv9",
+              "rubail": "hi96TjugRiLITatqxwFC",
+              "samantha": "HY0AVCmB90fxGEKkU5rz",
+              "david": "BoTfQVPAlh2bemD7p75F"
+            }
+          }
+        },
+        {
+          "name": "emotion",
+          "llm_label": "show_emotion",
+          "connector": "zenoh"
+        },
+        {
+          "name": "arm_g1",
+          "llm_label": "robot_action",
+          "connector": "zenoh"
+        }
+      ],
+      "backgrounds": [],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "greeting_hook",
+            "function": "greeting_start_hook",
+            "tts_provider": "elevenlabs",
+            "robot_name": "${ROBOT_NAME:-Bits}",
+            "custom_message": "How can I help you today?",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          },
+          "priority": 1
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "greeting_hook",
+            "function": "greeting_start_hook",
+            "tts_provider": "elevenlabs",
+            "robot_name": "${ROBOT_NAME:-Bits}",
+            "custom_message": "How can I help you today?",
+            "voice_id": "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}"
+          },
+          "priority": 1
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "person_follow_hook",
+            "function": "stop_person_follow_hook"
+          },
+          "priority": 2
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "person_follow_hook",
+            "function": "set_mode_hook",
+            "mode": "following"
+          },
+          "priority": 3
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "person_follow_hook",
+            "function": "switch_person_follow_hook"
+          },
+          "timeout_seconds": 5,
+          "priority": 1
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "person_follow_hook",
+            "function": "set_mode_hook",
+            "mode": "greeting"
+          },
+          "priority": 2
+        }
+      ]
+    }
+  },
+  "transition_rules": [
+    {
+      "from_mode": "approaching",
+      "to_mode": "greeting",
+      "transition_type": "context_aware",
+      "context_conditions": {
+        "approaching_detected": true
+      },
+      "priority": 0,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "greeting",
+      "to_mode": "approaching",
+      "transition_type": "context_aware",
+      "context_conditions": {
+        "greeting_conversation_finished": true
+      },
+      "priority": 0,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "greeting",
+      "to_mode": "conversation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation"
+      ],
+      "priority": 1,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "approaching",
+      "to_mode": "conversation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": [
+        "switch to conversation",
+        "switch to the conversation",
+        "switch to a conversation",
+        "to conversation",
+        "to the conversation",
+        "to a conversation"
+      ],
+      "priority": 1,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "conversation",
+      "to_mode": "approaching",
+      "transition_type": "input_triggered",
+      "trigger_keywords": [
+        "switch to greeting",
+        "switch to the greeting",
+        "switch to a greeting",
+        "to greeting",
+        "to the greeting",
+        "to a greeting"
+      ],
+      "priority": 1,
+      "cooldown_seconds": 5.0
+    }
+  ]
+}
