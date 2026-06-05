@@ -15,7 +15,7 @@ func TestGoogleLanguageCodeMap(t *testing.T) {
 }
 
 func TestGoogleParseMessage(t *testing.T) {
-	s := &transcriberStream{log: zap.NewNop(), model: "google", language: "english", apiVersion: "v2"}
+	s := &transcriberStream{log: zap.NewNop(), provider: "google", language: "english", apiVersion: "v2"}
 
 	require.Empty(t, googleParseMessage(s, ASRMessage{Type: "speech_start"}))
 	require.True(t, s.speechStarted)

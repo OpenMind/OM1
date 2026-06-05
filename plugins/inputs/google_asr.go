@@ -22,8 +22,7 @@ func init() {
 	inputs.Register("GoogleASRInput", NewGoogleASR)
 }
 
-// googleLanguageCodeMap maps friendly language names to the BCP-47 codes accepted
-// by the Google ASR service.
+// googleLanguageCodeMap maps friendly language names to Google's BCP-47 codes.
 var googleLanguageCodeMap = map[string]string{
 	"english":    "en-US",
 	"chinese":    "cmn-Hans-CN",
@@ -65,8 +64,7 @@ type googleASRParams struct {
 	enableTTSInterrupt   bool
 }
 
-// GoogleASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the Google ASR websocket through the shared asrCommon.
+// GoogleASRSensor streams local microphone audio to Google ASR via the shared asrCommon.
 type GoogleASRSensor struct {
 	*asrCommon
 
@@ -299,7 +297,7 @@ func resolveGoogleASRConfig(p googleASRParams) asrCommonConfig {
 
 	return asrCommonConfig{
 		Name:               p.name,
-		Model:              "google",
+		Provider:           "google",
 		APIVersion:         apiVersion,
 		WSURL:              wsURL,
 		Rate:               p.rate,
@@ -311,7 +309,7 @@ func resolveGoogleASRConfig(p googleASRParams) asrCommonConfig {
 	}
 }
 
-// googleParseMessage implements the Google ASR protocol (speech_start/speech_end/end_of_utterance events plus asr_reply) and records its latency metrics.
+// googleParseMessage handles the Google ASR protocol and records latency metrics.
 func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 	switch msg.Type {
 	case "speech_start":

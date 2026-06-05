@@ -32,7 +32,7 @@ const defaultParallelDedupWindow = 3 * time.Second
 
 // ParallelASRProviderConfig configures one ASR provider within a parallel sensor.
 type ParallelASRProviderConfig struct {
-	Model                string   `json:"model"`   // provider type: "riva" | "google" | "elevenlabs"
+	Provider             string   `json:"model"`   // provider type: "riva" | "google" | "elevenlabs"
 	APIKey               string   `json:"api_key"` // required for google/elevenlabs
 	APIVersion           string   `json:"api_version"`
 	BaseURL              string   `json:"base_url"` // override WS endpoint
@@ -58,7 +58,7 @@ type ParallelASRConfig struct {
 // ParallelASRSensor captures audio from source, fans the PCM out, and forwards the first
 // transcript to the cortex loop while suppressing the slower duplicates.
 type ParallelASRSensor struct {
-	*asrAggregator
+	*asrSensorCore
 
 	cfg     ParallelASRConfig
 	streams []*transcriberStream
@@ -68,10 +68,10 @@ type ParallelASRSensor struct {
 	audioChunk []int16
 
 	// first-wins dedup state
-	dedupWindow time.Duration
-	dmu         sync.Mutex
-	lastModel   string
-	lastTime    time.Time
+	dedupWindow  time.Duration
+	dmu          sync.Mutex
+	lastProvider string
+	lastTime     time.Time
 }
 
 // NewParallelASR constructs a ParallelASRSensor with the given configuration.
@@ -114,7 +114,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrAggregator: newAggregator("ParallelASRInput", cfg.EnableTTSInterrupt),
+		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
 	}
@@ -144,8 +144,8 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 // buildStreamConfig resolves one provider entry into a transcriberStream config,
 // reusing each vendor's existing config resolution (endpoints, language mapping).
 func (s *ParallelASRSensor) buildStreamConfig(p ParallelASRProviderConfig) (asrCommonConfig, error) {
-	model := strings.TrimSpace(strings.ToLower(p.Model))
-	name := fmt.Sprintf("ParallelASRInput[%s]", model)
+	provider := strings.TrimSpace(strings.ToLower(p.Provider))
+	name := fmt.Sprintf("ParallelASRInput[%s]", provider)
 
 	// Providers inherit the sensor-level api_key
 	apiKey := p.APIKey
@@ -153,7 +153,7 @@ func (s *ParallelASRSensor) buildStreamConfig(p ParallelASRProviderConfig) (asrC
 		apiKey = s.cfg.APIKey
 	}
 
-	switch model {
+	switch provider {
 	case "riva":
 		return resolveRivaASRConfig(rivaASRParams{
 			name:               name,
@@ -190,32 +190,32 @@ func (s *ParallelASRSensor) buildStreamConfig(p ParallelASRProviderConfig) (asrC
 			enableTTSInterrupt: s.cfg.EnableTTSInterrupt,
 		}), nil
 	default:
-		return asrCommonConfig{}, fmt.Errorf("unknown provider model %q (want riva, google, or elevenlabs)", p.Model)
+		return asrCommonConfig{}, fmt.Errorf("unknown provider %q (want riva, google, or elevenlabs)", p.Provider)
 	}
 }
 
 // deliver applies first-wins dedup: the first provider to transcribe an utterance
 // wins and is forwarded.
-func (s *ParallelASRSensor) deliver(model, text string) {
+func (s *ParallelASRSensor) deliver(provider, text string) {
 	s.dmu.Lock()
 	now := time.Now()
-	if model != s.lastModel && now.Sub(s.lastTime) < s.dedupWindow {
-		winner := s.lastModel
+	if provider != s.lastProvider && now.Sub(s.lastTime) < s.dedupWindow {
+		winner := s.lastProvider
 		s.dmu.Unlock()
-		metrics.ASRParallelTranscripts.WithLabelValues(model, "suppressed").Inc()
+		metrics.ASRParallelTranscripts.WithLabelValues(provider, "suppressed").Inc()
 		s.log.Info("ParallelASRInput: lost race, suppressed duplicate",
-			zap.String("loser", model),
+			zap.String("loser", provider),
 			zap.String("winner", winner),
 			zap.String("text", text),
 		)
 		return
 	}
-	s.lastModel = model
+	s.lastProvider = provider
 	s.lastTime = now
 	s.dmu.Unlock()
 
-	metrics.ASRParallelTranscripts.WithLabelValues(model, "won").Inc()
-	s.log.Info("ParallelASRInput: winner", zap.String("winner", model), zap.String("text", text))
+	metrics.ASRParallelTranscripts.WithLabelValues(provider, "won").Inc()
+	s.log.Info("ParallelASRInput: winner", zap.String("winner", provider), zap.String("text", text))
 	s.pushTranscript(text)
 }
 
@@ -266,7 +266,7 @@ func (s *ParallelASRSensor) connectStreams() {
 			defer wg.Done()
 			if err := st.connect(); err != nil {
 				s.log.Warn("ParallelASRInput: provider ws connect failed, will retry",
-					zap.String("model", st.model), zap.Error(err))
+					zap.String("provider", st.provider), zap.Error(err))
 			}
 		}(st)
 	}

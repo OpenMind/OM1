@@ -19,7 +19,7 @@ func newTestStream(model, languageCode string, parser asrMessageParser, ch chan 
 		name:         model + "Test",
 		log:          zap.NewNop(),
 		rate:         16000,
-		model:        model,
+		provider:     model,
 		apiVersion:   elevenlabsAPIVersion,
 		language:     "english",
 		languageCode: languageCode,
@@ -37,10 +37,10 @@ func newTestElevenLabsStream(ch chan string) *transcriberStream {
 	return newTestStream("elevenlabs", "en", elevenlabsParseMessage, ch)
 }
 
-// newTestAggregator builds an asrAggregator with a no-op logger and no zenoh, for
+// newTestSensorCore builds an asrSensorCore with a no-op logger and no zenoh, for
 // testing the transcript buffer independent of any vendor stream.
-func newTestAggregator() *asrAggregator {
-	return &asrAggregator{
+func newTestSensorCore() *asrSensorCore {
+	return &asrSensorCore{
 		name:         "test",
 		log:          zap.NewNop(),
 		transcriptCh: make(chan string, 8),
@@ -225,21 +225,21 @@ func TestOnWSMessageIgnoresInvalidOrShort(t *testing.T) {
 	}
 }
 
-func TestAggregatorStoppedIgnores(t *testing.T) {
-	a := newTestAggregator()
+func TestSensorCoreStoppedIgnores(t *testing.T) {
+	a := newTestSensorCore()
 	a.stopped = true
 
 	a.pushTranscript("hello world")
 
 	select {
 	case <-a.transcriptCh:
-		t.Fatal("a stopped aggregator must drop transcripts")
+		t.Fatal("a stopped sensor core must drop transcripts")
 	default:
 	}
 }
 
 func TestRawToText(t *testing.T) {
-	a := newTestAggregator()
+	a := newTestSensorCore()
 	ctx := context.Background()
 
 	msg, err := a.RawToText(ctx, 123)
@@ -264,7 +264,7 @@ func TestRawToText(t *testing.T) {
 }
 
 func TestFormattedLatestBuffer(t *testing.T) {
-	a := newTestAggregator()
+	a := newTestSensorCore()
 
 	require.Equal(t, "", a.FormattedLatestBuffer())
 

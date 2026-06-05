@@ -38,7 +38,7 @@ type transcriberStream struct {
 	name string
 	log  *zap.Logger
 
-	model        string
+	provider     string
 	apiVersion   string
 	language     string
 	languageCode string
@@ -48,9 +48,8 @@ type transcriberStream struct {
 	parseMessage asrMessageParser
 	wsClient     *ws.Client
 
-	onTranscript func(model, text string)
+	onTranscript func(provider, text string)
 
-	// mu guards the per-utterance speech timing used by the vendor parsers.
 	mu              sync.Mutex
 	speechStartTime time.Time
 	speechStarted   bool
@@ -60,11 +59,11 @@ type transcriberStream struct {
 
 // newTranscriberStream builds a stream from a vendor-resolved config, wiring its
 // websocket client to onWSMessage and its accepted transcripts to onTranscript.
-func newTranscriberStream(cfg asrCommonConfig, log *zap.Logger, onTranscript func(model, text string)) *transcriberStream {
+func newTranscriberStream(cfg asrCommonConfig, log *zap.Logger, onTranscript func(provider, text string)) *transcriberStream {
 	s := &transcriberStream{
 		name:         cfg.Name,
 		log:          log,
-		model:        cfg.Model,
+		provider:     cfg.Provider,
 		apiVersion:   cfg.APIVersion,
 		language:     cfg.Language,
 		languageCode: cfg.LanguageCode,
@@ -152,15 +151,15 @@ func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
 	}
 
 	if s.onTranscript != nil {
-		s.onTranscript(s.model, transcript)
+		s.onTranscript(s.provider, transcript)
 	}
 }
 
 // observeASR records an ASR latency metric pair with this stream's labels.
 func (s *transcriberStream) observeASR(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, d time.Duration) {
 	seconds := d.Seconds()
-	hist.WithLabelValues(s.model, s.language, s.apiVersion).Observe(seconds)
-	gauge.WithLabelValues(s.model, s.language, s.apiVersion).Set(seconds)
+	hist.WithLabelValues(s.provider, s.language, s.apiVersion).Observe(seconds)
+	gauge.WithLabelValues(s.provider, s.language, s.apiVersion).Set(seconds)
 }
 
 // statsLoop logs send statistics every 15 seconds until ctx is cancelled.

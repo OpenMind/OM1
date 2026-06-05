@@ -9,7 +9,7 @@ import (
 
 func newTestParallelSensor(window time.Duration) *ParallelASRSensor {
 	return &ParallelASRSensor{
-		asrAggregator: newTestAggregator(),
+		asrSensorCore: newTestSensorCore(),
 		dedupWindow:   window,
 	}
 }
@@ -54,26 +54,26 @@ func TestParallelDeliverFailover(t *testing.T) {
 	require.Equal(t, "failover transcript", got)
 
 	s.dmu.Lock()
-	require.Equal(t, "google", s.lastModel)
+	require.Equal(t, "google", s.lastProvider)
 	s.dmu.Unlock()
 }
 
 func TestParallelBuildStreamConfig(t *testing.T) {
 	s := &ParallelASRSensor{cfg: ParallelASRConfig{Rate: 16000}}
 
-	riva, err := s.buildStreamConfig(ParallelASRProviderConfig{Model: "riva", BaseURL: "ws://localhost:6790"})
+	riva, err := s.buildStreamConfig(ParallelASRProviderConfig{Provider: "riva", BaseURL: "ws://localhost:6790"})
 	require.NoError(t, err)
-	require.Equal(t, "riva", riva.Model)
+	require.Equal(t, "riva", riva.Provider)
 	require.Equal(t, "ws://localhost:6790", riva.WSURL)
 
-	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Model: "google"})
+	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Provider: "google"})
 	require.Error(t, err, "google requires an api_key")
 
-	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Model: "elevenlabs"})
+	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Provider: "elevenlabs"})
 	require.Error(t, err, "elevenlabs requires an api_key")
 
-	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Model: "whisper"})
-	require.Error(t, err, "unknown provider model must be rejected")
+	_, err = s.buildStreamConfig(ParallelASRProviderConfig{Provider: "whisper"})
+	require.Error(t, err, "unknown provider must be rejected")
 }
 
 func TestNewParallelASRValidation(t *testing.T) {

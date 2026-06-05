@@ -19,8 +19,8 @@ import (
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
-// cjkRegex matches CJK characters (Chinese, Japanese kana, Hangul) used to decide
-// the minimum-length threshold for accepting a transcript.
+// cjkRegex matches CJK characters (Chinese, Japanese kana, Hangul), which use a
+// shorter minimum-length threshold for accepting a transcript.
 var cjkRegex = regexp.MustCompile(`[\x{4e00}-\x{9fff}\x{3040}-\x{30ff}\x{ac00}-\x{d7af}]`)
 
 const asrZenohTopic = "om/asr/text"
@@ -46,27 +46,27 @@ type asrMessageParser func(s *transcriberStream, msg ASRMessage) string
 
 // asrCommonConfig holds the vendor-resolved configuration for a transcriberStream.
 type asrCommonConfig struct {
-	Name               string // log prefix, e.g. "GoogleASRInput"
-	Model              string // metric label, e.g. "google" / "elevenlabs"
-	APIVersion         string // metric label, e.g. "v1" / "v2"
-	WSURL              string // fully-built websocket endpoint
+	Name               string
+	Provider           string
+	APIVersion         string
+	WSURL              string
 	Rate               int
-	Language           string // friendly name, used as a metric label
+	Language           string
 	LanguageCode       string
 	AltCodes           []string
 	EnableTTSInterrupt bool
 	ParseMessage       asrMessageParser
 }
 
-// asrCommon couples the aggregator with a single vendor stream.
+// asrCommon couples the sensor core with a single vendor stream.
 type asrCommon struct {
-	*asrAggregator
+	*asrSensorCore
 	stream *transcriberStream
 }
 
-// asrAggregator owns the ASR sensor parts: the transcript channel read by the cortex loop,
-// the current-utterance buffer, lifecycle state, and the zenoh broadcast
-type asrAggregator struct {
+// asrSensorCore holds the parts shared by every ASR sensor: the transcript channel
+// read by the cortex loop, the utterance buffer, lifecycle state, and the zenoh broadcast.
+type asrSensorCore struct {
 	name string
 	log  *zap.Logger
 
@@ -84,12 +84,11 @@ type asrAggregator struct {
 	zenohPublisher *zenohsession.Publisher
 }
 
-// newAggregator constructs an asrAggregator, opening the (optional) zenoh publisher
-// used to broadcast transcripts on om/asr/text.
-func newAggregator(name string, enableTTSInterrupt bool) *asrAggregator {
+// newSensorCore builds the sensor core, initializing the zenoh publisher if possible.
+func newSensorCore(name string, enableTTSInterrupt bool) *asrSensorCore {
 	log := logger.Get()
 
-	a := &asrAggregator{
+	a := &asrSensorCore{
 		name:               name,
 		log:                log,
 		enableTTSInterrupt: enableTTSInterrupt,
@@ -114,9 +113,8 @@ func newAggregator(name string, enableTTSInterrupt bool) *asrAggregator {
 	return a
 }
 
-// pushTranscript delivers an accepted transcript to the cortex loop unless the
-// sensor has stopped.
-func (a *asrAggregator) pushTranscript(text string) {
+// pushTranscript accepts a transcript, pushing it onto the channel for the cortex loop.
+func (a *asrSensorCore) pushTranscript(text string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -140,13 +138,13 @@ func (a *asrAggregator) pushTranscript(text string) {
 
 // deliver is the default onTranscript handler for a single-provider stream: it
 // ignores the provider label and forwards every accepted transcript.
-func (a *asrAggregator) deliver(_ string, text string) {
+func (a *asrSensorCore) deliver(_ string, text string) {
 	a.pushTranscript(text)
 }
 
 // Poll returns the next accepted transcript, blocking until one is available or
 // ctx is cancelled.
-func (a *asrAggregator) Poll(ctx context.Context) (any, error) {
+func (a *asrSensorCore) Poll(ctx context.Context) (any, error) {
 	select {
 	case text, ok := <-a.transcriptCh:
 		if !ok {
@@ -160,7 +158,7 @@ func (a *asrAggregator) Poll(ctx context.Context) (any, error) {
 
 // pollLoop forwards transcripts from Poll onto out until ctx is cancelled or the
 // transcript channel closes.
-func (a *asrAggregator) pollLoop(ctx context.Context, out chan any) {
+func (a *asrSensorCore) pollLoop(ctx context.Context, out chan any) {
 	for {
 		raw, err := a.Poll(ctx)
 		if err != nil {
@@ -175,7 +173,7 @@ func (a *asrAggregator) pollLoop(ctx context.Context, out chan any) {
 }
 
 // RawToText appends an accepted transcript to the current utterance buffer.
-func (a *asrAggregator) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
+func (a *asrSensorCore) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
 		return nil, nil
@@ -194,11 +192,11 @@ func (a *asrAggregator) RawToText(_ context.Context, raw any) (*inputs.Message, 
 }
 
 // TriggersTick reports that ASR input wakes the cortex loop.
-func (a *asrAggregator) TriggersTick() bool { return true }
+func (a *asrSensorCore) TriggersTick() bool { return true }
 
 // FormattedLatestBuffer returns the buffered utterance as a Voice block, records
 // it on the IO provider, broadcasts it over zenoh, and clears the buffer.
-func (a *asrAggregator) FormattedLatestBuffer() string {
+func (a *asrSensorCore) FormattedLatestBuffer() string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -228,7 +226,7 @@ func (a *asrAggregator) FormattedLatestBuffer() string {
 
 // markStopped flips the stopped flag exactly once. It returns whether this call
 // was the first to stop the sensor and a snapshot of captureDone to wait on.
-func (a *asrAggregator) markStopped() (firstStop bool, captureDone chan struct{}) {
+func (a *asrSensorCore) markStopped() (firstStop bool, captureDone chan struct{}) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.stopped {
@@ -239,7 +237,7 @@ func (a *asrAggregator) markStopped() (firstStop bool, captureDone chan struct{}
 }
 
 // waitCapture waits up to 5s for the capture loop to finish.
-func (a *asrAggregator) waitCapture(captureDone chan struct{}) {
+func (a *asrSensorCore) waitCapture(captureDone chan struct{}) {
 	if captureDone == nil {
 		return
 	}
@@ -251,7 +249,7 @@ func (a *asrAggregator) waitCapture(captureDone chan struct{}) {
 }
 
 // closeZenoh drops the zenoh publisher and closes the session.
-func (a *asrAggregator) closeZenoh() {
+func (a *asrSensorCore) closeZenoh() {
 	if a.zenohPublisher != nil {
 		a.zenohPublisher.Drop()
 		a.zenohPublisher = nil
@@ -265,11 +263,11 @@ func (a *asrAggregator) closeZenoh() {
 }
 
 // newASRCommon constructs an asrCommon from a vendor-resolved config, building the
-// aggregator (with zenoh publisher) and the single websocket stream.
+// sensor core (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
-	agg := newAggregator(cfg.Name, cfg.EnableTTSInterrupt)
+	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt)
 	agg.log.Info(cfg.Name+": initializing",
-		zap.String("model", cfg.Model),
+		zap.String("provider", cfg.Provider),
 		zap.String("language", cfg.Language),
 		zap.String("language_code", cfg.LanguageCode),
 		zap.String("api_version", cfg.APIVersion),
@@ -279,7 +277,7 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 
 	stream := newTranscriberStream(cfg, agg.log, agg.deliver)
 
-	return &asrCommon{asrAggregator: agg, stream: stream}
+	return &asrCommon{asrSensorCore: agg, stream: stream}
 }
 
 // connect dials the single stream's ASR websocket.
@@ -308,11 +306,7 @@ func serializeASRText(text string) []byte {
 	frameID := uuid.New().String()
 
 	var buf []byte
-
-	// CDR encapsulation header (little-endian)
-	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
-
-	// stamp.sec (int32 LE)
+	buf = append(buf, 0x00, 0x01, 0x00, 0x00) // CDR encapsulation header (little-endian)
 	buf = zenohsession.AppendInt32LE(buf, int32(now.Unix()))
 
 	// stamp.nanosec (uint32 LE)
