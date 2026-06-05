@@ -1,4 +1,4 @@
-package inputs
+package asr
 
 import (
 	"context"
@@ -16,33 +16,36 @@ import (
 )
 
 func init() {
-	inputs.Register("RivaASRRTSPInput", NewRivaASRRTSP)
+	inputs.Register("ElevenLabsASRRTSPInput", NewElevenLabsASRRTSP)
 }
 
-// RivaASRRTSPConfig configures the RTSP-sourced Riva ASR sensor.
-type RivaASRRTSPConfig struct {
+// ElevenLabsASRRTSPConfig configures the RTSP-sourced ElevenLabs ASR sensor.
+type ElevenLabsASRRTSPConfig struct {
 	APIKey             string `json:"api_key"`
 	RTSPURL            string `json:"rtsp_url"` // RTSP audio source
 	Rate               int    `json:"rate"`     // sample rate Hz (default 16000)
 	Chunk              int    `json:"chunk"`    // samples per chunk (default 1600)
 	BaseURL            string `json:"base_url"` // override WS endpoint
-	Language           string `json:"language"` // default "english"
+	Language           string `json:"language"` // default "auto"
 	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
 }
 
-// RivaASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
-// forwards PCM to the Riva ASR websocket through the shared asrCommon.
-type RivaASRRTSPSensor struct {
+// ElevenLabsASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
+// forwards PCM to the ElevenLabs ASR websocket through the shared asrCommon.
+type ElevenLabsASRRTSPSensor struct {
 	*asrCommon
 
-	cfg RivaASRRTSPConfig
+	cfg ElevenLabsASRRTSPConfig
 }
 
-// NewRivaASRRTSP constructs a RivaASRRTSPSensor with the given configuration.
-func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
-	var cfg RivaASRRTSPConfig
+// NewElevenLabsASRRTSP constructs an ElevenLabsASRRTSPSensor with the given configuration.
+func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
+	var cfg ElevenLabsASRRTSPConfig
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
+	}
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("ElevenLabsASRRTSPInput: api_key required")
 	}
 	if cfg.RTSPURL == "" {
 		cfg.RTSPURL = "rtsp://localhost:8554/audio"
@@ -54,33 +57,34 @@ func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.Chunk = 1600
 	}
 
-	core := newRivaASRCommon(rivaASRParams{
-		name:               "RivaASRRTSPInput",
+	core := newElevenLabsASRCommon(elevenlabsASRParams{
+		name:               "ElevenLabsASRRTSPInput",
+		apiKey:             cfg.APIKey,
 		baseURL:            cfg.BaseURL,
 		rate:               cfg.Rate,
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("RivaASRRTSPInput: rtsp config",
+	core.log.Info("ElevenLabsASRRTSPInput: rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.Int("chunk", cfg.Chunk),
 	)
 
-	return &RivaASRRTSPSensor{
+	return &ElevenLabsASRRTSPSensor{
 		asrCommon: core,
 		cfg:       cfg,
 	}, nil
 }
 
 // Listen starts the sensor by connecting to the ASR websocket and running the RTSP capture loop.
-func (s *RivaASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
+func (s *ElevenLabsASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
 		defer close(out)
 		defer s.Stop()
 
 		if err := s.connect(); err != nil {
-			s.log.Error("RivaASRRTSPInput: ws connect failed", zap.Error(err))
+			s.log.Error("ElevenLabsASRRTSPInput: ws connect failed", zap.Error(err))
 			return
 		}
 
@@ -96,23 +100,23 @@ func (s *RivaASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 }
 
 // Stop signals the capture loop to stop, waits for it to finish, and cleans up resources.
-func (s *RivaASRRTSPSensor) Stop() {
+func (s *ElevenLabsASRRTSPSensor) Stop() {
 	first, captureDone := s.markStopped()
 	if !first {
 		return
 	}
 
-	s.log.Info("RivaASRRTSPInput: stopping sensor")
+	s.log.Info("ElevenLabsASRRTSPInput: stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
 
-	s.log.Info("RivaASRRTSPInput: sensor stopped")
+	s.log.Info("ElevenLabsASRRTSPInput: sensor stopped")
 }
 
 // captureLoop runs the RTSP stream and reconnects on failure until ctx is cancelled.
-func (s *RivaASRRTSPSensor) captureLoop(ctx context.Context) {
+func (s *ElevenLabsASRRTSPSensor) captureLoop(ctx context.Context) {
 	defer func() {
 		s.mu.Lock()
 		done := s.captureDone
@@ -128,8 +132,8 @@ func (s *RivaASRRTSPSensor) captureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("RivaASRRTSPInput: RTSP audio error", zap.Error(err))
-			s.log.Info("RivaASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("ElevenLabsASRRTSPInput: RTSP audio error", zap.Error(err))
+			s.log.Info("ElevenLabsASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -139,7 +143,7 @@ func (s *RivaASRRTSPSensor) captureLoop(ctx context.Context) {
 
 // streamRTSP runs ffmpeg to capture PCM audio from the RTSP URL and
 // sends it to the ASR websocket until an error occurs or ctx is cancelled.
-func (s *RivaASRRTSPSensor) streamRTSP(ctx context.Context) error {
+func (s *ElevenLabsASRRTSPSensor) streamRTSP(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-rtsp_transport", "tcp",
 		"-i", s.cfg.RTSPURL,
@@ -166,7 +170,7 @@ func (s *RivaASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("RivaASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("ElevenLabsASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)
