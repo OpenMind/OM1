@@ -1,4 +1,4 @@
-package inputs
+package asr
 
 import (
 	"context"
@@ -22,8 +22,7 @@ func init() {
 	inputs.Register("GoogleASRInput", NewGoogleASR)
 }
 
-// googleLanguageCodeMap maps friendly language names to the BCP-47 codes accepted
-// by the Google ASR service.
+// googleLanguageCodeMap maps friendly language names to Google's BCP-47 codes.
 var googleLanguageCodeMap = map[string]string{
 	"english":    "en-US",
 	"chinese":    "cmn-Hans-CN",
@@ -65,8 +64,7 @@ type googleASRParams struct {
 	enableTTSInterrupt   bool
 }
 
-// GoogleASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the Google ASR websocket through the shared asrCommon.
+// GoogleASRSensor streams local microphone audio to Google ASR via the shared asrCommon.
 type GoogleASRSensor struct {
 	*asrCommon
 
@@ -123,7 +121,7 @@ func (s *GoogleASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 			return
 		}
 
-		if err := s.wsClient.Connect(); err != nil {
+		if err := s.connect(); err != nil {
 			s.log.Error("GoogleASRInput: ws connect failed", zap.Error(err))
 			return
 		}
@@ -245,7 +243,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
 		}
 
-		if tts.Speaking.Load() && !s.enableTTSInterrupt {
+		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
 		}
 
@@ -260,6 +258,11 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 
 // newGoogleASRCommon resolves Google-specific config and builds the shared asrCommon with the Google parser.
 func newGoogleASRCommon(p googleASRParams) *asrCommon {
+	return newASRCommon(resolveGoogleASRConfig(p))
+}
+
+// resolveGoogleASRConfig maps Google vendor parameters to a transcriberStream config.
+func resolveGoogleASRConfig(p googleASRParams) asrCommonConfig {
 	apiVersion := strings.TrimSpace(strings.ToLower(p.apiVersion))
 	if apiVersion != "v1" && apiVersion != "v2" {
 		apiVersion = "v2"
@@ -292,9 +295,9 @@ func newGoogleASRCommon(p googleASRParams) *asrCommon {
 		}
 	}
 
-	return newASRCommon(asrCommonConfig{
+	return asrCommonConfig{
 		Name:               p.name,
-		Model:              "google",
+		Provider:           "google",
 		APIVersion:         apiVersion,
 		WSURL:              wsURL,
 		Rate:               p.rate,
@@ -303,22 +306,22 @@ func newGoogleASRCommon(p googleASRParams) *asrCommon {
 		AltCodes:           altCodes,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       googleParseMessage,
-	})
+	}
 }
 
-// googleParseMessage implements the Google ASR protocol (speech_start/speech_end/end_of_utterance events plus asr_reply) and records its latency metrics.
-func googleParseMessage(c *asrCommon, msg ASRMessage) string {
+// googleParseMessage handles the Google ASR protocol and records latency metrics.
+func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 	switch msg.Type {
 	case "speech_start":
-		c.speechStartTime = time.Now()
-		c.speechStarted = true
+		s.speechStartTime = time.Now()
+		s.speechStarted = true
 	case "speech_end":
-		if c.speechStarted {
-			c.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, time.Since(c.speechStartTime))
+		if s.speechStarted {
+			s.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, time.Since(s.speechStartTime))
 		}
 	case "end_of_utterance":
-		if c.speechStarted {
-			c.observeASR(metrics.ASRUtteranceEndLatency, metrics.ASRUtteranceEndLatencyLast, time.Since(c.speechStartTime))
+		if s.speechStarted {
+			s.observeASR(metrics.ASRUtteranceEndLatency, metrics.ASRUtteranceEndLatencyLast, time.Since(s.speechStartTime))
 		}
 	}
 
@@ -326,9 +329,9 @@ func googleParseMessage(c *asrCommon, msg ASRMessage) string {
 		return ""
 	}
 
-	if c.speechStarted {
-		c.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(c.speechStartTime))
-		c.speechStarted = false
+	if s.speechStarted {
+		s.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(s.speechStartTime))
+		s.speechStarted = false
 	}
 	return msg.ASRReply
 }
