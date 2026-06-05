@@ -80,18 +80,19 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 
 	// 3b. Long-term memory context.
 	if f.memory != nil {
-		userID := memory.ResolveCurrentUser()
-		providers.IO().SetDynamicVar("current_user_id", userID)
+		user := memory.ResolveCurrentUser()
+		providers.IO().SetDynamicVar("current_user_id", user.UUID)
+		providers.IO().SetDynamicVar("current_user_name", user.Name)
 
 		if question := f.voiceQuery(); question != "" {
-			memCtx := f.memory.SearchAndFormat(ctx, question, userID)
+			memCtx := f.memory.SearchAndFormat(ctx, question, user.UUID)
 			if memCtx != "" {
 				builder.WriteString("MEMORY:\n")
 				builder.WriteString(memCtx)
 				builder.WriteString("\n\nWhen answering questions about prior conversations, people, preferences, ")
 				builder.WriteString("decisions, dates, or recurring topics — prioritize the MEMORY section above ")
 				builder.WriteString("over your own parametric knowledge.\n\n")
-				f.log.Info("memory: injecting context", zap.Int("chars", len(memCtx)), zap.String("user", userID))
+				f.log.Info("memory: injecting context", zap.Int("chars", len(memCtx)), zap.String("uuid", user.UUID))
 			}
 		}
 	}

@@ -30,11 +30,13 @@ func TestReader_FormatContext_WithUserFacts(t *testing.T) {
 
 func TestReader_FormatContext_WithVisitInfo(t *testing.T) {
 	dir := t.TempDir()
-	usersDir := filepath.Join(dir, "users", "bob")
+	uuid := "deadbeef1234"
+	usersDir := filepath.Join(dir, "users", uuid)
 	require.NoError(t, os.MkdirAll(usersDir, 0o755))
 
 	profile := map[string]any{
-		"user_id":     "bob",
+		"uuid":        uuid,
+		"names":       []string{"bob"},
 		"visit_count": 3,
 		"last_seen":   "2026-06-03T10:00:00Z",
 	}
@@ -42,12 +44,13 @@ func TestReader_FormatContext_WithVisitInfo(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(usersDir, "profile.json"), data, 0o644))
 
 	// Also need facts.json to exist (even empty).
-	factsData, _ := json.MarshalIndent(map[string]any{"user_id": "bob", "facts": []any{}}, "", "  ")
+	factsData, _ := json.MarshalIndent(map[string]any{"user_id": uuid, "facts": []any{}}, "", "  ")
 	require.NoError(t, os.WriteFile(filepath.Join(usersDir, "facts.json"), factsData, 0o644))
 
 	reader := NewReader(dir, "", 0.5, testLogger())
 
-	result := reader.FormatContext(nil, 500, "bob")
+	result := reader.FormatContext(nil, 500, uuid)
+	require.Contains(t, result, "bob")
 	require.Contains(t, result, "Visited 3 times")
 }
 

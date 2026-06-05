@@ -63,9 +63,9 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 	return m
 }
 
-// SearchAndFormat resolves the current user, searches memory, and returns a formatted context string.
-func (m *Manager) SearchAndFormat(ctx context.Context, query string, userID string) string {
-	results, err := m.reader.SearchDaily(ctx, query, 3, userID)
+// SearchAndFormat searches memory by UUID and returns a formatted context string.
+func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
+	results, err := m.reader.SearchDaily(ctx, query, 3, uuid)
 	if err != nil {
 		m.log.Warn("memory search failed", zap.Error(err))
 		return ""
@@ -75,17 +75,17 @@ func (m *Manager) SearchAndFormat(ctx context.Context, query string, userID stri
 		m.signals.Record(r.Text, r.Score, query)
 	}
 
-	return m.reader.FormatContext(results, 0, userID)
+	return m.reader.FormatContext(results, 0, uuid)
 }
 
 // RecordInteraction writes the user message to the daily log and hot-updates the index.
-func (m *Manager) RecordInteraction(ctx context.Context, voiceInput string, userID string) {
+func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, uuid, name string) {
 	if m.writer == nil {
 		return
 	}
-	m.writer.AppendInteraction(voiceInput, userID)
+	m.writer.AppendInteraction(voiceInput, uuid, name)
 	if m.reader.IndexReady() {
-		m.writer.AppendToIndex(ctx, m.reader.Index(), voiceInput, userID)
+		m.writer.AppendToIndex(ctx, m.reader.Index(), voiceInput, uuid)
 	}
 }
 

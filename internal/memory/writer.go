@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Writer appends interactions to daily markdown files and manages
+// Writer appends interactions to daily markdown files and manages user profiles.
 type Writer struct {
 	memoryRoot         string
 	dailyDir           string
@@ -43,25 +43,25 @@ func NewWriter(memoryRoot string, log *zap.Logger) (*Writer, error) {
 }
 
 // AppendInteraction writes a user message to today's daily log.
-func (w *Writer) AppendInteraction(userMsg string, userID string) {
+func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
 	if strings.TrimSpace(userMsg) == "" {
 		return
 	}
 
-	if userID != "" {
-		w.ensureUserDir(userID)
-		w.updateUserProfile(userID)
+	if uuid != "" {
+		w.ensureUserDir(uuid, name)
+		w.updateUserProfile(uuid, name)
 	}
 
 	dailyPath := w.dailyPath()
 	ts := time.Now().Format("15:04:05")
 
-	entry := fmt.Sprintf("\n## %s\n", ts)
-	if userID == "" {
-		userID = "unknown"
+	tag := "unknown"
+	if uuid != "" {
+		tag = uuid
 	}
-	entry += fmt.Sprintf("[User: %s]\n", userID)
-	entry += fmt.Sprintf("- **User**: %s\n", strings.TrimSpace(userMsg))
+
+	entry := fmt.Sprintf("\n## %s\n[User: %s]\n- **User**: %s\n", ts, tag, strings.TrimSpace(userMsg))
 
 	f, err := os.OpenFile(dailyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -76,7 +76,7 @@ func (w *Writer) AppendInteraction(userMsg string, userID string) {
 }
 
 // AppendToIndex embeds and inserts a new user message into the given index.
-func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg string, userID string) {
+func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, uuid string) {
 	if strings.TrimSpace(userMsg) == "" || idx == nil {
 		return
 	}
@@ -84,15 +84,16 @@ func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg st
 	dateStr := time.Now().Format("2006-01-02")
 	ts := time.Now().Format("15:04:05")
 
-	if userID == "" {
-		userID = "unknown"
+	tag := "unknown"
+	if uuid != "" {
+		tag = uuid
 	}
-	userTag := fmt.Sprintf("[User: %s]\n", userID)
+	userTag := fmt.Sprintf("[User: %s]\n", tag)
 
 	text := fmt.Sprintf("[Date: %s]\n## %s\n%s- **User**: %s",
 		dateStr, ts, userTag, strings.TrimSpace(userMsg))
 
-	meta := map[string]string{"source": dateStr + ".md", "user_id": userID}
+	meta := map[string]string{"source": dateStr + ".md", "user_id": uuid}
 
 	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta}); err != nil {
 		w.log.Warn("memory: write-through index failed", zap.Error(err))
@@ -104,16 +105,20 @@ func (w *Writer) dailyPath() string {
 	return filepath.Join(w.dailyDir, today+".md")
 }
 
-func (w *Writer) ensureUserDir(userID string) {
-	userDir := filepath.Join(w.usersDir, userID)
+func (w *Writer) ensureUserDir(uuid, name string) {
+	userDir := filepath.Join(w.usersDir, uuid)
 	_ = os.MkdirAll(userDir, 0o755)
 
 	profilePath := filepath.Join(userDir, "profile.json")
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		now := time.Now().Format(time.RFC3339)
+		names := []string{}
+		if name != "" {
+			names = []string{name}
+		}
 		profile := map[string]any{
-			"user_id":           userID,
-			"display_name":      capitalize(userID),
+			"uuid":              uuid,
+			"names":             names,
 			"first_seen":        now,
 			"last_seen":         now,
 			"interaction_count": 0,
@@ -121,13 +126,13 @@ func (w *Writer) ensureUserDir(userID string) {
 		}
 		data, _ := json.MarshalIndent(profile, "", "  ")
 		_ = os.WriteFile(profilePath, data, 0o644)
-		w.log.Info("memory: created user profile", zap.String("user", userID))
+		w.log.Info("memory: created user profile", zap.String("uuid", uuid), zap.Strings("names", names))
 	}
 
 	factsPath := filepath.Join(userDir, "facts.json")
 	if _, err := os.Stat(factsPath); os.IsNotExist(err) {
 		facts := map[string]any{
-			"user_id": userID,
+			"user_id": uuid,
 			"facts":   []any{},
 		}
 		data, _ := json.MarshalIndent(facts, "", "  ")
@@ -135,8 +140,8 @@ func (w *Writer) ensureUserDir(userID string) {
 	}
 }
 
-func (w *Writer) updateUserProfile(userID string) {
-	profilePath := filepath.Join(w.usersDir, userID, "profile.json")
+func (w *Writer) updateUserProfile(uuid, name string) {
+	profilePath := filepath.Join(w.usersDir, uuid, "profile.json")
 	raw, err := os.ReadFile(profilePath)
 	if err != nil {
 		return
@@ -151,19 +156,26 @@ func (w *Writer) updateUserProfile(userID string) {
 	count, _ := profile["interaction_count"].(float64)
 	profile["interaction_count"] = count + 1
 
-	if _, visited := w.visitedThisSession[userID]; !visited {
+	if name != "" {
+		names, _ := profile["names"].([]any)
+		found := false
+		for _, n := range names {
+			if s, ok := n.(string); ok && strings.EqualFold(s, name) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			profile["names"] = append(names, name)
+		}
+	}
+
+	if _, visited := w.visitedThisSession[uuid]; !visited {
 		vc, _ := profile["visit_count"].(float64)
 		profile["visit_count"] = vc + 1
-		w.visitedThisSession[userID] = struct{}{}
+		w.visitedThisSession[uuid] = struct{}{}
 	}
 
 	data, _ := json.MarshalIndent(profile, "", "  ")
 	_ = os.WriteFile(profilePath, data, 0o644)
-}
-
-func capitalize(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
 }

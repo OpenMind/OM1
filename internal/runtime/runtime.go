@@ -451,8 +451,9 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	if current.memory != nil {
 		voice := rt.ioProvider.GetInput("Voice")
 		if voice != nil && voice.Input != "" && voice.Tick == rt.ioProvider.TickCounter() {
-			userID, _ := rt.ioProvider.GetDynamicVar("current_user_id")
-			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), userID)
+			uuid, _ := rt.ioProvider.GetDynamicVar("current_user_id")
+			name, _ := rt.ioProvider.GetDynamicVar("current_user_name")
+			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), uuid, name)
 		}
 		current.memory.Summarize()
 	}

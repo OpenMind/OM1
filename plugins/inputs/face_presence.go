@@ -143,6 +143,8 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 			// some prompt-builder paths read from IO instead of (or in
 			// addition to) FormattedLatestBuffer.
 			providers.IO().AddInput(facePresenceIOKey, text, time.Now())
+			providers.IO().SetDynamicVar("current_user_uuid", snap.ClosestUUID)
+			providers.IO().SetDynamicVar("current_user_name", snap.ClosestName)
 		}
 	}()
 	return out, nil

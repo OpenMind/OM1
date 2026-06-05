@@ -128,16 +128,17 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 }
 
 // readProfileVisitInfo reads profile.json and formats visit info.
-func (r *Reader) readProfileVisitInfo(userID string) string {
-	profilePath := filepath.Join(r.usersDir, userID, "profile.json")
+func (r *Reader) readProfileVisitInfo(uuid string) string {
+	profilePath := filepath.Join(r.usersDir, uuid, "profile.json")
 	raw, err := os.ReadFile(profilePath)
 	if err != nil {
 		return ""
 	}
 
 	var profile struct {
-		VisitCount int    `json:"visit_count"`
-		LastSeen   string `json:"last_seen"`
+		Names      []string `json:"names"`
+		VisitCount int      `json:"visit_count"`
+		LastSeen   string   `json:"last_seen"`
 	}
 	if err := json.Unmarshal(raw, &profile); err != nil {
 		return ""
@@ -147,7 +148,21 @@ func (r *Reader) readProfileVisitInfo(userID string) string {
 		return ""
 	}
 
-	info := fmt.Sprintf("Visited %d times.", profile.VisitCount)
+	displayName := ""
+	if len(profile.Names) > 0 {
+		displayName = profile.Names[0]
+		if len(profile.Names) > 1 {
+			displayName += " (also known as: " + strings.Join(profile.Names[1:], ", ") + ")"
+		}
+	}
+
+	var info string
+	if displayName != "" {
+		info = fmt.Sprintf("%s. Visited %d times.", displayName, profile.VisitCount)
+	} else {
+		info = fmt.Sprintf("Visited %d times.", profile.VisitCount)
+	}
+
 	if profile.LastSeen != "" {
 		if t, err := time.Parse(time.RFC3339, profile.LastSeen); err == nil {
 			days := int(time.Since(t).Hours() / 24)
