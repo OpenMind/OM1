@@ -25,6 +25,8 @@ var cjkRegex = regexp.MustCompile(`[\x{4e00}-\x{9fff}\x{3040}-\x{30ff}\x{ac00}-\
 
 const asrZenohTopic = "om/asr/text"
 
+const defaultASRCooldown = 1 * time.Second
+
 // acceptASRTranscript reports whether a transcript is long enough to keep.
 func acceptASRTranscript(text string) bool {
 	if cjkRegex.MatchString(text) {
@@ -76,6 +78,9 @@ type asrSensorCore struct {
 
 	messages []string
 
+	cooldown    time.Duration
+	lastDeliver time.Time
+
 	mu          sync.Mutex
 	stopped     bool
 	captureDone chan struct{}
@@ -84,14 +89,23 @@ type asrSensorCore struct {
 	zenohPublisher *zenohsession.Publisher
 }
 
+// resolveCooldown returns the effective cooldown duration based on the config.
+func resolveCooldown(enableTTSInterrupt bool, cooldown time.Duration) time.Duration {
+	if enableTTSInterrupt {
+		return 0
+	}
+	return cooldown
+}
+
 // newSensorCore builds the sensor core, initializing the zenoh publisher if possible.
-func newSensorCore(name string, enableTTSInterrupt bool) *asrSensorCore {
+func newSensorCore(name string, enableTTSInterrupt bool, cooldown time.Duration) *asrSensorCore {
 	log := logger.Get()
 
 	a := &asrSensorCore{
 		name:               name,
 		log:                log,
 		enableTTSInterrupt: enableTTSInterrupt,
+		cooldown:           resolveCooldown(enableTTSInterrupt, cooldown),
 		transcriptCh:       make(chan string, 32),
 	}
 
@@ -121,6 +135,12 @@ func (a *asrSensorCore) pushTranscript(text string) {
 	if a.stopped {
 		return
 	}
+
+	if a.cooldown > 0 && !a.lastDeliver.IsZero() && time.Since(a.lastDeliver) < a.cooldown {
+		a.log.Info(a.name+": ignoring follow-up transcript within cooldown", zap.String("text", text))
+		return
+	}
+	a.lastDeliver = time.Now()
 
 	a.log.Info(a.name+": transcript accepted", zap.String("text", text))
 
@@ -265,7 +285,7 @@ func (a *asrSensorCore) closeZenoh() {
 // newASRCommon constructs an asrCommon from a vendor-resolved config, building the
 // sensor core (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
-	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt)
+	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt, defaultASRCooldown)
 	agg.log.Info(cfg.Name+": initializing",
 		zap.String("provider", cfg.Provider),
 		zap.String("language", cfg.Language),

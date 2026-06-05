@@ -114,7 +114,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt),
+		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, defaultASRCooldown),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
 	}
