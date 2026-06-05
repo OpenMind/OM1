@@ -18,7 +18,7 @@
 # Env:
 #   PROM_URL   Prometheus base URL (default http://localhost:9091)
 #   METRICS_URL  app /metrics URL  (default http://localhost:9090/metrics)
-#   COMPOSE     docker compose command (default "docker compose")
+#   COMPOSE     docker compose command (auto-detected: "docker compose" or "docker-compose")
 #   IMAGE       app image (default openmindagi/om1:latest)
 #
 set -euo pipefail
@@ -27,9 +27,24 @@ LABEL="${1:?usage: benchmark.sh <python|go> [window_seconds]}"
 WINDOW="${2:-120}"
 PROM_URL="${PROM_URL:-http://localhost:9091}"
 METRICS_URL="${METRICS_URL:-http://localhost:9090/metrics}"
-COMPOSE="${COMPOSE:-docker compose}"
 IMAGE="${IMAGE:-openmindagi/om1:latest}"
 READY_TIMEOUT="${READY_TIMEOUT:-180}"
+
+# Resolve the Compose command. Prefer an explicit $COMPOSE, then the v2 plugin
+# ("docker compose"), then the standalone binary ("docker-compose"). We test that
+# the candidate actually runs, since a missing plugin makes "docker compose" fail
+# with a confusing "unknown shorthand flag: 'd'" error.
+if [ -z "${COMPOSE:-}" ]; then
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE="docker compose"
+  elif command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
+    COMPOSE="docker-compose"
+  else
+    echo "error: neither 'docker compose' nor 'docker-compose' is available" >&2
+    exit 1
+  fi
+fi
+echo ">> using compose command: $COMPOSE"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="$SCRIPT_DIR/results"
