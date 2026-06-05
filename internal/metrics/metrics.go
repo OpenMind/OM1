@@ -45,7 +45,7 @@ var (
 var (
 	RequestTotal = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "om1_request_total_seconds",
-		Help: "Total client-side request time (build+travel+proxy+parse) in seconds",
+		Help: "Total client-side request time in seconds: full request for non-streaming kinds (llm); time-to-first-byte for streaming kinds (tts)",
 	}, []string{"kind"})
 	RequestTotalLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "om1_request_total_last_seconds",

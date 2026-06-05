@@ -188,6 +188,9 @@ func (p *ttsBase) postAndStream(req *http.Request, modelID, metricURL string) er
 				latency := time.Since(start).Seconds()
 				metrics.TTSLatency.WithLabelValues(modelID, metricURL).Observe(latency)
 				metrics.TTSLatencyLast.WithLabelValues(modelID, metricURL).Set(latency)
+				// For streaming TTS, "total" is the time to first byte of the
+				// response (matches the Python TTS streaming semantics).
+				metrics.RecordRequestTiming("tts", latency, proxyTotalMs)
 			}
 			p.streamChunk(buf[:n])
 		}
@@ -198,8 +201,6 @@ func (p *ttsBase) postAndStream(req *http.Request, modelID, metricURL string) er
 			return fmt.Errorf("stream: %w", rerr)
 		}
 	}
-	// Total client-side time for this TTS request (travel+proxy+vendor+stream).
-	metrics.RecordRequestTiming("tts", time.Since(start).Seconds(), proxyTotalMs)
 	return nil
 }
 
