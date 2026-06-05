@@ -32,7 +32,6 @@ func TestPushTranscriptCooldownSuppressesFollowup(t *testing.T) {
 	a := newTestSensorCore()
 	a.cooldown = time.Second
 
-	// First transcript is accepted.
 	a.pushTranscript("hello there world")
 	got, ok := recvTranscript(t, a.transcriptCh)
 	require.True(t, ok)
