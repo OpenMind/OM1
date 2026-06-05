@@ -8,6 +8,31 @@
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4, and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
+## Version Info
+
+OM1 is available in both **Python** and **Go** implementations:
+
+- **Go (Current)** — Actively developed, production-ready implementation on the main branch
+- **Python** — Available on a separate branch; no longer maintained but fully functional for those who prefer it
+
+### Why Go?
+
+We migrated OM1 to Go for significant improvements in robotics and real-time AI workloads:
+
+- **Lower Latency** — Compiled binaries eliminate interpreter overhead, critical for real-time robot control and responsive voice interactions
+- **Better Performance** — Native execution delivers faster ASR/TTS pipelines and LLM response handling
+- **Efficient Concurrency** — Goroutines handle multiple sensors, inputs, and actions simultaneously with minimal resource usage
+- **Smaller Memory Footprint** — Reduced memory consumption ideal for edge devices like Jetson and embedded systems
+- **Simple Deployment** — Single static binary with no dependency management or virtual environments
+
+### Features Being Migrated to Go
+
+- Gazebo & Isaac Sim
+- MCP Integration
+- VLM (OpenAI, Gemini, VILA)
+- UBTECH Robot Support
+- Riva ASR/TTS
+
 ## Capabilities of OM1
 
 * **Modular Architecture**: Written in Go for performance and seamless integration.
@@ -30,14 +55,12 @@ This quick start uses the default starter configuration to help you understand t
 ### Quick Start (5 Minutes)
 
 1. Install system dependencies.
-2. Clone the repository.
+2. Download the binary or clone the repository.
 3. Add your OpenMind API key.
 4. Launch OM1 and verify it is running.
 
 ### Prerequisites
 
-- Go 1.23.0+ ([installation guide](https://go.dev/doc/install))
-- `make` build tool
 - Webcam access (recommended if configuring VLM)
 
 Install system packages:
@@ -55,7 +78,34 @@ sudo apt-get update
 sudo apt-get install -y portaudio19-dev ffmpeg
 ```
 
-### 2. Clone
+### 2. Download or Build
+
+#### Option A: Download Pre-built Binary (Recommended)
+
+No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases):
+
+| Platform | Architecture | Download |
+|----------|--------------|----------|
+| macOS | Apple Silicon (M1/M2/M3/M4) | `om1-darwin-arm64` |
+| macOS | Intel | `om1-darwin-amd64` |
+| Linux | x86_64 | `om1-linux-amd64` |
+| Linux | ARM64 (Jetson, RPi) | `om1-linux-arm64` |
+| Windows | x86_64 | `om1-windows-amd64.exe` |
+
+```bash
+# Example for macOS Apple Silicon
+curl -LO https://github.com/OpenMind/OM1/releases/latest/download/om1-darwin-arm64
+chmod +x om1-darwin-arm64
+mv om1-darwin-arm64 om1
+
+# Download config files
+git clone --depth 1 https://github.com/OpenMind/OM1.git om1-config
+cp -r om1-config/config .
+```
+
+#### Option B: Build from Source
+
+Requires Go 1.23.0+ ([installation guide](https://go.dev/doc/install)) and `make`.
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
@@ -92,6 +142,12 @@ You can also verify or adjust the fallback key location in `config/conversation.
 
 ### 4. Launch the Agent
 
+If using pre-built binary:
+```bash
+./om1 --config conversation
+```
+
+If built from source:
 ```bash
 CONFIG=conversation make run
 ```
