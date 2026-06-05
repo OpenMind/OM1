@@ -134,3 +134,46 @@ def record_startup_complete():
     Call once, when the runtime is initialized and about to enter its main loop.
     """
     om1_startup_duration.set(time.time() - _process_start)
+
+
+# Per-request roll-up metrics, labeled by kind (llm, asr, tts).
+#
+# om1_request_total_seconds is the full client-side time for one outbound request,
+# measured from the start of building the request to the end of parsing the
+# response (build + travel + proxy + vendor + parse). om1_request_proxy_seconds is
+# the gateway time for that request, from the x-proxy-total-ms response header
+# (recorded in the shared httpx hook). So
+# (om1_request_total_seconds - om1_request_proxy_seconds) ≈ OM1 compute + travel.
+om1_request_total = Histogram(
+    "om1_request_total_seconds",
+    "Total client-side request time (build+travel+proxy+parse) in seconds",
+    ["kind"],
+)
+om1_request_total_last = Gauge(
+    "om1_request_total_last_seconds",
+    "Most recent total client-side request time in seconds",
+    ["kind"],
+)
+
+om1_request_proxy = Histogram(
+    "om1_request_proxy_seconds",
+    "Gateway proxy time for a request (from x-proxy-total-ms) in seconds",
+    ["kind"],
+)
+om1_request_proxy_last = Gauge(
+    "om1_request_proxy_last_seconds",
+    "Most recent gateway proxy time for a request in seconds",
+    ["kind"],
+)
+
+
+def record_request_total(kind, seconds):
+    """Record the full client-side time for one outbound request (kind=llm/asr/tts)."""
+    om1_request_total.labels(kind=kind).observe(seconds)
+    om1_request_total_last.labels(kind=kind).set(seconds)
+
+
+def record_request_proxy(kind, seconds):
+    """Record the gateway proxy time for one outbound request (kind=llm/asr/tts)."""
+    om1_request_proxy.labels(kind=kind).observe(seconds)
+    om1_request_proxy_last.labels(kind=kind).set(seconds)

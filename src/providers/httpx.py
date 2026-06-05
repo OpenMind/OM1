@@ -13,6 +13,20 @@ from om1_utils.prometheus import (
     om1_http_upstream_ttfb_seconds,
 )
 
+from prometheus import record_request_proxy
+
+
+def _kind_from_path(path: str) -> str:
+    """Map a request path to a request kind label (llm / asr / tts / other)."""
+    p = path.lower()
+    if "chat/completions" in p or "/llm" in p:
+        return "llm"
+    if "tts" in p or "text-to-speech" in p or "/speech" in p:
+        return "tts"
+    if "asr" in p or "transcri" in p or "speech-to-text" in p or "/stt" in p:
+        return "asr"
+    return "other"
+
 
 def get_httpx_event_hooks() -> dict[str, list]:
     """
@@ -114,6 +128,9 @@ def get_httpx_event_hooks() -> dict[str, list]:
                 om1_http_proxy_total_last_seconds.labels(
                     host=host, path=path, method=method, status_code=status_code
                 ).set(val)
+                # Per-request proxy time, labeled by kind, to pair with
+                # om1_request_total_seconds: total - proxy ≈ OM1 compute + travel.
+                record_request_proxy(_kind_from_path(path), val)
             except ValueError:
                 pass
 
