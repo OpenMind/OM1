@@ -19,6 +19,31 @@
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
 
+## Go vs. Python Feature Comparison
+
+OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still **under active development** and not yet available in Go. The table below gives a high-level comparison to help you choose the right runtime for your use case.
+
+| Capability | Python | Go | Notes |
+| --- | :---: | :---: | --- |
+| Core agent runtime (input → LLM → action) | ✅ | ✅ | Fully supported in both. |
+| LLM providers (OpenAI, xAI, DeepSeek, Anthropic, Gemini, NearAI, Ollama, OpenRouter, Qwen) | ✅ | ✅ | Broad provider support in both. |
+| ASR (ElevenLabs, Google, Riva) | ✅ | ✅ | Including RTSP streaming variants. |
+| Text-to-Speech (`speak`) | ✅ | ✅ | Supported in both. |
+| Metrics & observability (Prometheus + Grafana) | ✅ | ✅ | Supported in both. |
+| Hardware connectors (ROS2, Zenoh, CycloneDDS) | ✅ | 🚧 | Go currently focuses on Zenoh; broader connector parity in progress. |
+| Visual Language Models (VLM) | ✅ | 🚧 | OpenAI/Gemini/VILA/local VLM inputs not yet available in Go. |
+| Locomotion & robot actions (move/navigate variants for Go2, G1, TurtleBot4, etc.) | ✅ | 🚧 | Go currently ships `arm_g1`, `emotion`, `greeting_conversation`, `speak`. |
+| Sensor inputs (GPS, RTK, LIDAR, odometry, localization, battery) | ✅ | 🚧 | Under development for Go. |
+| Web & social inputs (Twitter/X, news, weather) | ✅ | 🚧 | Under development for Go. |
+| Messaging integrations (Telegram, Discord) | ✅ | 🚧 | Under development for Go. |
+| Simulators (Gazebo, Isaac Sim) | ✅ | 🚧 | Under development for Go. |
+| Full autonomy with BrainPack (Navigation, SLAM, Auto Charging) | ✅ | 🚧 | Under development for Go. |
+
+> [!NOTE]
+> Legend: ✅ available · 🚧 under development / not yet available in Go.
+>
+> The Go feature set is expanding quickly. If a capability you need is marked 🚧, the [Python runtime](https://github.com/OpenMind/OM1/tree/python) is the recommended choice for now. Check back as parity improves, and see [Contributing](#contributing) if you'd like to help close the gap.
+
 ## Getting Started
 
 If you are new to OM1, this is the fastest path to a successful first run using the `conversation` agent.
