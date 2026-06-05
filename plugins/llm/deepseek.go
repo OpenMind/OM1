@@ -17,7 +17,6 @@ const (
 	defaultDeepSeekBaseURL string        = "https://api.openmind.com/api/core/deepseek"
 )
 
-// NewDeepSeek creates a DeepSeek LLM using the OpenAI-compatible API.
 func NewDeepSeek(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("DeepSeekLLM", configMap, defaultDeepSeekModel, defaultDeepSeekBaseURL, "auto", true)
 }

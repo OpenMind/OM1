@@ -162,7 +162,7 @@ func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	}
 
 	latest := s.messages[len(s.messages)-1]
-	result := fmt.Sprintf("\n%s: %q\n", facePresenceDescriptor, latest.Message)
+	result := fmt.Sprintf("\n%s: '%s'\n", facePresenceDescriptor, latest.Message)
 
 	ts := time.Unix(0, int64(latest.Timestamp*1e9))
 	providers.IO().AddInput(facePresenceIOKey, latest.Message, ts)

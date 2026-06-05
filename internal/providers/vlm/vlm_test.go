@@ -150,7 +150,6 @@ func TestNewVideoStreamDefaults(t *testing.T) {
 func TestNewVideoRTSPStreamDefaults(t *testing.T) {
 	v := NewVideoRTSPStream(VideoRTSPStreamConfig{})
 	assert.Equal(t, defaultRTSPURL, v.cfg.RTSPURL)
-	assert.Equal(t, defaultRTSPDecodeFormat, v.cfg.DecodeFormat)
 	assert.Equal(t, defaultFPS, v.cfg.FPS)
 	assert.Equal(t, defaultRTSPWidth, v.cfg.Width)
 	assert.Equal(t, defaultRTSPHeight, v.cfg.Height)

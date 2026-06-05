@@ -162,7 +162,7 @@ func (s *ConversationHistorySensor) FormattedLatestBuffer() string {
 
 	lines := make([]string, len(s.messages))
 	for i, msg := range s.messages {
-		lines[i] = fmt.Sprintf("User: %s", msg.Message)
+		lines[i] = fmt.Sprintf("\n%s : %s\n", conversationHistoryDescriptor, msg.Message)
 	}
 
 	return fmt.Sprintf("%s: %q", conversationHistoryDescriptor, strings.Join(lines, "; "))

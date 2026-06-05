@@ -20,13 +20,8 @@ const (
 	defaultQwenAPIKey  string = "placeholder"
 )
 
-// qwenToolCallRe matches Qwen-style inline tool call blocks emitted as text.
 var qwenToolCallRe = regexp.MustCompile(`(?s)<tool_call>\s*(\{.*?\})\s*</tool_call>`)
 
-// qwenLLM is a local Qwen model served over an OpenAI-compatible API. It differs
-// from a plain provider in three ways: it disables the model's thinking mode via
-// a "/no_think" suffix and chat_template_kwargs, and it falls back to parsing
-// tool calls emitted as <tool_call> text when the server returns none structured.
 type qwenLLM struct {
 	*openAICompatLLM
 	enableReasoning bool
@@ -55,8 +50,6 @@ func NewQwen(configMap map[string]any) (llm.LLM, error) {
 	return &qwenLLM{openAICompatLLM: base, enableReasoning: opts.EnableReasoning}, nil
 }
 
-// Call sends a prompt to the local Qwen model, appending "/no_think" when
-// reasoning is disabled and recovering tool calls from text when needed.
 func (q *qwenLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
 	userPrompt := prompt
 	if !q.enableReasoning {
@@ -91,7 +84,6 @@ func (q *qwenLLM) Call(ctx context.Context, prompt string, history []llm.Message
 	return resp, nil
 }
 
-// parseQwenToolCalls extracts <tool_call>{...}</tool_call> blocks from text.
 func parseQwenToolCalls(text string) []llm.ToolCall {
 	var toolCalls []llm.ToolCall
 	for _, match := range qwenToolCallRe.FindAllStringSubmatch(text, -1) {

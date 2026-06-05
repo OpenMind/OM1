@@ -17,7 +17,6 @@ const (
 	defaultFunctionGemmaBaseURL string             = "http://localhost:8200/v1"
 )
 
-// NewFunctionGemma creates a FunctionGemma LLM using the OpenAI-compatible API.
 func NewFunctionGemma(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("FunctionGemmaLLM", configMap, defaultFunctionGemmaModel, defaultFunctionGemmaBaseURL, "auto", true)
 }

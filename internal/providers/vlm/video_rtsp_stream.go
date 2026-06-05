@@ -14,18 +14,15 @@ import (
 )
 
 const (
-	defaultRTSPURL          = "rtsp://localhost:8554/live"
-	defaultRTSPWidth        = 480
-	defaultRTSPHeight       = 640
-	rtspReconnectDelay      = 2 * time.Second
-	defaultRTSPDecodeFormat = "H264"
+	defaultRTSPURL     = "rtsp://localhost:8554/live"
+	defaultRTSPWidth   = 480
+	defaultRTSPHeight  = 640
+	rtspReconnectDelay = 2 * time.Second
 )
 
 // VideoRTSPStreamConfig holds configuration options for the VideoRTSPStream.
 type VideoRTSPStreamConfig struct {
 	RTSPURL string
-
-	DecodeFormat string
 
 	FPS int
 
@@ -46,10 +43,6 @@ type VideoRTSPStream struct {
 func NewVideoRTSPStream(cfg VideoRTSPStreamConfig) *VideoRTSPStream {
 	if cfg.RTSPURL == "" {
 		cfg.RTSPURL = defaultRTSPURL
-	}
-
-	if cfg.DecodeFormat == "" {
-		cfg.DecodeFormat = defaultRTSPDecodeFormat
 	}
 
 	if cfg.FPS <= 0 {
@@ -112,9 +105,11 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("stdout pipe: %w", err)
 	}
+
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start ffmpeg: %w", err)
 	}
+
 	defer func() {
 		if cmd.Process != nil {
 			_ = cmd.Process.Kill()

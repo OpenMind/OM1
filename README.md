@@ -25,9 +25,9 @@ The Go runtime covers the core agent pipeline, but several capabilities availabl
 | LLM providers (OpenAI, xAI, DeepSeek, Anthropic, Gemini, NearAI, Ollama, OpenRouter, Qwen) | ✅ | ✅ | Broad provider support in both. |
 | ASR (ElevenLabs, Google, Riva) | ✅ | ✅ | Including RTSP streaming variants. |
 | Text-to-Speech (`speak`) | ✅ | ✅ | Supported in both. |
+| Visual Language Models (VLM) | ✅ | ✅ | OpenAI/Gemini are supported. |
 | Metrics & observability (Prometheus + Grafana) | ✅ | ✅ | Supported in both. |
 | Hardware connectors (ROS2, Zenoh, CycloneDDS) | ✅ | 🚧 | Go currently focuses on Zenoh; broader connector parity in progress. |
-| Visual Language Models (VLM) | ✅ | 🚧 | OpenAI/Gemini/VILA/local VLM inputs not yet available in Go. |
 | Locomotion & robot actions (move/navigate variants for Go2, G1, TurtleBot4, etc.) | ✅ | 🚧 | Go currently ships `arm_g1`, `emotion`, `greeting_conversation`, `speak`. |
 | Sensor inputs (GPS, RTK, LIDAR, odometry, localization, battery) | ✅ | 🚧 | Under development for Go. |
 | Web & social inputs (Twitter/X, news, weather) | ✅ | 🚧 | Under development for Go. |

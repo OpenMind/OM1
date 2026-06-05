@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/openmind/om1/internal/llm"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
+	video "github.com/openmind/om1/internal/providers/vlm"
+	"github.com/openmind/om1/internal/util"
 )
 
 func init() {
@@ -19,6 +22,13 @@ func init() {
 }
 
 const defaultGreetingLLMType = "GeminiLLM"
+
+const (
+	defaultVisionBaseURL = "https://api.openmind.com/api/core/gemini"
+	defaultVisionModel   = "gemini-2.5-flash"
+	defaultVisionMaxTok  = 1024
+	defaultVisionMaxAge  = 5 * time.Second
+)
 
 const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is in front of you. " +
 	"The current time is {current_time}. " +
@@ -63,22 +73,16 @@ func (r *Runner) greetingStartHook(ctx context.Context, cfg, vars map[string]any
 	return nil
 }
 
-// generateGreeting builds the prompt from the current scene and asks the
-// configured LLM for a spoken greeting, returning the trimmed generated text.
+// generateGreeting constructs the prompt for the greeting, attempts to generate a greeting using vision when possible, and falls back to text-only LLM generation when vision fails or is unavailable.
 // ToDo:
 // - add more context to the prompt, e.g. recent conversation history if available, etc.
 func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, robotName, helpMessage string) (string, error) {
-	model, err := r.greetingLLM(cfg)
-	if err != nil {
-		return "", err
-	}
-
 	if robotName == "" {
 		robotName = "a friendly robot"
 	}
 
-	scene := snapshot.ToText()
-	if strings.TrimSpace(scene) == "" {
+	scene := strings.TrimSpace(snapshot.ToText())
+	if scene == "" {
 		scene = "No one is clearly in view."
 	}
 
@@ -104,6 +108,15 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 
 	prompt := formatTemplate(promptTemplate, promptVars)
 
+	if greeting, ok := r.visionGreeting(ctx, cfg, prompt); ok {
+		return greeting, nil
+	}
+
+	model, err := r.greetingLLM(cfg)
+	if err != nil {
+		return "", err
+	}
+
 	resp, err := model.Call(ctx, prompt, nil)
 	if err != nil {
 		return "", err
@@ -115,10 +128,48 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 	return greeting, nil
 }
 
-// greetingLLM loads the LLM plugin configured for the greeting hook. The plugin
-// name is taken from "llm_type" (default OpenAILLM) and its configuration from
-// the optional "llm_config" map, with "llm_model" provided as a convenience
-// override for the model field.
+// visionGreeting attempts to generate a greeting using the vision describer. It returns the greeting and a boolean indicating whether generation was successful.
+func (r *Runner) visionGreeting(ctx context.Context, cfg map[string]any, prompt string) (string, bool) {
+	apiKey := stringVal(cfg, "api_key")
+	if apiKey == "" {
+		return "", false
+	}
+
+	maxAge := defaultVisionMaxAge
+	if sec := util.FloatFrom(cfg["vlm_max_frame_age_sec"], 0); sec > 0 {
+		maxAge = time.Duration(sec * float64(time.Second))
+	}
+
+	var encoded string
+	if jpeg, _, ok := providers.LatestFrame().GetFresh(maxAge); ok {
+		encoded = base64.StdEncoding.EncodeToString(jpeg)
+	} else {
+		r.log.Warn("greeting_start_hook: no recent frame, generating greeting without image")
+	}
+
+	describer := video.NewDescriber(video.Describer{
+		Name:      "greeting_hook",
+		APIKey:    apiKey,
+		BaseURL:   util.FirstNonEmpty(stringVal(cfg, "base_url"), defaultVisionBaseURL),
+		Model:     util.FirstNonEmpty(stringVal(cfg, "model"), defaultVisionModel),
+		Prompt:    prompt,
+		MaxTokens: int(util.FloatFrom(cfg["max_tokens"], defaultVisionMaxTok)),
+		Log:       r.log,
+	})
+
+	greeting, err := describer.Describe(ctx, encoded)
+	if err != nil {
+		r.log.Warn("greeting_start_hook: vision greeting failed, falling back to text", zap.Error(err))
+		return "", false
+	}
+	greeting = strings.TrimSpace(greeting)
+	if greeting == "" {
+		return "", false
+	}
+	return greeting, true
+}
+
+// greetingLLM resolves the LLM for a greeting hook, applying configuration from both the top-level and nested "llm_config" keys.
 func (r *Runner) greetingLLM(cfg map[string]any) (llm.LLM, error) {
 	llmType := stringVal(cfg, "llm_type")
 	if llmType == "" {

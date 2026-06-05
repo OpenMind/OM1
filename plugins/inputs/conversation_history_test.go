@@ -46,7 +46,8 @@ func TestConversationHistoryFormattedBuffer(t *testing.T) {
 	_, _ = s.RawToText(context.Background(), "bye")
 	out := s.FormattedLatestBuffer()
 	require.Contains(t, out, "Conversation History")
-	require.Contains(t, out, "User: hi; User: bye")
+	require.Contains(t, out, "hi")
+	require.Contains(t, out, "bye")
 }
 
 func TestConversationHistoryPoll(t *testing.T) {
