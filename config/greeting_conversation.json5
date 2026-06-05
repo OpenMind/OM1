@@ -106,6 +106,9 @@ You should prioritize safe, comfortable, and positive human interaction.",
         {
           type: "FacePresence",
         },
+        {
+          type: "GreetingStatus",
+        },
       ],
       cortex_llm: {
         type: "GeminiLLM",

@@ -549,6 +549,24 @@ func (g *GreetingConversationStateMachineProvider) MaxTurnCount() int {
 	return g.maxTurnCount
 }
 
+// finalTurnGuidance is the guidance string for the LLM when we're in the concluding state or approaching the max turn count.
+const finalTurnGuidance = "\nGreeting status: This is the final exchange of this greeting conversation. " +
+	"Give a brief, warm goodbye in your response and set conversation_state to \"finished\".\n"
+
+// EndingGuidance returns a guidance string for the LLM when we're in the concluding state or approaching the max turn count.
+func (g *GreetingConversationStateMachineProvider) EndingGuidance() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.currentState == StateFinished {
+		return ""
+	}
+	if g.currentState == StateConcluding || g.turnCount+1 >= g.maxTurnCount {
+		return finalTurnGuidance
+	}
+	return ""
+}
+
 // parseConversationState coerces an LLM-provided value into a ConversationState,
 // defaulting to CONVERSING on unknown values.
 func parseConversationState(raw any, log *zap.Logger) ConversationState {
