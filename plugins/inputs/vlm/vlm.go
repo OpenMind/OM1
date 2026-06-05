@@ -68,10 +68,10 @@ type VLMConfig struct {
 
 // vlmSensor implements the inputs.Sensor interface, capturing video frames, sending them to a vision API for description, and emitting the descriptions as messages.
 type vlmSensor struct {
-	name   string
-	log    *zap.Logger
-	client *visionClient
-	source frameSource
+	name      string
+	log       *zap.Logger
+	describer *video.Describer
+	source    frameSource
 
 	mu       sync.Mutex
 	messages []inputs.Message
@@ -159,15 +159,15 @@ func NewSensor(name string, cfg VLMConfig, source frameSource) *vlmSensor {
 		name:   name,
 		log:    log,
 		source: source,
-		client: &visionClient{
-			name:      name,
-			apiKey:    cfg.APIKey,
-			baseURL:   cfg.BaseURL,
-			model:     cfg.Model,
-			prompt:    cfg.Prompt,
-			maxTokens: cfg.MaxTokens,
-			log:       log,
-		},
+		describer: video.NewDescriber(video.Describer{
+			Name:      name,
+			APIKey:    cfg.APIKey,
+			BaseURL:   cfg.BaseURL,
+			Model:     cfg.Model,
+			Prompt:    cfg.Prompt,
+			MaxTokens: cfg.MaxTokens,
+			Log:       log,
+		}),
 	}
 }
 
@@ -194,7 +194,8 @@ func (s *vlmSensor) Listen(ctx context.Context) (<-chan any, error) {
 					return
 				}
 
-				text, err := s.client.describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
+				providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
+				text, err := s.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
 				if err != nil {
 					if ctx.Err() != nil {
 						return
