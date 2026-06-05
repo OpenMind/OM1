@@ -63,6 +63,11 @@ var (
 		Name: "om1_asr_utterance_end_latency_last_seconds",
 		Help: "Most recent latency from speech activity start to end_of_utterance detection in seconds",
 	}, []string{"model", "language", "api_version"})
+
+	ASRParallelTranscripts = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_asr_parallel_transcripts_total",
+		Help: "Transcripts seen by the parallel ASR sensor, labeled by provider model and first-wins outcome",
+	}, []string{"model", "outcome"})
 )
 
 // TTS metrics.
@@ -149,6 +154,7 @@ func init() {
 		ASRLatency, ASRLatencyLast,
 		ASRSpeechDuration, ASRSpeechDurationLast,
 		ASRUtteranceEndLatency, ASRUtteranceEndLatencyLast,
+		ASRParallelTranscripts,
 		TTSLatency, TTSLatencyLast,
 		KBQueryLatency, KBQueryLatencyLast,
 		KBEmbedLatency, KBEmbedLatencyLast,
