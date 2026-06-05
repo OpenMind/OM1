@@ -13,7 +13,7 @@ type UserIdentity struct {
 // ResolveCurrentUser reads the face-presence dynamic vars set by the sensor.
 func ResolveCurrentUser() UserIdentity {
 	io := providers.IO()
-	uuid, _ := io.GetDynamicVar("current_user_uuid")
+	uuid, _ := io.GetDynamicVar("current_user_id")
 	name, _ := io.GetDynamicVar("current_user_name")
 	return UserIdentity{UUID: uuid, Name: name}
 }

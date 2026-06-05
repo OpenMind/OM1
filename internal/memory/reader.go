@@ -106,7 +106,7 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 		}
 
 		if len(l1Parts) > 0 {
-			section := fmt.Sprintf("[User: %s]\n%s", userID, strings.Join(l1Parts, "\n"))
+			section := strings.Join(l1Parts, "\n")
 			parts = append(parts, section)
 			totalChars += len(section)
 		}
