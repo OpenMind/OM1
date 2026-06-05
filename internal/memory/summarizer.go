@@ -290,7 +290,7 @@ func parseSelectOutput(output string) []int {
 		line = strings.TrimSpace(line)
 		if numRe.MatchString(line) {
 			n := 0
-			fmt.Sscanf(line, "%d", &n)
+			_, _ = fmt.Sscanf(line, "%d", &n)
 			if n > 0 {
 				indices = append(indices, n-1)
 			}
@@ -540,110 +540,7 @@ func (s *Summarizer) findUnprocessed(lastSummary *time.Time) []string {
 	return results
 }
 
-func (s *Summarizer) readFiles(files []string, lastSummary *time.Time) string {
-	sectionRe := regexp.MustCompile(`^## (\d{2}:\d{2}:\d{2})`)
-	var parts []string
-
-	for _, f := range files {
-		content, err := os.ReadFile(f)
-		if err != nil {
-			continue
-		}
-
-		if lastSummary == nil {
-			parts = append(parts, string(content))
-			continue
-		}
-
-		stem := strings.TrimSuffix(filepath.Base(f), ".md")
-		fileDate, err := time.Parse("2006-01-02", stem)
-		if err != nil {
-			parts = append(parts, string(content))
-			continue
-		}
-
-		var filtered []string
-		var currentSection []string
-		currentKeep := true
-
-		for _, line := range strings.Split(string(content), "\n") {
-			m := sectionRe.FindStringSubmatch(line)
-			if m != nil {
-				if currentKeep && len(currentSection) > 0 {
-					filtered = append(filtered, strings.Join(currentSection, "\n"))
-				}
-				currentSection = []string{line}
-				t, err := time.Parse("15:04:05", m[1])
-				if err != nil {
-					currentKeep = true
-				} else {
-					sectionDT := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(),
-						t.Hour(), t.Minute(), t.Second(), 0, time.Local)
-					currentKeep = sectionDT.After(*lastSummary)
-				}
-			} else {
-				currentSection = append(currentSection, line)
-			}
-		}
-
-		if currentKeep && len(currentSection) > 0 {
-			filtered = append(filtered, strings.Join(currentSection, "\n"))
-		}
-
-		if len(filtered) > 0 {
-			parts = append(parts, strings.Join(filtered, "\n"))
-		}
-	}
-
-	return strings.Join(parts, "\n\n")
-}
-
-func (s *Summarizer) readAllUserFacts() string {
-	entries, err := os.ReadDir(s.usersDir)
-	if err != nil {
-		return "(no existing facts)"
-	}
-
-	var parts []string
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		factsPath := filepath.Join(s.usersDir, e.Name(), "facts.json")
-		raw, err := os.ReadFile(factsPath)
-		if err != nil {
-			continue
-		}
-
-		var data struct {
-			Facts []struct {
-				Fact     string `json:"fact"`
-				Category string `json:"category"`
-			} `json:"facts"`
-		}
-		if err := json.Unmarshal(raw, &data); err != nil || len(data.Facts) == 0 {
-			continue
-		}
-
-		lines := []string{fmt.Sprintf("[User: %s]", e.Name())}
-		for _, f := range data.Facts {
-			cat := f.Category
-			if cat == "" {
-				cat = "FACT"
-			}
-			lines = append(lines, fmt.Sprintf("- [%s] %s", cat, f.Fact))
-		}
-		parts = append(parts, strings.Join(lines, "\n"))
-	}
-
-	if len(parts) == 0 {
-		return "(no existing facts)"
-	}
-	return strings.Join(parts, "\n\n")
-}
-
 func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
-	// Group by user_id.
 	type factOp struct {
 		fact     string
 		category string
@@ -701,7 +598,6 @@ func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
 		added := 0
 		for _, op := range ops {
 			if op.replaces != "" {
-				// Remove old fact.
 				var kept = data.Facts[:0]
 				for _, f := range data.Facts {
 					if f.Fact != op.replaces {
@@ -740,13 +636,4 @@ func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
 		changedUsers = append(changedUsers, uid)
 	}
 	return changedUsers
-}
-
-func containsStr(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

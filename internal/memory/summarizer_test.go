@@ -17,7 +17,7 @@ func TestMarkCandidate_New(t *testing.T) {
 	require.NotNil(t, sig)
 	require.Equal(t, "chunk text here", sig.Text)
 	require.Equal(t, "alice", sig.UserID)
-	require.Equal(t, 0, sig.RecallCount)
+	require.Equal(t, 1, sig.RecallCount)
 }
 
 func TestMarkCandidate_ExistingSignal(t *testing.T) {

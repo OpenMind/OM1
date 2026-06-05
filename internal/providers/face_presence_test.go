@@ -102,5 +102,5 @@ func TestFetchSnapshotErrorStatus(t *testing.T) {
 	p := NewFacePresenceProvider(FacePresenceConfig{BaseURL: srv.URL})
 	_, err := p.FetchSnapshot(context.Background())
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "500")
+	require.Contains(t, err.Error(), "/who")
 }

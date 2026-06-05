@@ -139,7 +139,7 @@ func (c *Connector) postJSON(path string, body map[string]any) map[string]any {
 		c.log.Warn("gallery_find_similar/http: HTTP error", zap.Error(err))
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	data, _ := io.ReadAll(resp.Body)
 	var out map[string]any
 	if err := json.Unmarshal(data, &out); err != nil {

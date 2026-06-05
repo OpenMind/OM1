@@ -166,10 +166,10 @@ func (r *Reader) readProfileVisitInfo(uuid string) string {
 	if profile.LastSeen != "" {
 		if t, err := time.Parse(time.RFC3339, profile.LastSeen); err == nil {
 			days := int(time.Since(t).Hours() / 24)
-			switch {
-			case days == 0:
+			switch days {
+			case 0:
 				info += " Last seen: today."
-			case days == 1:
+			case 1:
 				info += " Last seen: yesterday."
 			default:
 				info += fmt.Sprintf(" Last seen: %d days ago.", days)

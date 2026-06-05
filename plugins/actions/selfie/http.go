@@ -12,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/actions"
@@ -295,7 +298,7 @@ func displayName(id string) string {
 	cleaned := dedupSuffixRE.ReplaceAllString(id, "")
 	cleaned = strings.ReplaceAll(cleaned, "-", " ")
 	cleaned = strings.ReplaceAll(cleaned, "_", " ")
-	return strings.Title(strings.ToLower(cleaned))
+	return cases.Title(language.English).String(strings.ToLower(cleaned))
 }
 
 func (c *Connector) clearState() {

@@ -318,16 +318,14 @@ func (idx *MemoryIndex) SaveToDisk(dir string) error {
 	if err != nil {
 		return fmt.Errorf("memory index: create graph file: %w", err)
 	}
+	defer f.Close()
 	w := bufio.NewWriter(f)
 	if err := idx.graph.Export(w); err != nil {
-		f.Close()
 		return fmt.Errorf("memory index: export graph: %w", err)
 	}
 	if err := w.Flush(); err != nil {
-		f.Close()
 		return fmt.Errorf("memory index: flush graph: %w", err)
 	}
-	f.Close()
 
 	// Save document metadata.
 	idToHash := make(map[int]string, len(idx.hashes))
@@ -410,7 +408,6 @@ func (idx *MemoryIndex) PruneHashes(validHashes map[string]struct{}) int {
 }
 
 // ParseDailyFile parses a daily markdown file into MemoryEntry chunks.
-// Each ## section becomes a separate chunk.
 func ParseDailyFile(path string) ([]MemoryEntry, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -468,7 +465,6 @@ func ParseDailyFile(path string) ([]MemoryEntry, error) {
 }
 
 // BuildIndex populates the given MemoryIndex from recent daily markdown files.
-// Files older than validDays are deleted.
 func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDays int) error {
 	entries, err := os.ReadDir(dailyDir)
 	if err != nil {
@@ -507,7 +503,6 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 	}
 
 	if len(allChunks) > 0 || idx.Size() > 0 {
-		// Prune entries from expired daily logs.
 		validHashes := make(map[string]struct{}, len(allChunks))
 		for _, c := range allChunks {
 			validHashes[hashText(c.Text)] = struct{}{}

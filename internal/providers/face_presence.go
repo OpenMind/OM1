@@ -173,7 +173,7 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 	if err != nil {
 		return PresenceSnapshot{}, fmt.Errorf("/who request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
