@@ -35,6 +35,33 @@ var (
 	}, []string{"model", "endpoint"})
 )
 
+// Per-request roll-up metrics, labeled by kind (llm, asr, tts).
+//
+// RequestTotal is the full client-side time for one outbound request, measured
+// from the start of building the request to the end of parsing the response
+// (build + travel + proxy + vendor + parse). RequestProxy is the gateway time
+// for that same request, taken from the x-proxy-total-ms response header. So
+// (RequestTotal - RequestProxy) ≈ OM1's own compute plus network travel.
+var (
+	RequestTotal = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "om1_request_total_seconds",
+		Help: "Total client-side request time (build+travel+proxy+parse) in seconds",
+	}, []string{"kind"})
+	RequestTotalLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "om1_request_total_last_seconds",
+		Help: "Most recent total client-side request time in seconds",
+	}, []string{"kind"})
+
+	RequestProxy = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "om1_request_proxy_seconds",
+		Help: "Gateway proxy time for a request (from x-proxy-total-ms) in seconds",
+	}, []string{"kind"})
+	RequestProxyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "om1_request_proxy_last_seconds",
+		Help: "Most recent gateway proxy time for a request in seconds",
+	}, []string{"kind"})
+)
+
 // VLM metrics.
 var (
 	VLMLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -198,7 +225,27 @@ func init() {
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
 		HTTPProxyTotal, HTTPProxyTotalLast,
 		StartupDuration,
+		RequestTotal, RequestTotalLast,
+		RequestProxy, RequestProxyLast,
 	)
+}
+
+// RecordRequestTiming records the total client-side time for an outbound request
+// (kind = "llm" | "asr" | "tts"), plus the gateway proxy time parsed from the
+// x-proxy-total-ms header value (pass "" or "?" if absent). totalSeconds should
+// cover build + travel + proxy + parse.
+func RecordRequestTiming(kind string, totalSeconds float64, proxyTotalMs string) {
+	RequestTotal.WithLabelValues(kind).Observe(totalSeconds)
+	RequestTotalLast.WithLabelValues(kind).Set(totalSeconds)
+
+	if proxyTotalMs == "" || proxyTotalMs == "?" {
+		return
+	}
+	if ms, err := strconv.ParseFloat(proxyTotalMs, 64); err == nil {
+		seconds := ms / 1000.0
+		RequestProxy.WithLabelValues(kind).Observe(seconds)
+		RequestProxyLast.WithLabelValues(kind).Set(seconds)
+	}
 }
 
 // RecordStartupComplete records the time elapsed from process start to the

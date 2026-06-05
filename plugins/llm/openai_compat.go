@@ -52,6 +52,9 @@ func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas 
 func (c *openAICompatLLM) SetSchemas(schemas []map[string]any) { c.schemas = schemas }
 
 func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
+	// start brackets the whole operation: build + travel + proxy + parse.
+	start := time.Now()
+
 	requestBody := map[string]any{
 		"model":    c.config.Model,
 		"messages": buildMessages(prompt, history),
@@ -66,23 +69,27 @@ func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm
 		requestBody[k] = v
 	}
 
-	body, err := c.doRequest(ctx, requestBody)
+	body, proxyTotalMs, err := c.doRequest(ctx, requestBody)
 	if err != nil {
 		return nil, err
 	}
-	return parseOpenAIResponse(body)
+	resp, err := parseOpenAIResponse(body)
+	metrics.RecordRequestTiming("llm", time.Since(start).Seconds(), proxyTotalMs)
+	return resp, err
 }
 
-func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]any) ([]byte, error) {
+// doRequest sends the request and returns the response body plus the gateway's
+// x-proxy-total-ms header value (empty if absent), used for per-request timing.
+func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]any) ([]byte, string, error) {
 	requestBytes, err := json.Marshal(requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("%s: marshal request: %w", c.provider, err)
+		return nil, "", fmt.Errorf("%s: marshal request: %w", c.provider, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		c.config.BaseURL+"/chat/completions", bytes.NewReader(requestBytes))
 	if err != nil {
-		return nil, fmt.Errorf("%s: build request: %w", c.provider, err)
+		return nil, "", fmt.Errorf("%s: build request: %w", c.provider, err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -91,16 +98,17 @@ func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]
 	start := time.Now()
 	resp, err := httpclient.Default().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%s: http: %w", c.provider, err)
+		return nil, "", fmt.Errorf("%s: http: %w", c.provider, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	metrics.RecordResponseLatency(metrics.LLMLatency, metrics.LLMLatencyLast,
 		c.provider, c.config.Model, c.config.BaseURL, req, resp, start)
 
+	proxyTotalMs := resp.Header.Get("x-proxy-total-ms")
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s: api %d: %s", c.provider, resp.StatusCode, body)
+		return nil, proxyTotalMs, fmt.Errorf("%s: api %d: %s", c.provider, resp.StatusCode, body)
 	}
-	return body, nil
+	return body, proxyTotalMs, nil
 }
