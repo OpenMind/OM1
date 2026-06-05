@@ -19,7 +19,6 @@ const (
 	defaultNearAIBaseURL string      = "https://api.openmind.com/api/core/nearai"
 )
 
-// NewNearAI creates a NEAR AI LLM using the OpenAI-compatible API.
 func NewNearAI(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("NearAILLM", configMap, defaultNearAIModel, defaultNearAIBaseURL, "auto", true)
 }

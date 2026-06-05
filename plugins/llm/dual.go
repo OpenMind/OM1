@@ -13,16 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// cloneStringAnyMap returns a shallow copy so a composite can inject parent
-// settings (e.g. api_key) into a sub-LLM config without mutating the source map.
-func cloneStringAnyMap(m map[string]any) map[string]any {
-	clone := make(map[string]any, len(m)+1)
-	for k, v := range m {
-		clone[k] = v
-	}
-	return clone
-}
-
 func init() {
 	llm.Register("DualLLM", NewDual)
 }
@@ -40,7 +30,6 @@ const (
 	defaultDualCloudModel = "gpt-4.1"
 )
 
-// voiceInputRe extracts the user's voice input from a fused prompt for eval context.
 var voiceInputRe = regexp.MustCompile(`Voice:\s*([^\n]+)`)
 
 type dualConfig struct {
@@ -71,17 +60,21 @@ func NewDual(configMap map[string]any) (llm.LLM, error) {
 	if cfg.LocalType == "" {
 		cfg.LocalType = defaultDualLocalType
 	}
+
 	if cfg.CloudType == "" {
 		cfg.CloudType = defaultDualCloudType
 	}
+
 	localCfg := cloneStringAnyMap(cfg.LocalConfig)
 	if _, ok := localCfg["model"]; !ok {
 		localCfg["model"] = defaultDualLocalModel
 	}
+
 	cloudCfg := cloneStringAnyMap(cfg.CloudConfig)
 	if _, ok := cloudCfg["model"]; !ok {
 		cloudCfg["model"] = defaultDualCloudModel
 	}
+
 	if cfg.APIKey != "" {
 		cloudCfg["api_key"] = cfg.APIKey
 	}
@@ -90,6 +83,7 @@ func NewDual(configMap map[string]any) (llm.LLM, error) {
 	if err != nil {
 		return nil, fmt.Errorf("DualLLM: load local %q: %w", cfg.LocalType, err)
 	}
+
 	cloud, err := llm.Load(cfg.CloudType, cloudCfg)
 	if err != nil {
 		return nil, fmt.Errorf("DualLLM: load cloud %q: %w", cfg.CloudType, err)
@@ -177,13 +171,13 @@ collect:
 		for _, r := range inTime {
 			chosen = r.resp
 		}
-		cancel() // stop the slower sub-LLM
+		cancel()
 	default:
-		// Neither in time: use the first usable response, waiting if none has arrived yet.
 		chosen = firstUsable(arrived)
 		for chosen == nil && len(arrived) < 2 {
 			r := <-results
 			arrived = append(arrived, r)
+
 			if r.resp != nil {
 				chosen = r.resp
 			}
@@ -222,8 +216,7 @@ func (d *dualLLM) selectBest(ctx context.Context, local, cloud *llm.Response, vo
 	return local
 }
 
-// evaluateQuality asks the local eval model which response better answers the
-// user. It returns "local" or "cloud", defaulting to "local" on any failure.
+// evaluateQuality prompts the eval LLM to choose which response is better based on the original prompt and the tool calls made by each response.
 func (d *dualLLM) evaluateQuality(ctx context.Context, local, cloud *llm.Response, prompt string) string {
 	localActions, _ := json.MarshalIndent(toolCallsToEval(local.ToolCalls), "", "  ")
 	cloudActions, _ := json.MarshalIndent(toolCallsToEval(cloud.ToolCalls), "", "  ")
@@ -289,4 +282,12 @@ func extractVoiceInput(prompt string) string {
 		return strings.TrimSpace(m[1])
 	}
 	return ""
+}
+
+func cloneStringAnyMap(m map[string]any) map[string]any {
+	clone := make(map[string]any, len(m)+1)
+	for k, v := range m {
+		clone[k] = v
+	}
+	return clone
 }

@@ -112,9 +112,11 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("stdout pipe: %w", err)
 	}
+
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start ffmpeg: %w", err)
 	}
+
 	defer func() {
 		if cmd.Process != nil {
 			_ = cmd.Process.Kill()
