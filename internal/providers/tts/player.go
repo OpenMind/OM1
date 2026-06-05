@@ -173,6 +173,8 @@ func (p *ttsBase) postAndStream(req *http.Request, modelID, metricURL string) er
 		resp.Header.Get("X-Proxy-Parse-Ms"), resp.Header.Get("X-Upstream-Total-Ms"),
 		resp.Header.Get("X-Upstream-TTFB-Ms"), resp.Header.Get("X-Proxy-Total-Ms"))
 
+	proxyTotalMs := resp.Header.Get("X-Proxy-Total-Ms")
+
 	buf := make([]byte, 1024)
 	firstChunk := true
 	for {
@@ -196,6 +198,8 @@ func (p *ttsBase) postAndStream(req *http.Request, modelID, metricURL string) er
 			return fmt.Errorf("stream: %w", rerr)
 		}
 	}
+	// Total client-side time for this TTS request (travel+proxy+vendor+stream).
+	metrics.RecordRequestTiming("tts", time.Since(start).Seconds(), proxyTotalMs)
 	return nil
 }
 
