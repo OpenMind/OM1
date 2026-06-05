@@ -1,30 +1,3 @@
-// Package correct_identity implements the identity-rename action.
-//
-// Calls /set_name on the face API to rename an existing identity.
-// Used when the LLM/user wants to correct a recently-enrolled label
-// (typo, mishearing) — NOT for wrong-person captures (use forget_last)
-// or look-alikes (use selfie with force=true).
-//
-// FROM-ID RESOLUTION
-// ------------------
-// The LLM gives us the from_id by name (e.g. "wendi"). The face API
-// uses UUIDs as primary keys, so we first query /gallery/identities to
-// resolve "wendi" -> {uuid}. Cases:
-//
-//   0 matches  -> "result=name_not_found"
-//   1 match    -> /set_name {uuid, name=to_id}
-//   N matches  -> "result=ambiguous count=N"
-//                 (the LLM needs to disambiguate — usually it shouldn't
-//                  happen since correct_identity is for fixing a recent
-//                  typo, and the typo is unlikely to collide with another
-//                  identity. If it does, the LLM should fall back to
-//                  asking the user which one.)
-//
-// NAME COLLISIONS ARE ALLOWED
-// ---------------------------
-// /set_name does NOT auto-merge same-name UUIDs (by design — different
-// people can share a name). After this action, gallery may have two
-// "wendy" UUIDs. That's fine; recognition uses face, not name.
 package correct_identity
 
 import (

@@ -84,18 +84,6 @@ func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 	}, nil
 }
 
-// Listen polls the face-presence service at the configured cadence and
-// updates the sensor's internal buffer (so FormattedLatestBuffer renders
-// the face line into the cortex prompt) plus the shared IO provider —
-// but does NOT push to the output channel. That makes FacePresence a
-// *passive* input: it keeps prompt context fresh so the LLM sees the
-// latest face state on its next tick, but it doesn't itself trigger a
-// cortex tick. Only triggering inputs (e.g. ASR) wake the LLM. Without
-// this, the LLM would be invoked on every poll (5 Hz) and the robot
-// would monologue.
-//
-// The returned channel is closed when ctx is cancelled. It never
-// produces values — by design.
 func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
