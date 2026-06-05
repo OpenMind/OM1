@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -109,6 +110,23 @@ var (
 	}, []string{"status"})
 )
 
+// Startup metrics.
+//
+// CPU, resident memory and heap-allocation-rate metrics are intentionally NOT
+// (re)defined here: client_golang's default registry already exports them via
+// the Go runtime and process collectors, so the perf benchmark reads them
+// directly off /metrics:
+//   - CPU:               process_cpu_seconds_total
+//   - Peak RSS:          process_resident_memory_bytes
+//   - Heap alloc rate:   rate(go_memstats_alloc_bytes_total[...])
+//   - GC / goroutines:   go_gc_duration_seconds, go_goroutines
+var (
+	StartupDuration = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_startup_duration_seconds",
+		Help: "Seconds from process start to the runtime reaching its ready state (cold/warm start time)",
+	})
+)
+
 // HTTP metrics.
 var (
 	HTTPProxyParse = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -163,7 +181,15 @@ func init() {
 		HTTPUpstreamTotal, HTTPUpstreamTotalLast,
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
 		HTTPProxyTotal, HTTPProxyTotalLast,
+		StartupDuration,
 	)
+}
+
+// RecordStartupComplete records the time elapsed from process start to the
+// runtime reaching its ready state, exposing it as om1_startup_duration_seconds.
+// Call this once, when the runtime is initialized and about to enter its main loop.
+func RecordStartupComplete(processStart time.Time) {
+	StartupDuration.Set(time.Since(processStart).Seconds())
 }
 
 // RecordHTTPTiming records HTTP timing metrics for a request with the given attributes and timing values in milliseconds.

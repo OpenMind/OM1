@@ -23,6 +23,8 @@ import (
 )
 
 func main() {
+	processStart := time.Now()
+
 	var (
 		configName = flag.String("config", "", "config name or path (required)")
 		logLevel   = flag.String("log-level", "info", "log level: debug|info|warn|error")
@@ -60,6 +62,9 @@ func main() {
 		HotReload:     *hotReload,
 		CheckInterval: *checkSecs,
 	})
+
+	// Record cold/warm start time: process start -> runtime ready (about to run).
+	metrics.RecordStartupComplete(processStart)
 
 	if err := rt.Run(ctx); err != nil && err != context.Canceled {
 		log.Fatal("runtime exited with error", zap.Error(err))

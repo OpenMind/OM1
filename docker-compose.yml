@@ -77,6 +77,60 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Per-container CPU/memory metrics (container_cpu_usage_seconds_total,
+  # container_memory_rss, container_memory_working_set_bytes, ...).
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "8080:8080"
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - '--housekeeping_interval=1s'
+      - '--docker_only=true'
+
+  # Host CPU, memory, thermal zones, cpufreq and hwmon sensors.
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    pid: host
+    network_mode: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.thermal_zone'
+      - '--collector.hwmon'
+      - '--collector.cpufreq'
+
+  # Jetson INA power rails, SoC temperatures and throttling state (ARM has no RAPL).
+  jetson-power-exporter:
+    build:
+      context: .
+      dockerfile: perf/Dockerfile.jetson-power-exporter
+    image: openmindagi/jetson-power-exporter:latest
+    container_name: jetson-power-exporter
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "9300:9300"
+    volumes:
+      - /sys:/sys:ro
+
 volumes:
   grafana-data:
   prometheus-data:

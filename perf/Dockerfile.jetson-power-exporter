@@ -1,0 +1,8 @@
+# Tiny dependency-free exporter image (stdlib only, no pip install needed).
+# Multi-arch base; runs on Jetson (arm64) and dev machines (amd64) alike.
+FROM python:3.12-slim
+
+COPY perf/jetson_power_exporter.py /usr/local/bin/jetson_power_exporter.py
+
+EXPOSE 9300
+ENTRYPOINT ["python3", "/usr/local/bin/jetson_power_exporter.py"]
