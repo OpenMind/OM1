@@ -82,23 +82,12 @@ sudo apt-get install -y portaudio19-dev ffmpeg
 
 #### Option A: Download Pre-built Binary (Recommended)
 
-No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases):
+No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases).
 
-| Platform | Architecture | Download |
-|----------|--------------|----------|
-| macOS | Apple Silicon (M1/M2/M3/M4) | `om1-darwin-arm64` |
-| macOS | Intel | `om1-darwin-amd64` |
-| Linux | x86_64 | `om1-linux-amd64` |
-| Linux | ARM64 (Jetson, RPi) | `om1-linux-arm64` |
-| Windows | x86_64 | `om1-windows-amd64.exe` |
+After downloading, make the binary executable and download the config files:
 
 ```bash
-# Example for macOS Apple Silicon
-curl -LO https://github.com/OpenMind/OM1/releases/latest/download/om1-darwin-arm64
-chmod +x om1-darwin-arm64
-mv om1-darwin-arm64 om1
-
-# Download config files
+chmod +x om1
 git clone --depth 1 https://github.com/OpenMind/OM1.git om1-config
 cp -r om1-config/config .
 ```
