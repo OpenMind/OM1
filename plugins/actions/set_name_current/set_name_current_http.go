@@ -1,31 +1,3 @@
-// Package set_name_current implements "rename the person in front of me".
-//
-// Calls /set_name_current on the face API. The server resolves the
-// CURRENTLY-LARGEST visible face to its UUID (exactly like
-// merge_current / find_similar_current) and renames THAT UUID. The LLM
-// passes only the new name — never a UUID, never the old name.
-//
-// WHY THIS EXISTS (vs correct_identity)
-// -------------------------------------
-// correct_identity resolves the target by NAME (from_id). That breaks
-// when several identities share a display name ("two Wendys"): the
-// face API returns result=ambiguous and refuses to guess. This action
-// sidesteps the problem entirely by targeting the FACE on screen, not a
-// name — so "call me yucheng now" works even with duplicate names.
-//
-// It is a pure rename (server-side /set_name), so it does NOT run the
-// selfie enroll pipeline and never trips result=face_belongs_to.
-//
-// WHEN TO USE
-// -----------
-//   - A visible, already-known person wants a different name
-//     ("actually, call me Yucheng").
-//   - You need to rename ONE of several same-named people — point the
-//     camera at them; the largest visible face is the target.
-//
-// For wrong-person captures use forget_last(); for look-alikes use
-// selfie(force=true); to fold two UUIDs of the SAME person into one use
-// gallery_merge.
 package set_name_current
 
 import (
