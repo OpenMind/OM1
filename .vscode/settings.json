@@ -1,0 +1,12 @@
+{
+  "go.testFlags": ["-p", "8", "-v"],
+  "go.testEnvVars": {
+    "CGO_ENABLED": "1",
+    "CGO_CFLAGS": "-I${workspaceFolder}/.zenoh-c/include",
+    "CGO_LDFLAGS": "-L${workspaceFolder}/.zenoh-c/lib -lzenohc -Wl,-rpath,${workspaceFolder}/.zenoh-c/lib",
+    "DYLD_LIBRARY_PATH": "${workspaceFolder}/.zenoh-c/lib",
+    "LD_LIBRARY_PATH": "${workspaceFolder}/.zenoh-c/lib"
+  },
+  "go.buildFlags": [],
+  "go.buildTags": "integration"
+}
