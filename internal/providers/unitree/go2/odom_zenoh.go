@@ -202,10 +202,12 @@ func (p *OdomZenohProvider) Stop() {
 		p.sub.Drop()
 		p.sub = nil
 	}
+
 	if p.session != nil {
 		p.session.Close()
 		p.session = nil
 	}
+
 	p.log.Info("go2 odom: provider stopped")
 }
 
@@ -219,9 +221,11 @@ func eulerFromQuaternion(x, y, z, w float64) (roll, pitch, yaw float64) {
 	if t2 > +1.0 {
 		t2 = +1.0
 	}
+
 	if t2 < -1.0 {
 		t2 = -1.0
 	}
+
 	pitch = math.Asin(t2)
 
 	t3 := +2.0 * (w*z + x*y)

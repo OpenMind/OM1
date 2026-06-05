@@ -254,7 +254,7 @@ func (s *vlmSensor) FormattedLatestBuffer() string {
 	}
 
 	latest := s.messages[len(s.messages)-1]
-	result := fmt.Sprintf("\n%q: %q\n", vlmDescriptor, latest.Message)
+	result := fmt.Sprintf("\n%s: '%s'\n", vlmDescriptor, latest.Message)
 
 	ts := time.Unix(0, int64(latest.Timestamp*1e9))
 	providers.IO().AddInput(s.name, latest.Message, ts)
