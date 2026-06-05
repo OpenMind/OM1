@@ -2,6 +2,22 @@ global:
   scrape_interval: 1s
 
 scrape_configs:
+  # Application-level metrics (latency, plus Go runtime/process metrics).
   - job_name: 'om1'
     static_configs:
       - targets: ['host.docker.internal:9090']
+
+  # Per-container CPU and memory (RSS, working set) from cAdvisor.
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+
+  # Host CPU, memory, thermal zones, cpufreq and hwmon from node_exporter.
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+
+  # Jetson INA power rails, SoC temperatures and throttling state.
+  - job_name: 'jetson'
+    static_configs:
+      - targets: ['host.docker.internal:9300']

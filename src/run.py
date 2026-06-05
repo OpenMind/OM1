@@ -95,6 +95,11 @@ def start(
         if hot_reload:
             logging.info(f"Hot-reload enabled (check interval: {check_interval} seconds)")
 
+        # Record cold/warm start time: process start -> runtime ready (about to run).
+        from prometheus import record_startup_complete
+
+        record_startup_complete()
+
         asyncio.run(runtime.run())
 
     except FileNotFoundError:
