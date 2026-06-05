@@ -431,8 +431,8 @@ func (s *Summarizer) readUserFactsList(userID string) string {
 
 // parseCompareOutput parses LLM ADD/UPDATE output.
 func (s *Summarizer) parseCompareOutput(output, userID string) []scoredDecision {
-	addRe := regexp.MustCompile(`^-\s*ADD\s+\[(\w+)\]\s+(.+)$`)
-	updateRe := regexp.MustCompile(`^-\s*UPDATE\s+\[(\w+)\]\s+(.+?)\s*\|\s*replaces:\s*(.+)$`)
+	addRe := regexp.MustCompile(`^-?\s*ADD\s+\[(\w+)\]\s+(.+)$`)
+	updateRe := regexp.MustCompile(`^-?\s*UPDATE\s+\[(\w+)\]\s+(.+?)\s*\|\s*replaces:\s*(.+)$`)
 
 	var decisions []scoredDecision
 	for _, line := range strings.Split(output, "\n") {

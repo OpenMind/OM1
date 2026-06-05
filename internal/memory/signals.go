@@ -22,7 +22,7 @@ const (
 	wRecency       = 0.15
 	wConsolidation = 0.15
 
-	promotionThreshold = 0.4
+	promotionThreshold = 0.45
 
 	expirationRecencyThreshold = 0.1
 	expirationRecallMinimum    = 2
