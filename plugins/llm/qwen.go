@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/metrics"
 )
 
 func init() {
@@ -51,6 +53,9 @@ func NewQwen(configMap map[string]any) (llm.LLM, error) {
 }
 
 func (q *qwenLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
+	// start brackets the whole operation: build + travel + proxy + parse.
+	start := time.Now()
+
 	userPrompt := prompt
 	if !q.enableReasoning {
 		userPrompt = prompt + " /no_think"
@@ -68,7 +73,7 @@ func (q *qwenLLM) Call(ctx context.Context, prompt string, history []llm.Message
 		requestBody[k] = v
 	}
 
-	body, err := q.doRequest(ctx, requestBody)
+	body, proxyTotalMs, err := q.doRequest(ctx, requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +86,7 @@ func (q *qwenLLM) Call(ctx context.Context, prompt string, history []llm.Message
 	if len(resp.ToolCalls) == 0 && strings.Contains(resp.TextContent, "<tool_call>") {
 		resp.ToolCalls = parseQwenToolCalls(resp.TextContent)
 	}
+	metrics.RecordRequestTiming("llm", time.Since(start).Seconds(), proxyTotalMs)
 	return resp, nil
 }
 
