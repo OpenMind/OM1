@@ -11,13 +11,15 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/util"
 )
 
 const (
 	defaultFPS         = 30
 	defaultWidth       = 640
 	defaultHeight      = 480
-	defaultJPEGQuality = 70
+	defaultJPEGQuality = 30
+	cameraRetryDelay   = 2 * time.Second
 )
 
 type VideoStreamConfig struct {
@@ -72,17 +74,37 @@ func (v *VideoStream) run(ctx context.Context) {
 	cam := v.cameraInput()
 	v.log.Info("VideoStream: using camera", zap.String("camera", cam))
 
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		if err := v.stream(ctx, cam); err != nil && ctx.Err() == nil {
+			v.log.Error("VideoStream: error streaming video", zap.Error(err))
+		}
+
+		if ctx.Err() != nil {
+			return
+		}
+
+		v.log.Warn("VideoStream: capture ended, restarting camera", zap.Duration("delay", cameraRetryDelay))
+		if !util.Sleep(ctx, cameraRetryDelay) {
+			return
+		}
+	}
+}
+
+// stream runs a single ffmpeg capture session and forwards decoded JPEG frames
+func (v *VideoStream) stream(ctx context.Context, cam string) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg", v.ffmpegArgs(cam)...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		v.log.Error("VideoStream: stdout pipe failed", zap.Error(err))
-		return
+		return fmt.Errorf("stdout pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		v.log.Error("VideoStream: failed to start ffmpeg", zap.Error(err))
-		return
+		return fmt.Errorf("start ffmpeg: %w", err)
 	}
 
 	defer func() {
@@ -94,7 +116,7 @@ func (v *VideoStream) run(ctx context.Context) {
 		v.log.Info("VideoStream: released video capture device")
 	}()
 
-	err = splitJPEGStream(stdout, func(frame []byte) bool {
+	return splitJPEGStream(stdout, func(frame []byte) bool {
 		if ctx.Err() != nil {
 			return false
 		}
@@ -102,10 +124,6 @@ func (v *VideoStream) run(ctx context.Context) {
 		v.send(Frame{Timestamp: time.Now(), JPEG: frame})
 		return true
 	})
-
-	if err != nil && ctx.Err() == nil {
-		v.log.Error("VideoStream: error streaming video", zap.Error(err))
-	}
 }
 
 // cameraInput returns the ffmpeg input specifier for the configured camera device.

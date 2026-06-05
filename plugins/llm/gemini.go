@@ -22,7 +22,6 @@ const (
 	defaultGeminiBaseURL string      = "https://api.openmind.com/api/core/gemini"
 )
 
-// NewGemini creates a Google Gemini LLM using the OpenAI-compatible API.
 func NewGemini(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("GeminiLLM", configMap, defaultGeminiModel, defaultGeminiBaseURL, "required", true)
 }

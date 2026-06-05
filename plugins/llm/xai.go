@@ -20,7 +20,6 @@ const (
 	defaultXAIBaseURL string   = "https://api.openmind.com/api/core/xai"
 )
 
-// NewXAI creates an xAI (Grok) LLM using the OpenAI-compatible API.
 func NewXAI(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("XAILLM", configMap, defaultXAIModel, defaultXAIBaseURL, "auto", true)
 }

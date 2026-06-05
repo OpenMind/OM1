@@ -11,9 +11,9 @@ import (
 
 	"github.com/openmind/om1/internal/httpclient"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/metrics"
 )
 
-// compatConfig holds the configuration shared by every OpenAI-compatible provider.
 type compatConfig struct {
 	APIKey     string `json:"api_key"`
 	Model      string `json:"model"`
@@ -22,21 +22,14 @@ type compatConfig struct {
 	HistoryLen int    `json:"history_length"`
 }
 
-// openAICompatLLM is a generic client for any provider that speaks the OpenAI
-// chat-completions API (Gemini, OpenAI, DeepSeek, xAI, OpenRouter, NearAI, ...).
-// Providers differ only in their defaults (model, base URL) and tool_choice,
-// so they each construct one of these via newOpenAICompat rather than
-// reimplementing the request/response plumbing.
 type openAICompatLLM struct {
-	provider   string // used for log lines and error messages, e.g. "GeminiLLM"
+	provider   string
 	config     compatConfig
-	toolChoice string // "auto" or "required"; only sent when schemas are present
+	toolChoice string // "auto" or "required"
 	extraBody  map[string]any
 	schemas    []map[string]any
 }
 
-// newOpenAICompat builds an OpenAI-compatible provider, applying the provider's
-// default model and base URL when the caller's config leaves them blank.
 func newOpenAICompat(provider string, configMap map[string]any, defaultModel, defaultBaseURL, toolChoice string, requireAPIKey bool) (*openAICompatLLM, error) {
 	var cfg compatConfig
 	if err := remarshal(configMap, &cfg); err != nil {
@@ -54,13 +47,10 @@ func newOpenAICompat(provider string, configMap map[string]any, defaultModel, de
 	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice}, nil
 }
 
-// FunctionSchemas returns the current function schemas registered with the LLM.
 func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas }
 
-// SetSchemas updates the function schemas that the LLM will use for tool calls.
 func (c *openAICompatLLM) SetSchemas(schemas []map[string]any) { c.schemas = schemas }
 
-// Call sends a prompt and conversation history to the provider and returns the response.
 func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
 	requestBody := map[string]any{
 		"model":    c.config.Model,
@@ -83,9 +73,6 @@ func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm
 	return parseOpenAIResponse(body)
 }
 
-// doRequest marshals the request body, posts it to the provider's
-// chat-completions endpoint, logs latency, and returns the raw response body.
-// It is shared by Call and by providers that need custom response parsing.
 func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]any) ([]byte, error) {
 	requestBytes, err := json.Marshal(requestBody)
 	if err != nil {
@@ -108,7 +95,8 @@ func (c *openAICompatLLM) doRequest(ctx context.Context, requestBody map[string]
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	recordResponseLatency(c.provider, c.config.Model, c.config.BaseURL, req, resp, start)
+	metrics.RecordResponseLatency(metrics.LLMLatency, metrics.LLMLatencyLast,
+		c.provider, c.config.Model, c.config.BaseURL, req, resp, start)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {

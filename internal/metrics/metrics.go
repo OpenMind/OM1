@@ -12,6 +12,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/logger"
 )
 
 // httpTimingLabels are the labels shared by every om1_http_* timing metric.
@@ -30,6 +32,19 @@ var (
 	LLMLatencyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "om1_llm_latency_last_seconds",
 		Help: "Most recent LLM response latency in seconds",
+	}, []string{"model", "endpoint"})
+)
+
+// VLM metrics.
+var (
+	VLMLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "om1_vlm_latency_seconds",
+		Help: "Latency of VLM (vision language model) responses in seconds",
+	}, []string{"model", "endpoint"})
+
+	VLMLatencyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "om1_vlm_latency_last_seconds",
+		Help: "Most recent VLM response latency in seconds",
 	}, []string{"model", "endpoint"})
 )
 
@@ -169,6 +184,7 @@ var (
 func init() {
 	prometheus.MustRegister(
 		LLMLatency, LLMLatencyLast,
+		VLMLatency, VLMLatencyLast,
 		ASRLatency, ASRLatencyLast,
 		ASRSpeechDuration, ASRSpeechDurationLast,
 		ASRUtteranceEndLatency, ASRUtteranceEndLatencyLast,
@@ -193,7 +209,6 @@ func RecordStartupComplete(processStart time.Time) {
 }
 
 // RecordHTTPTiming records HTTP timing metrics for a request with the given attributes and timing values in milliseconds.
-// It updates both the histogram and "last" gauge metrics for each timing aspect.
 func RecordHTTPTiming(host, path, method string, statusCode int, proxyParseMs, upstreamTotalMs, upstreamTTFBMs, proxyTotalMs string) {
 	status := strconv.Itoa(statusCode)
 	observe := func(hist *prometheus.HistogramVec, gauge *prometheus.GaugeVec, ms string) {
@@ -209,6 +224,35 @@ func RecordHTTPTiming(host, path, method string, statusCode int, proxyParseMs, u
 	observe(HTTPUpstreamTotal, HTTPUpstreamTotalLast, upstreamTotalMs)
 	observe(HTTPUpstreamTTFB, HTTPUpstreamTTFBLast, upstreamTTFBMs)
 	observe(HTTPProxyTotal, HTTPProxyTotalLast, proxyTotalMs)
+}
+
+// RecordLLMResponseLatency records the latency of an LLM response along with relevant request and response attributes.
+func RecordResponseLatency(latency *prometheus.HistogramVec, latencyLast *prometheus.GaugeVec, provider, model, endpoint string, req *http.Request, resp *http.Response, start time.Time) {
+	header := func(key string) string {
+		if v := resp.Header.Get(key); v != "" {
+			return v
+		}
+		return "?"
+	}
+	elapsed := time.Since(start)
+	logger.Get().Info(provider,
+		zap.String("method", req.Method),
+		zap.String("url", req.URL.String()),
+		zap.Int("status", resp.StatusCode),
+		zap.Int64("elapsed_ms", elapsed.Milliseconds()),
+		zap.String("proxy_parse_ms", header("x-proxy-parse-ms")),
+		zap.String("upstream_total_ms", header("x-upstream-total-ms")),
+		zap.String("upstream_ttfb_ms", header("x-upstream-ttfb-ms")),
+		zap.String("proxy_total_ms", header("x-proxy-total-ms")),
+	)
+
+	seconds := elapsed.Seconds()
+	latency.WithLabelValues(model, endpoint).Observe(seconds)
+	latencyLast.WithLabelValues(model, endpoint).Set(seconds)
+
+	RecordHTTPTiming(req.URL.Host, req.URL.Path, req.Method, resp.StatusCode,
+		header("x-proxy-parse-ms"), header("x-upstream-total-ms"),
+		header("x-upstream-ttfb-ms"), header("x-proxy-total-ms"))
 }
 
 // RecordKBQuery records the latency of a knowledge base query.

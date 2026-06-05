@@ -26,7 +26,6 @@ const (
 	defaultOpenAIBaseURL string      = "https://api.openmind.com/api/core/openai"
 )
 
-// NewOpenAI creates an OpenAI LLM using the OpenAI chat-completions API.
 func NewOpenAI(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("OpenAILLM", configMap, defaultOpenAIModel, defaultOpenAIBaseURL, "auto", true)
 }
