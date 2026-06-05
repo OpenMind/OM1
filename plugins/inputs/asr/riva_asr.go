@@ -19,8 +19,7 @@ func init() {
 	inputs.Register("RivaASRInput", NewRivaASR)
 }
 
-// rivaLanguageCodeMap maps friendly language names to the BCP-47 codes accepted
-// by the Riva ASR service.
+// rivaLanguageCodeMap maps friendly language names to Riva's BCP-47 codes.
 var rivaLanguageCodeMap = map[string]string{
 	"english":    "en-US",
 	"chinese":    "cmn-Hans-CN",
@@ -61,8 +60,7 @@ type rivaASRParams struct {
 	enableTTSInterrupt bool
 }
 
-// RivaASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the Riva ASR websocket through the shared asrCommon.
+// RivaASRSensor streams local microphone audio to Riva ASR via the shared asrCommon.
 type RivaASRSensor struct {
 	*asrCommon
 
@@ -270,7 +268,7 @@ func resolveRivaASRConfig(p rivaASRParams) asrCommonConfig {
 
 	return asrCommonConfig{
 		Name:               p.name,
-		Model:              "riva",
+		Provider:           "riva",
 		APIVersion:         rivaAPIVersion,
 		WSURL:              wsURL,
 		Rate:               p.rate,

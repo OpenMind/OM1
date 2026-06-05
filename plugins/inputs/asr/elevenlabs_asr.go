@@ -22,8 +22,8 @@ func init() {
 	inputs.Register("ElevenLabsASRInput", NewElevenLabsASR)
 }
 
-// elevenlabsLanguageCodeMap maps friendly language names to the short codes
-// accepted by the ElevenLabs ASR service. "auto" enables language detection.
+// elevenlabsLanguageCodeMap maps friendly language names to ElevenLabs short codes;
+// "auto" enables language detection.
 var elevenlabsLanguageCodeMap = map[string]string{
 	"auto":       "auto",
 	"english":    "en",
@@ -64,8 +64,7 @@ type elevenlabsASRParams struct {
 	enableTTSInterrupt bool
 }
 
-// ElevenLabsASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the ElevenLabs ASR websocket through the shared asrCommon.
+// ElevenLabsASRSensor streams local microphone audio to ElevenLabs ASR via the shared asrCommon.
 type ElevenLabsASRSensor struct {
 	*asrCommon
 
@@ -281,7 +280,7 @@ func resolveElevenLabsASRConfig(p elevenlabsASRParams) asrCommonConfig {
 
 	return asrCommonConfig{
 		Name:               p.name,
-		Model:              "elevenlabs",
+		Provider:           "elevenlabs",
 		APIVersion:         elevenlabsAPIVersion,
 		WSURL:              wsURL,
 		Rate:               p.rate,
@@ -292,10 +291,11 @@ func resolveElevenLabsASRConfig(p elevenlabsASRParams) asrCommonConfig {
 	}
 }
 
-// elevenlabsParseMessage implements the ElevenLabs ASR protocol (partial marks speech start, committed carries the transcript) and records its latency metric.
+// elevenlabsParseMessage handles the ElevenLabs ASR protocol (partial marks speech
+// start, committed carries the transcript) and records its latency metric.
 func elevenlabsParseMessage(s *transcriberStream, msg ASRMessage) string {
 	if msg.Type == "partial" {
-		// Record the start time only on the first partial of an utterance, else latency shrinks to time-since-last-partial.
+		// Stamp the start only on the first partial, else latency measures time-since-last-partial.
 		if !s.speechStarted {
 			s.speechStartTime = time.Now()
 			s.speechStarted = true

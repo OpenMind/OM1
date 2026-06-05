@@ -1,9 +1,6 @@
 # Build artifacts
 build/
 
-# IDE
-.vscode/
-
 # Claude Code
 CLAUDE.md
 .claude/
