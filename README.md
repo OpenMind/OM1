@@ -8,45 +8,16 @@
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4, and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
-## Version Info
+## Pick Your Runtime
 
-OM1 is available in both **Python** and **Go** implementations:
+OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. We migrated to Go for lower latency, better performance, efficient concurrency, a smaller memory footprint for edge devices, and simpler deployment as a single static binary.
 
-- **Go (Current)** — Actively developed, production-ready implementation on the main branch
-- **Python** — Available on a separate branch; no longer maintained but fully functional for those who prefer it
+The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. The table below gives a high-level comparison to help you choose the right runtime for your use case.
 
-### Why Go?
+> [!NOTE]
+> However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It will not be maintained.
 
-We migrated OM1 to Go for significant improvements in robotics and real-time AI workloads:
-
-- **Lower Latency** — Compiled binaries eliminate interpreter overhead, critical for real-time robot control and responsive voice interactions
-- **Better Performance** — Native execution delivers faster ASR/TTS pipelines and LLM response handling
-- **Efficient Concurrency** — Goroutines handle multiple sensors, inputs, and actions simultaneously with minimal resource usage
-- **Smaller Memory Footprint** — Reduced memory consumption ideal for edge devices like Jetson and embedded systems
-- **Simple Deployment** — Single static binary with no dependency management or virtual environments
-
-### Features Being Migrated to Go
-
-- Gazebo & Isaac Sim
-- MCP Integration
-- VLM (OpenAI, Gemini, VILA)
-- UBTECH Robot Support
-- Riva ASR/TTS
-
-## Capabilities of OM1
-
-* **Modular Architecture**: Written in Go for performance and seamless integration.
-* **Data Input**: Easily handles new data and sensors.
-* **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
-* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
-* **Metrics & Observability**: Includes a pre-configured Prometheus and Grafana stack to monitor real-time AI pipeline metrics like LLM and ASR latencies.
-
-## Architecture Overview
-![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
-
-## Go vs. Python Feature Comparison
-
-OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still **under active development** and not yet available in Go. The table below gives a high-level comparison to help you choose the right runtime for your use case.
+### Feature Comparison
 
 | Capability | Python | Go | Notes |
 | --- | :---: | :---: | --- |
@@ -65,9 +36,18 @@ OM1 was originally built in Python, and the Go runtime is a newer, performance-f
 | Full autonomy with BrainPack (Navigation, SLAM, Auto Charging) | ✅ | 🚧 | Under development for Go. |
 
 > [!NOTE]
-> Legend: ✅ available · 🚧 under development / not yet available in Go.
->
-> The Go feature set is expanding quickly. If a capability you need is marked 🚧, the [Python runtime](https://github.com/OpenMind/OM1/tree/python) is the recommended choice for now. Check back as parity improves, and see [Contributing](#contributing) if you'd like to help close the gap.
+> ✅ available · 🚧 under development. If a capability you need is marked 🚧, the [Python runtime](https://github.com/OpenMind/OM1/tree/python) is the recommended choice for now.
+
+## Capabilities of OM1
+
+* **Modular Architecture**: Written in Go for performance and seamless integration.
+* **Data Input**: Easily handles new data and sensors.
+* **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
+* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* **Metrics & Observability**: Includes a pre-configured Prometheus and Grafana stack to monitor real-time AI pipeline metrics like LLM and ASR latencies.
+
+## Architecture Overview
+![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
 
 ## Getting Started
 
@@ -84,12 +64,6 @@ This quick start uses the default starter configuration to help you understand t
 3. Add your OpenMind API key.
 4. Launch OM1 and verify it is running.
 
-### Prerequisites
-
-- Webcam access (recommended if configuring VLM)
-
-Install system packages:
-
 ### 1. Install System Dependencies
 
 For macOS:
@@ -102,6 +76,9 @@ For Linux:
 sudo apt-get update
 sudo apt-get install -y portaudio19-dev ffmpeg
 ```
+
+> [!TIP]
+> Webcam access is recommended if configuring VLM.
 
 ### 2. Download or Build
 
@@ -132,27 +109,16 @@ make build
 
 Get your API key from [OpenMind Portal](https://portal.openmind.com/).
 
-1. Sign in to OpenMind Portal.
-2. Open the dashboard and create a new API key.
-3. Copy the generated key.
-
-Recommended (shell profile):
+Set via shell profile (recommended):
 ```bash
 export OM_API_KEY="<your_api_key>"
 ```
 
-Alternative (project-local):
+Or use a project-local `.env` file:
 ```bash
 cp .env.example .env
+# Then set OM_API_KEY=<your_api_key> in .env
 ```
-
-Then set:
-```bash
-OM_API_KEY=<your_api_key>
-```
-in `.env`.
-
-You can also verify or adjust the fallback key location in `config/conversation.json5`.
 
 ### 4. Launch the Agent
 
