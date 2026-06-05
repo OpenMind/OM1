@@ -7,65 +7,62 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestJoinNames(t *testing.T) {
-	require.Equal(t, "", joinNames(nil))
-	require.Equal(t, "alice", joinNames([]string{"alice"}))
-	require.Equal(t, "alice and bob", joinNames([]string{"alice", "bob"}))
-	require.Equal(t, "alice, bob and carol", joinNames([]string{"alice", "bob", "carol"}))
+func TestPresenceSnapshotToText_Empty(t *testing.T) {
+	snap := PresenceSnapshot{}
+	require.Equal(t, "", snap.ToText())
 }
 
-func TestPresenceSnapshotToText(t *testing.T) {
-	cases := []struct {
-		name string
-		snap PresenceSnapshot
-		want string
-	}{
-		{"nobody", PresenceSnapshot{}, "No one in view."},
-		{
-			"one known",
-			PresenceSnapshot{Names: []string{"wendy"}, ClosestName: "wendy"},
-			"In Camera View: 1 known (wendy). Closest: wendy.",
-		},
-		{
-			"two known plus unknowns",
-			PresenceSnapshot{Names: []string{"wendy", "alice"}, UnknownFaces: 2, ClosestName: "wendy"},
-			"In Camera View: 2 known (wendy and alice) and 2 unknown faces. Closest: wendy.",
-		},
-		{
-			"single unknown",
-			PresenceSnapshot{UnknownFaces: 1, ClosestName: "unknown"},
-			"In Camera View: 1 unknown face. Closest: unknown.",
-		},
+func TestPresenceSnapshotToText_OneNamed(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{{Name: "sean", UUID: "abc", Area: 1000}},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, tc.snap.ToText())
-		})
-	}
+	text := snap.ToText()
+	require.Contains(t, text, "FacePresence: 1 face")
+	require.Contains(t, text, "sean")
 }
 
-func TestPresenceSnapshotToTextDedupsAndDropsUnknown(t *testing.T) {
-	snap := PresenceSnapshot{Names: []string{"wendy", "wendy", "unknown", " "}, ClosestName: "wendy"}
-	require.Equal(t, "In Camera View: 1 known (wendy). Closest: wendy.", snap.ToText(),
-		"duplicate, blank, and 'unknown' names are filtered from the known list")
+func TestPresenceSnapshotToText_NamedAndAnon(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "sean", UUID: "abc", Area: 2000},
+			{Name: "anon_73d0a4", UUID: "def", Area: 1000},
+		},
+	}
+	text := snap.ToText()
+	require.Contains(t, text, "2 faces")
+	require.Contains(t, text, "sean")
+	require.Contains(t, text, "anon_73d0a4")
+}
+
+func TestPresenceSnapshotToText_UnknownDropped(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "unknown", Area: 1000},
+			{Name: "sean", UUID: "abc", Area: 500},
+		},
+	}
+	text := snap.ToText()
+	require.Contains(t, text, "1 face")
+	require.Contains(t, text, "sean")
+	require.NotContains(t, text, "unknown")
+}
+
+func TestPresenceSnapshotToText_OnlyUnknown(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{{Name: "unknown", Area: 1000}},
+	}
+	require.Equal(t, "", snap.ToText())
 }
 
 func TestNewFacePresenceProviderDefaults(t *testing.T) {
 	p := NewFacePresenceProvider(FacePresenceConfig{})
-	require.Equal(t, "http://127.0.0.1:6793", p.baseURL)
-	require.Equal(t, 1.0, p.recentSec)
-	require.Equal(t, 2*time.Second, p.timeout)
-	require.Equal(t, 500.0, p.minFaceArea)
-}
-
-func TestNewFacePresenceProviderTrimsSlash(t *testing.T) {
-	p := NewFacePresenceProvider(FacePresenceConfig{BaseURL: "http://host:1/"})
-	require.Equal(t, "http://host:1", p.baseURL)
+	require.Equal(t, "http://127.0.0.1:6793", p.cfg.BaseURL)
+	require.Equal(t, 1.0, p.cfg.RecentSec)
+	require.Equal(t, 180.0, p.cfg.AnonNewcomerThrSec)
 }
 
 func TestFetchSnapshot(t *testing.T) {
@@ -75,26 +72,25 @@ func TestFetchSnapshot(t *testing.T) {
 		raw, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(raw, &gotBody)
 		_, _ = w.Write([]byte(`{
+			"ok": true,
 			"server_ts": 1700.5,
 			"faces": [
-				{"name": "alice", "area": 2000},
+				{"name": "alice", "uuid": "aaa111", "area": 2000, "tier": "confident"},
 				{"name": "unknown", "area": 1500},
-				{"name": "tiny", "area": 10},
-				{"name": "bob", "area": 800}
+				{"name": "bob", "uuid": "bbb222", "area": 800, "tier": "tentative"}
 			]
 		}`))
 	}))
 	t.Cleanup(srv.Close)
 
-	p := NewFacePresenceProvider(FacePresenceConfig{BaseURL: srv.URL, MinFaceArea: 500, RecentSec: 3})
+	p := NewFacePresenceProvider(FacePresenceConfig{BaseURL: srv.URL, RecentSec: 3})
 	snap, err := p.FetchSnapshot(context.Background())
 	require.NoError(t, err)
 
 	require.Equal(t, 3.0, gotBody["recent_sec"], "recent_sec is sent in the request body")
-	require.Equal(t, 1700.5, snap.Timestamp)
-	require.Equal(t, []string{"alice", "bob"}, snap.Names, "ordered by area desc, tiny face dropped, unknown excluded from names")
-	require.Equal(t, 1, snap.UnknownFaces, "the large unknown face is counted")
-	require.Equal(t, "alice", snap.ClosestName, "largest face is closest")
+	require.Len(t, snap.Faces, 3)
+	require.Equal(t, "alice", snap.ClosestName, "largest UUID face is closest")
+	require.Equal(t, "aaa111", snap.ClosestUUID)
 }
 
 func TestFetchSnapshotErrorStatus(t *testing.T) {

@@ -11,12 +11,12 @@
 // AFTER confirming via dialog that two identities are the same person.
 // Typical workflow:
 //
-//   1. LLM sees `anon_73d0a4 (met before, ...)` in FacePresence.
-//   2. LLM calls gallery_find_similar() — server uses visible face.
-//   3. SimilarMatches → best=sean(0.48).
-//   4. LLM asks visitor: "Are you Sean? You look familiar."
-//   5. Visitor confirms.
-//   6. LLM calls gallery_merge(target_name="sean", confirmed_by="user_voice").
+//  1. LLM sees `anon_73d0a4 (met before, ...)` in FacePresence.
+//  2. LLM calls gallery_find_similar() — server uses visible face.
+//  3. SimilarMatches → best=sean(0.48).
+//  4. LLM asks visitor: "Are you Sean? You look familiar."
+//  5. Visitor confirms.
+//  6. LLM calls gallery_merge(target_name="sean", confirmed_by="user_voice").
 //
 // The 2-step process is INTENTIONAL — face similarity alone is not
 // trustworthy enough to merge automatically (different people can have

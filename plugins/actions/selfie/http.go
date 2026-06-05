@@ -400,7 +400,7 @@ func (c *Connector) dispatchNetworkError() {
 
 // -------- Tiny argument helpers --------
 
-func stringArg(m map[string]any, k string) string  { s, _ := m[k].(string); return s }
+func stringArg(m map[string]any, k string) string { s, _ := m[k].(string); return s }
 func boolArg(m map[string]any, k string, d bool) bool {
 	if v, ok := m[k].(bool); ok {
 		return v

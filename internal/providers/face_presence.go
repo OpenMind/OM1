@@ -12,14 +12,14 @@
 // For NAMED faces, the LLM picks one of three styles based on how long
 // ago this identity was last seen:
 //
-//   < 1 day      → "Welcome back, <Name>!" (recent, conversational)
-//   1 ≤ d < 7    → "Hi <Name>, I've seen you N days ago." (recent-ish)
-//   ≥ 7 days     → "Hi <Name>, last time we met was on <DATE>."
+//	< 1 day      → "Welcome back, <Name>!" (recent, conversational)
+//	1 ≤ d < 7    → "Hi <Name>, I've seen you N days ago." (recent-ish)
+//	≥ 7 days     → "Hi <Name>, last time we met was on <DATE>."
 //
 // For ANON faces (auto-enrolled, no name yet), two states:
 //
-//   < 3 min      → "Hi! What's your name?" (newcomer, just discovered)
-//   ≥ 3 min      → "We've met before — what's your name?"
+//	< 3 min      → "Hi! What's your name?" (newcomer, just discovered)
+//	≥ 3 min      → "We've met before — what's your name?"
 //
 // UNKNOWN faces (no UUID assigned yet, still in the 1-3s window between
 // detection and auto-enroll) are HIDDEN from the text — they're a
@@ -94,10 +94,10 @@ func NewFacePresenceProvider(cfg FacePresenceConfig) *FacePresenceProvider {
 // returned by the Python API. Pointer types let us distinguish "field
 // absent / null" from "field present with value 0".
 type FaceEntry struct {
-	Name           string   `json:"name"`              // "sean" / "anon_73d0a4" / "unknown"
-	UUID           string   `json:"uuid"`              // full 32-hex; "" for unknown
-	Tier           string   `json:"tier"`              // "confident" / "tentative" / "uncertain"
-	Sim            float64  `json:"sim"`               // raw cosine sim
+	Name           string   `json:"name"` // "sean" / "anon_73d0a4" / "unknown"
+	UUID           string   `json:"uuid"` // full 32-hex; "" for unknown
+	Tier           string   `json:"tier"` // "confident" / "tentative" / "uncertain"
+	Sim            float64  `json:"sim"`  // raw cosine sim
 	TrackID        int      `json:"track_id"`
 	Area           int      `json:"area,omitempty"`
 	CreatedAgoSec  *float64 `json:"created_ago_sec"`   // UUID age in seconds; null for unknown
@@ -112,7 +112,7 @@ type FaceEntry struct {
 // (largest-area) face on screen. Kept here for backward compatibility
 // with code that worked with the previous "single closest face" model
 // (e.g. lifecycle hooks deciding how to greet the room on startup).
-// New code should iterate ``Faces`` instead.
+// New code should iterate “Faces“ instead.
 type PresenceSnapshot struct {
 	OK       bool        `json:"ok"`
 	Faces    []FaceEntry `json:"faces"`
@@ -153,13 +153,13 @@ func SetDefaults(cfg FacePresenceConfig) {
 // FetchSnapshot calls POST /who and returns the parsed result.
 //
 // Returns by VALUE rather than pointer for backward compatibility with
-// hook code that takes ``PresenceSnapshot`` arguments. On error, the
+// hook code that takes “PresenceSnapshot“ arguments. On error, the
 // returned snapshot is the zero value (Faces=nil, OK=false), and the
 // error is non-nil.
 //
-// Populates the derived ``Closest*`` fields from the largest-area face
-// before returning, so hook code can call ``snap.ClosestName`` without
-// iterating ``Faces``.
+// Populates the derived “Closest*“ fields from the largest-area face
+// before returning, so hook code can call “snap.ClosestName“ without
+// iterating “Faces“.
 func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnapshot, error) {
 	body, _ := json.Marshal(map[string]any{"recent_sec": p.cfg.RecentSec})
 	req, err := http.NewRequestWithContext(
@@ -271,9 +271,9 @@ func (s *PresenceSnapshot) ToText() string {
 
 // formatNamedEntry — three-tier label based on how long since last sighting.
 //
-//   "sean (recognized)"                              — < 1 day
-//   "sean (recognized, 2 days ago)"                  — 1-6 days
-//   "sean (recognized, last seen 2026-03-05)"        — ≥ 7 days
+//	"sean (recognized)"                              — < 1 day
+//	"sean (recognized, 2 days ago)"                  — 1-6 days
+//	"sean (recognized, last seen 2026-03-05)"        — ≥ 7 days
 func formatNamedEntry(f FaceEntry) string {
 	cfg := providerForDefaults.cfg
 	if f.LastSeenAgoSec == nil {
@@ -300,8 +300,8 @@ func formatNamedEntry(f FaceEntry) string {
 
 // formatAnonEntry — newcomer vs met-before.
 //
-//   "anon_73d0a4 (newcomer)"                          — < 3 min
-//   "anon_73d0a4 (met before, last seen 2026-06-04)"  — ≥ 3 min
+//	"anon_73d0a4 (newcomer)"                          — < 3 min
+//	"anon_73d0a4 (met before, last seen 2026-06-04)"  — ≥ 3 min
 func formatAnonEntry(f FaceEntry) string {
 	cfg := providerForDefaults.cfg
 	if f.LastSeenAgoSec == nil {

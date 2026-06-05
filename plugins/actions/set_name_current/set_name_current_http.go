@@ -22,6 +22,7 @@
 //     ("actually, call me Yucheng").
 //   - You need to rename ONE of several same-named people — point the
 //     camera at them; the largest visible face is the target.
+//
 // For wrong-person captures use forget_last(); for look-alikes use
 // selfie(force=true); to fold two UUIDs of the SAME person into one use
 // gallery_merge.

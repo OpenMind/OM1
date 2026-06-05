@@ -8,14 +8,14 @@
 //
 // LLM WORKFLOW (read-only step)
 // -----------------------------
-// 1. LLM sees `anon_73d0a4 (met before, last seen ...)` in FacePresence.
-// 2. Visitor says "do you remember me?"
-// 3. LLM calls gallery_find_similar() with no arguments.
-// 4. Server picks the largest visible face's UUID as the query.
-// 5. Result lands in SimilarMatches as e.g.
-//      "matches=2 best=sean(0.48) second=alice(0.32)"
-//    The LLM reads this on its NEXT tick (user just spoke again) and
-//    decides whether to ask "Are you Sean?".
+//  1. LLM sees `anon_73d0a4 (met before, last seen ...)` in FacePresence.
+//  2. Visitor says "do you remember me?"
+//  3. LLM calls gallery_find_similar() with no arguments.
+//  4. Server picks the largest visible face's UUID as the query.
+//  5. Result lands in SimilarMatches as e.g.
+//     "matches=2 best=sean(0.48) second=alice(0.32)"
+//     The LLM reads this on its NEXT tick (user just spoke again) and
+//     decides whether to ask "Are you Sean?".
 //
 // This action is READ-ONLY — does not modify the gallery. Follow-up
 // confirmation goes through gallery_merge.
