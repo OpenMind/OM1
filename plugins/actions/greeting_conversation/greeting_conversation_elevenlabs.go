@@ -23,8 +23,9 @@ const (
 
 	statusConversation = byte(3)
 
-	tickInterval = 10 * time.Second
-	ttsTimeout   = 30 * time.Second
+	tickInterval    = 10 * time.Second
+	ttsTimeout      = 30 * time.Second
+	ttsPollInterval = 100 * time.Millisecond
 )
 
 // ConversationStateEnum is the LLM-facing enum for the conversation_state field.
@@ -78,7 +79,6 @@ type Connector struct {
 	mu                       sync.Mutex
 	greetingStatus           providers.ConversationState
 	conversationFinishedSent bool
-	pendingFinishedUpdate    bool
 	ttsPlaying               bool
 	ttsPlayingStart          time.Time
 }
@@ -236,8 +236,7 @@ func (c *Connector) Stop() {
 	}
 }
 
-// handleFinished records the finished transition and updates context, deferring
-// the context update until TTS playback completes if it is still in progress.
+// handleFinished updates context to trigger the mode switch when the conversation finishes.
 func (c *Connector) handleFinished() {
 	c.mu.Lock()
 	if c.conversationFinishedSent {
@@ -246,22 +245,41 @@ func (c *Connector) handleFinished() {
 	}
 	c.conversationFinishedSent = true
 	speaking := c.ttsPlaying
-	if speaking {
-		c.pendingFinishedUpdate = true
-	}
 	c.mu.Unlock()
 
-	if speaking {
-		c.log.Info("greeting_conversation: finished, waiting for TTS to complete before updating context")
+	if !speaking {
+		c.log.Info("greeting_conversation: finished")
+		c.updateContextFinished()
 		return
 	}
-	c.log.Info("greeting_conversation: finished")
+
+	c.log.Info("greeting_conversation: finished, waiting for TTS to complete before switching")
+	go c.switchWhenTTSDone()
+}
+
+// switchWhenTTSDone waits for TTS playback to drain or time out, then updates context to trigger the mode switch.
+func (c *Connector) switchWhenTTSDone() {
+	deadline := time.Now().Add(ttsTimeout)
+	ticker := time.NewTicker(ttsPollInterval)
+	defer ticker.Stop()
+
+	for tts.Busy() {
+		<-ticker.C
+		if time.Now().After(deadline) {
+			c.log.Warn("greeting_conversation: TTS playback timed out, switching anyway")
+			break
+		}
+	}
+
+	c.mu.Lock()
+	c.ttsPlaying = false
+	c.mu.Unlock()
+
+	c.log.Info("greeting_conversation: TTS completed, switching")
 	c.updateContextFinished()
 }
 
-// waitingOnTTS reports whether playback is still active. When playback has just
-// completed it flushes any pending finished-context update; on timeout it gives
-// up waiting so ticks can resume.
+// waitingOnTTS returns true if the connector is currently waiting on TTS playback to drain before switching out of the conversation.
 func (c *Connector) waitingOnTTS() bool {
 	c.mu.Lock()
 	if !c.ttsPlaying {
@@ -269,25 +287,19 @@ func (c *Connector) waitingOnTTS() bool {
 		return false
 	}
 	elapsed := time.Since(c.ttsPlayingStart)
-	stillSpeaking := tts.Speaking.Load()
+	c.mu.Unlock()
 
+	stillSpeaking := tts.Busy()
 	if stillSpeaking && elapsed <= ttsTimeout {
-		c.mu.Unlock()
 		return true
 	}
 
+	c.mu.Lock()
 	c.ttsPlaying = false
-	timedOut := stillSpeaking && elapsed > ttsTimeout
-	pending := c.pendingFinishedUpdate
-	c.pendingFinishedUpdate = false
 	c.mu.Unlock()
 
-	if timedOut {
+	if stillSpeaking && elapsed > ttsTimeout {
 		c.log.Warn("greeting_conversation: TTS playback timed out", zap.Duration("elapsed", elapsed))
-	}
-	if pending {
-		c.log.Info("greeting_conversation: TTS completed, updating context greeting_conversation_finished=true")
-		c.updateContextFinished()
 	}
 	return false
 }
