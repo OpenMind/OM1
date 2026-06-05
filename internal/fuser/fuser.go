@@ -89,9 +89,7 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 			if memCtx != "" {
 				builder.WriteString("MEMORY:\n")
 				builder.WriteString(memCtx)
-				builder.WriteString("\n\nWhen answering questions about prior conversations, people, preferences, ")
-				builder.WriteString("decisions, dates, or recurring topics — prioritize the MEMORY section above ")
-				builder.WriteString("over your own parametric knowledge.\n\n")
+				builder.WriteString("\n\nProactively reference MEMORY in your responses. Prioritize it over your own knowledge.\n\n")
 				f.log.Info("memory: injecting context", zap.Int("chars", len(memCtx)), zap.String("uuid", user.UUID))
 			}
 		}
