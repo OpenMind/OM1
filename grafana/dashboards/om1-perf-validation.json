@@ -738,6 +738,86 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "OM1 internal (total \u2212 proxy \u2248 OM1 compute + travel)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 300,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "OM1 compute + travel = request total \u2212 proxy (mean)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 301,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(rate(om1_request_total_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"llm\"}[1m])) - (rate(om1_request_proxy_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"llm\"}[1m]))",
+          "legendFormat": "LLM (total \u2212 proxy)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(rate(om1_request_total_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"tts\"}[1m])) - (rate(om1_request_proxy_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"tts\"}[1m]))",
+          "legendFormat": "TTS (total \u2212 proxy)",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(rate(om1_http_request_duration_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_request_duration_seconds_count{path=~\".*tts.*\"}[1m])) - (rate(om1_http_proxy_total_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_proxy_total_seconds_count{path=~\".*tts.*\"}[1m]))",
+          "legendFormat": "TTS\u00b7py (total \u2212 proxy)",
+          "refId": "C"
+        }
+      ]
     }
   ]
 }
