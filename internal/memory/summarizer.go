@@ -486,9 +486,20 @@ func (s *Summarizer) generateSummary(ctx context.Context, userID string) error {
 		factLines = append(factLines, fmt.Sprintf("- [%s] %s", f.Category, f.Fact))
 	}
 
+	displayName := userID
+	profilePath := filepath.Join(s.usersDir, userID, "profile.json")
+	if pRaw, err := os.ReadFile(profilePath); err == nil {
+		var profile struct {
+			Names []string `json:"names"`
+		}
+		if json.Unmarshal(pRaw, &profile) == nil && len(profile.Names) > 0 {
+			displayName = profile.Names[len(profile.Names)-1]
+		}
+	}
+
 	prompt := fmt.Sprintf(
 		"Summarize these facts about user %q in one concise paragraph (max 50 words):\n%s",
-		userID, strings.Join(factLines, "\n"),
+		displayName, strings.Join(factLines, "\n"),
 	)
 
 	summary, err := s.llmCall(ctx, []chatMessage{{Role: "user", Content: prompt}})
