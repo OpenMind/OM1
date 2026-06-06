@@ -52,6 +52,9 @@ dds = [
 ]
 macos = ["osascript"]
 
+[project.scripts]
+om1-mcp-server = "expose.server:main"
+
 [dependency-groups]
 dev = [
     "black==26.3.1",
