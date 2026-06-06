@@ -840,6 +840,77 @@
           "refId": "C"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Client HTTP total \u2212 proxy (\u2248 travel + client overhead; excludes OM1 build/parse)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "id": 302,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "llm_latency / request_duration \u2212 proxy (mean)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 303,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum(rate(om1_llm_latency_seconds_sum[1m])) / sum(rate(om1_llm_latency_seconds_count[1m]))) - ((sum(rate(om1_http_proxy_total_seconds_sum{path=~\".*chat/completions.*\"}[1m])) / sum(rate(om1_http_proxy_total_seconds_count{path=~\".*chat/completions.*\"}[1m]))) or ((sum(rate(om1_llm_latency_seconds_sum[1m])) / sum(rate(om1_llm_latency_seconds_count[1m]))) * 0))",
+          "legendFormat": "Go: llm_latency \u2212 proxy",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum(rate(om1_http_request_duration_seconds_sum{path=~\".*chat/completions.*\"}[1m])) / sum(rate(om1_http_request_duration_seconds_count{path=~\".*chat/completions.*\"}[1m]))) - ((sum(rate(om1_http_proxy_total_seconds_sum{path=~\".*chat/completions.*\"}[1m])) / sum(rate(om1_http_proxy_total_seconds_count{path=~\".*chat/completions.*\"}[1m]))) or ((sum(rate(om1_http_request_duration_seconds_sum{path=~\".*chat/completions.*\"}[1m])) / sum(rate(om1_http_request_duration_seconds_count{path=~\".*chat/completions.*\"}[1m]))) * 0))",
+          "legendFormat": "Py: request_duration \u2212 proxy",
+          "refId": "B"
+        }
+      ]
     }
   ]
 }
