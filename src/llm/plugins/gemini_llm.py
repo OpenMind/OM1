@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
-from prometheus import om1_llm_latency, om1_llm_latency_last
+from prometheus import om1_llm_latency, om1_llm_latency_last, record_request_total
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.httpx import get_async_httpx_client
 from providers.llm_history_manager import LLMHistoryManager
@@ -101,6 +101,8 @@ class GeminiLLM(LLM[R]):
         """
         if messages is None:
             messages = []
+        # req_start brackets the whole operation: build + travel + proxy + parse.
+        req_start = time.time()
         try:
             logging.info(f"Gemini LLM input: {prompt}")
             logging.info(f"Gemini LLM messages: {messages}")
@@ -165,3 +167,6 @@ class GeminiLLM(LLM[R]):
         except Exception as e:
             logging.error(f"Gemini API error: {e}")
             return None
+        finally:
+            # Total client-side time for this LLM request (build+travel+proxy+parse).
+            record_request_total("llm", time.time() - req_start)
