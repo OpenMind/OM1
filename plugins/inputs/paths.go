@@ -84,8 +84,7 @@ func (s *PathsSensor) Poll(_ context.Context) (any, error) {
 	return s.provider.LidarString(), nil
 }
 
-// RawToText converts a raw assessment line into a timestamped Message and
-// appends it to the bounded in-memory history.
+// RawToText appends a new assessment to the message buffer, returning it as an inputs.Message for downstream processing.
 func (s *PathsSensor) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
@@ -104,8 +103,7 @@ func (s *PathsSensor) RawToText(_ context.Context, raw any) (*inputs.Message, er
 	return msg, nil
 }
 
-// FormattedLatestBuffer returns the newest assessment as a prompt-ready block
-// and clears the history. It returns "" when empty.
+// FormattedLatestBuffer returns the most recent assessment in the buffer.
 func (s *PathsSensor) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
