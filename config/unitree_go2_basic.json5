@@ -30,6 +30,15 @@
   },
   agent_actions: [
     {
+      name: "dock_charging",
+      llm_label: "dock_charging",
+      connector: "unitree_go2_dock",
+      config: {
+        base_url: "http://localhost:5000/maps/locations/list",
+        default_dock_location: "charging_dock",
+      },
+    },
+    {
       name: "move_game_controller",
       llm_label: "external movement controller",
       connector: "go2_game_controller",
