@@ -51,6 +51,10 @@ dds = [
     "cyclonedds==0.10.2"
 ]
 macos = ["osascript"]
+smolvlm = [
+    "transformers>=4.52.0",
+    "num2words>=0.5.14",
+]
 
 [dependency-groups]
 dev = [
