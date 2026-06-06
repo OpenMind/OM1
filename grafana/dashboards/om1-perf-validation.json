@@ -817,7 +817,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(rate(om1_request_total_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"llm\"}[1m])) - (rate(om1_request_proxy_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"llm\"}[1m]))",
+          "expr": "(rate(om1_request_total_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"llm\"}[1m])) - ((rate(om1_request_proxy_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"llm\"}[1m])) or ((rate(om1_request_total_seconds_sum{kind=\"llm\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"llm\"}[1m])) * 0))",
           "legendFormat": "LLM (total \u2212 proxy)",
           "refId": "A"
         },
@@ -826,8 +826,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(rate(om1_request_total_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"tts\"}[1m])) - (rate(om1_request_proxy_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"tts\"}[1m]))",
-          "legendFormat": "TTS (total \u2212 proxy)",
+          "expr": "(rate(om1_request_total_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"tts\"}[1m])) - ((rate(om1_request_proxy_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_proxy_seconds_count{kind=\"tts\"}[1m])) or ((rate(om1_request_total_seconds_sum{kind=\"tts\"}[1m]) / rate(om1_request_total_seconds_count{kind=\"tts\"}[1m])) * 0))",
+          "legendFormat": "TTS (total \u2212 proxy*)",
           "refId": "B"
         },
         {
@@ -835,8 +835,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(rate(om1_http_request_duration_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_request_duration_seconds_count{path=~\".*tts.*\"}[1m])) - (rate(om1_http_proxy_total_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_proxy_total_seconds_count{path=~\".*tts.*\"}[1m]))",
-          "legendFormat": "TTS\u00b7py (total \u2212 proxy)",
+          "expr": "(rate(om1_http_request_duration_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_request_duration_seconds_count{path=~\".*tts.*\"}[1m])) - ((rate(om1_http_proxy_total_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_proxy_total_seconds_count{path=~\".*tts.*\"}[1m])) or ((rate(om1_http_request_duration_seconds_sum{path=~\".*tts.*\"}[1m]) / rate(om1_http_request_duration_seconds_count{path=~\".*tts.*\"}[1m])) * 0))",
+          "legendFormat": "TTS\u00b7py (total \u2212 proxy*)",
           "refId": "C"
         }
       ]
