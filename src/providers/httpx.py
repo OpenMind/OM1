@@ -130,7 +130,11 @@ def get_httpx_event_hooks() -> dict[str, list]:
                 ).set(val)
                 # Per-request proxy time, labeled by kind, to pair with
                 # om1_request_total_seconds: total - proxy ≈ OM1 compute + travel.
-                record_request_proxy(_kind_from_path(path), val)
+                # An explicit x-om1-kind request header (e.g. set by the history
+                # summarizer) wins over the path-based guess, so summarization
+                # calls don't pollute kind="llm".
+                kind = response.request.headers.get("x-om1-kind") or _kind_from_path(path)
+                record_request_proxy(kind, val)
             except ValueError:
                 pass
 

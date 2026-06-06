@@ -1,12 +1,14 @@
 import asyncio
 import functools
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
 
 from llm import LLMConfig
+from prometheus import record_request_total
 
 from .io_provider import IOProvider
 
@@ -141,8 +143,12 @@ class LLMHistoryManager:
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": summary_prompt},
                 ],
+                # Tag summarization calls so the httpx hook records their proxy
+                # time under kind="llm_summary" instead of polluting kind="llm".
+                "extra_headers": {"x-om1-kind": "llm_summary"},
             }
 
+            summary_start = time.time()
             if isinstance(self.client, openai.AsyncClient):
                 response = await asyncio.wait_for(
                     self.client.chat.completions.create(**api_kwargs),
@@ -157,6 +163,8 @@ class LLMHistoryManager:
                     ),
                     timeout=timeout,
                 )
+            # Pair with the proxy sample recorded by the httpx hook (kind=llm_summary).
+            record_request_total("llm_summary", time.time() - summary_start)
 
             if not response or not response.choices:
                 logging.error("Invalid API response format")
