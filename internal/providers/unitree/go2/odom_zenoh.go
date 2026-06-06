@@ -154,10 +154,6 @@ func (p *OdomZenohProvider) processOdom(pose poseStamped) {
 	p.moveHistory = 0.7*delta + 0.3*p.moveHistory
 	if delta > 0.01 || p.moveHistory > 0.01 {
 		p.moving = true
-		p.log.Info("go2 odom: moving",
-			zap.Float64("delta_m", delta),
-			zap.Float64("move_history", p.moveHistory),
-		)
 	} else {
 		p.moving = false
 	}
@@ -178,7 +174,8 @@ func (p *OdomZenohProvider) processOdom(pose poseStamped) {
 	if now := time.Now(); now.Sub(p.lastDebugLog) >= debugLogInterval {
 		p.lastDebugLog = now
 		p.log.Debug("go2 odom",
-			zap.Float64("x", p.x), zap.Float64("y", p.y),
+			zap.Float64("x", p.x), zap.Float64("y", p.y), zap.Float64("z", p.z),
+			zap.String("body_attitude", string(p.bodyAttitude)),
 			zap.Float64("yaw_m180_p180", p.odomYawM180P180),
 			zap.Float64("yaw_0_360", p.odomYaw0360),
 			zap.Float64("rockchip_ts", p.odomRockchipTS),
