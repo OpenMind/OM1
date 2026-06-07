@@ -47,25 +47,25 @@ type ApproachingPerson struct {
 // NewApproachingPerson constructs the ApproachingPerson background task and
 // subscribes to the person-greeting topic.
 func NewApproachingPerson(configMap map[string]any) (bg.Background, error) {
-	log := logger.Get()
+	log := logger.Get().Named("ApproachingPerson")
 
 	a := &ApproachingPerson{log: log, greeting: providers.Greeting()}
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		log.Error("ApproachingPerson: zenoh unavailable", zap.Error(err))
+		log.Error("zenoh unavailable", zap.Error(err))
 		return a, nil
 	}
 	a.session = sess
 
 	sub, err := sess.DeclareSubscriber(personGreetingTopic, a.onPersonGreeting)
 	if err != nil {
-		log.Error("ApproachingPerson: failed to declare subscriber", zap.Error(err))
+		log.Error("failed to declare subscriber", zap.Error(err))
 	} else {
 		a.sub = sub
 	}
 
-	log.Info("ApproachingPerson background task initialized.")
+	log.Info("background task initialized")
 	return a, nil
 }
 
@@ -73,7 +73,7 @@ func NewApproachingPerson(configMap map[string]any) (bg.Background, error) {
 func (a *ApproachingPerson) onPersonGreeting(data []byte) {
 	status, err := deserializePersonGreetingStatus(data)
 	if err != nil {
-		a.log.Error("ApproachingPerson: failed to deserialize status", zap.Error(err))
+		a.log.Error("failed to deserialize status", zap.Error(err))
 		return
 	}
 
@@ -106,7 +106,7 @@ func (a *ApproachingPerson) Run(ctx context.Context) {
 	}
 
 	if a.session == nil {
-		a.log.Warn("No Zenoh session available in ApproachingPerson.")
+		a.log.Warn("no Zenoh session available")
 		util.Sleep(ctx, approachingPollInterval)
 		return
 	}
@@ -114,7 +114,7 @@ func (a *ApproachingPerson) Run(ctx context.Context) {
 	requestID := uuid.New().String()
 	payload := serializePersonGreetingStatus(requestID, personStatusSwitch, "Switching to next person")
 	if err := a.session.Put(personGreetingTopic, payload); err != nil {
-		a.log.Error("ApproachingPerson: failed to publish SWITCH status", zap.Error(err))
+		a.log.Error("failed to publish SWITCH status", zap.Error(err))
 	}
 
 	util.Sleep(ctx, approachingPollInterval)
@@ -122,7 +122,7 @@ func (a *ApproachingPerson) Run(ctx context.Context) {
 
 // Stop releases the zenoh subscriber and session.
 func (a *ApproachingPerson) Stop() {
-	a.log.Info("Stopping ApproachingPerson background task.")
+	a.log.Info("stopping background task")
 	if a.sub != nil {
 		a.sub.Drop()
 		a.sub = nil

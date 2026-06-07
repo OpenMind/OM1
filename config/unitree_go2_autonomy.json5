@@ -55,5 +55,13 @@
       llm_label: "emotion",
       connector: "zenoh",
     },
+    {
+      name: "move_go2_autonomy",
+      llm_label: "Move",
+      connector: "move",
+      config: {
+        cmd_vel_topic: "cmd_vel",
+      },
+    },
   ],
 }

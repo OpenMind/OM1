@@ -112,12 +112,12 @@ func (s *transcriberStream) packageAudio(pcm []byte) ([]byte, error) {
 func (s *transcriberStream) sendChunk(pcm []byte) {
 	packet, err := s.packageAudio(pcm)
 	if err != nil {
-		s.log.Warn(s.name+": package error", zap.Error(err))
+		s.log.Warn("package error", zap.Error(err))
 		return
 	}
 
 	if err := s.wsClient.Send(packet); err != nil {
-		s.log.Warn(s.name+": send error", zap.Error(err))
+		s.log.Warn("send error", zap.Error(err))
 		s.stats.mu.Lock()
 		s.stats.FailedChunks++
 		s.stats.mu.Unlock()
@@ -196,5 +196,5 @@ func (s *transcriberStream) PrintStatistics() {
 		fields = append(fields, zap.Duration("time_since_last_send", time.Since(lastSendTime)))
 	}
 
-	s.log.Info(s.name+": statistics", fields...)
+	s.log.Info("statistics", fields...)
 }

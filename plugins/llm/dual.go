@@ -48,6 +48,7 @@ type dualLLM struct {
 	local llm.LLM
 	cloud llm.LLM
 	eval  *openAICompatLLM
+	log   *zap.Logger
 }
 
 // NewDual creates a DualLLM that wraps a local and cloud sub-LLM from the registry.
@@ -103,7 +104,7 @@ func NewDual(configMap map[string]any) (llm.LLM, error) {
 		},
 	}
 
-	return &dualLLM{local: local, cloud: cloud, eval: eval}, nil
+	return &dualLLM{local: local, cloud: cloud, eval: eval, log: logger.Get().Named("DualLLM")}, nil
 }
 
 // SetSchemas propagates the tool schemas to both sub-LLMs.
@@ -135,7 +136,7 @@ func (d *dualLLM) Call(ctx context.Context, prompt string, history []llm.Message
 		callStart := time.Now()
 		resp, err := sub.Call(callCtx, prompt, history)
 		if err != nil {
-			logger.Get().Warn("DualLLM sub-call failed", zap.String("source", source), zap.Error(err))
+			d.log.Warn("sub-call failed", zap.String("source", source), zap.Error(err))
 			resp = nil
 		}
 		results <- dualResult{resp: resp, elapsed: time.Since(callStart), source: source}
@@ -185,7 +186,7 @@ collect:
 		cancel()
 	}
 
-	logger.Get().Info("DualLLM",
+	d.log.Info("race complete",
 		zap.Int("in_time", len(inTime)),
 		zap.Int64("elapsed_ms", time.Since(start).Milliseconds()),
 	)
@@ -248,7 +249,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response.`, pr
 
 	resp, err := d.eval.Call(evalCtx, evalPrompt, nil)
 	if err != nil || resp == nil {
-		logger.Get().Warn("DualLLM quality evaluation failed, defaulting to local", zap.Error(err))
+		d.log.Warn("quality evaluation failed, defaulting to local", zap.Error(err))
 		return "local"
 	}
 	if strings.Contains(strings.ToUpper(strings.TrimSpace(resp.TextContent)), "A") {

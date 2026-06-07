@@ -48,8 +48,8 @@ func NewUnitreeGo2Odom(configMap map[string]any) (inputs.Sensor, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 
-	log := logger.Get()
-	log.Info("UnitreeGo2Odom: initializing", zap.String("topic", cfg.Topic))
+	log := logger.Get().Named("UnitreeGo2Odom")
+	log.Info("initializing", zap.String("topic", cfg.Topic))
 
 	return &OdomSensor{
 		log:      log,
@@ -155,7 +155,7 @@ func (s *OdomSensor) Stop() {
 	s.stopped = true
 	s.mu.Unlock()
 
-	s.log.Info("UnitreeGo2Odom: stopping sensor")
+	s.log.Info("stopping sensor")
 	if s.provider != nil {
 		s.provider.Stop()
 	}

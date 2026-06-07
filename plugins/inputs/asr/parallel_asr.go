@@ -130,7 +130,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 		s.streams = append(s.streams, newTranscriberStream(streamCfg, s.log, s.deliver))
 	}
 
-	s.log.Info("ParallelASRInput: configured",
+	s.log.Info("configured",
 		zap.String("source", cfg.Source),
 		zap.Int("rate", cfg.Rate),
 		zap.Int("chunk", cfg.Chunk),
@@ -203,7 +203,7 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 		winner := s.lastProvider
 		s.dmu.Unlock()
 		metrics.ASRParallelTranscripts.WithLabelValues(provider, "suppressed").Inc()
-		s.log.Info("ParallelASRInput: lost race, suppressed duplicate",
+		s.log.Info("lost race, suppressed duplicate",
 			zap.String("loser", provider),
 			zap.String("winner", winner),
 			zap.String("text", text),
@@ -215,7 +215,7 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 	s.dmu.Unlock()
 
 	metrics.ASRParallelTranscripts.WithLabelValues(provider, "won").Inc()
-	s.log.Info("ParallelASRInput: winner", zap.String("winner", provider), zap.String("text", text))
+	s.log.Info("winner", zap.String("winner", provider), zap.String("text", text))
 	s.pushTranscript(text)
 }
 
@@ -229,7 +229,7 @@ func (s *ParallelASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 
 		if s.cfg.Source == "mic" {
 			if err := providers.PortAudio.Acquire(); err != nil {
-				s.log.Error("ParallelASRInput: portaudio init failed", zap.Error(err))
+				s.log.Error("portaudio init failed", zap.Error(err))
 				return
 			}
 		}
@@ -242,7 +242,7 @@ func (s *ParallelASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 
 		if s.cfg.Source == "mic" {
 			if err := s.openMic(ctx); err != nil {
-				s.log.Error("ParallelASRInput: mic open failed", zap.Error(err))
+				s.log.Error("mic open failed", zap.Error(err))
 				return
 			}
 		} else {
@@ -265,7 +265,7 @@ func (s *ParallelASRSensor) connectStreams() {
 		go func(st *transcriberStream) {
 			defer wg.Done()
 			if err := st.connect(); err != nil {
-				s.log.Warn("ParallelASRInput: provider ws connect failed, will retry",
+				s.log.Warn("provider ws connect failed, will retry",
 					zap.String("provider", st.provider), zap.Error(err))
 			}
 		}(st)
@@ -288,7 +288,7 @@ func (s *ParallelASRSensor) Stop() {
 		return
 	}
 
-	s.log.Info("ParallelASRInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	for _, st := range s.streams {
@@ -299,7 +299,7 @@ func (s *ParallelASRSensor) Stop() {
 	}
 	s.closeZenoh()
 
-	s.log.Info("ParallelASRInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // openMic opens the configured microphone stream and starts the capture loop.
@@ -323,7 +323,7 @@ func (s *ParallelASRSensor) openMic(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("ParallelASRInput: microphone",
+	s.log.Info("microphone",
 		zap.String("device", device.Name),
 		zap.Int("rate", s.cfg.Rate),
 		zap.Int("chunk", s.cfg.Chunk),
@@ -356,7 +356,7 @@ func (s *ParallelASRSensor) openMic(ctx context.Context) error {
 	s.mu.Unlock()
 
 	go s.micCaptureLoop(ctx, stream)
-	s.log.Info("ParallelASRInput: microphone started")
+	s.log.Info("microphone started")
 	return nil
 }
 
@@ -386,7 +386,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 		}
 
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
-			s.log.Warn("ParallelASRInput: read error", zap.Error(err))
+			s.log.Warn("read error", zap.Error(err))
 		}
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
@@ -419,8 +419,8 @@ func (s *ParallelASRSensor) rtspCaptureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("ParallelASRInput: RTSP audio error", zap.Error(err))
-			s.log.Info("ParallelASRInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("RTSP audio error", zap.Error(err))
+			s.log.Info("reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -457,7 +457,7 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("ParallelASRInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)

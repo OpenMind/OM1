@@ -86,7 +86,7 @@ type asrSensorCore struct {
 
 // newSensorCore builds the sensor core, initializing the zenoh publisher if possible.
 func newSensorCore(name string, enableTTSInterrupt bool) *asrSensorCore {
-	log := logger.Get()
+	log := logger.Get().Named(name)
 
 	a := &asrSensorCore{
 		name:               name,
@@ -97,18 +97,18 @@ func newSensorCore(name string, enableTTSInterrupt bool) *asrSensorCore {
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		log.Warn(name+": zenoh unavailable, ASR broadcast disabled", zap.Error(err))
+		log.Warn("zenoh unavailable, ASR broadcast disabled", zap.Error(err))
 		return a
 	}
 	pub, err := sess.DeclarePublisher(asrZenohTopic)
 	if err != nil {
 		sess.Close()
-		log.Warn(name+": failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
+		log.Warn("failed to declare zenoh publisher, ASR broadcast disabled", zap.Error(err))
 		return a
 	}
 	a.zenohSession = sess
 	a.zenohPublisher = pub
-	log.Info(name+": zenoh publisher initialized", zap.String("topic", asrZenohTopic))
+	log.Info("zenoh publisher initialized", zap.String("topic", asrZenohTopic))
 
 	return a
 }
@@ -122,17 +122,17 @@ func (a *asrSensorCore) pushTranscript(text string) {
 		return
 	}
 
-	a.log.Info(a.name+": transcript accepted", zap.String("text", text))
+	a.log.Info("transcript accepted", zap.String("text", text))
 
 	if a.enableTTSInterrupt && tts.Speaking.Load() {
 		tts.RequestInterrupt()
-		a.log.Info(a.name + ": interrupting TTS due to detected speech")
+		a.log.Info("interrupting TTS due to detected speech")
 	}
 
 	select {
 	case a.transcriptCh <- text:
 	default:
-		a.log.Warn(a.name+": transcript buffer full, dropping", zap.String("text", text))
+		a.log.Warn("transcript buffer full, dropping", zap.String("text", text))
 	}
 }
 
@@ -207,7 +207,7 @@ func (a *asrSensorCore) FormattedLatestBuffer() string {
 	latest := a.messages[len(a.messages)-1]
 	result := fmt.Sprintf("\nVoice: %q\n", latest)
 
-	a.log.Info(a.name+": flushing buffer", zap.String("text", latest))
+	a.log.Info("flushing buffer", zap.String("text", latest))
 	a.messages = nil
 
 	providers.IO().AddInput("Voice", latest, time.Time{})
@@ -215,9 +215,9 @@ func (a *asrSensorCore) FormattedLatestBuffer() string {
 	if a.zenohPublisher != nil {
 		payload := serializeASRText(latest)
 		if err := a.zenohPublisher.Put(payload); err != nil {
-			a.log.Warn(a.name+": zenoh publish failed", zap.Error(err))
+			a.log.Warn("zenoh publish failed", zap.Error(err))
 		} else {
-			a.log.Info(a.name+": published ASR to zenoh", zap.String("text", latest))
+			a.log.Info("published ASR to zenoh", zap.String("text", latest))
 		}
 	}
 
@@ -244,7 +244,7 @@ func (a *asrSensorCore) waitCapture(captureDone chan struct{}) {
 	select {
 	case <-captureDone:
 	case <-time.After(5 * time.Second):
-		a.log.Warn(a.name + ": capture loop did not stop within timeout")
+		a.log.Warn("capture loop did not stop within timeout")
 	}
 }
 
@@ -253,12 +253,12 @@ func (a *asrSensorCore) closeZenoh() {
 	if a.zenohPublisher != nil {
 		a.zenohPublisher.Drop()
 		a.zenohPublisher = nil
-		a.log.Info(a.name + ": zenoh publisher dropped")
+		a.log.Info("zenoh publisher dropped")
 	}
 	if a.zenohSession != nil {
 		a.zenohSession.Close()
 		a.zenohSession = nil
-		a.log.Info(a.name + ": zenoh session closed")
+		a.log.Info("zenoh session closed")
 	}
 }
 
@@ -266,7 +266,7 @@ func (a *asrSensorCore) closeZenoh() {
 // sensor core (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
 	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt)
-	agg.log.Info(cfg.Name+": initializing",
+	agg.log.Info("initializing",
 		zap.String("provider", cfg.Provider),
 		zap.String("language", cfg.Language),
 		zap.String("language_code", cfg.LanguageCode),

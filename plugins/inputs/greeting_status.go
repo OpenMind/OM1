@@ -21,8 +21,8 @@ type GreetingStatusSensor struct {
 
 // NewGreetingStatus constructs a GreetingStatusSensor.
 func NewGreetingStatus(_ map[string]any) (inputs.Sensor, error) {
-	log := logger.Get()
-	log.Info("GreetingStatus: initializing")
+	log := logger.Get().Named("GreetingStatus")
+	log.Info("initializing")
 	return &GreetingStatusSensor{
 		log:      log,
 		greeting: providers.Greeting(),
@@ -51,5 +51,5 @@ func (s *GreetingStatusSensor) FormattedLatestBuffer() string {
 }
 
 func (s *GreetingStatusSensor) Stop() {
-	s.log.Info("GreetingStatus: stopping sensor")
+	s.log.Info("stopping sensor")
 }

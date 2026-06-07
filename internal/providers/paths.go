@@ -14,6 +14,14 @@ import (
 
 const pathsTopic = "om/paths"
 
+// Movement encapsulates the derived movement options based on the current valid paths.
+type Movement struct {
+	TurnLeft  []uint32
+	TurnRight []uint32
+	Advance   []uint32
+	Retreat   bool
+}
+
 // PathsProvider subscribes to the om/paths topic and derives a natural-language
 // summary of the safe movement directions from the raw path indices.
 //
@@ -148,6 +156,18 @@ func (p *PathsProvider) MovementOptions() map[string]any {
 		"advance":    p.advance,
 		"turn_right": p.turnRight,
 		"retreat":    p.retreat,
+	}
+}
+
+// Movement returns the derived movement options as a Movement struct.
+func (p *PathsProvider) Movement() Movement {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return Movement{
+		TurnLeft:  append([]uint32(nil), p.turnLeft...),
+		TurnRight: append([]uint32(nil), p.turnRight...),
+		Advance:   append([]uint32(nil), p.advance...),
+		Retreat:   p.retreat,
 	}
 }
 

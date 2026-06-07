@@ -65,7 +65,7 @@ func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("ElevenLabsASRRTSPInput: rtsp config",
+	core.log.Info("rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.Int("chunk", cfg.Chunk),
 	)
@@ -84,7 +84,7 @@ func (s *ElevenLabsASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error
 		defer s.Stop()
 
 		if err := s.connect(); err != nil {
-			s.log.Error("ElevenLabsASRRTSPInput: ws connect failed", zap.Error(err))
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
@@ -106,13 +106,13 @@ func (s *ElevenLabsASRRTSPSensor) Stop() {
 		return
 	}
 
-	s.log.Info("ElevenLabsASRRTSPInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
 
-	s.log.Info("ElevenLabsASRRTSPInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // captureLoop runs the RTSP stream and reconnects on failure until ctx is cancelled.
@@ -132,8 +132,8 @@ func (s *ElevenLabsASRRTSPSensor) captureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("ElevenLabsASRRTSPInput: RTSP audio error", zap.Error(err))
-			s.log.Info("ElevenLabsASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("RTSP audio error", zap.Error(err))
+			s.log.Info("reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -170,7 +170,7 @@ func (s *ElevenLabsASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("ElevenLabsASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)

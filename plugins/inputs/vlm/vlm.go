@@ -151,8 +151,8 @@ func parseConfig(configMap map[string]any, defaults providerDefaults) (VLMConfig
 }
 
 func NewSensor(name string, cfg VLMConfig, source frameSource) *vlmSensor {
-	log := logger.Get()
-	log.Info(name+": initializing",
+	log := logger.Get().Named(name)
+	log.Info("initializing",
 		zap.String("base_url", cfg.BaseURL),
 		zap.String("model", cfg.Model),
 		zap.Int("fps", cfg.FPS),
@@ -202,7 +202,7 @@ func (s *vlmSensor) Listen(ctx context.Context) (<-chan any, error) {
 					if ctx.Err() != nil {
 						return
 					}
-					s.log.Warn(s.name+": vision request failed", zap.Error(err))
+					s.log.Warn("vision request failed", zap.Error(err))
 					continue
 				}
 				if text == "" {
@@ -278,5 +278,5 @@ func (s *vlmSensor) Stop() {
 		cancel()
 	}
 	s.source.Stop()
-	s.log.Info(s.name + ": stopping sensor")
+	s.log.Info("stopping sensor")
 }

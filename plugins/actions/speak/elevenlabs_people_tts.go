@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/actions"
+	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
 )
@@ -54,6 +55,8 @@ func NewElevenLabsPeopleTTS(configMap map[string]any) (actions.Connector, error)
 		cfg.VoiceID = tts.DefaultVoiceID
 	}
 
+	baseConn.log = logger.Get().Named("speak/elevenlabs_people_tts")
+
 	return &ElevenLabsPeopleConnector{
 		ElevenLabsConnector: baseConn,
 		defaultVoiceID:      cfg.VoiceID,
@@ -78,14 +81,14 @@ func (e *ElevenLabsPeopleConnector) Connect(_ context.Context, input actions.Inp
 	if e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
 		e.silenceCounter++
 		e.silenceMu.Unlock()
-		e.log.Info("speak/elevenlabs_people_tts: skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
+		e.log.Info("skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
 		return nil, nil
 	}
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
 	voiceID := e.resolveVoiceID()
-	e.log.Info("speak/elevenlabs_people_tts: enqueueing text",
+	e.log.Info("enqueueing text",
 		zap.String("text", text),
 		zap.String("voice_id", voiceID),
 	)
@@ -110,7 +113,7 @@ func (e *ElevenLabsPeopleConnector) resolveVoiceID() string {
 
 	if peopleName != "" && e.voiceIDs != nil {
 		if voiceID, ok := e.voiceIDs[peopleName]; ok {
-			e.log.Info("speak/elevenlabs_people_tts: matched person voice",
+			e.log.Info("matched person voice",
 				zap.String("people", peopleName),
 				zap.String("voice_id", voiceID),
 			)
