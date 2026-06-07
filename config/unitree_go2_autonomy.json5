@@ -56,7 +56,7 @@
       connector: "zenoh",
     },
     {
-      name: "move_go2_autonomy",
+      name: "unitree_go2_autonomy",
       llm_label: "Move",
       connector: "move",
       config: {
