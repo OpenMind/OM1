@@ -377,7 +377,6 @@ func (c *moveConnector) tickDrive(pos go2.OdomPosition) {
 	if traveled < math.Abs(c.pending.dx) {
 		c.moveRobot(pos, fb*c.pending.speed, 0, 0)
 	} else {
-		// Overshoot: nudge back the other way.
 		c.moveRobot(pos, -fb*0.2, 0, 0)
 	}
 }
