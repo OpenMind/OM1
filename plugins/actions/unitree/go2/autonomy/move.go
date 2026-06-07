@@ -25,14 +25,19 @@ const (
 	defaultAIRequestTopic = "om/ai/request"
 	defaultAIRespTopic    = "om/ai/response"
 
-	moveSpeed            = 0.5  // forward/back linear speed (m/s)
-	turnSpeed            = 0.8  // angular speed while turning (rad/s)
-	angleToleranceDeg    = 5.0  // yaw within this gap is considered "facing" the goal
-	distanceTolerance    = 0.05 // metres within this gap is considered "arrived"
-	movementAttemptLimit = 15   // abort a command that fails to converge in this many ticks
-	advanceClearPath     = 4    // straight-ahead path index that must be clear to advance
-	tickInterval         = 100 * time.Millisecond
-	guardPollInterval    = 500 * time.Millisecond
+	moveSpeed         = 0.5  // forward/back linear speed (m/s)
+	turnSpeed         = 0.8  // angular speed while turning (rad/s)
+	angleToleranceDeg = 5.0  // yaw within this gap is considered "facing" the goal
+	distanceTolerance = 0.05 // metres within this gap is considered "arrived"
+	advanceClearPath  = 4    // straight-ahead path index that must be clear to advance
+
+	tickInterval      = 50 * time.Millisecond
+	guardPollInterval = 500 * time.Millisecond
+
+	stallTimeout     = 2 * time.Second
+	commandTimeout   = 15 * time.Second
+	turnProgressEps  = 0.5   // deg of closing before a turn counts as "progressing"
+	driveProgressEps = 0.005 // metres of closing before a drive counts as "progressing"
 )
 
 // pathAngles maps each path index to its heading offset in degrees, matching the
@@ -76,6 +81,23 @@ type moveCommand struct {
 	startY       float64 // odometry y at command creation
 	turnComplete bool    // whether phase 1 (turning) is done
 	speed        float64 // advance speed (m/s)
+
+	started     time.Time
+	lastImprove time.Time
+	bestGap     float64
+}
+
+func (cmd *moveCommand) markPhase(now time.Time) {
+	cmd.bestGap = math.Inf(1)
+	cmd.lastImprove = now
+}
+
+func (cmd *moveCommand) recordProgress(gap, eps float64, now time.Time) bool {
+	if cmd.bestGap-gap > eps {
+		cmd.bestGap = gap
+		cmd.lastImprove = now
+	}
+	return now.Sub(cmd.lastImprove) > stallTimeout || now.Sub(cmd.started) > commandTimeout
 }
 
 // moveConnector executes autonomous movement commands for the Unitree Go2.
@@ -98,10 +120,8 @@ type moveConnector struct {
 
 	rng *rand.Rand
 
-	mu               sync.Mutex
-	pending          *moveCommand
-	movementAttempts int
-	gapPrevious      float64
+	mu      sync.Mutex
+	pending *moveCommand
 }
 
 // NewMoveConnector builds the autonomy connector from its decoded config.
@@ -244,12 +264,13 @@ func (c *moveConnector) processMoveBack(pos go2.OdomPosition) {
 	})
 }
 
-// queue installs cmd as the pending movement and resets the convergence counters.
+// queue installs cmd as the pending movement and starts its progress tracking.
 func (c *moveConnector) queue(cmd *moveCommand) {
 	c.mu.Lock()
+	now := time.Now()
+	cmd.started = now
+	cmd.markPhase(now)
 	c.pending = cmd
-	c.movementAttempts = 0
-	c.gapPrevious = 0
 	c.mu.Unlock()
 }
 
@@ -277,12 +298,6 @@ func (c *moveConnector) Tick(ctx context.Context) {
 		return
 	}
 
-	if c.movementAttempts > movementAttemptLimit {
-		c.log.Info("not converging - aborting", zap.Int("attempts", c.movementAttempts))
-		c.abortLocked()
-		return
-	}
-
 	if !c.pending.turnComplete {
 		c.tickTurn(pos)
 		return
@@ -293,22 +308,28 @@ func (c *moveConnector) Tick(ctx context.Context) {
 // tickTurn runs phase 1: rotate until the robot faces the command's target yaw.
 func (c *moveConnector) tickTurn(pos go2.OdomPosition) {
 	gap := angleGap(-pos.OdomYawM180P180, c.pending.yaw)
-	c.gapPrevious = gap
 
-	switch {
-	case math.Abs(gap) > 10.0:
-		c.movementAttempts++
+	if math.Abs(gap) <= angleToleranceDeg {
+		c.log.Info("turn complete, starting advance")
+		c.pending.turnComplete = true
+		c.pending.markPhase(time.Now())
+		return
+	}
+
+	if c.pending.recordProgress(math.Abs(gap), turnProgressEps, time.Now()) {
+		c.log.Info("turn not converging - aborting", zap.Float64("gap_deg", gap))
+		c.abortLocked()
+		return
+	}
+
+	if math.Abs(gap) > 10.0 {
 		if !c.executeTurn(gap) {
 			c.abortLocked()
 		}
-	case math.Abs(gap) > angleToleranceDeg:
-		c.movementAttempts++
-		c.moveRobot(pos, 0, 0, math.Copysign(0.2, gap))
-	default:
-		c.log.Info("turn complete, starting advance")
-		c.pending.turnComplete = true
-		c.gapPrevious = 0
+		return
 	}
+
+	c.moveRobot(pos, 0, 0, math.Copysign(0.2, gap))
 }
 
 // tickDrive runs phase 2: drive forwards/backwards until the target distance is reached.
@@ -320,8 +341,7 @@ func (c *moveConnector) tickDrive(pos go2.OdomPosition) {
 	}
 
 	traveled := math.Hypot(pos.OdomX-c.pending.startX, pos.OdomY-c.pending.startY)
-	gap := math.Abs(c.pending.dx) - traveled
-	c.gapPrevious = math.Abs(gap)
+	remaining := math.Abs(c.pending.dx) - traveled
 
 	move := c.paths.Movement()
 	var fb float64
@@ -342,13 +362,18 @@ func (c *moveConnector) tickDrive(pos go2.OdomPosition) {
 		fb = -1
 	}
 
-	if math.Abs(gap) <= distanceTolerance {
+	if math.Abs(remaining) <= distanceTolerance {
 		c.log.Info("advance complete")
 		c.abortLocked()
 		return
 	}
 
-	c.movementAttempts++
+	if c.pending.recordProgress(math.Abs(remaining), driveProgressEps, time.Now()) {
+		c.log.Info("advance not converging - aborting", zap.Float64("remaining_m", remaining))
+		c.abortLocked()
+		return
+	}
+
 	if traveled < math.Abs(c.pending.dx) {
 		c.moveRobot(pos, fb*c.pending.speed, 0, 0)
 	} else {
@@ -402,8 +427,6 @@ func (c *moveConnector) moveRobot(pos go2.OdomPosition, vx, vy, vturn float64) {
 
 // abortLocked stops the robot and clears the pending command.
 func (c *moveConnector) abortLocked() {
-	c.movementAttempts = 0
-	c.gapPrevious = 0
 	c.pending = nil
 
 	if c.cmdVel != nil {
