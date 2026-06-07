@@ -47,7 +47,7 @@ type zenohConnector struct {
 // NewZenohConnector creates a new zenohConnector with the provided configuration.
 func NewEmotionZenohConnector(cfg map[string]any) (actions.Connector, error) {
 	return &zenohConnector{
-		log:      logger.Get(),
+		log:      logger.Get().Named("emotion/zenoh"),
 		provider: providers.Avatar(),
 	}, nil
 }
@@ -63,7 +63,7 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 	}
 
 	if err := z.provider.SendAvatarCommand(emotion); err != nil {
-		z.log.Error("emotion/zenoh: send failed", zap.Error(err))
+		z.log.Error("send failed", zap.Error(err))
 	}
 	return nil, nil
 }

@@ -100,7 +100,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 		alternativeLanguages: cfg.AlternativeLanguages,
 		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("GoogleASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
+	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &GoogleASRSensor{
 		asrCommon:  core,
@@ -117,17 +117,17 @@ func (s *GoogleASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer s.Stop()
 
 		if err := providers.PortAudio.Acquire(); err != nil {
-			s.log.Error("GoogleASRInput: portaudio init failed", zap.Error(err))
+			s.log.Error("portaudio init failed", zap.Error(err))
 			return
 		}
 
 		if err := s.connect(); err != nil {
-			s.log.Error("GoogleASRInput: ws connect failed", zap.Error(err))
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
 		if err := s.openMic(ctx); err != nil {
-			s.log.Error("GoogleASRInput: mic open failed", zap.Error(err))
+			s.log.Error("mic open failed", zap.Error(err))
 			return
 		}
 
@@ -143,14 +143,14 @@ func (s *GoogleASRSensor) Stop() {
 		return
 	}
 
-	s.log.Info("GoogleASRInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
 
-	s.log.Info("GoogleASRInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // openMic initializes PortAudio, opens the configured microphone stream, and starts the capture loop.
@@ -177,7 +177,7 @@ func (s *GoogleASRSensor) openMic(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("GoogleASRInput: microphone",
+	s.log.Info("microphone",
 		zap.String("device", device.Name),
 		zap.Int("rate", s.cfg.Rate),
 		zap.Int("chunk", s.cfg.Chunk),
@@ -211,7 +211,7 @@ func (s *GoogleASRSensor) openMic(ctx context.Context) error {
 
 	go s.captureLoop(ctx, stream)
 	go s.statsLoop(ctx)
-	s.log.Info("GoogleASRInput: microphone started")
+	s.log.Info("microphone started")
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 		}
 
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
-			s.log.Warn("GoogleASRInput: read error", zap.Error(err))
+			s.log.Warn("read error", zap.Error(err))
 		}
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {

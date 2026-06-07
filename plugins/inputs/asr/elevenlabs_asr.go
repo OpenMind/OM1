@@ -97,7 +97,7 @@ func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("ElevenLabsASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
+	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &ElevenLabsASRSensor{
 		asrCommon:  core,
@@ -114,17 +114,17 @@ func (s *ElevenLabsASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer s.Stop()
 
 		if err := providers.PortAudio.Acquire(); err != nil {
-			s.log.Error("ElevenLabsASRInput: portaudio init failed", zap.Error(err))
+			s.log.Error("portaudio init failed", zap.Error(err))
 			return
 		}
 
 		if err := s.connect(); err != nil {
-			s.log.Error("ElevenLabsASRInput: ws connect failed", zap.Error(err))
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
 		if err := s.openMic(ctx); err != nil {
-			s.log.Error("ElevenLabsASRInput: mic open failed", zap.Error(err))
+			s.log.Error("mic open failed", zap.Error(err))
 			return
 		}
 
@@ -140,14 +140,14 @@ func (s *ElevenLabsASRSensor) Stop() {
 		return
 	}
 
-	s.log.Info("ElevenLabsASRInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
 
-	s.log.Info("ElevenLabsASRInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // openMic initializes PortAudio, opens the configured microphone stream, and starts the capture loop.
@@ -174,7 +174,7 @@ func (s *ElevenLabsASRSensor) openMic(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("ElevenLabsASRInput: microphone",
+	s.log.Info("microphone",
 		zap.String("device", device.Name),
 		zap.Int("rate", s.cfg.Rate),
 		zap.Int("chunk", s.cfg.Chunk),
@@ -208,7 +208,7 @@ func (s *ElevenLabsASRSensor) openMic(ctx context.Context) error {
 
 	go s.captureLoop(ctx, stream)
 	go s.statsLoop(ctx)
-	s.log.Info("ElevenLabsASRInput: microphone started")
+	s.log.Info("microphone started")
 	return nil
 }
 
@@ -237,7 +237,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 		}
 
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
-			s.log.Warn("ElevenLabsASRInput: read error", zap.Error(err))
+			s.log.Warn("read error", zap.Error(err))
 		}
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
@@ -267,7 +267,7 @@ func resolveElevenLabsASRConfig(p elevenlabsASRParams) asrCommonConfig {
 
 	languageCode, ok := elevenlabsLanguageCodeMap[language]
 	if !ok {
-		logger.Get().Error(p.name+": unsupported language, defaulting to auto",
+		logger.Get().Named(p.name).Error("unsupported language, defaulting to auto",
 			zap.String("language", language))
 		language = "auto"
 		languageCode = "auto"

@@ -34,8 +34,8 @@ type PathsSensor struct {
 
 // NewPaths constructs a PathsSensor and starts its underlying PathsProvider.
 func NewPaths(_ map[string]any) (inputs.Sensor, error) {
-	log := logger.Get()
-	log.Info("Paths: initializing")
+	log := logger.Get().Named("Paths")
+	log.Info("initializing")
 
 	return &PathsSensor{
 		log:      log,
@@ -132,7 +132,7 @@ func (s *PathsSensor) Stop() {
 	s.stopped = true
 	s.mu.Unlock()
 
-	s.log.Info("Paths: stopping sensor")
+	s.log.Info("stopping sensor")
 	if s.provider != nil {
 		s.provider.Stop()
 	}

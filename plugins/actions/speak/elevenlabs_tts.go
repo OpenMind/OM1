@@ -69,7 +69,7 @@ func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
 		cfg.Rate = rateFromFormat(cfg.OutputFormat)
 	}
 
-	log := logger.Get()
+	log := logger.Get().Named("speak/elevenlabs_tts")
 	elevenlabs := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
 		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
@@ -112,13 +112,13 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	if e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
 		e.silenceCounter++
 		e.silenceMu.Unlock()
-		e.log.Info("speak/elevenlabs_tts: skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
+		e.log.Info("skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
 		return nil, nil
 	}
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
-	e.log.Info("speak/elevenlabs_tts: enqueueing text", zap.String("text", text))
+	e.log.Info("enqueueing text", zap.String("text", text))
 	e.elevenlabs.AddText(text)
 
 	return nil, nil
