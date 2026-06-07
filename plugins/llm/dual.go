@@ -51,6 +51,13 @@ type dualLLM struct {
 	log   *zap.Logger
 }
 
+func (d *dualLLM) logger() *zap.Logger {
+	if d.log != nil {
+		return d.log
+	}
+	return logger.Get().Named("DualLLM")
+}
+
 // NewDual creates a DualLLM that wraps a local and cloud sub-LLM from the registry.
 func NewDual(configMap map[string]any) (llm.LLM, error) {
 	var cfg dualConfig
@@ -136,7 +143,7 @@ func (d *dualLLM) Call(ctx context.Context, prompt string, history []llm.Message
 		callStart := time.Now()
 		resp, err := sub.Call(callCtx, prompt, history)
 		if err != nil {
-			d.log.Warn("sub-call failed", zap.String("source", source), zap.Error(err))
+			d.logger().Warn("sub-call failed", zap.String("source", source), zap.Error(err))
 			resp = nil
 		}
 		results <- dualResult{resp: resp, elapsed: time.Since(callStart), source: source}
@@ -186,7 +193,7 @@ collect:
 		cancel()
 	}
 
-	d.log.Info("race complete",
+	d.logger().Info("race complete",
 		zap.Int("in_time", len(inTime)),
 		zap.Int64("elapsed_ms", time.Since(start).Milliseconds()),
 	)
@@ -249,7 +256,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response.`, pr
 
 	resp, err := d.eval.Call(evalCtx, evalPrompt, nil)
 	if err != nil || resp == nil {
-		d.log.Warn("quality evaluation failed, defaulting to local", zap.Error(err))
+		d.logger().Warn("quality evaluation failed, defaulting to local", zap.Error(err))
 		return "local"
 	}
 	if strings.Contains(strings.ToUpper(strings.TrimSpace(resp.TextContent)), "A") {
