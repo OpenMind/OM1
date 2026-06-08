@@ -17,6 +17,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -351,6 +352,7 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 
 	for {
 		timer := time.NewTimer(tickInterval)
+		trigger := "timer"
 		select {
 		case <-ctx.Done():
 			timer.Stop()
@@ -359,6 +361,7 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 		case <-timer.C:
 		case <-current.inputOrchestrator.TickNow():
 			timer.Stop()
+			trigger = "immediate"
 		case update := <-providers.ModeContext().Updates():
 			timer.Stop()
 			rt.manager.UpdateUserContext(update)
@@ -369,7 +372,9 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 		now := time.Now()
 		if !prevTick.IsZero() {
 			actual := now.Sub(prevTick)
+			metrics.RecordTickInterval(actual.Seconds(), tickInterval.Seconds(), trigger)
 			rt.log.Info("tick-timing",
+				zap.String("trigger", trigger),
 				zap.Time("ts", now),
 				zap.Float64("actual_ms", float64(actual.Nanoseconds())/1e6),
 				zap.Float64("expected_ms", float64(tickInterval.Nanoseconds())/1e6),
