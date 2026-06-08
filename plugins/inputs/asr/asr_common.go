@@ -80,8 +80,8 @@ type asrSensorCore struct {
 	stopped     bool
 	captureDone chan struct{}
 
-	zenohSession   *zenohsession.Session
-	zenohPublisher *zenohsession.Publisher
+	zenohSession   zenohsession.Session
+	zenohPublisher zenohsession.Publisher
 }
 
 // newSensorCore builds the sensor core, initializing the zenoh publisher if possible.

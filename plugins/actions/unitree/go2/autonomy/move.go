@@ -107,11 +107,11 @@ type moveConnector struct {
 	odom  *go2.OdomZenohProvider
 	paths *providers.PathsProvider
 
-	cmdVel  *zenohsession.Publisher
-	session *zenohsession.Session
+	cmdVel  zenohsession.Publisher
+	session zenohsession.Session
 
-	aiRespPub *zenohsession.Publisher
-	aiReqSub  *zenohsession.Subscriber
+	aiRespPub zenohsession.Publisher
+	aiReqSub  zenohsession.Subscriber
 
 	aiControlEnabled atomic.Bool
 
