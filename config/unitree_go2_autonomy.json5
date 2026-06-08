@@ -18,6 +18,9 @@
       type: "UnitreeGo2Odom",
     },
     {
+      type: "UnitreeGo2Battery",
+    },
+    {
       type: "GoogleASRInput",
       config: {
         api_version: "v2",
