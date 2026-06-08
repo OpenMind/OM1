@@ -20,13 +20,13 @@ func TestCloneConfig(t *testing.T) {
 }
 
 func TestAddMeta(t *testing.T) {
-	cfg := addMeta(map[string]any{"api_key": "existing"}, map[string]string{"api_key": "new", "mode": "greeting"})
+	cfg := addMeta(map[string]any{"api_key": "existing"}, map[string]any{"api_key": "new", "mode": "greeting"})
 	require.Equal(t, "existing", cfg["api_key"], "existing keys are not overwritten")
 	require.Equal(t, "greeting", cfg["mode"], "new meta keys are added")
 }
 
 func TestAddMetaNilConfig(t *testing.T) {
-	cfg := addMeta(nil, map[string]string{"mode": "x"})
+	cfg := addMeta(nil, map[string]any{"mode": "x"})
 	require.Equal(t, "x", cfg["mode"], "a nil config map is allocated")
 }
 
@@ -36,13 +36,20 @@ func TestMergePrompt(t *testing.T) {
 }
 
 func TestBuildMeta(t *testing.T) {
-	m := &modeSetup{sys: &config.SystemConfig{APIKey: "k", RobotIP: "1.2.3.4"}}
+	m := &modeSetup{sys: &config.SystemConfig{APIKey: "k", RobotIP: "1.2.3.4", UseSim: true}}
 	meta := m.buildMeta("greeting")
-	require.Equal(t, map[string]string{
+	require.Equal(t, map[string]any{
 		"api_key":  "k",
 		"robot_ip": "1.2.3.4",
+		"use_sim":  true,
 		"mode":     "greeting",
 	}, meta)
+}
+
+func TestBuildMetaOmitsUseSimWhenFalse(t *testing.T) {
+	m := &modeSetup{sys: &config.SystemConfig{APIKey: "k"}}
+	_, ok := m.buildMeta("greeting")["use_sim"]
+	require.False(t, ok, "use_sim is omitted when not enabled, like other zero-value fields")
 }
 
 func TestBuildMetaOmitsEmpty(t *testing.T) {

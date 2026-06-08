@@ -1,4 +1,4 @@
-package arm_g1
+package arm
 
 import (
 	"context"
@@ -45,39 +45,39 @@ type ArmInput struct {
 
 func init() {
 	actions.RegisterInterface(
-		"arm_g1",
+		"unitree_g1_arm",
 		"Action interface for Unitree G1 arm gesture control. "+
 			"Publishes custom arm motion commands to the g1_arm_action ROS2 node via Zenoh. "+
 			"Supported gestures: shake_hand, face_wave, hands_up, stand_still, show_hand, wave.",
 		ArmInput{},
 	)
-	actions.Register("arm_g1/zenoh", NewArmG1ZenohConnector)
+	actions.Register("unitree_g1_arm/zenoh", NewArmG1ZenohConnector)
 }
 
 type zenohConnector struct {
 	log       *zap.Logger
-	session   *zenohsession.Session
-	publisher *zenohsession.Publisher
+	session   zenohsession.Session
+	publisher zenohsession.Publisher
 }
 
 // NewArmG1ZenohConnector creates a new zenohConnector with the provided configuration.
 func NewArmG1ZenohConnector(cfg map[string]any) (actions.Connector, error) {
-	log := logger.Get()
+	log := logger.Get().Named("unitree_g1_arm/zenoh")
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		log.Warn("arm_g1/zenoh: zenoh unavailable, arm gestures disabled", zap.Error(err))
+		log.Warn("zenoh unavailable, arm gestures disabled", zap.Error(err))
 		return &zenohConnector{log: log}, nil
 	}
 
 	pub, err := sess.DeclarePublisher(sportRequestTopic)
 	if err != nil {
 		sess.Close()
-		log.Warn("arm_g1/zenoh: failed to declare publisher, arm gestures disabled", zap.Error(err))
+		log.Warn("failed to declare publisher, arm gestures disabled", zap.Error(err))
 		return &zenohConnector{log: log}, nil
 	}
 
-	log.Info("arm_g1/zenoh: zenoh session opened")
+	log.Info("zenoh session opened")
 	return &zenohConnector{log: log, session: sess, publisher: pub}, nil
 }
 
@@ -85,7 +85,7 @@ func NewArmG1ZenohConnector(cfg map[string]any) (actions.Connector, error) {
 func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("arm_g1/zenoh: unexpected input type %T", input)
+		return nil, fmt.Errorf("unitree_g1_arm/zenoh: unexpected input type %T", input)
 	}
 	action, _ := args["action"].(string)
 	if action == "" || action == "idle" {
@@ -99,11 +99,11 @@ func (z *zenohConnector) Connect(_ context.Context, input actions.Input) (action
 	parameter := fmt.Sprintf(`{"action": "%s"}`, action)
 	payload := serializeUnitreeRequest(customAPIID, parameter)
 	if err := z.publisher.Put(payload); err != nil {
-		z.log.Error("arm_g1/zenoh: put failed", zap.Error(err))
+		z.log.Error("put failed", zap.Error(err))
 		return nil, err
 	}
 
-	z.log.Info("arm_g1/zenoh: published", zap.String("action", action), zap.String("mapped", action))
+	z.log.Info("published", zap.String("action", action), zap.String("mapped", action))
 	return nil, nil
 }
 
@@ -117,13 +117,13 @@ func (z *zenohConnector) Stop() {
 	if z.publisher != nil {
 		z.publisher.Drop()
 		z.publisher = nil
-		z.log.Info("arm_g1/zenoh: publisher dropped")
+		z.log.Info("publisher dropped")
 	}
 
 	if z.session != nil {
 		z.session.Close()
 		z.session = nil
-		z.log.Info("arm_g1/zenoh: zenoh session closed")
+		z.log.Info("zenoh session closed")
 	}
 
 }

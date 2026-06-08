@@ -1,4 +1,4 @@
-package inputs
+package asr
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		alternativeLanguages: cfg.AlternativeLanguages,
 		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("GoogleASRRTSPInput: rtsp config",
+	core.log.Info("rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.Int("chunk", cfg.Chunk),
 	)
@@ -92,8 +92,8 @@ func (s *GoogleASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer close(out)
 		defer s.Stop()
 
-		if err := s.wsClient.Connect(); err != nil {
-			s.log.Error("GoogleASRRTSPInput: ws connect failed", zap.Error(err))
+		if err := s.connect(); err != nil {
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
@@ -115,13 +115,13 @@ func (s *GoogleASRRTSPSensor) Stop() {
 		return
 	}
 
-	s.log.Info("GoogleASRRTSPInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
 
-	s.log.Info("GoogleASRRTSPInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // captureLoop runs the RTSP stream and reconnects on failure until ctx is cancelled.
@@ -141,8 +141,8 @@ func (s *GoogleASRRTSPSensor) captureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("GoogleASRRTSPInput: RTSP audio error", zap.Error(err))
-			s.log.Info("GoogleASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("RTSP audio error", zap.Error(err))
+			s.log.Info("reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -179,7 +179,7 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("GoogleASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)

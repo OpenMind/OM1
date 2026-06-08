@@ -12,7 +12,7 @@ This example takes two inputs, emotional state and voice inputs, sends them to a
 
 Run
 ```bash
-uv run src/run.py cubly
+make run CONFIG=cubly
 ```
 
 You should see your webcam light turn on and Cubly should speak to you from your default laptop speaker. You can see what is happening in the terminal logs.

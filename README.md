@@ -10,7 +10,7 @@
 
 ## Capabilities of OM1
 
-* **Modular Architecture**: Designed with Python for simplicity and seamless integration.
+* **Modular Architecture**: Written in Go for performance and seamless integration.
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
@@ -19,13 +19,38 @@
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
 
+## Go vs. Python Feature Comparison
+
+OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still **under active development** and not yet available in Go. The table below gives a high-level comparison to help you choose the right runtime for your use case.
+
+| Capability | Python | Go | Notes |
+| --- | :---: | :---: | --- |
+| Core agent runtime (input → LLM → action) | ✅ | ✅ | Fully supported in both. |
+| LLM providers (OpenAI, xAI, DeepSeek, Anthropic, Gemini, NearAI, Ollama, OpenRouter, Qwen) | ✅ | ✅ | Broad provider support in both. |
+| ASR (ElevenLabs, Google, Riva) | ✅ | ✅ | Including RTSP streaming variants. |
+| Text-to-Speech (`speak`) | ✅ | ✅ | Supported in both. |
+| Visual Language Models (VLM) | ✅ | ✅ | OpenAI/Gemini are supported. |
+| Metrics & observability (Prometheus + Grafana) | ✅ | ✅ | Supported in both. |
+| Simulators (Gazebo, Isaac Sim) | ✅ | ✅ | Two types of the Zenoh backends are supported. |
+| Hardware connectors (ROS2, Zenoh, CycloneDDS) | ✅ | 🚧 | Go currently focuses on Zenoh; broader connector parity in progress. |
+| Locomotion & robot actions (move/navigate variants for Go2, G1, TurtleBot4, etc.) | ✅ | 🚧 | Go currently ships `arm_g1`, `emotion`, `greeting_conversation`, `speak`. |
+| Sensor inputs (GPS, RTK, LIDAR, odometry, localization, battery) | ✅ | 🚧 | Under development for Go. |
+| Web & social inputs (Twitter/X, news, weather) | ✅ | 🚧 | Under development for Go. |
+| Messaging integrations (Telegram, Discord) | ✅ | 🚧 | Under development for Go. |
+| Full autonomy with BrainPack (Navigation, SLAM, Auto Charging) | ✅ | 🚧 | Under development for Go. |
+
+> [!NOTE]
+> Legend: ✅ available · 🚧 under development / not yet available in Go.
+>
+> The Go feature set is expanding quickly. If a capability you need is marked 🚧, the [Python runtime](https://github.com/OpenMind/OM1/tree/python) is the recommended choice for now. Check back as parity improves, and see [Contributing](#contributing) if you'd like to help close the gap.
+
 ## Getting Started
 
-If you are new to OM1, this is the fastest path to a successful first run using the `spot` agent.
+If you are new to OM1, this is the fastest path to a successful first run using the `conversation` agent.
 
-Spot uses your webcam to detect objects and sends those observations to the LLM. The model then returns move/speak/emotion outputs as logs and API responses.
+The conversation agent uses your webcam and microphone to enable natural voice interactions with an AI. The model processes visual and audio inputs and responds through speech.
 
-Spot in this quick start is the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and does not execute robot hardware actions.
+This quick start uses the default starter configuration to help you understand the OM1 pipeline. It visualizes state updates in the terminal and demonstrates the input-LLM-action flow.
 
 ### Quick Start (5 Minutes)
 
@@ -36,8 +61,8 @@ Spot in this quick start is the default starter configuration to help you unders
 
 ### Prerequisites
 
-- Python 3.10+
-- [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/)
+- Go 1.23.0+ ([installation guide](https://go.dev/doc/install))
+- `make` build tool
 - Webcam access (recommended if configuring VLM)
 
 Install system packages:
@@ -52,7 +77,7 @@ brew install portaudio ffmpeg
 For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
+sudo apt-get install -y portaudio19-dev ffmpeg
 ```
 
 ### 2. Clone
@@ -60,8 +85,8 @@ sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
 ```bash
 git clone https://github.com/OpenMind/OM1.git
 cd OM1
-git submodule update --init
-uv venv
+make deps
+make build
 ```
 
 ### 3. Configure API Key
@@ -88,21 +113,26 @@ OM_API_KEY=<your_api_key>
 ```
 in `.env`.
 
-You can also verify or adjust the fallback key location in `config/spot.json5`.
+You can also verify or adjust the fallback key location in `config/conversation.json5`.
 
-### 4. Launch Spot
+### 4. Launch the Agent
 
 ```bash
-uv run src/run.py spot
+CONFIG=conversation make run
+```
+
+Or for development with debug logging:
+```bash
+CONFIG=conversation make dev
 ```
 
 #### Verify It Is Working
 
 Your setup is successful if:
 
-- The terminal shows the Spot agent has started successfully.
+- The terminal shows the agent has started successfully.
 - You see input processing and LLM responses logged in the terminal.
-- The agent responds to camera input and generates appropriate outputs.
+- The agent responds to voice and camera input with speech output.
 
 ### 5. Monitor with Grafana (Optional)
 
@@ -117,7 +147,7 @@ Navigate to <http://localhost:3000> in your browser (default login: `admin`/`adm
 ### Troubleshooting
 
 - `Authentication` errors: confirm `OM_API_KEY` is set and not expired.
-- `No module` errors: run the command with `uv run` from the repo root.
+- `Build` errors: ensure Go 1.23.0+ is installed and run `make deps` first.
 - `Camera` access issues: grant terminal/IDE camera permissions in OS settings.
 - `Address already in use` on port `8000`: stop the conflicting process or free the port.
 
@@ -129,7 +159,8 @@ Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
 For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
-> **Note:** This quick start uses the Spot starter configuration. For voice interactions, ensure ASR and TTS are configured in `config/spot.json5`.
+> [!NOTE]
+> For voice interactions, ensure ASR and TTS are configured in `config/conversation.json5`.
 
 ## What's Next?
 
@@ -140,14 +171,13 @@ For more help connecting OM1 to your robot hardware, see [getting started](https
 
 ## Interfacing with New Robot Hardware
 
-OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `src/actions/move/connector/ros2.py`:
+OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `plugins/actions/move/ros2.go`:
 
-```python
-...
-elif output_interface.action == "shake paw":
-    if self.sport_client:
-        self.sport_client.Hello()
-...
+```go
+case "shake paw":
+    if connector.sportClient != nil {
+        connector.sportClient.Hello()
+    }
 ```
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
@@ -211,4 +241,4 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 
 ## License
 
-This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+This project is licensed under the terms of the [MIT License](./LICENSE).

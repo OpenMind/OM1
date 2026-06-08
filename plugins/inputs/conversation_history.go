@@ -54,8 +54,8 @@ func NewConversationHistory(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.MaxRounds = conversationHistoryDefaultRounds
 	}
 
-	log := logger.Get()
-	log.Info("ConversationHistoryInput: initializing",
+	log := logger.Get().Named("ConversationHistoryInput")
+	log.Info("initializing",
 		zap.Int("max_rounds", cfg.MaxRounds),
 	)
 
@@ -162,7 +162,7 @@ func (s *ConversationHistorySensor) FormattedLatestBuffer() string {
 
 	lines := make([]string, len(s.messages))
 	for i, msg := range s.messages {
-		lines[i] = fmt.Sprintf("User: %s", msg.Message)
+		lines[i] = fmt.Sprintf("\n%s : %s\n", conversationHistoryDescriptor, msg.Message)
 	}
 
 	return fmt.Sprintf("%s: %q", conversationHistoryDescriptor, strings.Join(lines, "; "))
@@ -180,5 +180,5 @@ func (s *ConversationHistorySensor) Stop() {
 	s.messages = nil
 	s.mu.Unlock()
 
-	s.log.Info("ConversationHistoryInput: stopping sensor")
+	s.log.Info("stopping sensor")
 }

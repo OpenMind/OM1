@@ -123,7 +123,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Install `portaudio`, `ffmpeg` and other dependencies:
 
 ```bash
-sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev python3-dev
+sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev
 ```
 
 Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues).
@@ -148,7 +148,7 @@ pactl set-default-sink alsa_output.platform-bcm2835_audio.stereo-fallback
 * Launch OM1
 
 ```bash
-uv run src/run.py turtlebot4_lidar_gps
+make run CONFIG=turtlebot4_lidar_gps
 ```
 
 On the RPi4, there will be a lengthy delay before OM1 runs the first time you invoke this command.
@@ -160,7 +160,7 @@ Install OM1 and Zenoh on your laptop, following [Install OM1 on your laptop](../
 Then, run OM1:
 
 ```bash
-uv run src/run.py turtlebot4
+make run CONFIG=turtlebot4
 ```
 
 Please make sure that your development machine (e.g. your laptop) is running the same version of the Zenoh bridge (e.g. 1.2.1) as the RPi otherwise you will get errors. When you run OM1 on your laptop, OM1 will use your laptop's microphone, speaker, and camera inputs/outputs, rather than the sensors on the TurtleBot4.

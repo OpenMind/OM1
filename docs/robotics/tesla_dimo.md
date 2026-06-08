@@ -39,7 +39,7 @@ If everything is set up correctly, you should be able to view your Tesla data in
 
 Run
 ```bash Run Robot
-uv run src/run.py tesla
+make run CONFIG=tesla
 ```
 
 ## Configuration

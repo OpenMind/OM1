@@ -23,8 +23,9 @@ const (
 
 	statusConversation = byte(3)
 
-	tickInterval = 10 * time.Second
-	ttsTimeout   = 30 * time.Second
+	tickInterval    = 10 * time.Second
+	ttsTimeout      = 30 * time.Second
+	ttsPollInterval = 100 * time.Millisecond
 )
 
 // ConversationStateEnum is the LLM-facing enum for the conversation_state field.
@@ -73,12 +74,11 @@ type Connector struct {
 	log      *zap.Logger
 	tts      *tts.ElevenLabsProvider
 	greeting *providers.GreetingConversationStateMachineProvider
-	session  *zenoh.Session
+	session  zenoh.Session
 
 	mu                       sync.Mutex
 	greetingStatus           providers.ConversationState
 	conversationFinishedSent bool
-	pendingFinishedUpdate    bool
 	ttsPlaying               bool
 	ttsPlayingStart          time.Time
 }
@@ -105,7 +105,7 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 		cfg.Rate = tts.DefaultRate
 	}
 
-	log := logger.Get()
+	log := logger.Get().Named("greeting_conversation")
 
 	tts := tts.ElevenLabs(tts.ElevenLabsConfig{
 		APIKey:           cfg.APIKey,
@@ -127,10 +127,10 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 	}
 
 	if sess, err := zenoh.Open(); err != nil {
-		log.Warn("greeting_conversation: Zenoh unavailable, status/context updates disabled", zap.Error(err))
+		log.Warn("Zenoh unavailable, status/context updates disabled", zap.Error(err))
 	} else {
 		c.session = sess
-		log.Info("greeting_conversation: Zenoh session opened")
+		log.Info("Zenoh session opened")
 	}
 
 	return c, nil
@@ -149,7 +149,7 @@ func (c *Connector) Connect(_ context.Context, input actions.Input) (actions.Out
 	confidence := util.FloatFrom(args["confidence"], 0.0)
 	speechClarity := util.FloatFrom(args["speech_clarity"], 1.0)
 
-	c.log.Info("greeting_conversation: turn",
+	c.log.Info("turn",
 		zap.String("conversation_state", conversationState),
 		zap.String("response", response),
 		zap.Float64("confidence", confidence),
@@ -179,7 +179,7 @@ func (c *Connector) Connect(_ context.Context, input actions.Input) (actions.Out
 	c.mu.Unlock()
 	c.publishCountdown(currentState)
 
-	c.log.Info("greeting_conversation: state update", zap.Any("state_update", stateUpdate))
+	c.log.Info("state update", zap.Any("state_update", stateUpdate))
 
 	if currentState == providers.StateFinished {
 		c.handleFinished()
@@ -198,7 +198,7 @@ func (c *Connector) Tick(ctx context.Context) {
 	}
 
 	if c.waitingOnTTS() {
-		c.log.Info("greeting_conversation: skipping tick during active TTS playback")
+		c.log.Info("skipping tick during active TTS playback")
 		return
 	}
 
@@ -216,7 +216,7 @@ func (c *Connector) Tick(ctx context.Context) {
 		c.conversationFinishedSent = true
 		c.mu.Unlock()
 		if send {
-			c.log.Info("greeting_conversation: finished (detected in tick)")
+			c.log.Info("finished (detected in tick)")
 			c.updateContextFinished()
 		}
 	}
@@ -225,19 +225,18 @@ func (c *Connector) Tick(ctx context.Context) {
 // Stop releases the Zenoh session. The shared ElevenLabs provider manages its
 // own lifecycle and is not stopped here.
 func (c *Connector) Stop() {
-	c.log.Info("greeting_conversation: stopping")
+	c.log.Info("stopping")
 	c.mu.Lock()
 	sess := c.session
 	c.session = nil
 	c.mu.Unlock()
 	if sess != nil {
 		sess.Close()
-		c.log.Info("greeting_conversation: Zenoh session closed")
+		c.log.Info("Zenoh session closed")
 	}
 }
 
-// handleFinished records the finished transition and updates context, deferring
-// the context update until TTS playback completes if it is still in progress.
+// handleFinished updates context to trigger the mode switch when the conversation finishes.
 func (c *Connector) handleFinished() {
 	c.mu.Lock()
 	if c.conversationFinishedSent {
@@ -246,22 +245,41 @@ func (c *Connector) handleFinished() {
 	}
 	c.conversationFinishedSent = true
 	speaking := c.ttsPlaying
-	if speaking {
-		c.pendingFinishedUpdate = true
-	}
 	c.mu.Unlock()
 
-	if speaking {
-		c.log.Info("greeting_conversation: finished, waiting for TTS to complete before updating context")
+	if !speaking {
+		c.log.Info("finished")
+		c.updateContextFinished()
 		return
 	}
-	c.log.Info("greeting_conversation: finished")
+
+	c.log.Info("finished, waiting for TTS to complete before switching")
+	go c.switchWhenTTSDone()
+}
+
+// switchWhenTTSDone waits for TTS playback to drain or time out, then updates context to trigger the mode switch.
+func (c *Connector) switchWhenTTSDone() {
+	deadline := time.Now().Add(ttsTimeout)
+	ticker := time.NewTicker(ttsPollInterval)
+	defer ticker.Stop()
+
+	for tts.Busy() {
+		<-ticker.C
+		if time.Now().After(deadline) {
+			c.log.Warn("TTS playback timed out, switching anyway")
+			break
+		}
+	}
+
+	c.mu.Lock()
+	c.ttsPlaying = false
+	c.mu.Unlock()
+
+	c.log.Info("TTS completed, switching")
 	c.updateContextFinished()
 }
 
-// waitingOnTTS reports whether playback is still active. When playback has just
-// completed it flushes any pending finished-context update; on timeout it gives
-// up waiting so ticks can resume.
+// waitingOnTTS returns true if the connector is currently waiting on TTS playback to drain before switching out of the conversation.
 func (c *Connector) waitingOnTTS() bool {
 	c.mu.Lock()
 	if !c.ttsPlaying {
@@ -269,25 +287,19 @@ func (c *Connector) waitingOnTTS() bool {
 		return false
 	}
 	elapsed := time.Since(c.ttsPlayingStart)
-	stillSpeaking := tts.Speaking.Load()
+	c.mu.Unlock()
 
+	stillSpeaking := tts.Busy()
 	if stillSpeaking && elapsed <= ttsTimeout {
-		c.mu.Unlock()
 		return true
 	}
 
+	c.mu.Lock()
 	c.ttsPlaying = false
-	timedOut := stillSpeaking && elapsed > ttsTimeout
-	pending := c.pendingFinishedUpdate
-	c.pendingFinishedUpdate = false
 	c.mu.Unlock()
 
-	if timedOut {
-		c.log.Warn("greeting_conversation: TTS playback timed out", zap.Duration("elapsed", elapsed))
-	}
-	if pending {
-		c.log.Info("greeting_conversation: TTS completed, updating context greeting_conversation_finished=true")
-		c.updateContextFinished()
+	if stillSpeaking && elapsed > ttsTimeout {
+		c.log.Warn("TTS playback timed out", zap.Duration("elapsed", elapsed))
 	}
 	return false
 }
@@ -317,17 +329,17 @@ func (c *Connector) publishCountdown(state providers.ConversationState) {
 	payload := serializePersonGreetingStatus(requestID, statusConversation, string(message))
 
 	if err := sess.Put(personGreetingTopic, payload); err != nil {
-		c.log.Error("greeting_conversation: failed to publish PersonGreetingStatus", zap.Error(err))
+		c.log.Error("failed to publish PersonGreetingStatus", zap.Error(err))
 		return
 	}
-	c.log.Info("greeting_conversation: published PersonGreetingStatus", zap.ByteString("message", message))
+	c.log.Info("published PersonGreetingStatus", zap.ByteString("message", message))
 }
 
 // updateContextFinished publishes greeting_conversation_finished=true so the
 // ModeManager can fire its context-aware transition out of the conversation mode.
 func (c *Connector) updateContextFinished() {
 	providers.ModeContext().Publish(map[string]any{"greeting_conversation_finished": true})
-	c.log.Info("greeting_conversation: context greeting_conversation_finished=true")
+	c.log.Info("context greeting_conversation_finished=true")
 }
 
 func (c *Connector) currentStatus() providers.ConversationState {

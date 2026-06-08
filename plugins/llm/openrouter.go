@@ -25,7 +25,6 @@ const (
 	defaultOpenRouterBaseURL string          = "https://api.openmind.com/api/core/openrouter"
 )
 
-// NewOpenRouter creates an OpenRouter LLM using the OpenAI-compatible API.
 func NewOpenRouter(configMap map[string]any) (llm.LLM, error) {
 	return newOpenAICompat("OpenRouter", configMap, defaultOpenRouterModel, defaultOpenRouterBaseURL, "auto", true)
 }

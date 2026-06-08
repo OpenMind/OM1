@@ -23,6 +23,9 @@
         enable_tts_interrupt: false,
       },
     },
+    {
+      type: "VLMGemini",
+    }
   ],
   cortex_llm: {
     type: "GeminiLLM",

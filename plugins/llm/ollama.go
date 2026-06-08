@@ -12,6 +12,7 @@ import (
 
 	"github.com/openmind/om1/internal/httpclient"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/metrics"
 )
 
 func init() {
@@ -32,8 +33,6 @@ type ollamaConfig struct {
 	NumCtx      int     `json:"num_ctx"`
 }
 
-// ollamaLLM talks to a local Ollama server over its native /api/chat protocol,
-// providing privacy-focused, offline-capable inference.
 type ollamaLLM struct {
 	config  ollamaConfig
 	chatURL string
@@ -56,14 +55,11 @@ func NewOllama(configMap map[string]any) (llm.LLM, error) {
 	return &ollamaLLM{config: cfg, chatURL: baseURL + "/api/chat"}, nil
 }
 
-// FunctionSchemas returns the current function schemas registered with the LLM.
 func (o *ollamaLLM) FunctionSchemas() []map[string]any { return o.schemas }
 
-// SetSchemas updates the function schemas that the LLM will use for tool calls.
 func (o *ollamaLLM) SetSchemas(schemas []map[string]any) { o.schemas = schemas }
 
-// ollamaResp models the structure of the response from Ollama's /api/chat endpoint.
-type ollamaResp struct {
+type OllamaResp struct {
 	Message struct {
 		Content   string `json:"content"`
 		ToolCalls []struct {
@@ -77,7 +73,6 @@ type ollamaResp struct {
 	EvalCount       int `json:"eval_count"`
 }
 
-// Call sends a prompt and conversation history to the Ollama server and returns the response.
 func (o *ollamaLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
 	requestBody := map[string]any{
 		"model":    o.config.Model,
@@ -110,14 +105,15 @@ func (o *ollamaLLM) Call(ctx context.Context, prompt string, history []llm.Messa
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	recordResponseLatency("OllamaLLM", o.config.Model, o.chatURL, req, resp, start)
+	metrics.RecordResponseLatency(metrics.LLMLatency, metrics.LLMLatencyLast,
+		"OllamaLLM", o.config.Model, o.chatURL, req, resp, start)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("OllamaLLM: api %d: %s", resp.StatusCode, body)
 	}
 
-	var apiResponse ollamaResp
+	var apiResponse OllamaResp
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
 		return nil, fmt.Errorf("OllamaLLM: parse response: %w", err)
 	}

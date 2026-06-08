@@ -23,28 +23,31 @@ icon: play
 
 Ensure you have the following installed on your machine:
 
-- `Python` >= 3.10
-- `uv` >= 0.6.2 as the Python package manager and virtual environment
+- `Go` >= 1.23.0 ([installation guide](https://go.dev/doc/install))
+- `make` build tool
 - `portaudio` for audio input and output
 - `ffmpeg` for video processing
 - Get your OpenMind API key [here](https://portal.openmind.com/)
 
-#### UV (A Rust and Python package manager)
+#### Go Installation
 
 ```bash
-# Mac
-brew install uv
+# macOS
+brew install go
 
-# Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Linux - download from https://go.dev/dl/ or use your package manager
+sudo apt-get update
+sudo apt-get install golang-go
 ```
+
+For other platforms, download from https://go.dev/dl/
 
 #### PortAudio Library
 
 For audio functionality, install `portaudio`:
 
 ```bash
-# Mac
+# macOS
 brew install portaudio
 
 # Linux
@@ -52,20 +55,12 @@ sudo apt-get update
 sudo apt-get install portaudio19-dev
 ```
 
-#### Install python3-dev
-
-```bash
-# Linux
-sudo apt-get update
-sudo apt-get install python3-dev
-```
-
 #### ffmpeg
 
 For video functionality, install FFmpeg:
 
 ```bash
-# Mac
+# macOS
 brew install ffmpeg
 
 # Linux
@@ -82,17 +77,18 @@ source $HOME/.cargo/env
 
 ## CLI
 
-OM1 provides a command-line interface (CLI). The main entry point is `src/run.py` which provides the following commands:
-
-- `start`: Start an agent with a specified config
+OM1 provides a command-line interface (CLI). The main entry point is the `om1` binary built from `cmd/main.go` which provides the following options:
 
 ```bash
-uv run src/run.py start [config_name] [--log-level] [--log-to-file]
+CONFIG=[config_name] make run
 ```
 
 - `config_name`: Name of the config file (without `.json5` extension) in the `/config` directory.
-- `--log-level`: Optional log level (default: `INFO`). Use `DEBUG` for detailed logs.
-- `--log-to-file`: Optional flag to log to `logs/{config_name}.log` (default: `False`).
+
+For development with debug logging:
+```bash
+CONFIG=[config_name] make dev
+```
 
 ## Installation and Setup
 
@@ -103,16 +99,37 @@ Run the following commands to clone the repository and set up the environment:
 ```bash clone repo
 git clone https://github.com/OpenMind/OM1.git
 cd OM1
-git submodule update --init
-uv venv
+make deps
+make build
 ```
+
+**What these commands do:**
+
+- `make deps` - Downloads and installs all Go module dependencies, fetches the zenoh-c library, and ensures your environment is ready for building.
+- `make build` - Compiles the OM1 binary from source code.
+
+Dependencies are managed via Go modules (`go.mod` and `go.sum`).
+
+**Adding New Dependencies**
+
+To add a new Go package:
+
+```bash
+go get <package>    # Add the dependency
+make deps           # Tidy and verify modules
+```
+
+**Best Practices:**
+- Keep dependencies minimal and prefer well-maintained packages
+- Run `make check` before committing (runs fmt, vet, lint, and test)
+- Use `make fmt` to format code and `make lint` to check for issues
 
 2. Set the configuration variables
 
-Locate the `config` folder and add your OpenMind API key to `/config/spot.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.com/.
+Locate the `config` folder and add your OpenMind API key to `/config/conversation.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.com/.
 
 ```bash
-# /config/spot.json5
+# /config/conversation.json5
 ...
 "api_key": "om1_live_..."
 ...
@@ -126,29 +143,29 @@ Or, create a `.env` file in the project directory and add the following:
 OM_API_KEY=om1_live_...
 ```
 
-3. Run the Spot Agent
+3. Run the Conversation Agent
 
-Run the following command to start the Spot Agent:
+Run the following command to start the Conversation Agent:
 
 ```bash
-uv run src/run.py spot
+CONFIG=conversation make run
 ```
 
-> **Note:** Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
+> **Note:** Agent configuration names are only required when switching between different agents.
 
-Spot is just an example agent configuration.
+The conversation agent is just an example agent configuration.
 
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `conversation.json5`.
 
 ASR configuration (check in agent_inputs)
-```bash
+```json5
 {
       "type": "GoogleASRInput"
 }
 ```
 
 TTS configuration (check in agent_actions)
-```bash
+```json5
 {
       name: "speak",
       llm_label: "speak",
@@ -161,31 +178,7 @@ TTS configuration (check in agent_actions)
 }
 ```
 
-During the first execution, the system will automatically resolve and install all project dependencies. This process may take several minutes to complete before the agent becomes operational.
-
-**Runtime Configuration**
-
-Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
-
-**Subsequent Executions**
-
-After the initial run, you can start the agent using the simplified command:
-
-```bash
-uv run src/run.py
-```
-
-![ ](../.gitbook/assets/hot_reload.png)
-
-The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
-
-**Switching Agent Configurations**
-
-To run a different agent (for example, the conversation agent), specify the configuration name explicitly:
-
-```bash
-uv run src/run.py conversation
-```
+During the first build, the system will automatically download the zenoh-c library and resolve all Go dependencies. This process may take several minutes to complete.
 
 ### Prometheus and Grafana Monitoring
 
@@ -201,7 +194,7 @@ Then navigate to [http://localhost:3000](http://localhost:3000) (default login: 
 
 ### Understanding the Log Data
 
-The log data provide insight into how the `spot` agent makes sense of its environment and decides on its next actions.
+The log data provide insight into how the `conversation` agent makes sense of its environment and decides on its next actions.
 
   - First, it detects a person using vision.
   - Communicates with an external AI API for response generation.
@@ -241,16 +234,16 @@ INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), C
 
 There are more pre-configured agents in the `/config` folder. They can be run with the following command:
 
-For example, to run the `cubly` agent:
+For example, to run the `greeting_conversation` agent:
 
 ```bash
-uv run src/run.py cubly
+CONFIG=greeting_conversation make run
 ```
 
 If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
 
 ```bash
-uv run src/run.py <agent_name>
+CONFIG=<agent_name> make run
 ```
 
 To get started with development, refer [here](../developer_cookbook/introduction.md)

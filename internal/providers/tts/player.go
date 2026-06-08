@@ -66,6 +66,7 @@ func (p *ttsBase) AddText(text string) {
 func (p *ttsBase) AddTextWithVoice(text, voiceID string) {
 	select {
 	case p.queue <- ttsRequest{text: text, voiceID: voiceID, generation: generation.Load()}:
+		pending.Add(1)
 	default:
 		p.log.Warn(p.name+": queue full, dropping", zap.String("text", text))
 	}
@@ -94,37 +95,48 @@ func (p *ttsBase) processAudio() {
 			if !ok {
 				return
 			}
-
-			if req.generation < generation.Load() {
-				continue
-			}
-
-			if !p.initFFPlay() {
-				p.log.Error(p.name + ": ffplay unavailable, dropping utterance")
-				continue
-			}
-
-			if p.preRollSilenceMs > 0 {
-				p.streamChunk(silenceBytes(p.rate, p.preRollSilenceMs))
-			}
-
-			Speaking.Store(true)
-			err := p.synth(req)
-			if Interrupt.Load() {
-				p.handleInterrupt()
-			} else {
-				if err != nil && p.ctx.Err() == nil {
-					p.log.Error(p.name+": synthesis failed", zap.Error(err))
-				}
-
-				p.finishPlayback()
-
-				if Interrupt.Load() {
-					p.handleInterrupt()
-				}
-			}
-			Speaking.Store(false)
+			p.handleRequest(req)
 		}
+	}
+}
+
+// handleRequest synthesizes and plays a single dequeued utterance. It always
+// clears the request's pending count when done, so pending stays positive for
+// the whole lifetime of the utterance (including the gap before Speaking is
+// set) and Busy reflects queued-but-unplayed speech.
+func (p *ttsBase) handleRequest(req ttsRequest) {
+	defer pending.Add(-1)
+
+	if req.generation < generation.Load() {
+		return
+	}
+
+	if !p.initFFPlay() {
+		p.log.Error(p.name + ": ffplay unavailable, dropping utterance")
+		return
+	}
+
+	if p.preRollSilenceMs > 0 {
+		p.streamChunk(silenceBytes(p.rate, p.preRollSilenceMs))
+	}
+
+	Speaking.Store(true)
+	defer Speaking.Store(false)
+
+	err := p.synth(req)
+	if Interrupt.Load() {
+		p.handleInterrupt()
+		return
+	}
+
+	if err != nil && p.ctx.Err() == nil {
+		p.log.Error(p.name+": synthesis failed", zap.Error(err))
+	}
+
+	p.finishPlayback()
+
+	if Interrupt.Load() {
+		p.handleInterrupt()
 	}
 }
 

@@ -1,4 +1,4 @@
-package inputs
+package asr
 
 import (
 	"context"
@@ -22,8 +22,8 @@ func init() {
 	inputs.Register("ElevenLabsASRInput", NewElevenLabsASR)
 }
 
-// elevenlabsLanguageCodeMap maps friendly language names to the short codes
-// accepted by the ElevenLabs ASR service. "auto" enables language detection.
+// elevenlabsLanguageCodeMap maps friendly language names to ElevenLabs short codes;
+// "auto" enables language detection.
 var elevenlabsLanguageCodeMap = map[string]string{
 	"auto":       "auto",
 	"english":    "en",
@@ -64,8 +64,7 @@ type elevenlabsASRParams struct {
 	enableTTSInterrupt bool
 }
 
-// ElevenLabsASRSensor captures audio from a local microphone (via PortAudio) and
-// streams it to the ElevenLabs ASR websocket through the shared asrCommon.
+// ElevenLabsASRSensor streams local microphone audio to ElevenLabs ASR via the shared asrCommon.
 type ElevenLabsASRSensor struct {
 	*asrCommon
 
@@ -98,7 +97,7 @@ func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("ElevenLabsASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
+	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &ElevenLabsASRSensor{
 		asrCommon:  core,
@@ -115,17 +114,17 @@ func (s *ElevenLabsASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer s.Stop()
 
 		if err := providers.PortAudio.Acquire(); err != nil {
-			s.log.Error("ElevenLabsASRInput: portaudio init failed", zap.Error(err))
+			s.log.Error("portaudio init failed", zap.Error(err))
 			return
 		}
 
-		if err := s.wsClient.Connect(); err != nil {
-			s.log.Error("ElevenLabsASRInput: ws connect failed", zap.Error(err))
+		if err := s.connect(); err != nil {
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
 		if err := s.openMic(ctx); err != nil {
-			s.log.Error("ElevenLabsASRInput: mic open failed", zap.Error(err))
+			s.log.Error("mic open failed", zap.Error(err))
 			return
 		}
 
@@ -141,14 +140,14 @@ func (s *ElevenLabsASRSensor) Stop() {
 		return
 	}
 
-	s.log.Info("ElevenLabsASRInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
 
-	s.log.Info("ElevenLabsASRInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // openMic initializes PortAudio, opens the configured microphone stream, and starts the capture loop.
@@ -175,7 +174,7 @@ func (s *ElevenLabsASRSensor) openMic(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("ElevenLabsASRInput: microphone",
+	s.log.Info("microphone",
 		zap.String("device", device.Name),
 		zap.Int("rate", s.cfg.Rate),
 		zap.Int("chunk", s.cfg.Chunk),
@@ -209,7 +208,7 @@ func (s *ElevenLabsASRSensor) openMic(ctx context.Context) error {
 
 	go s.captureLoop(ctx, stream)
 	go s.statsLoop(ctx)
-	s.log.Info("ElevenLabsASRInput: microphone started")
+	s.log.Info("microphone started")
 	return nil
 }
 
@@ -238,7 +237,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 		}
 
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
-			s.log.Warn("ElevenLabsASRInput: read error", zap.Error(err))
+			s.log.Warn("read error", zap.Error(err))
 		}
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
@@ -256,6 +255,11 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 
 // newElevenLabsASRCommon resolves ElevenLabs-specific config and builds the shared asrCommon with the ElevenLabs parser.
 func newElevenLabsASRCommon(p elevenlabsASRParams) *asrCommon {
+	return newASRCommon(resolveElevenLabsASRConfig(p))
+}
+
+// resolveElevenLabsASRConfig maps ElevenLabs vendor parameters to a transcriberStream config.
+func resolveElevenLabsASRConfig(p elevenlabsASRParams) asrCommonConfig {
 	language := strings.TrimSpace(strings.ToLower(p.language))
 	if language == "" {
 		language = "auto"
@@ -263,7 +267,7 @@ func newElevenLabsASRCommon(p elevenlabsASRParams) *asrCommon {
 
 	languageCode, ok := elevenlabsLanguageCodeMap[language]
 	if !ok {
-		logger.Get().Error(p.name+": unsupported language, defaulting to auto",
+		logger.Get().Named(p.name).Error("unsupported language, defaulting to auto",
 			zap.String("language", language))
 		language = "auto"
 		languageCode = "auto"
@@ -274,9 +278,9 @@ func newElevenLabsASRCommon(p elevenlabsASRParams) *asrCommon {
 		wsURL = fmt.Sprintf("wss://api.openmind.com/api/core/elevenlabs/asr?api_key=%s", p.apiKey)
 	}
 
-	return newASRCommon(asrCommonConfig{
+	return asrCommonConfig{
 		Name:               p.name,
-		Model:              "elevenlabs",
+		Provider:           "elevenlabs",
 		APIVersion:         elevenlabsAPIVersion,
 		WSURL:              wsURL,
 		Rate:               p.rate,
@@ -284,16 +288,17 @@ func newElevenLabsASRCommon(p elevenlabsASRParams) *asrCommon {
 		LanguageCode:       languageCode,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       elevenlabsParseMessage,
-	})
+	}
 }
 
-// elevenlabsParseMessage implements the ElevenLabs ASR protocol (partial marks speech start, committed carries the transcript) and records its latency metric.
-func elevenlabsParseMessage(c *asrCommon, msg ASRMessage) string {
+// elevenlabsParseMessage handles the ElevenLabs ASR protocol (partial marks speech
+// start, committed carries the transcript) and records its latency metric.
+func elevenlabsParseMessage(s *transcriberStream, msg ASRMessage) string {
 	if msg.Type == "partial" {
-		// Record the start time only on the first partial of an utterance, else latency shrinks to time-since-last-partial.
-		if !c.speechStarted {
-			c.speechStartTime = time.Now()
-			c.speechStarted = true
+		// Stamp the start only on the first partial, else latency measures time-since-last-partial.
+		if !s.speechStarted {
+			s.speechStartTime = time.Now()
+			s.speechStarted = true
 		}
 		return ""
 	}
@@ -303,16 +308,16 @@ func elevenlabsParseMessage(c *asrCommon, msg ASRMessage) string {
 	}
 
 	// A committed message ends the segment, so reset the timer even when the transcript is dropped.
-	speechStarted := c.speechStarted
-	speechStartTime := c.speechStartTime
-	c.speechStarted = false
+	speechStarted := s.speechStarted
+	speechStartTime := s.speechStartTime
+	s.speechStarted = false
 
 	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
 		return ""
 	}
 
 	if speechStarted {
-		c.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(speechStartTime))
+		s.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(speechStartTime))
 	}
 	return msg.ASRReply
 }

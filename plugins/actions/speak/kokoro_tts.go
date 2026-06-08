@@ -61,7 +61,7 @@ func NewKokoroTTS(configMap map[string]any) (actions.Connector, error) {
 		cfg.Rate = tts.DefaultKokoroRate
 	}
 
-	log := logger.Get()
+	log := logger.Get().Named("speak/kokoro_tts")
 	kokoro := tts.Kokoro(tts.KokoroConfig{
 		BaseURL:      cfg.BaseURL,
 		APIKey:       cfg.APIKey,
@@ -93,13 +93,13 @@ func (k *KokoroConnector) Connect(_ context.Context, input actions.Input) (actio
 	if k.silenceRate > 0 && k.silenceCounter < k.silenceRate {
 		k.silenceCounter++
 		k.silenceMu.Unlock()
-		k.log.Info("speak/kokoro_tts: skipping (silence_rate)", zap.Int("counter", k.silenceCounter))
+		k.log.Info("skipping (silence_rate)", zap.Int("counter", k.silenceCounter))
 		return nil, nil
 	}
 	k.silenceCounter = 0
 	k.silenceMu.Unlock()
 
-	k.log.Info("speak/kokoro_tts: enqueueing text", zap.String("text", text))
+	k.log.Info("enqueueing text", zap.String("text", text))
 	k.kokoro.AddText(text)
 
 	return nil, nil

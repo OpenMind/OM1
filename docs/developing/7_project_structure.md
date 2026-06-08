@@ -8,17 +8,28 @@ icon: diagram-project
 
 ```tree
 .
+├── cmd/                  # Main entry point
+│   └── main.go
 ├── config/               # Agent configuration files
-├── src/
-│   ├── actions/          # Agent outputs/actions/capabilities
-│   ├── backgrounds/      # Background tasks
+├── internal/             # Core packages
+│   ├── actions/          # Action orchestrators
+│   ├── backgrounds/      # Background task orchestrators
+│   ├── config/           # Configuration loading
 │   ├── fuser/            # Input fusion logic
-│   ├── inputs/           # Input plugins (e.g. VLM, audio)
+│   ├── hooks/            # Function hook registry
+│   ├── inputs/           # Input/sensor orchestrators
 │   ├── llm/              # LLM integration
-│   ├── providers/        # Background tasks
-│   ├── runtime/          # Core runtime system
-│   ├── zenoh_msgs/       # Zenoh's Interface Definition Language (IDL)
-│   └── run.py            # CLI entry point
+│   ├── logger/           # Logging utilities
+│   ├── metrics/          # Prometheus metrics server
+│   ├── providers/        # I/O providers (TTS, ASR, audio)
+│   ├── runtime/          # Core runtime manager
+│   └── zenoh/            # Zenoh integration (CDR codec, session)
+├── plugins/              # Plugin implementations
+│   ├── actions/          # speak, emotion, arm_g1, etc.
+│   ├── backgrounds/      # Background task plugins
+│   ├── inputs/           # face_presence, google_asr
+│   └── llm/              # OpenAI, Gemini, DeepSeek, Ollama, etc.
+└── Makefile              # Build system
 ```
 
 The system is based on a loop that runs at a fixed frequency of `self.config.hertz`. The loop looks for the most recent data from various sources, fuses the data into a prompt (typical length ~1 paragraph), sends that prompt to one or more LLMs, and then sends the LLM responses to virtual agents or physical robots for conversion into real world actions.
