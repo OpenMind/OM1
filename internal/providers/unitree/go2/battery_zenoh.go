@@ -14,20 +14,12 @@ import (
 )
 
 const (
-	defaultBatteryTopic = "lowstate"
+	defaultBatteryTopic = "rt/lowstate"
 
-	// rt/lowstate is published at ~500Hz. Decoding and locking on every sample
-	// would peg a CPU core for data that changes slowly, so we drop samples that
-	// arrive sooner than this interval after the last one we processed.
 	batteryThrottleInterval = 200 * time.Millisecond
 
 	batteryDebugLogInterval = 15 * time.Second
 
-	// Absolute byte offsets of the battery-related fields within the CDR-encoded
-	// unitree_go/msg/LowState payload (offsets include the 4-byte CDR
-	// encapsulation header, matching the bytes delivered over zenoh).
-	//
-	// Verified against the cyclonedds reference serializer.
 	lowStateSocOffset    = 1043 // bms_state.soc     uint8
 	lowStateNTC1Offset   = 1152 // temperature_ntc1  uint8
 	lowStateNTC2Offset   = 1153 // temperature_ntc2  uint8
@@ -36,7 +28,6 @@ const (
 	lowStateMinLen       = lowStatePowerAOffset + 4
 )
 
-// BatteryState is a snapshot of the Go2 battery readings.
 type BatteryState struct {
 	Percentage  float64 `json:"percentage"`
 	Voltage     float64 `json:"voltage"`
@@ -44,17 +35,12 @@ type BatteryState struct {
 	Temperature int     `json:"temperature"`
 }
 
-// BatteryZenohProvider subscribes to rt/lowstate and maintains the latest
-// battery snapshot, throttling the high-frequency stream to limit CPU usage.
 type BatteryZenohProvider struct {
 	log     *zap.Logger
 	topic   string
 	session zenohsession.Session
 	sub     zenohsession.Subscriber
 
-	// lastProcessedNs is the unix-nano timestamp of the last sample we decoded.
-	// Read/written with atomics so the throttle check stays lock-free on the hot
-	// path where most samples are discarded.
 	lastProcessedNs atomic.Int64
 
 	mu          sync.RWMutex
@@ -94,17 +80,12 @@ func NewBatteryZenohProvider(topic string) *BatteryZenohProvider {
 	return p
 }
 
-// onSample decodes an incoming LowState sample and updates the battery state.
-//
-// rt/lowstate arrives at ~500Hz; we discard samples that arrive within
-// batteryThrottleInterval of the last one we accepted before doing any work.
 func (p *BatteryZenohProvider) onSample(data []byte) {
 	now := time.Now().UnixNano()
 	last := p.lastProcessedNs.Load()
 	if now-last < int64(batteryThrottleInterval) {
 		return
 	}
-	// Claim this interval's slot; if a concurrent sample beat us, drop this one.
 	if !p.lastProcessedNs.CompareAndSwap(last, now) {
 		return
 	}
