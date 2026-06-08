@@ -4,19 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
 )
 
+const maxSyncPhotos = 5
+
 // Writer appends interactions to daily markdown files and manages user profiles.
 type Writer struct {
 	memoryRoot         string
 	dailyDir           string
 	usersDir           string
+	galleryDir         string
 	log                *zap.Logger
 	visitedThisSession map[string]struct{}
 }
@@ -33,10 +38,18 @@ func NewWriter(memoryRoot string, log *zap.Logger) (*Writer, error) {
 		return nil, fmt.Errorf("memory writer: create users dir: %w", err)
 	}
 
+	var galleryDir string
+	candidate := filepath.Join(filepath.Dir(memoryRoot), "gallery")
+	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+		galleryDir = candidate
+		log.Info("memory: gallery detected for photo sync", zap.String("path", galleryDir))
+	}
+
 	return &Writer{
 		memoryRoot:         memoryRoot,
 		dailyDir:           dailyDir,
 		usersDir:           usersDir,
+		galleryDir:         galleryDir,
 		log:                log,
 		visitedThisSession: make(map[string]struct{}),
 	}, nil
@@ -138,6 +151,77 @@ func (w *Writer) ensureUserDir(uuid, name string) {
 		data, _ := json.MarshalIndent(facts, "", "  ")
 		_ = os.WriteFile(factsPath, data, 0o644)
 	}
+
+	w.syncPhotos(uuid)
+}
+
+// syncPhotos copies the latest maxSyncPhotos aligned photos from the gallery
+func (w *Writer) syncPhotos(uuid string) {
+	if w.galleryDir == "" {
+		return
+	}
+
+	srcDir := filepath.Join(w.galleryDir, uuid, "aligned")
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return
+	}
+
+	var jpgs []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(strings.ToLower(e.Name()), ".jpg") {
+			jpgs = append(jpgs, e.Name())
+		}
+	}
+	if len(jpgs) == 0 {
+		return
+	}
+	sort.Strings(jpgs)
+
+	if len(jpgs) > maxSyncPhotos {
+		jpgs = jpgs[len(jpgs)-maxSyncPhotos:]
+	}
+	wanted := make(map[string]struct{}, len(jpgs))
+	for _, name := range jpgs {
+		wanted[name] = struct{}{}
+	}
+
+	dstDir := filepath.Join(w.usersDir, uuid, "photos")
+	_ = os.MkdirAll(dstDir, 0o755)
+
+	for _, name := range jpgs {
+		dst := filepath.Join(dstDir, name)
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		if err := copyFile(filepath.Join(srcDir, name), dst); err != nil {
+			w.log.Warn("memory: photo sync failed", zap.String("file", name), zap.Error(err))
+		}
+	}
+
+	existing, _ := os.ReadDir(dstDir)
+	for _, e := range existing {
+		if _, keep := wanted[e.Name()]; !keep {
+			_ = os.Remove(filepath.Join(dstDir, e.Name()))
+		}
+	}
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func (w *Writer) updateUserProfile(uuid, name string) {

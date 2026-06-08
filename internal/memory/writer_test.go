@@ -2,6 +2,7 @@ package memory
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -129,4 +130,77 @@ func TestWriter_DirectoryCreation(t *testing.T) {
 	require.NoError(t, err)
 	_, err = os.Stat(filepath.Join(dir, "users"))
 	require.NoError(t, err)
+}
+
+func TestWriter_SyncPhotos(t *testing.T) {
+	root := t.TempDir()
+	memoryDir := filepath.Join(root, "memory")
+	galleryDir := filepath.Join(root, "gallery")
+
+	alignedDir := filepath.Join(galleryDir, testUUID, "aligned")
+	require.NoError(t, os.MkdirAll(alignedDir, 0o755))
+	for i := 1; i <= 7; i++ {
+		name := fmt.Sprintf("sample_%04d.jpg", i)
+		require.NoError(t, os.WriteFile(filepath.Join(alignedDir, name), []byte("img"), 0o644))
+	}
+
+	w, err := NewWriter(memoryDir, testLogger())
+	require.NoError(t, err)
+	require.Equal(t, galleryDir, w.galleryDir, "gallery should be auto-detected")
+
+	w.ensureUserDir(testUUID, "test")
+
+	photosDir := filepath.Join(memoryDir, "users", testUUID, "photos")
+	entries, err := os.ReadDir(photosDir)
+	require.NoError(t, err)
+	require.Len(t, entries, maxSyncPhotos)
+	require.Equal(t, "sample_0003.jpg", entries[0].Name())
+	require.Equal(t, "sample_0007.jpg", entries[4].Name())
+}
+
+func TestWriter_SyncPhotos_Incremental(t *testing.T) {
+	root := t.TempDir()
+	memoryDir := filepath.Join(root, "memory")
+	galleryDir := filepath.Join(root, "gallery")
+
+	alignedDir := filepath.Join(galleryDir, testUUID, "aligned")
+	require.NoError(t, os.MkdirAll(alignedDir, 0o755))
+
+	for i := 1; i <= 3; i++ {
+		name := fmt.Sprintf("sample_%04d.jpg", i)
+		require.NoError(t, os.WriteFile(filepath.Join(alignedDir, name), []byte("v1"), 0o644))
+	}
+
+	w, err := NewWriter(memoryDir, testLogger())
+	require.NoError(t, err)
+	w.syncPhotos(testUUID)
+
+	photosDir := filepath.Join(memoryDir, "users", testUUID, "photos")
+	entries, _ := os.ReadDir(photosDir)
+	require.Len(t, entries, 3)
+
+	for i := 4; i <= 5; i++ {
+		name := fmt.Sprintf("sample_%04d.jpg", i)
+		require.NoError(t, os.WriteFile(filepath.Join(alignedDir, name), []byte("v1"), 0o644))
+	}
+	w.syncPhotos(testUUID)
+
+	entries, _ = os.ReadDir(photosDir)
+	require.Len(t, entries, 5)
+
+	require.NoError(t, os.WriteFile(filepath.Join(alignedDir, "sample_0006.jpg"), []byte("v1"), 0o644))
+	w.syncPhotos(testUUID)
+
+	entries, _ = os.ReadDir(photosDir)
+	require.Len(t, entries, maxSyncPhotos)
+	require.Equal(t, "sample_0002.jpg", entries[0].Name(), "oldest should be trimmed")
+}
+
+func TestWriter_SyncPhotos_NoGallery(t *testing.T) {
+	dir := t.TempDir()
+	w, err := NewWriter(dir, testLogger())
+	require.NoError(t, err)
+	require.Empty(t, w.galleryDir)
+
+	w.syncPhotos(testUUID)
 }
