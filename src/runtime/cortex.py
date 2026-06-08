@@ -486,6 +486,11 @@ class ModeCortexRuntime:
         cortex_generation = self._cortex_loop_generation
         logging.info(f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})")
 
+        # prev_tick measures the real wall-clock gap between consecutive ticks so
+        # we can see how much asyncio.sleep drifts from the requested cadence
+        # (the in-process counterpart of the Go timer drift check).
+        prev_tick = None
+
         try:
             while True:
                 if not self._is_generation_valid(cortex_generation, "cortex loop"):
@@ -498,6 +503,20 @@ class ModeCortexRuntime:
 
                 # Helper to yield control to event loop
                 await asyncio.sleep(0)
+
+                now = time.perf_counter()
+                if prev_tick is not None:
+                    actual = now - prev_tick
+                    logging.info(
+                        "tick-timing ts=%.6f actual_ms=%.3f expected_ms=%.3f drift_ms=%+.3f"
+                        % (
+                            time.time(),
+                            actual * 1000.0,
+                            sleep_duration * 1000.0,
+                            (actual - sleep_duration) * 1000.0,
+                        )
+                    )
+                prev_tick = now
 
                 await self._tick(cortex_generation)
                 self.sleep_ticker_provider.skip_sleep = False
