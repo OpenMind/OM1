@@ -113,9 +113,9 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 	return rc
 }
 
-// buildMeta constructs a metadata map for the mode, including global config values and the mode name.
-func (m *modeSetup) buildMeta(modeName string) map[string]string {
-	meta := make(map[string]string)
+// buildMeta constructs a metadata map for the mode, including system-level values and the mode name.
+func (m *modeSetup) buildMeta(modeName string) map[string]any {
+	meta := make(map[string]any)
 	if m.sys.APIKey != "" {
 		meta["api_key"] = m.sys.APIKey
 	}
@@ -124,6 +124,9 @@ func (m *modeSetup) buildMeta(modeName string) map[string]string {
 	}
 	if m.sys.URID != "" {
 		meta["URID"] = m.sys.URID
+	}
+	if m.sys.UseSim {
+		meta["use_sim"] = true
 	}
 	if modeName != "" {
 		meta["mode"] = modeName
@@ -142,7 +145,7 @@ func cloneConfig(cfg map[string]any) map[string]any {
 }
 
 // addMeta adds metadata key-value pairs to a config map if they are not already present.
-func addMeta(cfg map[string]any, meta map[string]string) map[string]any {
+func addMeta(cfg map[string]any, meta map[string]any) map[string]any {
 	if cfg == nil {
 		cfg = make(map[string]any)
 	}
