@@ -17,7 +17,6 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
-	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -345,28 +344,16 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 
 	tickInterval := time.Duration(float64(time.Second) / current.runtimeConfig.Hertz)
 
-	// prevTick measures the real wall-clock gap between consecutive ticks so we
-	// can see how much the timer-driven cadence drifts from tickInterval (the
-	// Go counterpart of the Python asyncio.sleep drift check).
-	var prevTick time.Time
-
 	for {
 		timer := time.NewTimer(tickInterval)
-		sleepStart := time.Now()
-		trigger := "timer"
 		select {
 		case <-ctx.Done():
 			timer.Stop()
 			rt.log.Info("cortex loop exiting", zap.String("mode", modeName))
 			return
 		case <-timer.C:
-			// Timer fired uninterrupted — this is a pure inter-tick sleep, so
-			// its overshoot reflects timer/sleep accuracy (no tick work, no
-			// event-driven wakeup).
-			metrics.RecordSleepDrift(time.Since(sleepStart).Seconds(), tickInterval.Seconds())
 		case <-current.inputOrchestrator.TickNow():
 			timer.Stop()
-			trigger = "immediate"
 		case update := <-providers.ModeContext().Updates():
 			timer.Stop()
 			rt.manager.UpdateUserContext(update)
@@ -374,21 +361,7 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 			continue
 		}
 
-		now := time.Now()
-		if !prevTick.IsZero() {
-			actual := now.Sub(prevTick)
-			metrics.RecordTickInterval(actual.Seconds(), tickInterval.Seconds(), trigger)
-			rt.log.Info("tick-timing",
-				zap.String("trigger", trigger),
-				zap.Time("ts", now),
-				zap.Float64("actual_ms", float64(actual.Nanoseconds())/1e6),
-				zap.Float64("expected_ms", float64(tickInterval.Nanoseconds())/1e6),
-				zap.Float64("drift_ms", float64((actual-tickInterval).Nanoseconds())/1e6),
-			)
-		}
-		prevTick = now
-
-		rt.tick(ctx, current, now)
+		rt.tick(ctx, current, time.Now())
 	}
 }
 

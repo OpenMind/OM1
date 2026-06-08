@@ -49,27 +49,6 @@ python3 perf/zenoh-scan-latency/zenoh_scan_latency.py --key 'OM742d35Cc6634/pi/s
 Compare the two summaries (same window, same key). Add `-v` / `--verbose` for
 per-message delay if you want the raw distribution.
 
-## Measure message rate / jitter (e.g. `/odom`)
-Pass `-rate` / `--rate` to measure the **arrival rate in Hz** and the
-inter-arrival **jitter** instead of latency. Rate mode ignores the payload and
-times only the gaps between consecutive receives, so **no clock sync is needed**
-and it works on any topic — including `nav_msgs/Odometry` on `**/odom`:
-
-```bash
-# Go
-go run ./perf/zenoh-scan-latency -key '**/odom' -rate -duration 30s
-
-# Python
-python3 perf/zenoh-scan-latency/zenoh_scan_latency.py --key '**/odom' --rate --duration 30
-```
-
-The summary reports `message rate: N Hz` plus the inter-arrival distribution
-(min / p50 / p95 / p99 / max / mean / stddev in ms). Run both at the same time
-to compare how steadily the Go vs Python zenoh client delivers the same stream.
-This pairs with the in-process `tick-timing` logs (the cortex loop prints its
-actual-vs-expected tick interval) to check the Python `asyncio.sleep` drift
-against Go's timer.
-
 ## Notes
 - Both default to **client mode** connecting to `tcp/127.0.0.1:7447`; override
   with `-endpoint` / `--endpoint` if the router is elsewhere.
