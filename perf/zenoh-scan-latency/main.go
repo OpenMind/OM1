@@ -34,7 +34,8 @@ func main() {
 		key      = flag.String("key", "**/scan", "zenoh key expression to subscribe to (e.g. <ns>/pi/scan)")
 		endpoint = flag.String("endpoint", "tcp/127.0.0.1:7447", "zenoh router endpoint (client mode)")
 		duration = flag.Duration("duration", 30*time.Second, "how long to sample before printing the summary")
-		verbose  = flag.Bool("v", false, "print per-message delay")
+		verbose  = flag.Bool("v", false, "print per-message delay (latency mode) or inter-arrival gap (rate mode)")
+		rate     = flag.Bool("rate", false, "measure inter-arrival rate/jitter (Hz) instead of header.stamp latency; use for topics like **/odom (no clock sync needed)")
 	)
 	flag.Parse()
 
@@ -49,13 +50,35 @@ func main() {
 	defer sess.Close()
 
 	var (
-		mu      sync.Mutex
-		delays  []float64 // milliseconds
-		skipped int       // payloads too short to carry a header.stamp
+		mu        sync.Mutex
+		delays    []float64 // milliseconds (latency mode)
+		intervals []float64 // milliseconds between consecutive receives (rate mode)
+		count     int       // total messages received (rate mode)
+		lastRecv  time.Time // previous receive time (rate mode)
+		skipped   int       // payloads too short to carry a header.stamp (latency mode)
 	)
 
 	sub, err := sess.DeclareSubscriber(*key, func(payload []byte) {
 		recv := time.Now()
+
+		if *rate {
+			// Rate mode: ignore the payload entirely and just measure how steady
+			// the arrival cadence is. No clock sync required, so it works for any
+			// topic (e.g. **/odom) regardless of whether it carries a header.stamp.
+			mu.Lock()
+			if !lastRecv.IsZero() {
+				gap := float64(recv.Sub(lastRecv).Nanoseconds()) / 1e6
+				intervals = append(intervals, gap)
+				if *verbose {
+					fmt.Printf("gap=%.3f ms\n", gap)
+				}
+			}
+			lastRecv = recv
+			count++
+			mu.Unlock()
+			return
+		}
+
 		if len(payload) < 12 {
 			mu.Lock()
 			skipped++
@@ -82,12 +105,53 @@ func main() {
 	}
 	defer sub.Drop()
 
-	fmt.Printf("[go] subscribed to %q via %s — sampling for %s ...\n", *key, *endpoint, *duration)
+	mode := "latency"
+	if *rate {
+		mode = "rate"
+	}
+	fmt.Printf("[go] subscribed to %q via %s (%s mode) — sampling for %s ...\n", *key, *endpoint, mode, *duration)
 	time.Sleep(*duration)
 
 	mu.Lock()
 	defer mu.Unlock()
-	printSummary("go", *key, delays, skipped, *duration)
+	if *rate {
+		printRateSummary("go", *key, intervals, count, *duration)
+	} else {
+		printSummary("go", *key, delays, skipped, *duration)
+	}
+}
+
+// printRateSummary reports the message arrival rate (Hz) and inter-arrival
+// jitter — the spread of gaps between consecutive messages. This is the
+// clock-sync-free counterpart to printSummary, used for topics like **/odom.
+func printRateSummary(lang, key string, intervals []float64, count int, dur time.Duration) {
+	fmt.Printf("\n=== %s zenoh rate summary ===\n", lang)
+	fmt.Printf("key: %s | window: %s | messages: %d\n", key, dur, count)
+	if count == 0 {
+		fmt.Println("no messages received — check the key expression and that the publisher is running")
+		return
+	}
+	rate := float64(count) / dur.Seconds()
+	fmt.Printf("message rate: %.2f Hz (%.2f msg/s)\n", rate, rate)
+	if len(intervals) == 0 {
+		fmt.Println("only one message — not enough to compute inter-arrival jitter")
+		return
+	}
+	sorted := append([]float64(nil), intervals...)
+	sort.Float64s(sorted)
+	sum := 0.0
+	for _, d := range intervals {
+		sum += d
+	}
+	mean := sum / float64(len(intervals))
+	// Population standard deviation of the gaps = jitter.
+	varSum := 0.0
+	for _, d := range intervals {
+		varSum += (d - mean) * (d - mean)
+	}
+	std := math.Sqrt(varSum / float64(len(intervals)))
+	fmt.Printf("inter-arrival ms — min %.3f | p50 %.3f | p95 %.3f | p99 %.3f | max %.3f | mean %.3f | stddev %.3f\n",
+		sorted[0], pct(sorted, 50), pct(sorted, 95), pct(sorted, 99), sorted[len(sorted)-1], mean, std)
 }
 
 func printSummary(lang, key string, delays []float64, skipped int, dur time.Duration) {
