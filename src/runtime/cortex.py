@@ -9,6 +9,7 @@ from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
+from prometheus import record_tick_interval
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -507,9 +508,12 @@ class ModeCortexRuntime:
                 now = time.perf_counter()
                 if prev_tick is not None:
                     actual = now - prev_tick
+                    trigger = "immediate" if skip_status else "timer"
+                    record_tick_interval(actual, sleep_duration, trigger)
                     logging.info(
-                        "tick-timing ts=%.6f actual_ms=%.3f expected_ms=%.3f drift_ms=%+.3f"
+                        "tick-timing trigger=%s ts=%.6f actual_ms=%.3f expected_ms=%.3f drift_ms=%+.3f"
                         % (
+                            trigger,
                             time.time(),
                             actual * 1000.0,
                             sleep_duration * 1000.0,

@@ -177,3 +177,44 @@ def record_request_proxy(kind, seconds):
     """Record the gateway proxy time for one outbound request (kind=llm/asr/tts)."""
     om1_request_proxy.labels(kind=kind).observe(seconds)
     om1_request_proxy_last.labels(kind=kind).set(seconds)
+
+
+# Cortex tick-cadence metrics. The cortex loop is meant to fire every 1/hertz
+# seconds; these expose how steadily it actually fires — the asyncio.sleep drift
+# question (compare to the Go timer on perf-metrics-go). The interval is a
+# histogram (always positive, so the le buckets work and quantiles are queryable
+# over any window); the drift is a last-value gauge because drift can be negative
+# for early/event-driven ticks, which a histogram's le buckets can't represent.
+# The "trigger" label separates the steady timer cadence ("timer") from
+# event-driven immediate/skip-sleep ticks ("immediate") — filter trigger="timer"
+# for pure sleep drift. Buckets are tuned for sub-second ticks (fine-grained
+# around the common 10 Hz / 100 ms cadence) and span 1 ms .. 2 s.
+om1_cortex_tick_interval = Histogram(
+    "om1_cortex_tick_interval_seconds",
+    "Actual wall-clock interval between consecutive cortex ticks in seconds",
+    ["trigger"],
+    buckets=(
+        0.001, 0.005, 0.01, 0.02, 0.05, 0.08, 0.09, 0.095, 0.1,
+        0.105, 0.11, 0.12, 0.15, 0.2, 0.3, 0.5, 1, 2,
+    ),
+)
+om1_cortex_tick_drift_last = Gauge(
+    "om1_cortex_tick_drift_last_seconds",
+    "Most recent cortex tick drift (actual interval - expected) in seconds; negative for early/event-driven ticks",
+    ["trigger"],
+)
+om1_cortex_tick_expected = Gauge(
+    "om1_cortex_tick_expected_seconds",
+    "Configured target interval between cortex ticks (1/hertz) in seconds",
+)
+
+
+def record_tick_interval(actual_seconds, expected_seconds, trigger):
+    """Record one cortex tick's actual interval and drift from the 1/hertz cadence.
+
+    trigger is "timer" for the normal asyncio.sleep cadence or "immediate" for
+    event-driven / skip-sleep ticks; filter trigger="timer" for pure sleep drift.
+    """
+    om1_cortex_tick_interval.labels(trigger=trigger).observe(actual_seconds)
+    om1_cortex_tick_drift_last.labels(trigger=trigger).set(actual_seconds - expected_seconds)
+    om1_cortex_tick_expected.set(expected_seconds)
