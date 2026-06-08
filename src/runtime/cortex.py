@@ -9,7 +9,7 @@ from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
-from prometheus import record_tick_interval
+from prometheus import record_sleep_drift, record_tick_interval
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -500,7 +500,14 @@ class ModeCortexRuntime:
                 skip_status = self.sleep_ticker_provider.skip_sleep
                 sleep_duration = 1 / self.current_config.hertz if self.current_config else 1
                 if not skip_status and self.current_config:
+                    sleep_start = time.perf_counter()
                     await self.sleep_ticker_provider.sleep(sleep_duration)
+                    # Record only sleeps that ran to completion. If an input set
+                    # skip_sleep mid-sleep, sleep() returns early (cancelled), so
+                    # skip_sleep is now True — exclude it to keep this metric a
+                    # pure measure of asyncio.sleep accuracy.
+                    if not self.sleep_ticker_provider.skip_sleep:
+                        record_sleep_drift(time.perf_counter() - sleep_start, sleep_duration)
 
                 # Helper to yield control to event loop
                 await asyncio.sleep(0)

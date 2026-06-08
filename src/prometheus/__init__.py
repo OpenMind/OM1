@@ -218,3 +218,30 @@ def record_tick_interval(actual_seconds, expected_seconds, trigger):
     om1_cortex_tick_interval.labels(trigger=trigger).observe(actual_seconds)
     om1_cortex_tick_drift_last.labels(trigger=trigger).set(actual_seconds - expected_seconds)
     om1_cortex_tick_expected.set(expected_seconds)
+
+
+# Isolated sleep-drift: unlike the tick interval above (which spans the whole
+# loop, including the LLM call inside _tick and any input wakeup), this measures
+# ONLY the inter-tick asyncio.sleep that ran to completion. So it reflects pure
+# asyncio.sleep accuracy. drift = actual sleep - requested 1/hertz; normally >= 0
+# (sleeps overshoot). Buckets are fine-grained near zero (50 us .. 500 ms).
+om1_cortex_sleep_drift = Histogram(
+    "om1_cortex_sleep_drift_seconds",
+    "Overshoot of the cortex inter-tick sleep: actual asyncio.sleep minus requested 1/hertz, in seconds",
+    buckets=(0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.5),
+)
+om1_cortex_sleep_drift_last = Gauge(
+    "om1_cortex_sleep_drift_last_seconds",
+    "Most recent cortex sleep overshoot (actual sleep - requested) in seconds",
+)
+
+
+def record_sleep_drift(actual_seconds, expected_seconds):
+    """Record one completed inter-tick sleep's overshoot (actual - requested).
+
+    Call only for sleeps that ran to completion (not cancelled by an input
+    setting skip_sleep), so the metric reflects pure asyncio.sleep accuracy.
+    """
+    drift = actual_seconds - expected_seconds
+    om1_cortex_sleep_drift.observe(drift)
+    om1_cortex_sleep_drift_last.set(drift)
