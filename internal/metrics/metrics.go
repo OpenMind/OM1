@@ -240,11 +240,32 @@ var (
 		Name: "om1_cortex_tick_expected_seconds",
 		Help: "Configured target interval between cortex ticks (1/hertz) in seconds",
 	})
+
+	// sleepDriftBuckets are fine-grained near zero: sleep/timer overshoot is
+	// typically sub-millisecond to a few ms, so buckets span 50 µs .. 500 ms.
+	sleepDriftBuckets = []float64{
+		0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.5,
+	}
+
+	// CortexSleepDrift isolates sleep/timer accuracy from tick work: it measures
+	// only the inter-tick wait (the timer fire), not the whole loop period, so it
+	// is not polluted by the LLM call inside tick() or by event-driven wakeups.
+	// drift = actual wait - requested 1/hertz; normally >= 0 (sleeps overshoot).
+	CortexSleepDrift = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "om1_cortex_sleep_drift_seconds",
+		Help:    "Overshoot of the cortex inter-tick sleep: actual timer wait minus requested 1/hertz, in seconds",
+		Buckets: sleepDriftBuckets,
+	})
+	CortexSleepDriftLast = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_cortex_sleep_drift_last_seconds",
+		Help: "Most recent cortex sleep overshoot (actual wait - requested) in seconds",
+	})
 )
 
 func init() {
 	prometheus.MustRegister(
 		CortexTickInterval, CortexTickDriftLast, CortexTickExpected,
+		CortexSleepDrift, CortexSleepDriftLast,
 		LLMLatency, LLMLatencyLast,
 		VLMLatency, VLMLatencyLast,
 		ASRLatency, ASRLatencyLast,
@@ -298,6 +319,16 @@ func RecordTickInterval(actualSeconds, expectedSeconds float64, trigger string) 
 	CortexTickInterval.WithLabelValues(trigger).Observe(actualSeconds)
 	CortexTickDriftLast.WithLabelValues(trigger).Set(actualSeconds - expectedSeconds)
 	CortexTickExpected.Set(expectedSeconds)
+}
+
+// RecordSleepDrift records one completed inter-tick sleep's overshoot: the
+// actual timer wait minus the requested 1/hertz. Call only for sleeps that ran
+// to completion (i.e. the timer fired), not for event-driven early wakeups, so
+// the metric reflects pure sleep/timer accuracy.
+func RecordSleepDrift(actualSeconds, expectedSeconds float64) {
+	drift := actualSeconds - expectedSeconds
+	CortexSleepDrift.Observe(drift)
+	CortexSleepDriftLast.Set(drift)
 }
 
 // RecordHTTPTiming records HTTP timing metrics for a request with the given attributes and timing values in milliseconds.

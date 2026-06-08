@@ -352,6 +352,7 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 
 	for {
 		timer := time.NewTimer(tickInterval)
+		sleepStart := time.Now()
 		trigger := "timer"
 		select {
 		case <-ctx.Done():
@@ -359,6 +360,10 @@ func (rt *Runtime) runCortexLoop(ctx context.Context) {
 			rt.log.Info("cortex loop exiting", zap.String("mode", modeName))
 			return
 		case <-timer.C:
+			// Timer fired uninterrupted — this is a pure inter-tick sleep, so
+			// its overshoot reflects timer/sleep accuracy (no tick work, no
+			// event-driven wakeup).
+			metrics.RecordSleepDrift(time.Since(sleepStart).Seconds(), tickInterval.Seconds())
 		case <-current.inputOrchestrator.TickNow():
 			timer.Stop()
 			trigger = "immediate"
