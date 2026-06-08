@@ -42,8 +42,8 @@ type OdomPosition struct {
 type OdomZenohProvider struct {
 	log     *zap.Logger
 	topic   string
-	session *zenohsession.Session
-	sub     *zenohsession.Subscriber
+	session zenohsession.Session
+	sub     zenohsession.Subscriber
 
 	mu               sync.RWMutex
 	bodyHeightCm     int

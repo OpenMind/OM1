@@ -36,8 +36,8 @@ func init() {
 // Zenoh messages and updates the mode context accordingly.
 type ApproachingPerson struct {
 	log      *zap.Logger
-	session  *zenohsession.Session
-	sub      *zenohsession.Subscriber
+	session  zenohsession.Session
+	sub      zenohsession.Subscriber
 	greeting *providers.GreetingConversationStateMachineProvider
 
 	mu                 sync.Mutex

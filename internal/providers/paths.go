@@ -33,8 +33,8 @@ type Movement struct {
 //	9       -> move back (retreat)
 type PathsProvider struct {
 	log     *zap.Logger
-	session *zenohsession.Session
-	sub     *zenohsession.Subscriber
+	session zenohsession.Session
+	sub     zenohsession.Subscriber
 
 	mu          sync.RWMutex
 	turnLeft    []uint32

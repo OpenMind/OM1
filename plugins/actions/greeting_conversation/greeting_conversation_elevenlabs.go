@@ -74,7 +74,7 @@ type Connector struct {
 	log      *zap.Logger
 	tts      *tts.ElevenLabsProvider
 	greeting *providers.GreetingConversationStateMachineProvider
-	session  *zenoh.Session
+	session  zenoh.Session
 
 	mu                       sync.Mutex
 	greetingStatus           providers.ConversationState

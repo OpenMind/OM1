@@ -56,8 +56,8 @@ func init() {
 
 type zenohConnector struct {
 	log       *zap.Logger
-	session   *zenohsession.Session
-	publisher *zenohsession.Publisher
+	session   zenohsession.Session
+	publisher zenohsession.Publisher
 }
 
 // NewArmG1ZenohConnector creates a new zenohConnector with the provided configuration.

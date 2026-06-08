@@ -31,12 +31,12 @@ OM1 was originally built in Python, and the Go runtime is a newer, performance-f
 | Text-to-Speech (`speak`) | ✅ | ✅ | Supported in both. |
 | Visual Language Models (VLM) | ✅ | ✅ | OpenAI/Gemini are supported. |
 | Metrics & observability (Prometheus + Grafana) | ✅ | ✅ | Supported in both. |
+| Simulators (Gazebo, Isaac Sim) | ✅ | ✅ | Two types of the Zenoh backends are supported. |
 | Hardware connectors (ROS2, Zenoh, CycloneDDS) | ✅ | 🚧 | Go currently focuses on Zenoh; broader connector parity in progress. |
 | Locomotion & robot actions (move/navigate variants for Go2, G1, TurtleBot4, etc.) | ✅ | 🚧 | Go currently ships `arm_g1`, `emotion`, `greeting_conversation`, `speak`. |
 | Sensor inputs (GPS, RTK, LIDAR, odometry, localization, battery) | ✅ | 🚧 | Under development for Go. |
 | Web & social inputs (Twitter/X, news, weather) | ✅ | 🚧 | Under development for Go. |
 | Messaging integrations (Telegram, Discord) | ✅ | 🚧 | Under development for Go. |
-| Simulators (Gazebo, Isaac Sim) | ✅ | 🚧 | Under development for Go. |
 | Full autonomy with BrainPack (Navigation, SLAM, Auto Charging) | ✅ | 🚧 | Under development for Go. |
 
 > [!NOTE]
