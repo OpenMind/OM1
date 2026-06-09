@@ -34,8 +34,16 @@ func (ArmAction) EnumValues() []string {
 		"rotate_hands",
 		"salute",
 		"shrug",
-		"speack_action_extended",
-		"speak_action",
+		"talking_2s",
+		"talking_4s",
+		"talking_6s",
+		"talking_8s",
+		"talking_10s",
+		"talking_12s",
+		"talking_14s",
+		"talking_16s",
+		"talking_18s",
+		"talking_20s",
 	}
 }
 
