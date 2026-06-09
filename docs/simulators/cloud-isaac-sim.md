@@ -116,7 +116,7 @@ Run OM1 on your local machine and connect to the cloud simulator:
 3. Run the config:
 
 ```bash
-make run CONFIG=cloud_sim
+CONFIG=unitree_go2_autonomy USE_SIM=true make dev
 ```
 
 ## Cleaning Up
