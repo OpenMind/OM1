@@ -14,86 +14,35 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+
+      - name: Install PortAudio
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          submodules: 'recursive'
+          go-version-file: 'go.mod'
+          cache: true
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake ffmpeg
-
-      - name: Cache CycloneDDS build
+      - name: Cache zenoh-c
         uses: actions/cache@v4
         with:
-          path: /tmp/cyclonedds/cyclonedds/install
-          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/unitest.yml') }}
+          path: .zenoh-c
+          key: ${{ runner.os }}-zenoh-c-1.9.0
           restore-keys: |
-            ${{ runner.os }}-cyclonedds-0.10.x-
+            ${{ runner.os }}-zenoh-c-
 
-      - name: Install cycloneDDS
-        run: |
-          if [ ! -d "/tmp/cyclonedds/cyclonedds/install" ]; then
-            echo "Building CycloneDDS from source..."
-            mkdir -p /tmp/cyclonedds
-            cd /tmp/cyclonedds
-            git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-            cd cyclonedds && mkdir build install && cd build
-            cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON
-            cmake --build . --target install
-          else
-            echo "Using cached CycloneDDS installation"
-          fi
-          echo "CYCLONEDDS_HOME=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
-          echo "/tmp/cyclonedds/cyclonedds/install/lib" >> $GITHUB_PATH
-          echo "CMAKE_PREFIX_PATH=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-
-      - name: Cache uv dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Install dependencies
-        run: |
-          uv sync --extra dds
+      - name: Download zenoh-c
+        run: make download-zenohc
 
       - name: Run unit tests
-        run: |
-          uv run pytest --cov --cov-report=xml --cov-report=term --junitxml=junit.xml -o junit_family=legacy --log-cli-level=DEBUG -s
+        run: make test
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
         if: ${{ !cancelled() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          fail_ci_if_error: false
-
-      - name: Upload test results
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          report_type: test_results
-          files: ./junit.xml
+          files: ./coverage.out
           fail_ci_if_error: false

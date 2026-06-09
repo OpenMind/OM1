@@ -8,7 +8,7 @@ icon: gear
 
 Agents are configured via JSON5 files in the `/config` directory. The configuration file is used to define the LLM `system prompt`, agent's inputs, LLM configuration, and actions etc. Here is an example of the configuration file:
 
-```python
+```json5
 {
   version: "v1.0.5",
   default_mode: "welcome",
@@ -161,7 +161,7 @@ This field ensures that configuration files remain compatible as the runtime evo
 
 ### Runtime support
 
-The runtime/version.py module handles:
+The internal/config/version.go module handles:
 
   - retrieving the current runtime version
   - checking compatibility between config and runtime
@@ -191,7 +191,7 @@ The runtime/version.py module handles:
 
 Example configuration for the agent_inputs section:
 
-```python
+```json5
   agent_inputs: [
     {
       type: "GovernanceEthereum"
@@ -227,7 +227,7 @@ The `cortex_llm` field allows you to configure the Large Language Model (LLM) us
 
 Here is an example configuration of the `cortex_llm` showing use of a single LLM to generate decisions:
 
-```python
+```json5
   cortex_llm: {
     type: "OpenAILLM",
     config: {
@@ -254,7 +254,7 @@ You can implement your own LLM endpoints or use more sophisticated approaches su
 
 Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them. Here is an example configuration for the `agent_actions` section:
 
-```python
+```json5
   agent_actions: [
     {
       name: "move",
@@ -281,7 +281,7 @@ You can customize the actions following the [Action Plugin Guide](6_actions.md)
 
 MCP servers can be added to a config to give OM1 agent capability to interact with different MCP tools. Example:
 
-```python
+```json5
 mcp_servers: [
     {
       name: "weather",
@@ -298,7 +298,7 @@ Refer to [MCP Integration](mcp-integration.md) to understand the complete archit
 
 Transition rules define how and when the robot switches between operational modes.
 
-```python
+```json5
     {
       from_mode: "<current_mode>",
       to_mode: "welcome",

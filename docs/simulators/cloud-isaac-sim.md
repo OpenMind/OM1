@@ -12,7 +12,7 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 
 - OpenMind Portal account on **Builder plan** or higher (required for Cloud Simulator access)
 - API key (found in your portal)
-- OM1 codebase with `uv` environment configured
+- OM1 codebase built (`make build`)
 
 ## Cost & Billing
 
@@ -104,7 +104,7 @@ Access a full VS Code environment running in the cloud with OM1 pre-configured.
 
 From here, you can:
 - Edit and run OM1 code directly in the cloud
-- Execute `uv run` commands without local hardware
+- Execute `make run` commands without local hardware
 - Test and debug your robot behaviors
 
 ### Option B: Local Environment
@@ -116,7 +116,7 @@ Run OM1 on your local machine and connect to the cloud simulator:
 3. Run the config:
 
 ```bash
-uv run src/run.py cloud_sim
+make run CONFIG=cloud_sim
 ```
 
 ## Cleaning Up

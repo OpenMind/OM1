@@ -1,33 +1,44 @@
 # Copilot Instructions
 
 ## Tooling / Dependencies
-- We use **uv** for Python dependency management and execution.
-- Dependencies are defined in `pyproject.toml` (do not introduce `requirements.txt` unless explicitly requested).
-- Use these commands in docs/examples:
-  - Install/sync: `uv sync`
-  - Add deps: `uv add <package>`
-  - Run commands: `uv run <command>` (e.g., `uv run pytest`)
-- If adding a new dependency, prefer a well-maintained package and keep the dependency list minimal.
-- Assume a lockfile is used (e.g., `uv.lock`) — do not suggest deleting or bypassing it.
+- We use **Make** for building, testing, and running the project.
+- Dependencies are managed via Go modules (`go.mod` and `go.sum`).
+- Use these make commands:
+  - Build: `make build`
+  - Test: `make test`
+  - Test with coverage: `make test-coverage`
+  - Run: `make run CONFIG=<config_name>`
+  - Dev mode: `make dev CONFIG=<config_name>`
+  - Lint: `make lint`
+  - Format: `make fmt`
+  - Check all: `make check` (runs fmt, vet, lint, and test)
+  - Clean: `make clean`
+- When adding a new dependency, use `go get <package>` and run `make deps` to tidy.
+- Keep the dependency list minimal and prefer well-maintained packages.
 
 ## Coding Style
-- Use Python 3.10
-- Prefer async/await
-- Use type hints everywhere
-- Follow PEP8 and Black formatting
+- Use Go 1.21+
+- Follow Go conventions and idiomatic patterns
+- Use proper error handling (never ignore errors)
+- Follow the standard Go project layout
+- Use `gofmt` for formatting (enforced by `make fmt`)
 
 ## Architecture
 - Use modular design
-- Separate API, service, and data layers
-- No business logic inside routes
+- Separate concerns: inputs, actions, backgrounds, LLM providers
+- Keep business logic out of HTTP handlers
+- Use interfaces for abstractions
 
 ## Testing
-- Use pytest
+- Use Go's built-in testing framework
 - Add unit tests for all new functions
 - Aim for 90% code coverage
-- Prefer to use patch and mock for external dependencies
-- For patches, patch it using `with (patch("full.path.to.ClassOrFunction1") as mock1, patch("full.path.to.ClassOrFunction2") as mock2):` to ensure the patch is applied in the correct scope.
+- Run tests with race detector: `make test`
+- Use table-driven tests where appropriate
+- Mock external dependencies using interfaces
 
 ## Comments
-- Write numpy style docstrings
+- Write clear package documentation
+- Document exported functions and types
 - Avoid obvious comments
+- Use godoc conventions

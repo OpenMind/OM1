@@ -9,79 +9,132 @@ This guide walks you through creating a new input plugin for OM1. Input plugins 
 
 ## Prerequisites
 
-- Understanding of Python classes and inheritance
-- Familiarity with async programming
+- Understanding of Go interfaces and structs
+- Familiarity with concurrent programming in Go
 - Knowledge of the data source you're integrating
 
 ## Implementation Steps
 
-### Step 1: Create a Provider class (Optional)
-If your plugin requires complex initialization or external service integration, create a provider class.
+### Step 1: Create a Provider (Optional)
+If your plugin requires complex initialization or external service integration, create a provider.
 
-Location: /src/providers/your_provider.py
+Location: `/internal/providers/your_provider.go`
 
 ### Step 2: Create a new Plugin File
 
-To proceed with a new input plugin integration, create a python file.
-Location: `/src/inputs/plugins/your_plugin.py`
+To proceed with a new input plugin integration, create a Go file.
+Location: `/plugins/inputs/your_plugin/your_plugin.go`
 
-Required imports -
-```bash
-from inputs.base import Sensor, SensorConfig
-from inputs.base.loop import FuserInput
-from providers.plugin_provider import PluginProvider # import your provider class (if defined)
-from providers.io_provider import IOProvider
+Required imports:
+```go
+package your_plugin
+
+import (
+    "context"
+    "github.com/openmind/om1/internal/inputs"
+)
 ```
 
-### Step 3: Implement Your Plugin Class
+### Step 3: Implement the Sensor Interface
 
-```bash
-class YourInput(FuserInput[YourRawType]):
-    def __init__(self, config: SensorConfig = SensorConfig()):
-        super().__init__(config)
-        # Initialize your plugin-specific resources
-        self.plugin = PluginProvider()
-        self.io_provider = IOProvider()
-        self.messages: list[Message] = []
+Your plugin must implement the `Sensor` interface defined in `internal/inputs/sensor.go`:
+
+```go
+type Sensor interface {
+    // Listen creates a channel that continuously yields raw input events.
+    Listen(ctx context.Context) (<-chan any, error)
+
+    // Poll retrieves a single raw input event.
+    Poll(ctx context.Context) (any, error)
+
+    // RawToText converts raw input data into Message format.
+    RawToText(ctx context.Context, rawInput any) (*inputs.Message, error)
+
+    // FormattedLatestBuffer returns the formatted buffer string.
+    FormattedLatestBuffer() string
+
+    // Stop signals the sensor to stop listening and clean up resources.
+    Stop()
+}
 ```
 
-### Step 4: Implement Required Methods
+### Step 4: Implement Your Plugin Struct
 
-Implement any methods that will be required for the setup. Here are a few examples-
+```go
+type YourInput struct {
+    config    map[string]any
+    isRunning bool
+    buffer    string
+}
 
-```bash
-    async def start(self) -> None:
-        """
-        Initialize and start the input plugin.
-        Called when the plugin begins operation.
-        """
-        self._is_running = True
-        # Set up connections, open files, initialize hardware, etc.
-        await self._connect()
+func New(cfg map[string]any) (inputs.Sensor, error) {
+    return &YourInput{
+        config: cfg,
+    }, nil
+}
+```
 
-    async def stop(self) -> None:
-        """
-        Cleanly shutdown the input plugin.
-        Called when the plugin should stop operation.
-        """
-        self._is_running = False
-        # Close connections, release resources, cleanup
-        await self._disconnect()
+### Step 5: Implement Required Methods
+
+```go
+func (y *YourInput) Listen(ctx context.Context) (<-chan any, error) {
+    ch := make(chan any)
+    go func() {
+        defer close(ch)
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            default:
+                // Read from your data source and send to channel
+                data, err := y.readData()
+                if err == nil {
+                    ch <- data
+                }
+            }
+        }
+    }()
+    return ch, nil
+}
+
+func (y *YourInput) Poll(ctx context.Context) (any, error) {
+    // Return a single reading from your data source
+    return y.readData()
+}
+
+func (y *YourInput) RawToText(ctx context.Context, rawInput any) (*inputs.Message, error) {
+    // Convert raw input to a Message
+    text := formatAsText(rawInput)
+    return inputs.NewMessage(text), nil
+}
+
+func (y *YourInput) FormattedLatestBuffer() string {
+    return y.buffer
+}
+
+func (y *YourInput) Stop() {
+    y.isRunning = false
+}
 ```
 
 ## Plugin Registration
 
-**Automatic Discovery** - Plugins are automatically discovered by the system. No manual registration required!
+Plugins are registered using the `inputs.Register` function. Add an `init()` function to your plugin:
+
+```go
+func init() {
+    inputs.Register("YourInput", New)
+}
+```
 
 ### How it works:
 
-    - The system scans /src/inputs/plugins/ directory
-    - Uses find_module_with_class() in /src/inputs/__init__.py
-    - Finds all classes inheriting from FuserInput
-    - Uses regex pattern: class {ClassName}(FuserInput)
+- The `inputs.Register` function maps your plugin type name to its factory function
+- The `inputs.Load` function creates instances based on configuration
+- Plugin type names in config files must match the registered name
 
-### Requirements for auto-discovery:
+### Requirements:
 
-    - Class must inherit from FuserInput
-    - File must be in /src/inputs/plugins/ directory
-    - Use standard class declaration syntax
+- Implement the `Sensor` interface from `internal/inputs/sensor.go`
+- Register your factory function with `inputs.Register`
+- File must be in `/plugins/inputs/` directory

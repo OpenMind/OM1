@@ -15,20 +15,12 @@ ls /dev/tty.*
 ls /dev/cu.*
 ```
 
-## Testing the Low Level Mac BLE scan
-
-In `system_hw_test`:
-
-```bash
-uv run ble.py
-```
-
 ## Testing the BLE Scan
 
 Test host computer BLE scan and data storage to local file:
 
 ```bash
-uv run src/run.py test_ble
+make run CONFIG=test_ble
 ```
 
 ## Testing the BLE scan plus Arduino BLE/GPS
@@ -36,7 +28,7 @@ uv run src/run.py test_ble
 Host computer BLE scan plus Arduino based GPS and BLE:
 
 ```bash
-uv run src/run.py test_ble_gps
+make run CONFIG=test_ble_gps
 ```
 
 ## Testing the Entire Solution
@@ -44,7 +36,7 @@ uv run src/run.py test_ble_gps
 Combines autonomy, VILA, two BLE sources, GPS, odometry, and enhanced GPS:
 
 ```bash
-uv run src/run.py unitree_go2_mapper
+make run CONFIG=unitree_go2_mapper
 ```
 
 You should see a list of nearby BLE sources, such as BLE Beacons. The system will write location and RF data to file, and, if possible, to a cloud endpoint.
@@ -59,13 +51,7 @@ This is a draft format and will change frequently.
 
 ## Local YOLO
 
-In `system_hw_test`:
-
-```bash
-uv run yolo.py
-```
-
 At the top level, run:
 ```bash
-uv run src/run.py yolo
+make run CONFIG=yolo
 ```

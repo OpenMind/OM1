@@ -1,0 +1,485 @@
+package runtime
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"sync"
+	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/actions"
+	"github.com/openmind/om1/internal/backgrounds"
+	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/fuser"
+	"github.com/openmind/om1/internal/hooks"
+	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/knowledgebase"
+	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/providers"
+	zenohsession "github.com/openmind/om1/internal/zenoh"
+)
+
+type Options struct {
+	HotReload     bool
+	CheckInterval float64
+}
+
+type modeState struct {
+	runtimeConfig      *config.RuntimeConfig
+	promptFuser        *fuser.Fuser
+	cortexLLM          *llm.Orchestrator
+	actionOrchestrator *actions.Orchestrator
+	bgOrchestrator     *backgrounds.Orchestrator // nil when mode has no backgrounds
+	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
+	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
+	modeHooks          *hooks.Runner
+
+	cancelCtx      context.CancelFunc
+	inputDone      <-chan struct{}
+	actionDone     <-chan struct{}
+	backgroundDone <-chan struct{}
+	cortexDone     <-chan struct{}
+}
+
+type Runtime struct {
+	systemConfig *config.SystemConfig
+	opts         Options
+	log          *zap.Logger
+	manager      *ModeManager
+	ioProvider   *providers.IOProvider
+	tracer       *providers.Tracer
+
+	mu                        sync.Mutex
+	current                   *modeState
+	isReloading               bool
+	generation                int
+	modeTransitionHandlerOnce bool
+
+	modeTransitionCh chan string
+}
+
+func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runtime {
+	zenohsession.SetDefaultOptions(zenohsession.Options{
+		UseSim: systemConfig.UseSim,
+		APIKey: systemConfig.APIKey,
+	})
+
+	return &Runtime{
+		systemConfig:     systemConfig,
+		opts:             opts,
+		log:              log,
+		manager:          NewModeManager(systemConfig, log),
+		ioProvider:       providers.IO(),
+		tracer:           providers.TracerProvider(),
+		modeTransitionCh: make(chan string, 1),
+	}
+}
+
+func (rt *Runtime) Run(ctx context.Context) error {
+	if rt.opts.HotReload {
+		go rt.watchConfig(ctx)
+	}
+
+	initialMode := rt.manager.CurrentMode()
+	if err := rt.initializeMode(initialMode); err != nil {
+		return fmt.Errorf("initialize mode %q: %w", initialMode, err)
+	}
+
+	rt.mu.Lock()
+	current := rt.current
+	rt.mu.Unlock()
+
+	if current != nil {
+		startupCtx := map[string]any{
+			"mode_name":   initialMode,
+			"system_name": rt.systemConfig.Name,
+			"timestamp":   float64(time.Now().UnixMilli()) / 1000.0,
+		}
+
+		if err := rt.manager.globalHooks.Run(ctx, hooks.OnStartup, startupCtx); err != nil {
+			rt.log.Warn("global startup hook failed", zap.Error(err))
+		}
+
+		if err := current.modeHooks.Run(ctx, hooks.OnStartup, startupCtx); err != nil {
+			rt.log.Warn("mode startup hook failed", zap.Error(err))
+		}
+	}
+
+	rt.startOrchestrators(ctx)
+
+	<-ctx.Done()
+
+	rt.stopOrchestrators()
+	rt.manager.Close()
+	rt.tracer.Stop()
+	return ctx.Err()
+}
+
+func (rt *Runtime) initializeMode(modeName string) error {
+	modeCfg, ok := rt.systemConfig.Modes[modeName]
+	if !ok {
+		return fmt.Errorf("mode %q not found in config", modeName)
+	}
+
+	modeConfig := NewModeSetup(modeCfg, rt.systemConfig)
+
+	if err := modeConfig.loadComponents(); err != nil {
+		return err
+	}
+
+	runtimeConfig := modeConfig.toRuntimeConfig()
+
+	if runtimeConfig.UseTracer {
+		rt.tracer.Enable()
+	}
+
+	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
+
+	rt.manager.ResetUserContext()
+
+	var knowledgeBase fuser.KnowledgeBase
+	if runtimeConfig.KnowledgeBase != nil {
+		kb, err := knowledgebase.NewKnowledgeBase(runtimeConfig.KnowledgeBase)
+		if err != nil {
+			rt.log.Warn("knowledge base disabled", zap.Error(err))
+		} else {
+			knowledgeBase = kb
+		}
+	}
+
+	state := &modeState{
+		runtimeConfig: runtimeConfig,
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, rt.log),
+		cortexLLM: llm.NewOrchestrator(
+			modeConfig.cortexLLM,
+			modeCfg.CortexLLM.Config,
+			collectSchemas(modeConfig.agentActions),
+		),
+		actionOrchestrator: actions.NewOrchestrator(
+			modeConfig.agentActions,
+			actions.ExecMode(runtimeConfig.ActionExecMode),
+			runtimeConfig.ActionDeps,
+			rt.log,
+		),
+		sensors:   modeConfig.sensors,
+		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
+	}
+	if len(modeConfig.backgroundList) > 0 {
+		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)
+	}
+
+	rt.mu.Lock()
+	rt.current = state
+	rt.mu.Unlock()
+
+	rt.log.Info("mode initialised", zap.String("mode", modeName))
+	return nil
+}
+
+// startOrchestrators starts the orchestrators for the current mode in separate goroutines.
+func (rt *Runtime) startOrchestrators(ctx context.Context) {
+	if ctx.Err() != nil {
+		return
+	}
+
+	rt.mu.Lock()
+	current := rt.current
+	rt.mu.Unlock()
+
+	if current == nil {
+		return
+	}
+
+	modeCtx, cancel := context.WithCancel(ctx)
+	current.cancelCtx = cancel
+
+	current.inputOrchestrator = inputs.NewOrchestrator(current.sensors, rt.log)
+	current.inputDone = current.inputOrchestrator.Start(modeCtx)
+
+	if current.actionOrchestrator != nil {
+		current.actionDone = current.actionOrchestrator.Start(modeCtx)
+	}
+	if current.bgOrchestrator != nil {
+		current.backgroundDone = current.bgOrchestrator.Start(modeCtx)
+	}
+
+	cortexDone := make(chan struct{})
+	current.cortexDone = cortexDone
+	go func() {
+		defer close(cortexDone)
+		rt.runCortexLoop(modeCtx)
+	}()
+
+	rt.mu.Lock()
+	if !rt.modeTransitionHandlerOnce {
+		rt.modeTransitionHandlerOnce = true
+		go rt.handleModeTransitions(ctx)
+	}
+	rt.mu.Unlock()
+}
+
+// stopOrchestrators stops all orchestrators for the current mode and waits for them to finish, with a timeout to prevent hanging.
+func (rt *Runtime) stopOrchestrators() {
+	rt.mu.Lock()
+	current := rt.current
+	rt.current = nil
+	rt.mu.Unlock()
+
+	if current == nil || current.cancelCtx == nil {
+		return
+	}
+
+	current.cancelCtx()
+
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer stopCancel()
+
+	type namedCh struct {
+		name string
+		ch   <-chan struct{}
+	}
+	pools := []namedCh{
+		{"cortex", current.cortexDone},
+		{"action", current.actionDone},
+		{"background", current.backgroundDone},
+		{"input", current.inputDone},
+	}
+
+	var wg sync.WaitGroup
+	for _, p := range pools {
+		if p.ch == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(name string, ch <-chan struct{}) {
+			defer wg.Done()
+			select {
+			case <-ch:
+			case <-stopCtx.Done():
+				rt.log.Warn("orchestrator shutdown timed out", zap.String("pool", name))
+			}
+		}(p.name, p.ch)
+	}
+
+	wg.Wait()
+}
+
+// onModeTransition stops the current mode's orchestrators, initialises the new
+// mode and restarts all orchestrators.
+func (rt *Runtime) onModeTransition(ctx context.Context, fromMode, toMode string) error {
+	rt.log.Info("handling mode transition",
+		zap.String("from", fromMode),
+		zap.String("to", toMode),
+	)
+
+	rt.mu.Lock()
+	rt.isReloading = true
+	rt.mu.Unlock()
+	defer func() {
+		rt.mu.Lock()
+		rt.isReloading = false
+		rt.mu.Unlock()
+	}()
+
+	// Capture the departing mode's hooks before stopOrchestrators clears current.
+	rt.mu.Lock()
+	var exitHooks *hooks.Runner
+	if rt.current != nil {
+		exitHooks = rt.current.modeHooks
+	}
+	rt.mu.Unlock()
+
+	rt.stopOrchestrators()
+
+	if err := rt.initializeMode(toMode); err != nil {
+		return fmt.Errorf("initialize mode %q: %w", toMode, err)
+	}
+
+	// Capture the arriving mode's hooks after initializeMode sets the new current.
+	rt.mu.Lock()
+	var entryHooks *hooks.Runner
+	if rt.current != nil {
+		entryHooks = rt.current.modeHooks
+	}
+	rt.mu.Unlock()
+
+	rt.manager.Transition(toMode, "transition", exitHooks, entryHooks)
+	rt.startOrchestrators(ctx)
+
+	rt.log.Info("mode transition complete", zap.String("to", toMode))
+	return nil
+}
+
+// handleModeTransitions listens for mode transition requests and handles them sequentially to avoid concurrent transitions.
+func (rt *Runtime) handleModeTransitions(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case toMode := <-rt.modeTransitionCh:
+			fromMode := rt.manager.CurrentMode()
+			if err := rt.onModeTransition(ctx, fromMode, toMode); err != nil {
+				rt.log.Error("mode transition failed",
+					zap.String("to", toMode),
+					zap.Error(err),
+				)
+			}
+		}
+	}
+}
+
+// runCortexLoop runs the cortex loop for the current mode, ticking at the configured hertz
+// and also allowing immediate ticks when signaled by the InputOrchestrator.
+func (rt *Runtime) runCortexLoop(ctx context.Context) {
+	modeName := rt.manager.CurrentMode()
+
+	rt.mu.Lock()
+	rt.generation++
+	generation := rt.generation
+	current := rt.current
+	rt.mu.Unlock()
+
+	rt.tracer.SetGeneration(generation)
+	rt.log.Info("cortex loop started", zap.String("mode", modeName), zap.Int("generation", generation))
+
+	if current == nil {
+		return
+	}
+
+	tickInterval := time.Duration(float64(time.Second) / current.runtimeConfig.Hertz)
+
+	for {
+		timer := time.NewTimer(tickInterval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			rt.log.Info("cortex loop exiting", zap.String("mode", modeName))
+			return
+		case <-timer.C:
+		case <-current.inputOrchestrator.TickNow():
+			timer.Stop()
+		case update := <-providers.ModeContext().Updates():
+			timer.Stop()
+			rt.manager.UpdateUserContext(update)
+			rt.scheduleTransition(rt.manager.CheckTransitions(ctx, current.inputOrchestrator.Buffers()))
+			continue
+		}
+
+		rt.tick(ctx, current, time.Now())
+	}
+}
+
+// scheduleTransition queues a mode change when toMode is non-empty, dropping the
+// request if one is already pending. It reports whether a transition was
+// scheduled, so callers can skip further work for the departing mode.
+func (rt *Runtime) scheduleTransition(toMode string) bool {
+	if toMode == "" {
+		return false
+	}
+	select {
+	case rt.modeTransitionCh <- toMode:
+		rt.log.Info("mode transition scheduled", zap.String("to", toMode))
+	default:
+	}
+	return true
+}
+
+// tick executes a single cortex cycle: checks for mode transitions, fuses a
+// prompt, calls the LLM, executes tool calls and records telemetry.
+func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.Time) {
+	if ctx.Err() != nil {
+		return
+	}
+
+	rt.mu.Lock()
+	reloading := rt.isReloading
+	rt.mu.Unlock()
+
+	if reloading {
+		rt.log.Debug("skipping tick during mode transition")
+		return
+	}
+
+	rt.ioProvider.IncrementTick()
+	sensorBuffers := current.inputOrchestrator.Buffers()
+
+	if rt.scheduleTransition(rt.manager.CheckTransitions(ctx, sensorBuffers)) {
+		return
+	}
+
+	prompt, err := current.promptFuser.Fuse(ctx, sensorBuffers)
+	if err != nil {
+		rt.log.Warn("fuse failed", zap.Error(err))
+		return
+	}
+
+	if ctx.Err() != nil {
+		return
+	}
+
+	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
+
+	response, err := current.cortexLLM.Call(ctx, prompt, nil)
+	if err != nil {
+		rt.log.Warn("llm call failed", zap.Error(err))
+		return
+	}
+
+	rt.tracer.Gauge(prompt, traceOutput(response))
+
+	if len(response.ToolCalls) > 0 {
+		calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(response.ToolCalls))
+		if err != nil {
+			rt.log.Warn("parse action calls failed", zap.Error(err))
+		} else {
+			for _, res := range current.actionOrchestrator.Submit(ctx, calls) {
+				if res.Err != nil {
+					rt.log.Warn("action failed",
+						zap.String("action", res.ActionName),
+						zap.Error(res.Err),
+					)
+				}
+			}
+		}
+	}
+
+	rt.ioProvider.RecordTick(tickStart)
+}
+
+// watchConfig polls the config file and logs a warning when it changes.
+func (rt *Runtime) watchConfig(ctx context.Context) {
+	if rt.systemConfig.Name == "" {
+		return
+	}
+	path := fmt.Sprintf("config/%s.json5", rt.systemConfig.Name)
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	lastMod := info.ModTime()
+	interval := time.Duration(rt.opts.CheckInterval * float64(time.Second))
+	if interval <= 0 {
+		interval = time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			info, err := os.Stat(path)
+			if err != nil {
+				continue
+			}
+			if info.ModTime().After(lastMod) {
+				lastMod = info.ModTime()
+				rt.log.Info("config file changed — hot-reload not yet implemented; restart to apply changes",
+					zap.String("path", path))
+			}
+		}
+	}
+}

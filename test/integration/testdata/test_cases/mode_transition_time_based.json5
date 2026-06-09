@@ -1,0 +1,62 @@
+{
+  // Time-based transition: patrol holds for a short timeout, then the runtime
+  // automatically switches to `active`, which then produces an action. Proves the
+  // time-based rule path (checkTimeBased) drives a real mode switch.
+  name: "patrol times out into active",
+  description: "time_based rule transitions modes after a timeout",
+  default_mode: "patrol",
+  wait_for_calls: 1,
+  timeout_ms: 5000,
+
+  transition_rules: [
+    {
+      from_mode: "patrol",
+      to_mode: "active",
+      transition_type: "time_based",
+      timeout_seconds: 0.1,
+      priority: 1,
+    },
+  ],
+
+  modes: {
+    patrol: {
+      name: "patrol",
+      hertz: 50,
+      system_prompt_base: "You are idling on patrol.",
+      agent_inputs: [
+        { type: "mock_input", config: { text: "all quiet", triggers_tick: true } },
+      ],
+      cortex_llm: { type: "scripted_llm", config: { rules: [] } },
+      agent_actions: [],
+    },
+
+    active: {
+      name: "active",
+      hertz: 50,
+      system_prompt_base: "You are now active.",
+      agent_inputs: [
+        { type: "mock_input", config: { text: "time to move", triggers_tick: true } },
+      ],
+      cortex_llm: {
+        type: "scripted_llm",
+        config: {
+          rules: [
+            {
+              when_contains: "move",
+              tool_calls: [ { name: "move", arguments: { direction: "forward" } } ],
+            },
+          ],
+        },
+      },
+      agent_actions: [
+        { name: "move", llm_label: "move", connector: "recording" },
+      ],
+    },
+  },
+
+  expected: {
+    action_calls: [
+      { action: "move", arg_contains: { direction: "forward" } },
+    ],
+  },
+}

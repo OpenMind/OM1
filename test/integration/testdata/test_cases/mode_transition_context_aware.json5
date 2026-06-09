@@ -1,0 +1,69 @@
+{
+  // Context-aware transition: the patrol input publishes a context flag onto the
+  // mode-context bus (threat_detected=true). The runtime re-evaluates and switches
+  // to `alert`, which then acts. Proves the context_aware rule path.
+  name: "context flag transitions to alert",
+  description: "context_aware rule transitions when a published flag matches",
+  default_mode: "patrol",
+  wait_for_calls: 1,
+  timeout_ms: 5000,
+
+  transition_rules: [
+    {
+      from_mode: "patrol",
+      to_mode: "alert",
+      transition_type: "context_aware",
+      context_conditions: { threat_detected: true },
+      priority: 1,
+    },
+  ],
+
+  modes: {
+    patrol: {
+      name: "patrol",
+      hertz: 50,
+      system_prompt_base: "You are on patrol.",
+      agent_inputs: [
+        {
+          type: "mock_input",
+          config: {
+            text: "scanning the area",
+            triggers_tick: true,
+            publish_context: { threat_detected: true },
+          },
+        },
+      ],
+      cortex_llm: { type: "scripted_llm", config: { rules: [] } },
+      agent_actions: [],
+    },
+
+    alert: {
+      name: "alert",
+      hertz: 50,
+      system_prompt_base: "You are responding to a threat.",
+      agent_inputs: [
+        { type: "mock_input", config: { text: "intruder detected", triggers_tick: true } },
+      ],
+      cortex_llm: {
+        type: "scripted_llm",
+        config: {
+          rules: [
+            {
+              when_contains: "intruder",
+              tool_calls: [ { name: "speak", arguments: { sentence: "Threat acknowledged" } } ],
+            },
+          ],
+        },
+      },
+      agent_actions: [
+        { name: "speak", llm_label: "speak", connector: "recording" },
+      ],
+    },
+  },
+
+  expected: {
+    action_calls: [
+      { action: "speak", arg_contains: { sentence: "Threat acknowledged" } },
+    ],
+  },
+}

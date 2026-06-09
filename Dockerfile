@@ -1,15 +1,27 @@
-FROM python:3.12-slim
+FROM golang:1.26-bookworm AS builder
 
-RUN apt-get update && apt-get install -y \
-    git \
-    ffmpeg \
-    portaudio19-dev \
-    libasound2-dev \
-    libv4l-dev \
-    python3-pip \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    cmake \
-    python3-dev \
+    pkg-config \
+    curl \
+    unzip \
+    portaudio19-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN make build
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    ffmpeg \
     libasound2 \
     libasound2-data \
     libasound2-plugins \
@@ -18,20 +30,11 @@ RUN apt-get update && apt-get install -y \
     alsa-topology-conf \
     alsa-ucm-conf \
     pulseaudio-utils \
+    libv4l-0 \
+    libhidapi-hidraw0 \
     iputils-ping \
-    curl \
-    pkg-config \
-    libssl-dev \
     libnss-mdns \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-RUN python3 -m pip install --upgrade pip
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    libportaudio2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -47,61 +50,57 @@ RUN if ! grep -q 'mdns4_minimal' /etc/nsswitch.conf; then \
       sed -i 's/^\(hosts:[[:space:]]*files\)\(.*\)$/\1 mdns4_minimal [NOTFOUND=return]\2/' /etc/nsswitch.conf; \
     fi
 
-WORKDIR /app
-RUN git clone --branch releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds
-WORKDIR /app/cyclonedds/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON \
- && cmake --build . --target install
-
-ENV CYCLONEDDS_HOME=/app/cyclonedds/install \
-    CMAKE_PREFIX_PATH=/app/cyclonedds/install
-
 WORKDIR /app/OM1
-COPY . .
-RUN git submodule update --init --recursive
+
+COPY --from=builder /app/build/om1 /usr/local/bin/om1
+COPY --from=builder /app/.zenoh-c/lib/ /usr/local/lib/
+RUN ldconfig
+
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/knowledge_base ./knowledge_base
 
 RUN cp -r config config_defaults
 
-RUN uv venv /app/OM1/.venv && \
-    uv pip install -r pyproject.toml --extra dds
+COPY <<'EOF' /entrypoint.sh
+#!/bin/bash
+set -e
 
-ENV VIRTUAL_ENV=/app/OM1/.venv
-ENV PATH="/app/OM1/.venv/bin:$PATH"
+cp -rn /app/OM1/config_defaults/* /app/OM1/config/ 2>/dev/null || true
 
-RUN echo '#!/bin/bash' > /entrypoint.sh && \
-    echo 'set -e' >> /entrypoint.sh && \
-    echo 'cp -r /app/OM1/config_defaults/* /app/OM1/config/ 2>/dev/null || true' >> /entrypoint.sh && \
-    echo 'if [ "${OM1_SKIP_INTERNET_CHECK}" = "true" ]; then' >> /entrypoint.sh && \
-    echo '  echo "Skipping internet connectivity check."' >> /entrypoint.sh && \
-    echo 'else' >> /entrypoint.sh && \
-    echo '  until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
-    echo '    echo "Waiting for internet connection..."' >> /entrypoint.sh && \
-    echo '    sleep 2' >> /entrypoint.sh && \
-    echo '  done' >> /entrypoint.sh && \
-    echo '  echo "Internet connected."' >> /entrypoint.sh && \
-    echo 'fi' >> /entrypoint.sh && \
-    echo 'echo "Checking audio system..."' >> /entrypoint.sh && \
-    echo 'if ! pactl info >/dev/null 2>&1; then' >> /entrypoint.sh && \
-    echo '  echo "ERROR: PulseAudio connection failed. Exiting container for restart..."' >> /entrypoint.sh && \
-    echo '  exit 1' >> /entrypoint.sh && \
-    echo 'fi' >> /entrypoint.sh && \
-    echo 'echo "PulseAudio connected successfully."' >> /entrypoint.sh && \
-    echo 'if ! pactl list sinks | grep -q "default_output_aec" 2>/dev/null; then' >> /entrypoint.sh && \
-    echo '  echo "ERROR: Audio device default_output_aec not found. Exiting container for restart..."' >> /entrypoint.sh && \
-    echo '  echo "Available audio sinks:"' >> /entrypoint.sh && \
-    echo '  pactl list short sinks 2>/dev/null || echo "No sinks available"' >> /entrypoint.sh && \
-    echo '  exit 1' >> /entrypoint.sh && \
-    echo 'fi' >> /entrypoint.sh && \
-    echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
-    echo 'echo "Starting main command..."' >> /entrypoint.sh && \
-    echo 'if [ -n "${OM1_COMMAND}" ]; then' >> /entrypoint.sh && \
-    echo '  exec python src/run.py "${OM1_COMMAND}"' >> /entrypoint.sh && \
-    echo 'elif [ -f "/app/OM1/config/memory/.runtime.json5" ]; then' >> /entrypoint.sh && \
-    echo '  exec python src/run.py' >> /entrypoint.sh && \
-    echo 'else' >> /entrypoint.sh && \
-    echo '  exec python src/run.py "$@"' >> /entrypoint.sh && \
-    echo 'fi' >> /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+if [ "${OM1_SKIP_INTERNET_CHECK}" = "true" ]; then
+  echo "Skipping internet connectivity check."
+else
+  until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do
+    echo "Waiting for internet connection..."
+    sleep 2
+  done
+  echo "Internet connected."
+fi
+
+if [ "${OM1_SKIP_AUDIO_CHECK}" = "true" ]; then
+  echo "Skipping audio system check."
+else
+  echo "Checking audio system..."
+  if ! pactl info >/dev/null 2>&1; then
+    echo "ERROR: PulseAudio connection failed. Exiting container for restart..."
+    exit 1
+  fi
+  echo "PulseAudio connected successfully."
+  if ! pactl list sinks | grep -q "default_output_aec" 2>/dev/null; then
+    echo "ERROR: Audio device default_output_aec not found. Exiting container for restart..."
+    echo "Available audio sinks:"
+    pactl list short sinks 2>/dev/null || echo "No sinks available"
+    exit 1
+  fi
+  echo "Audio device default_output_aec is ready."
+fi
+
+echo "Starting OM1..."
+OM1_COMMAND="${OM1_COMMAND:-${1:-conversation}}"
+exec /usr/local/bin/om1 -config "${OM1_COMMAND}" ${OM1_EXTRA_ARGS}
+EOF
+
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["spot"]
+CMD ["conversation"]

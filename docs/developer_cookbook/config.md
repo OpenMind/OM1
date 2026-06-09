@@ -70,7 +70,7 @@ To ensure your configuration is valid, follow the format defined [here](https://
 | `name`           | `string` | Yes      | Human-readable identifier for the action. Example: `"speak"`                                                               |
 | `llm_label`      | `string` | Yes      | Label the model uses to refer to this action. Example: `"speak"`                                                           |
 | `implementation` | `string` | No       | Defines the business logic. If none defined, defaults to `"passthrough"`. Example: `"passthrough"`                         |
-| `connector`      | `string` | Yes      | Name of the connector. This is the Python file name defined under `actions/action_name/connector`. Example: `"elevenlabs_tts"` |
+| `connector`      | `string` | Yes      | Name of the connector. This is the Go file name defined under `plugins/actions/action_name/`. Example: `"elevenlabs_tts"` |
 
 ### Step 7: Add modes
 

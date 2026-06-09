@@ -1,0 +1,46 @@
+{
+  // A single mode whose input contains a greeting. The scripted cortex LLM
+  // reacts to "Hello" by emitting a `speak` tool call, which must reach the
+  // recording connector wired to the speak action.
+  name: "speak on greeting",
+  description: "input -> fuser -> cortex LLM -> speak action",
+  hertz: 50,
+  wait_for_calls: 1,
+  timeout_ms: 3000,
+
+  system_prompt_base: "You are a friendly test robot.",
+
+  agent_inputs: [
+    {
+      type: "mock_input",
+      config: {
+        text: "Hello there robot",
+        triggers_tick: true,
+      },
+    },
+  ],
+
+  cortex_llm: {
+    type: "scripted_llm",
+    config: {
+      rules: [
+        {
+          when_contains: "Hello",
+          tool_calls: [
+            { name: "speak", arguments: { sentence: "Hi there, human!" } },
+          ],
+        },
+      ],
+    },
+  },
+
+  agent_actions: [
+    { name: "speak", llm_label: "speak", connector: "recording" },
+  ],
+
+  expected: {
+    action_calls: [
+      { action: "speak", arg_contains: { sentence: "Hi there" } },
+    ],
+  },
+}

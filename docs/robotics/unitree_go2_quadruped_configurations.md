@@ -21,7 +21,7 @@ In this configuration, the quadruped observes its environment, listens and speak
 
 Run
 ```bash
-uv run src/run.py unitree_go2_basic
+make run CONFIG=unitree_go2_basic
 ```
 
 In this mode, the quadruped is configured to (1) use a small local VLM, (2) listen to you, and (3) to speak to you. The amount of speech ("always") is set via the `"silence_rate": 0, // vocalize all speech outputs` setting in `actions:speak:config`.
@@ -30,7 +30,7 @@ In this mode, the quadruped is configured to (1) use a small local VLM, (2) list
 
 Run
 ```bash
-uv run src/run.py unitree_go2_autonomy
+make run CONFIG=unitree_go2_autonomy
 ```
 
 OM1 will provide LIDAR and other data to a system of LLMs, allowing them to autonomously explore indoor and outdoor environments.
@@ -41,7 +41,7 @@ In this mode, the quadruped is configured to (1) use a cloud VLM, (2) listen to 
 
 Run
 ```bash
-uv run src/run.py unitree_go2_mapper
+make run CONFIG=unitree_go2_mapper
 ```
 
 OM1 will provide LIDAR and other data to a system of LLMs, allowing them to autonomously explore indoor and outdoor environments. Also, the system will log position (local odometry and GPS data) and Bluetooth data, as the basis for reliable navigation and path planning. In this mode, the quadruped is configured to use a cloud VLM. There is no speech in this configuration.

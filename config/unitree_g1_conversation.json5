@@ -3,7 +3,7 @@
   version: "v1.0.5",
 
   // Mode system configuration for Unitree G1
-  default_mode: "greeting",
+  default_mode: "conversation",
   allow_manual_switching: true,
   mode_memory_enabled: true,
 
@@ -14,7 +14,7 @@
   cortex_llm: {
     type: "GeminiLLM",
     config: {
-      agent_name: "${ROBOT_NAME:-Pam}",
+      agent_name: "${ROBOT_NAME:-Iris}",
       history_length: 10,
     },
   },
@@ -26,10 +26,10 @@
   },
 
   modes: {
-    greeting: {
+    conversation: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\
+system_prompt_base: "You are Unitree G1, a polite humanoid robot designed for friendly human interaction and conversation.\
 \n\
 Your responsibilities:\n\
 - Speak clearly, politely, and naturally.\n\
@@ -40,15 +40,24 @@ Your responsibilities:\n\
 \n\
 Identity:\n\
 - You are Unitree G1, a humanoid robot.\n\
-- Your name is ${ROBOT_NAME:-Pam}.\n\
+- Your name is ${ROBOT_NAME:-Iris}.\n\
 \n\
-You are allowed to perform the following physical actions when appropriate during interaction: shake_hand, face_wave, hands_up, IDLE, stand_still, show_hand, wave.\n\
+You are allowed to perform the following physical actions when appropriate during interaction: idle, shake_hand, face_wave, hands_up, stand_still, show_hand, rotate_hand, heart, push, salute, shrug, speak_action_extended, speak_action, come_closer, flexible.\n\
 \n\
 Behavior Guidelines:\n\
 - Use gestures naturally to improve interaction.\n\
-- For greetings, you may use WAVE or FACE_WAVE.\n\
+- For greetings, you may use FACE_WAVE, SALUTE, or SHAKE_HAND.\n\
 - When meeting someone new, you may offer SHAKE_HAND.\n\
-- When idle or explain things, prefer STAND_STILL.\n\
+- For appreciation, encouragement, or affection, you may use HEART.\n\
+- When you are uncertain or do not know something, you may use SHRUG.\n\
+- When celebrating, showing excitement, or sharing good news, you may use HANDS_UP.\n\
+- SHOW_HAND is a simple friendly gesture to show your hand.\n\
+- ROTATE_HAND is a playful hand motion used to add fun and personality.\n\
+- FLEXIBLE is a playful expressive movement that can make interactions more lively.\n\
+- When inviting someone to approach, you may use COME_CLOSER.\n\
+- PUSH should only be used when demonstrating or discussing a pushing action.\n\
+- For speaking with coordinated body language, you may use SPEAK_ACTION or SPEAK_ACTION_EXTENDED.\n\
+- When idle, listening, or explaining, prefer STAND_STILL.\n\
 - Avoid excessive or repetitive motions.\n\
 - Never perform unsafe, aggressive, or inappropriate actions.\n\
 \n\
@@ -59,31 +68,20 @@ You should prioritize safe, comfortable, and positive human interaction.",
           type: "GoogleASRInput",
           config: {
             api_version: "v2",
-            enable_tts_interrupt: false,
+            enable_tts_interrupt: true,
             rate: 16000,
             chunk: 1600,
           },
         },
         {
-          type: "ConversationHistoryInput",
-          config: {
-            max_rounds: 3,
-          },
-        },
-        {
-          type: "FacePresence",
-        },
+          type: "VLMGeminiRTSP",
+        }
       ],
       cortex_llm: {
-        type: "ParallelLLM",
+        type: "GeminiLLM",
         config: {
-          llms: [
-            {
-              llm_type: "GeminiLLM",
-              action_filter: ["speak", "arm_g1", "face"],
-            },
-          ],
-          execute_immediately: true,
+          agent_name: "Spot",
+          history_length: 10,
         },
       },
       action_execution_mode: "concurrent",
@@ -91,45 +89,26 @@ You should prioritize safe, comfortable, and positive human interaction.",
         {
           name: "speak",
           llm_label: "speak",
-          connector: "elevenlabs_people_tts",
+          connector: "elevenlabs_tts",
           config: {
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-            voice_ids: {
-              boyuan: "mr9qrgzgp98Y3CKLQHa5",
-              jerin: "XOhISZ8S2JCoAAhPLE4t",
-              lifan: "RK1vBUdUjL4AGgQCaxpi",
-              wendy: "usX0EPrPwf8ZC4BJpllM",
-              shicai: "m2txcO7RSY7jbTbO0PS4",
-              jan: "rPwOfJSzVUxWlm2ZLSv9",
-              rubail: "hi96TjugRiLITatqxwFC",
-              samantha: "HY0AVCmB90fxGEKkU5rz",
-              david: "BoTfQVPAlh2bemD7p75F",
-            },
+            enable_tts_interrupt: false,
           },
         },
         {
-          name: "face",
-          llm_label: "show_emotion",
-          connector: "avatar",
+          name: "emotion",
+          llm_label: "emotion",
+          connector: "zenoh",
         },
         {
-          name: "arm_g1",
+          name: "unitree_g1_arm",
           llm_label: "robot_action",
           connector: "zenoh",
         },
       ],
       backgrounds: [],
-      lifecycle_hooks: [
-        {
-          hook_type: "on_startup",
-          handler_type: "message",
-          handler_config: {
-            tts_provider: "elevenlabs",
-            message: "Hello! I'm ${ROBOT_NAME:-Pam}, how are you?",
-            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-          },
-        },
-      ],
+      lifecycle_hooks: [],
     },
   },
+  transition_rules: [],
 }
