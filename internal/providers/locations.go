@@ -1,4 +1,4 @@
-package go2
+package providers
 
 import (
 	"context"
@@ -188,6 +188,17 @@ func (p *LocationsProvider) GetLocation(label string) (Location, bool) {
 	defer p.mu.RUnlock()
 	loc, ok := p.locations[key]
 	return loc, ok
+}
+
+// AllLocations returns a copy of all cached locations keyed by their normalized label.
+func (p *LocationsProvider) AllLocations() map[string]Location {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	out := make(map[string]Location, len(p.locations))
+	for key, loc := range p.locations {
+		out[key] = loc
+	}
+	return out
 }
 
 // AllNames returns the display names of all cached locations.

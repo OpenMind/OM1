@@ -14,8 +14,8 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
-	go2 "github.com/openmind/om1/internal/providers/unitree/go2"
 	"github.com/openmind/om1/internal/util"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
@@ -59,7 +59,7 @@ func init() {
 			"movement control until navigation completes.",
 		NavigateLocationInput{},
 	)
-	actions.Register("navigation/navigate", NewUnitreeGo2Navigate)
+	actions.Register("navigation/navigation", NewUnitreeGo2Navigate)
 }
 
 type Config struct {
@@ -123,7 +123,7 @@ func parseConfig(configMap map[string]any) Config {
 type Connector struct {
 	log       *zap.Logger
 	tts       *tts.ElevenLabsProvider
-	locations *go2.LocationsProvider
+	locations *providers.LocationsProvider
 
 	session      zenohsession.Session
 	goalPosePub  zenohsession.Publisher
@@ -160,7 +160,7 @@ func NewUnitreeGo2Navigate(configMap map[string]any) (actions.Connector, error) 
 		Rate:             cfg.Rate,
 	}, log)
 
-	locations := go2.NewLocationsProvider(cfg.BaseURL, cfg.APIKey, timeout, refresh)
+	locations := providers.NewLocationsProvider(cfg.BaseURL, cfg.APIKey, timeout, refresh)
 	locations.Start()
 
 	c := &Connector{
