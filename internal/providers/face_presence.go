@@ -119,10 +119,11 @@ type PresenceSnapshot struct {
 	ServerTS float64     `json:"server_ts"`
 
 	// Derived (populated by FetchSnapshot, not from JSON).
-	ClosestName string  `json:"-"`
-	ClosestUUID string  `json:"-"`
-	ClosestTier string  `json:"-"`
-	ClosestSim  float64 `json:"-"`
+	ClosestName  string  `json:"-"`
+	ClosestUUID  string  `json:"-"`
+	ClosestTier  string  `json:"-"`
+	ClosestSim   float64 `json:"-"`
+	UnknownFaces int     `json:"-"`
 }
 
 // providerForDefaults exposes the configured thresholds to the
@@ -196,6 +197,9 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 	// The hook's "no one in particular" fallback then kicks in.
 	var bestArea int
 	for _, f := range snap.Faces {
+		if f.Name == "unknown" || f.Name == "" {
+			snap.UnknownFaces++
+		}
 		if f.UUID == "" {
 			continue
 		}

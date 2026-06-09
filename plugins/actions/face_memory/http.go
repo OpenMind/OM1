@@ -23,7 +23,6 @@ import (
 	"github.com/openmind/om1/internal/providers/tts"
 )
 
-
 // FaceMemoryOp is the enum of supported operations.
 type FaceMemoryOp string
 
@@ -63,7 +62,6 @@ func init() {
 	)
 	actions.Register("face_memory", NewConnector)
 }
-
 
 type Config struct {
 	APIKey           string  `json:"api_key"`
@@ -154,7 +152,6 @@ func NewConnector(configMap map[string]any) (actions.Connector, error) {
 	}, nil
 }
 
-
 func (c *Connector) Connect(ctx context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
@@ -182,7 +179,6 @@ func (c *Connector) Connect(ctx context.Context, input actions.Input) (actions.O
 
 func (c *Connector) Tick(ctx context.Context) { <-ctx.Done() }
 func (c *Connector) Stop()                    {}
-
 
 func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, error) {
 	name := strings.TrimSpace(stringArg(args, "id"))
@@ -304,7 +300,6 @@ func (c *Connector) dispatchSelfieResponse(resp map[string]any, claimedID string
 	}
 }
 
-
 func (c *Connector) doCorrectIdentity(_ context.Context, args map[string]any) (any, error) {
 	fromID := normID(args, "from_id")
 	toID := normID(args, "to_id")
@@ -409,7 +404,6 @@ func (c *Connector) dispatchRenameResponse(resp map[string]any, fromID, toID, uu
 	}
 }
 
-
 func (c *Connector) doForgetLast(_ context.Context, _ map[string]any) (any, error) {
 	resp := c.postJSON("/gallery/forget_last", map[string]any{})
 	c.dispatchForgetResponse(resp)
@@ -454,7 +448,6 @@ func (c *Connector) dispatchForgetResponse(resp map[string]any) {
 		c.speak("Something went wrong undoing that.")
 	}
 }
-
 
 func (c *Connector) doFindSimilar(_ context.Context, args map[string]any) (any, error) {
 	topK := intArg(args, "top_k", c.cfg.DefaultTopK)
@@ -534,7 +527,6 @@ func (c *Connector) dispatchFindSimilarResponse(resp map[string]any) {
 	}
 }
 
-
 func (c *Connector) doMerge(_ context.Context, args map[string]any) (any, error) {
 	targetName := strings.ToLower(strings.TrimSpace(strOr(args, "target_name", "")))
 	confirmedBy := strings.TrimSpace(strOr(args, "confirmed_by", ""))
@@ -604,7 +596,6 @@ func (c *Connector) dispatchMergeResponse(resp map[string]any, targetName string
 	}
 }
 
-
 func (c *Connector) doSetName(_ context.Context, args map[string]any) (any, error) {
 	toID := normID(args, "to_id")
 	if toID == "" {
@@ -660,7 +651,6 @@ func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID str
 	}
 }
 
-
 func (c *Connector) postJSON(path string, body map[string]any) map[string]any {
 	url := c.cfg.FaceHTTPBaseURL + path
 	buf, _ := json.Marshal(body)
@@ -715,7 +705,6 @@ func (c *Connector) dispatchNetworkError() {
 	c.clearState()
 }
 
-
 func (c *Connector) getBlur() bool {
 	resp := c.postJSON("/config", map[string]any{"get": true})
 	if resp == nil {
@@ -762,7 +751,6 @@ func (c *Connector) waitAnyFace(ctx context.Context, timeoutSec int) bool {
 	}
 	return false
 }
-
 
 func displayName(id string) string {
 	if id == "" {
