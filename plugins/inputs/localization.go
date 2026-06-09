@@ -9,7 +9,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/openmind/om1/internal/geometry"
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
@@ -34,17 +33,9 @@ type LocalizationConfig struct {
 	QualityTolerance float32 `json:"quality_tolerance"`
 }
 
-// localizationProvider is the subset of the localization provider that the
-// sensor depends on. It is an interface so tests can inject a fake.
-type localizationProvider interface {
-	IsLocalized() bool
-	Pose() *geometry.Pose
-	Stop()
-}
-
 type LocalizationSensor struct {
 	log      *zap.Logger
-	provider localizationProvider
+	provider *localizationprovider.LocalizationProvider
 
 	mu       sync.Mutex
 	messages []inputs.Message
