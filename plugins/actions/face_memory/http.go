@@ -722,10 +722,6 @@ func (c *Connector) setBlur(on bool) {
 	_ = c.postJSON("/config", map[string]any{"set": map[string]any{"blur": on}})
 }
 
-func (c *Connector) whoSnapshot() map[string]any {
-	return c.postJSON("/who", map[string]any{"recent_sec": c.cfg.FaceRecentSec})
-}
-
 func (c *Connector) waitAnyFace(ctx context.Context, timeoutSec int) bool {
 	if timeoutSec <= 0 {
 		timeoutSec = c.cfg.TimeoutSec
@@ -735,7 +731,7 @@ func (c *Connector) waitAnyFace(ctx context.Context, timeoutSec int) bool {
 		tries = 1
 	}
 	for i := 0; i < tries; i++ {
-		resp := c.whoSnapshot()
+		resp := c.postJSON("/who", map[string]any{"recent_sec": c.cfg.FaceRecentSec})
 		if resp != nil {
 			now, _ := resp["now"].([]any)
 			unknownNow, _ := resp["unknown_now"].(float64)

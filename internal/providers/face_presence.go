@@ -1,37 +1,12 @@
-// Package providers (face presence) — drop into internal/providers/.
+// Package providers — FacePresenceProvider polls the face service's /who
+// endpoint and renders snapshots into LLM-readable text.
 //
-// FacePresenceProvider polls the face HTTP service's /who endpoint and
-// renders the snapshot into LLM-readable text. In passive mode (LLM
-// doesn't tick on face change), the text the LLM sees here on its next
-// user-driven tick is its only window into the room. So the format
-// encodes everything the LLM needs to choose its greeting style.
+// Greeting tiers for NAMED faces (by last-seen gap):
+//   <1 day → "Welcome back", 1-6 days → "N days ago", ≥7 days → date.
+// ANON faces: <3 min → newcomer, ≥3 min → met before.
+// UNKNOWN faces (pre-enroll transients) are hidden from LLM text.
 //
-// GREETING-STYLE LADDER
-// ---------------------
-//
-// For NAMED faces, the LLM picks one of three styles based on how long
-// ago this identity was last seen:
-//
-//	< 1 day      → "Welcome back, <Name>!" (recent, conversational)
-//	1 ≤ d < 7    → "Hi <Name>, I've seen you N days ago." (recent-ish)
-//	≥ 7 days     → "Hi <Name>, last time we met was on <DATE>."
-//
-// For ANON faces (auto-enrolled, no name yet), two states:
-//
-//	< 3 min      → "Hi! What's your name?" (newcomer, just discovered)
-//	≥ 3 min      → "We've met before — what's your name?"
-//
-// UNKNOWN faces (no UUID assigned yet, still in the 1-3s window between
-// detection and auto-enroll) are HIDDEN from the text — they're a
-// transitional state the LLM can't act on (no identity to name).
-//
-// STICKY SESSION SEMANTICS
-// ------------------------
-// The "last seen" gap is snapshotted at the start of each track session,
-// not the current gallery value (which is touched every frame the face
-// is visible). Same person staying in the room for an hour: gap stays
-// constant. Same person leaving and returning: gap reflects the
-// PREVIOUS visit, not "0 seconds ago".
+// "Last seen" gap is snapshotted at session start, not updated per-frame.
 package providers
 
 import (
@@ -44,6 +19,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/openmind/om1/internal/httpclient"
 )
 
 // FacePresenceConfig configures the provider.
@@ -85,14 +62,15 @@ func NewFacePresenceProvider(cfg FacePresenceConfig) *FacePresenceProvider {
 		cfg.NamedLongAbsenceThrSec = 604_800.0
 	}
 	return &FacePresenceProvider{
-		cfg:    cfg,
-		client: &http.Client{Timeout: cfg.Timeout},
+		cfg: cfg,
+		client: &http.Client{
+			Transport: httpclient.Default().Transport,
+			Timeout:   cfg.Timeout,
+		},
 	}
 }
 
-// FaceEntry is one face in a /who snapshot. Field names mirror the JSON
-// returned by the Python API. Pointer types let us distinguish "field
-// absent / null" from "field present with value 0".
+// FaceEntry is one face in a /who snapshot. Pointer fields distinguish null from zero.
 type FaceEntry struct {
 	Name           string   `json:"name"` // "sean" / "anon_73d0a4" / "unknown"
 	UUID           string   `json:"uuid"` // full 32-hex; "" for unknown
@@ -105,14 +83,8 @@ type FaceEntry struct {
 	LastSeenISO    *string  `json:"last_seen_iso"`     // ISO timestamp of previous sighting
 }
 
-// PresenceSnapshot is the parsed /who response (we only need a subset of fields).
-//
-// ClosestName / ClosestUUID / ClosestTier are derived fields populated
-// by FetchSnapshot after parsing — they describe the most prominent
-// (largest-area) face on screen. Kept here for backward compatibility
-// with code that worked with the previous "single closest face" model
-// (e.g. lifecycle hooks deciding how to greet the room on startup).
-// New code should iterate “Faces“ instead.
+// PresenceSnapshot is the parsed /who response.
+// Closest* fields describe the largest-area face; new code should iterate Faces.
 type PresenceSnapshot struct {
 	OK       bool        `json:"ok"`
 	Faces    []FaceEntry `json:"faces"`
@@ -126,10 +98,7 @@ type PresenceSnapshot struct {
 	UnknownFaces int     `json:"-"`
 }
 
-// providerForDefaults exposes the configured thresholds to the
-// PresenceSnapshot.ToText method (which is a method on PresenceSnapshot, not the
-// provider, for simple test ergonomics). face_presence.go calls
-// SetDefaults at startup so these match the parsed runtime config.
+// providerForDefaults holds thresholds used by ToText. Updated via SetDefaults.
 var providerForDefaults = &FacePresenceProvider{
 	cfg: FacePresenceConfig{
 		AnonNewcomerThrSec:     180.0,
@@ -152,15 +121,7 @@ func SetDefaults(cfg FacePresenceConfig) {
 }
 
 // FetchSnapshot calls POST /who and returns the parsed result.
-//
-// Returns by VALUE rather than pointer for backward compatibility with
-// hook code that takes “PresenceSnapshot“ arguments. On error, the
-// returned snapshot is the zero value (Faces=nil, OK=false), and the
-// error is non-nil.
-//
-// Populates the derived “Closest*“ fields from the largest-area face
-// before returning, so hook code can call “snap.ClosestName“ without
-// iterating “Faces“.
+// Populates derived Closest* and UnknownFaces fields before returning.
 func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnapshot, error) {
 	body, _ := json.Marshal(map[string]any{"recent_sec": p.cfg.RecentSec})
 	req, err := http.NewRequestWithContext(
@@ -185,16 +146,8 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 		return PresenceSnapshot{}, fmt.Errorf("/who decode: %w (body=%s)", err, string(data))
 	}
 
-	// Populate Closest* derived fields from the largest visible face
-	// that has a UUID. Falls through to empty strings if no such face.
-	//
-	// For hook usage: ``ClosestName`` is meant as a person's NAME for
-	// natural-language greetings ("Hello Sean"). Auto-enrolled "anon_xxx"
-	// labels are not names — surfacing them to the LLM would produce
-	// awkward output like "Hello anon_73d0a4". So when the closest face
-	// is anonymous, we leave ``ClosestName`` empty (still populate
-	// ``ClosestUUID``/``ClosestTier``/``ClosestSim`` for diagnostics).
-	// The hook's "no one in particular" fallback then kicks in.
+	// Populate Closest* from the largest visible face with a UUID.
+	// Anon names are left empty so the hook's fallback kicks in.
 	var bestArea int
 	for _, f := range snap.Faces {
 		if f.Name == "unknown" || f.Name == "" {
@@ -219,16 +172,13 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 }
 
 // ToText renders the snapshot into one LLM-readable line.
-//
-// Returns "" when no actionable faces (e.g. only "unknown" transients)
-// so the caller can treat empty as "nothing new" and keep the prompt
-// clean during idle periods.
+// Returns "" when no actionable faces are present.
 func (s *PresenceSnapshot) ToText() string {
 	if s == nil || len(s.Faces) == 0 {
 		return ""
 	}
 
-	// Sort by area desc (largest face = most prominent / closest).
+	// Sort by area desc.
 	faces := make([]FaceEntry, len(s.Faces))
 	copy(faces, s.Faces)
 	sort.SliceStable(faces, func(i, j int) bool {
@@ -238,8 +188,7 @@ func (s *PresenceSnapshot) ToText() string {
 		return faces[i].TrackID < faces[j].TrackID
 	})
 
-	// Bucket. Unknown faces are intentionally dropped (transient state
-	// between detection and auto-enroll, no actionable UUID yet).
+	// Bucket into named/anon; drop unknown (transient, no UUID).
 	var named, anons []FaceEntry
 	for _, f := range faces {
 		switch {
@@ -273,11 +222,7 @@ func (s *PresenceSnapshot) ToText() string {
 	return fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
 }
 
-// formatNamedEntry — three-tier label based on how long since last sighting.
-//
-//	"sean (recognized)"                              — < 1 day
-//	"sean (recognized, 2 days ago)"                  — 1-6 days
-//	"sean (recognized, last seen 2026-03-05)"        — ≥ 7 days
+// formatNamedEntry — three-tier label based on last-seen gap.
 func formatNamedEntry(f FaceEntry) string {
 	cfg := providerForDefaults.cfg
 	if f.LastSeenAgoSec == nil {
@@ -302,15 +247,10 @@ func formatNamedEntry(f FaceEntry) string {
 	}
 }
 
-// formatAnonEntry — newcomer vs met-before.
-//
-//	"anon_73d0a4 (newcomer)"                          — < 3 min
-//	"anon_73d0a4 (met before, last seen 2026-06-04)"  — ≥ 3 min
+// formatAnonEntry — newcomer (<3 min) vs met-before (≥3 min).
 func formatAnonEntry(f FaceEntry) string {
 	cfg := providerForDefaults.cfg
 	if f.LastSeenAgoSec == nil {
-		// Brand-new anon (just auto-enrolled this session) or no
-		// session snapshot. Treat as newcomer.
 		return fmt.Sprintf("%s (newcomer)", f.Name)
 	}
 	gap := *f.LastSeenAgoSec
@@ -324,8 +264,7 @@ func formatAnonEntry(f FaceEntry) string {
 	return fmt.Sprintf("%s (met before, last seen %s)", f.Name, dateStr)
 }
 
-// lastSeenDate parses an ISO timestamp like "2026-03-05T14:30:00" into
-// a human-friendly "2026-03-05" date. Returns "" on parse failure.
+// lastSeenDate extracts a "2006-01-02" date from an ISO timestamp.
 func lastSeenDate(isoPtr *string) string {
 	if isoPtr == nil || *isoPtr == "" {
 		return ""
