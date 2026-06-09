@@ -15,7 +15,7 @@ OM1 was originally built in Python, and the Go runtime is a newer, performance-f
 The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. The table below gives a high-level comparison to help you choose the right runtime for your use case.
 
 > [!NOTE]
-> However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It will not be maintained.
+> However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It is now deprecated and will not be maintained.
 
 ### Feature Comparison
 
