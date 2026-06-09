@@ -1,4 +1,4 @@
-package arm_g1
+package arm
 
 import (
 	"encoding/binary"
@@ -19,7 +19,6 @@ func TestSerializeUnitreeRequestHeaderAndAPIID(t *testing.T) {
 
 	require.Equal(t, []byte{0x00, 0x01, 0x00, 0x00}, buf[:4], "CDR encapsulation header")
 
-	// identity.id (int64) at data offset 0, then api_id (int64) at data offset 8.
 	require.Equal(t, int64(0), int64(binary.LittleEndian.Uint64(buf[4:12])), "identity.id is zero")
 	require.Equal(t, int64(1042), int64(binary.LittleEndian.Uint64(buf[12:20])), "api_id is encoded")
 }

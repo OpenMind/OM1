@@ -11,6 +11,15 @@ func FloatFrom(v any, def float64) float64 {
 	return def
 }
 
+// StringFrom extracts a string from a JSON-decoded value, returning def when the
+// value is absent, not a string, or empty.
+func StringFrom(v any, def string) string {
+	if s, ok := v.(string); ok && s != "" {
+		return s
+	}
+	return def
+}
+
 // ToFloat coerces a JSON-decoded numeric value to float64. The bool is false
 // when v is not a recognized numeric type.
 func ToFloat(v any) (float64, bool) {

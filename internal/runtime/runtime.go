@@ -18,6 +18,7 @@ import (
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
 	"github.com/openmind/om1/internal/providers"
+	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
 type Options struct {
@@ -60,6 +61,11 @@ type Runtime struct {
 }
 
 func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runtime {
+	zenohsession.SetDefaultOptions(zenohsession.Options{
+		UseSim: systemConfig.UseSim,
+		APIKey: systemConfig.APIKey,
+	})
+
 	return &Runtime{
 		systemConfig:     systemConfig,
 		opts:             opts,

@@ -63,14 +63,14 @@ func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 		cfg.PollIntervalSec = 0.2
 	}
 
-	log := logger.Get()
+	log := logger.Get().Named("FacePresence")
 	provider := providers.NewFacePresenceProvider(providers.FacePresenceConfig{
 		BaseURL:   cfg.BaseURL,
 		RecentSec: cfg.RecentSec,
 		Timeout:   2 * time.Second,
 	})
 
-	log.Info("FacePresence: initializing",
+	log.Info("initializing",
 		zap.String("base_url", cfg.BaseURL),
 		zap.Float64("recent_sec", cfg.RecentSec),
 		zap.Float64("poll_interval_sec", cfg.PollIntervalSec),
@@ -107,7 +107,7 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 				if ctx.Err() != nil {
 					return
 				}
-				s.log.Warn("FacePresence: failed to fetch snapshot", zap.Error(err))
+				s.log.Warn("failed to fetch snapshot", zap.Error(err))
 				util.Sleep(ctx, 2*time.Second)
 				continue
 			}
@@ -182,5 +182,5 @@ func (s *FacePresenceSensor) Stop() {
 	s.stopped = true
 	s.mu.Unlock()
 
-	s.log.Info("FacePresence: stopping sensor")
+	s.log.Info("stopping sensor")
 }

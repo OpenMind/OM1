@@ -89,7 +89,7 @@ func NewRivaASR(configMap map[string]any) (inputs.Sensor, error) {
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("RivaASRInput: microphone config", zap.Int("chunk", cfg.Chunk))
+	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
 	return &RivaASRSensor{
 		asrCommon:  core,
@@ -106,17 +106,17 @@ func (s *RivaASRSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer s.Stop()
 
 		if err := providers.PortAudio.Acquire(); err != nil {
-			s.log.Error("RivaASRInput: portaudio init failed", zap.Error(err))
+			s.log.Error("portaudio init failed", zap.Error(err))
 			return
 		}
 
 		if err := s.connect(); err != nil {
-			s.log.Error("RivaASRInput: ws connect failed", zap.Error(err))
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
 		if err := s.openMic(ctx); err != nil {
-			s.log.Error("RivaASRInput: mic open failed", zap.Error(err))
+			s.log.Error("mic open failed", zap.Error(err))
 			return
 		}
 
@@ -132,14 +132,14 @@ func (s *RivaASRSensor) Stop() {
 		return
 	}
 
-	s.log.Info("RivaASRInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
 
-	s.log.Info("RivaASRInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // openMic initializes PortAudio, opens the configured microphone stream, and starts the capture loop.
@@ -166,7 +166,7 @@ func (s *RivaASRSensor) openMic(ctx context.Context) error {
 		}
 	}
 
-	s.log.Info("RivaASRInput: microphone",
+	s.log.Info("microphone",
 		zap.String("device", device.Name),
 		zap.Int("rate", s.cfg.Rate),
 		zap.Int("chunk", s.cfg.Chunk),
@@ -200,7 +200,7 @@ func (s *RivaASRSensor) openMic(ctx context.Context) error {
 
 	go s.captureLoop(ctx, stream)
 	go s.statsLoop(ctx)
-	s.log.Info("RivaASRInput: microphone started")
+	s.log.Info("microphone started")
 	return nil
 }
 
@@ -229,7 +229,7 @@ func (s *RivaASRSensor) captureLoop(ctx context.Context, stream *portaudio.Strea
 		}
 
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
-			s.log.Warn("RivaASRInput: read error", zap.Error(err))
+			s.log.Warn("read error", zap.Error(err))
 		}
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {

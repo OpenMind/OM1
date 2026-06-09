@@ -61,7 +61,7 @@ func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
 	})
-	core.log.Info("RivaASRRTSPInput: rtsp config",
+	core.log.Info("rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.Int("chunk", cfg.Chunk),
 	)
@@ -80,7 +80,7 @@ func (s *RivaASRRTSPSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer s.Stop()
 
 		if err := s.connect(); err != nil {
-			s.log.Error("RivaASRRTSPInput: ws connect failed", zap.Error(err))
+			s.log.Error("ws connect failed", zap.Error(err))
 			return
 		}
 
@@ -102,13 +102,13 @@ func (s *RivaASRRTSPSensor) Stop() {
 		return
 	}
 
-	s.log.Info("RivaASRRTSPInput: stopping sensor")
+	s.log.Info("stopping sensor")
 
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
 
-	s.log.Info("RivaASRRTSPInput: sensor stopped")
+	s.log.Info("sensor stopped")
 }
 
 // captureLoop runs the RTSP stream and reconnects on failure until ctx is cancelled.
@@ -128,8 +128,8 @@ func (s *RivaASRRTSPSensor) captureLoop(ctx context.Context) {
 		}
 
 		if err := s.streamRTSP(ctx); err != nil && ctx.Err() == nil {
-			s.log.Warn("RivaASRRTSPInput: RTSP audio error", zap.Error(err))
-			s.log.Info("RivaASRRTSPInput: reconnecting", zap.Duration("delay", rtspReconnectDelay))
+			s.log.Warn("RTSP audio error", zap.Error(err))
+			s.log.Info("reconnecting", zap.Duration("delay", rtspReconnectDelay))
 			if !util.Sleep(ctx, rtspReconnectDelay) {
 				return
 			}
@@ -166,7 +166,7 @@ func (s *RivaASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		_ = cmd.Wait()
 	}()
 
-	s.log.Info("RivaASRRTSPInput: RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
+	s.log.Info("RTSP audio stream connected", zap.String("rtsp_url", s.cfg.RTSPURL))
 
 	chunkBytes := s.cfg.Chunk * 2 // int16 samples
 	buf := make([]byte, chunkBytes)

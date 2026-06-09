@@ -26,10 +26,10 @@ const (
 // for avatar communication.
 type AvatarProvider struct {
 	log               *zap.Logger
-	session           *zenohsession.Session
-	requestPublisher  *zenohsession.Publisher  // publishes to om/avatar/request (face commands)
-	responsePublisher *zenohsession.Publisher  // publishes to om/avatar/response (health check replies)
-	requestSubscriber *zenohsession.Subscriber // subscribes to om/avatar/request
+	session           zenohsession.Session
+	requestPublisher  zenohsession.Publisher  // publishes to om/avatar/request (face commands)
+	responsePublisher zenohsession.Publisher  // publishes to om/avatar/response (health check replies)
+	requestSubscriber zenohsession.Subscriber // subscribes to om/avatar/request
 }
 
 var (

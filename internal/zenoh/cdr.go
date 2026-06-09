@@ -10,6 +10,11 @@ func ReadFloat64LE(data []byte, off int) float64 {
 	return math.Float64frombits(binary.LittleEndian.Uint64(data[off:]))
 }
 
+// ReadFloat32LE reads a little-endian float32 from data starting at off.
+func ReadFloat32LE(data []byte, off int) float32 {
+	return math.Float32frombits(binary.LittleEndian.Uint32(data[off:]))
+}
+
 // AppendInt32LE appends a little-endian int32 to buf.
 func AppendInt32LE(buf []byte, v int32) []byte {
 	var b [4]byte

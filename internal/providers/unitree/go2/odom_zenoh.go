@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultOdomTopic = "utlidar/robot_pose"
+	defaultOdomTopic = "odom"
 	radToDeg         = 57.2958
 )
 
@@ -40,8 +40,8 @@ type OdomPosition struct {
 type OdomZenohProvider struct {
 	log     *zap.Logger
 	topic   string
-	session *zenohsession.Session
-	sub     *zenohsession.Subscriber
+	session zenohsession.Session
+	sub     zenohsession.Subscriber
 
 	mu               sync.RWMutex
 	bodyHeightCm     int
@@ -58,6 +58,8 @@ type OdomZenohProvider struct {
 	odomYawM180P180  float64
 	odomRockchipTS   float64
 	odomSubscriberTS float64
+
+	lastDebugLog time.Time
 }
 
 var (
@@ -150,10 +152,6 @@ func (p *OdomZenohProvider) processOdom(pose poseStamped) {
 	p.moveHistory = 0.7*delta + 0.3*p.moveHistory
 	if delta > 0.01 || p.moveHistory > 0.01 {
 		p.moving = true
-		p.log.Info("go2 odom: moving",
-			zap.Float64("delta_m", delta),
-			zap.Float64("move_history", p.moveHistory),
-		)
 	} else {
 		p.moving = false
 	}
@@ -171,12 +169,16 @@ func (p *OdomZenohProvider) processOdom(pose poseStamped) {
 	p.x = pose.posX
 	p.y = pose.posY
 
-	p.log.Debug("go2 odom",
-		zap.Float64("x", p.x), zap.Float64("y", p.y),
-		zap.Float64("yaw_m180_p180", p.odomYawM180P180),
-		zap.Float64("yaw_0_360", p.odomYaw0360),
-		zap.Float64("rockchip_ts", p.odomRockchipTS),
-	)
+	if now := time.Now(); now.Sub(p.lastDebugLog) >= debugLogInterval {
+		p.lastDebugLog = now
+		p.log.Debug("go2 odom",
+			zap.Float64("x", p.x), zap.Float64("y", p.y), zap.Float64("z", p.z),
+			zap.String("body_attitude", string(p.bodyAttitude)),
+			zap.Float64("yaw_m180_p180", p.odomYawM180P180),
+			zap.Float64("yaw_0_360", p.odomYaw0360),
+			zap.Float64("rockchip_ts", p.odomRockchipTS),
+		)
+	}
 }
 
 // Position returns the latest odometry snapshot in the world frame.
@@ -235,7 +237,7 @@ func eulerFromQuaternion(x, y, z, w float64) (roll, pitch, yaw float64) {
 	return roll, pitch, yaw
 }
 
-// deserializePoseStamped decodes a CDR-encoded geometry_msgs/PoseStamped.
+// deserializePoseStamped decodes a CDR-encoded nav_msgs/Odometry message.
 //
 // Wire layout (offsets relative to the start of the buffer):
 //
@@ -243,9 +245,11 @@ func eulerFromQuaternion(x, y, z, w float64) (roll, pitch, yaw float64) {
 //	[4]  stamp.sec        int32  LE  (data offset 0)
 //	[8]  stamp.nanosec    uint32 LE  (data offset 4)
 //	[12] header.frame_id  CDR string (data offset 8) + padding to 4-byte
+//	[..] child_frame_id   CDR string + padding to 4-byte
 //	[..] padding to 8-byte data boundary (float64 alignment)
-//	[..] position.x/y/z          float64 LE x3
-//	[..] orientation.x/y/z/w     float64 LE x4
+//	[..] pose.pose.position.x/y/z        float64 LE x3
+//	[..] pose.pose.orientation.x/y/z/w   float64 LE x4
+//	[..] pose.covariance, twist, twist.covariance (unused)
 func deserializePoseStamped(data []byte) (poseStamped, error) {
 	var ps poseStamped
 
@@ -268,6 +272,13 @@ func deserializePoseStamped(data []byte) (poseStamped, error) {
 	if dataOff := pos - 4; (4-dataOff%4)%4 > 0 {
 		pos += (4 - dataOff%4) % 4
 	}
+
+	// child_frame_id
+	if pos+4 > len(data) {
+		return ps, fmt.Errorf("go2 odom: truncated at child_frame_id length")
+	}
+	childFrameIDLen := int(binary.LittleEndian.Uint32(data[pos:]))
+	pos += 4 + childFrameIDLen
 
 	if dataOff := pos - 4; (8-dataOff%8)%8 > 0 {
 		pos += (8 - dataOff%8) % 8

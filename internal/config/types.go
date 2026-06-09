@@ -21,6 +21,11 @@ type SystemConfig struct {
 	RobotIP string `json:"robot_ip"`
 	URID    string `json:"URID"`
 
+	// UseSim routes simulation topics (CLOUD_TOPICS) to the cloud broker over a
+	// WebSocket session instead of the local Zenoh network. Mirrors the Python
+	// use_sim flag.
+	UseSim bool `json:"use_sim"`
+
 	UseTracer bool `json:"use_tracer"`
 
 	DefaultMode       string                `json:"default_mode"`
