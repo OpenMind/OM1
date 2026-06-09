@@ -10,7 +10,7 @@
 
 ## Pick Your Runtime
 
-OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. We migrated to Go for lower latency, better performance, efficient concurrency, a smaller memory footprint for edge devices, and simpler deployment as a single static binary.
+OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. We migrated to Go for lower latency, better performance, efficient concurrency, a smaller memory footprint for edge devices, and simpler deployment as a single Go binary (with the Zenoh C library bundled alongside it).
 
 The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. The table below gives a high-level comparison to help you choose the right runtime for your use case.
 
