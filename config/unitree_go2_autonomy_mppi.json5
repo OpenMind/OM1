@@ -23,12 +23,6 @@
       type: "GoogleASRInput",
       config: {
         api_version: "v2",
-        // Keep the mic streaming to Google while TTS is playing. With this set
-        // to false the capture loop drops every chunk during playback (see
-        // plugins/inputs/asr/google_asr.go), which corrupts utterances that
-        // overlap with the robot speaking and is the main cause of "doesn't
-        // hear me all the time". Pair this with enable_tts_interrupt: true
-        // on the TTS connector so detected speech also cancels the clip.
         enable_tts_interrupt: true,
         rate: 16000,
         chunk: 1600,
@@ -45,9 +39,6 @@
     type: "GeminiLLM",
     config: {
       agent_name: "Bits",
-      // Bumped from 2 so the bot can carry a short conversation across
-      // ticks (a single user utterance often spans several cortex ticks at
-      // hertz=1, and follow-ups need prior context to make sense).
       history_length: 6,
     },
   },
@@ -59,11 +50,6 @@
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
         enable_tts_interrupt: true,
-        // 0 = speak on every tick. Anything > 0 gates the connector to drop
-        // (silence_rate-1) of every silence_rate speak commands, which causes
-        // the robot to ignore replies to user voice prompts because the
-        // matching tick happens to land on a skipped slot. See
-        // plugins/actions/speak/elevenlabs_tts.go.
         silence_rate: 2,
       },
     },
@@ -73,16 +59,10 @@
       connector: "zenoh",
     },
     {
-      // MPPI-backed autonomy: this connector picks an obstacle-free direction
-      // from om_paths and hands a goal to the om_mppi planner (in om1_sensor),
-      // which drives the robot smoothly via /cmd_vel.  Swap connector back to
-      // "move" for the original turn-then-drive behaviour.
       name: "unitree_go2_autonomy",
       llm_label: "Move",
       connector: "move_mppi",
       config: {
-        // Keep the goal within om_paths-verified clear space (~1 m); goals
-        // beyond nearby obstacles are unreachable and cause stuck/timeout.
         goal_distance: 0.8,
       },
     },
