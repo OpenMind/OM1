@@ -86,13 +86,27 @@ sudo apt-get install -y portaudio19-dev ffmpeg
 
 No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases).
 
-After downloading, make the binary executable and download the config files:
+Current pre-built binaries are available for:
+
+- `linux-amd64`
+- `linux-arm64`
+- `darwin-arm64`
+- `darwin-amd64`
+
+After downloading and extracting the archive, open a terminal in the extracted folder and run:
 
 ```bash
 chmod +x om1
-git clone --depth 1 https://github.com/OpenMind/OM1.git om1-config
-cp -r om1-config/config .
 ```
+
+On macOS, if the binary is blocked by Gatekeeper, run:
+
+```bash
+xattr -d com.apple.quarantine om1 2>/dev/null || true
+```
+
+> [!NOTE]
+> The release archive already includes `config/`, `knowledge_base/`, and `libzenohc` files, so you do not need to clone the repository for runtime assets.
 
 #### Option B: Build from Source
 
@@ -114,7 +128,7 @@ Set via shell profile (recommended):
 export OM_API_KEY="<your_api_key>"
 ```
 
-Or use a project-local `.env` file:
+If you built from source from this repository, you can also use a project-local `.env` file:
 ```bash
 cp .env.example .env
 # Then set OM_API_KEY=<your_api_key> in .env
@@ -123,9 +137,20 @@ cp .env.example .env
 ### 4. Launch the Agent
 
 If using pre-built binary:
+
+On macOS:
 ```bash
-./om1 --config conversation
+export DYLD_LIBRARY_PATH="$PWD:$DYLD_LIBRARY_PATH"
+./om1 -config ./config/conversation.json5
 ```
+
+On Linux:
+```bash
+export LD_LIBRARY_PATH="$PWD:$LD_LIBRARY_PATH"
+./om1 -config ./config/conversation.json5
+```
+
+If you run into permission issues on macOS, go to System Settings -> Privacy & Security and allow `om1` (and `libzenohc.dylib` if prompted).
 
 If built from source:
 ```bash
