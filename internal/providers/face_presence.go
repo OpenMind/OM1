@@ -2,7 +2,9 @@
 // endpoint and renders snapshots into LLM-readable text.
 //
 // Greeting tiers for NAMED faces (by last-seen gap):
-//   <1 day → "Welcome back", 1-6 days → "N days ago", ≥7 days → date.
+//
+//	<1 day → "Welcome back", 1-6 days → "N days ago", ≥7 days → date.
+//
 // ANON faces: <3 min → newcomer, ≥3 min → met before.
 // UNKNOWN faces (pre-enroll transients) are hidden from LLM text.
 //

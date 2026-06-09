@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/actions"
+	"github.com/openmind/om1/internal/httpclient"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
@@ -145,10 +146,13 @@ func NewConnector(configMap map[string]any) (actions.Connector, error) {
 	}, log)
 
 	return &Connector{
-		log:    log,
-		cfg:    cfg,
-		client: &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec * float64(time.Second))},
-		tts:    ttsClient,
+		log: log,
+		cfg: cfg,
+		client: &http.Client{
+			Transport: httpclient.Default().Transport,
+			Timeout:   time.Duration(cfg.HTTPTimeoutSec * float64(time.Second)),
+		},
+		tts: ttsClient,
 	}, nil
 }
 
