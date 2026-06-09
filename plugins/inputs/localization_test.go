@@ -1,4 +1,4 @@
-package go2
+package inputs
 
 import (
 	"context"
@@ -7,25 +7,25 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	localizationprovider "github.com/openmind/om1/internal/providers/unitree/go2"
+	"github.com/openmind/om1/internal/geometry"
 )
 
 type fakeLocalizationProvider struct {
 	localized bool
-	pose      *localizationprovider.Pose
+	pose      *geometry.Pose
 	stopped   bool
 }
 
-func (f *fakeLocalizationProvider) IsLocalized() bool                { return f.localized }
-func (f *fakeLocalizationProvider) Pose() *localizationprovider.Pose { return f.pose }
-func (f *fakeLocalizationProvider) Stop()                            { f.stopped = true }
+func (f *fakeLocalizationProvider) IsLocalized() bool    { return f.localized }
+func (f *fakeLocalizationProvider) Pose() *geometry.Pose { return f.pose }
+func (f *fakeLocalizationProvider) Stop()                { f.stopped = true }
 
 func newTestLocalizationSensor(p localizationProvider) *LocalizationSensor {
 	return &LocalizationSensor{log: zap.NewNop(), provider: p}
 }
 
 func TestLocalizationPoll(t *testing.T) {
-	pose := &localizationprovider.Pose{Position: localizationprovider.Point{X: 1, Y: 2, Z: 3}}
+	pose := &geometry.Pose{Position: geometry.Point{X: 1, Y: 2, Z: 3}}
 
 	cases := []struct {
 		name     string

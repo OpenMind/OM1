@@ -1,4 +1,4 @@
-package go2
+package inputs
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/geometry"
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
@@ -37,7 +38,7 @@ type LocalizationConfig struct {
 // sensor depends on. It is an interface so tests can inject a fake.
 type localizationProvider interface {
 	IsLocalized() bool
-	Pose() *localizationprovider.Pose
+	Pose() *geometry.Pose
 	Stop()
 }
 

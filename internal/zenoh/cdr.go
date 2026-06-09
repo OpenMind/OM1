@@ -2,6 +2,7 @@ package zenoh
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 )
 
@@ -45,6 +46,28 @@ func AppendFloat64LE(buf []byte, v float64) []byte {
 	binary.LittleEndian.PutUint64(b[:], math.Float64bits(v))
 
 	return append(buf, b[:]...)
+}
+
+// ReadStdMsgsFloat64 reads a std_msgs/Float64 from data.
+func ReadStdMsgsString(data []byte) (string, error) {
+	if len(data) < 8 {
+		return "", fmt.Errorf("zenoh: std_msgs/String payload too short (%d bytes)", len(data))
+	}
+
+	pos := 4
+	strLen := int(binary.LittleEndian.Uint32(data[pos:]))
+	pos += 4
+
+	if pos+strLen > len(data) {
+		return "", fmt.Errorf("zenoh: std_msgs/String truncated (need %d bytes, have %d)", pos+strLen, len(data))
+	}
+
+	s := data[pos : pos+strLen]
+	if len(s) > 0 && s[len(s)-1] == 0x00 {
+		s = s[:len(s)-1]
+	}
+
+	return string(s), nil
 }
 
 // AppendCDRString appends a CDR-encoded string to buf.

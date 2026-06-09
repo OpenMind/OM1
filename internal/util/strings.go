@@ -11,3 +11,8 @@ func FirstNonEmpty(vals ...string) string {
 	}
 	return ""
 }
+
+// TrimLower trims whitespace and converts the string to lowercase.
+func TrimLower(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
