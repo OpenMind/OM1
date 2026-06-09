@@ -3,25 +3,34 @@ documentation:
   - changed-files:
     - any-glob-to-any-file: ['docs/**/*', '*.md', '*.mdx']
 
-# Robotics code
-robotics:
+# Core / internal code
+core:
   - changed-files:
     - any-glob-to-any-file:
-      - 'src/**/*'
-      - 'system_hw_test/**/*'
+      - 'cmd/**/*'
+      - 'internal/**/*'
 
-# Python files
-python:
+# Plugins
+plugins:
   - changed-files:
-    - any-glob-to-any-file: '**/*.py'
+    - any-glob-to-any-file:
+      - 'plugins/**/*'
+
+# Go files
+go:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.go'
 
 # Docker/Infrastructure
 infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - '**/Dockerfile'
+      - '**/Dockerfile.*'
       - '**/docker-compose*.yml'
       - '**/*.dockerfile'
+      - 'grafana/**/*'
+      - 'prometheus.yml'
 
 # CI/CD changes
 ci-cd:
@@ -34,24 +43,21 @@ ci-cd:
 dependencies:
   - changed-files:
     - any-glob-to-any-file:
-      - 'requirements.txt'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'poetry.lock'
-      - 'pyproject.toml'
+      - 'go.mod'
+      - 'go.sum'
 
 # Tests
 tests:
   - changed-files:
     - any-glob-to-any-file:
-      - '**/test_*.py'
-      - '**/*_test.py'
-      - 'tests/**/*'
+      - '**/*_test.go'
+      - 'test/**/*'
 
 # Configuration files
 config:
   - changed-files:
     - any-glob-to-any-file:
+      - 'config/**/*'
       - '**/*.yaml'
       - '**/*.yml'
       - '**/*.json'

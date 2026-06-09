@@ -6,6 +6,7 @@
 *.md @OpenMind/devrel-team @OpenMind/openmind-core
 /docs/ @OpenMind/devrel-team @OpenMind/openmind-core
 /config/ @OpenMind/core-developer-team @OpenMind/openmind-core
-/src/ @OpenMind/robotics-team @OpenMind/openmind-core
-/system_hw_test/ @OpenMind/robotics-team @OpenMind/openmind-core
+/cmd/ @OpenMind/core-developer-team @OpenMind/openmind-core
+/internal/ @OpenMind/core-developer-team @OpenMind/openmind-core
+/plugins/ @OpenMind/robotics-team @OpenMind/openmind-core
 /.github/ @OpenMind/openmind-core
