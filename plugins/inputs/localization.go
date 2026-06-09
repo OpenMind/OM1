@@ -1,4 +1,4 @@
-package go2
+package inputs
 
 import (
 	"context"
@@ -33,17 +33,9 @@ type LocalizationConfig struct {
 	QualityTolerance float32 `json:"quality_tolerance"`
 }
 
-// localizationProvider is the subset of the localization provider that the
-// sensor depends on. It is an interface so tests can inject a fake.
-type localizationProvider interface {
-	IsLocalized() bool
-	Pose() *localizationprovider.Pose
-	Stop()
-}
-
 type LocalizationSensor struct {
 	log      *zap.Logger
-	provider localizationProvider
+	provider *localizationprovider.LocalizationProvider
 
 	mu       sync.Mutex
 	messages []inputs.Message

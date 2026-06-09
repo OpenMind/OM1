@@ -1,4 +1,4 @@
-package go2
+package inputs
 
 import (
 	"context"
@@ -10,46 +10,23 @@ import (
 	localizationprovider "github.com/openmind/om1/internal/providers/unitree/go2"
 )
 
-type fakeLocalizationProvider struct {
-	localized bool
-	pose      *localizationprovider.Pose
-	stopped   bool
-}
-
-func (f *fakeLocalizationProvider) IsLocalized() bool                { return f.localized }
-func (f *fakeLocalizationProvider) Pose() *localizationprovider.Pose { return f.pose }
-func (f *fakeLocalizationProvider) Stop()                            { f.stopped = true }
-
-func newTestLocalizationSensor(p localizationProvider) *LocalizationSensor {
-	return &LocalizationSensor{log: zap.NewNop(), provider: p}
+func newTestLocalizationSensor() *LocalizationSensor {
+	return &LocalizationSensor{
+		log:      zap.NewNop(),
+		provider: localizationprovider.NewLocalizationProvider("", 0),
+	}
 }
 
 func TestLocalizationPoll(t *testing.T) {
-	pose := &localizationprovider.Pose{Position: localizationprovider.Point{X: 1, Y: 2, Z: 3}}
+	s := newTestLocalizationSensor()
 
-	cases := []struct {
-		name     string
-		provider *fakeLocalizationProvider
-		want     string
-	}{
-		{"localized with pose", &fakeLocalizationProvider{localized: true, pose: pose}, localizedText},
-		{"localized but no pose", &fakeLocalizationProvider{localized: true, pose: nil}, notLocalizedText},
-		{"not localized with pose", &fakeLocalizationProvider{localized: false, pose: pose}, notLocalizedText},
-		{"not localized no pose", &fakeLocalizationProvider{localized: false, pose: nil}, notLocalizedText},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			s := newTestLocalizationSensor(tc.provider)
-			raw, err := s.Poll(context.Background())
-			require.NoError(t, err)
-			require.Equal(t, tc.want, raw)
-		})
-	}
+	raw, err := s.Poll(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, notLocalizedText, raw)
 }
 
 func TestLocalizationRawToText(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	msg, err := s.RawToText(context.Background(), localizedText)
 	require.NoError(t, err)
@@ -59,7 +36,7 @@ func TestLocalizationRawToText(t *testing.T) {
 }
 
 func TestLocalizationRawToTextNonString(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	msg, err := s.RawToText(context.Background(), 42)
 	require.NoError(t, err)
@@ -67,7 +44,7 @@ func TestLocalizationRawToTextNonString(t *testing.T) {
 }
 
 func TestLocalizationRawToTextEmptyString(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	msg, err := s.RawToText(context.Background(), "")
 	require.NoError(t, err)
@@ -75,7 +52,7 @@ func TestLocalizationRawToTextEmptyString(t *testing.T) {
 }
 
 func TestLocalizationFormattedLatestBuffer(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	require.Equal(t, "", s.FormattedLatestBuffer())
 
@@ -90,7 +67,7 @@ func TestLocalizationFormattedLatestBuffer(t *testing.T) {
 }
 
 func TestLocalizationFormattedLatestBufferReturnsNewest(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	_, err := s.RawToText(context.Background(), notLocalizedText)
 	require.NoError(t, err)
@@ -103,7 +80,7 @@ func TestLocalizationFormattedLatestBufferReturnsNewest(t *testing.T) {
 }
 
 func TestLocalizationBoundedHistory(t *testing.T) {
-	s := newTestLocalizationSensor(&fakeLocalizationProvider{})
+	s := newTestLocalizationSensor()
 
 	for i := 0; i < localizationMaxMessages+5; i++ {
 		_, err := s.RawToText(context.Background(), localizedText)
@@ -116,12 +93,10 @@ func TestLocalizationBoundedHistory(t *testing.T) {
 	require.LessOrEqual(t, n, localizationMaxMessages)
 }
 
-func TestLocalizationStopIsIdempotentAndStopsProvider(t *testing.T) {
-	p := &fakeLocalizationProvider{}
-	s := newTestLocalizationSensor(p)
+func TestLocalizationStopIsIdempotent(t *testing.T) {
+	s := newTestLocalizationSensor()
 
 	s.Stop()
-	require.True(t, p.stopped)
 	require.True(t, s.stopped)
 
 	require.NotPanics(t, s.Stop)

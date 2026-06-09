@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/geometry"
 	"github.com/openmind/om1/internal/logger"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
@@ -18,22 +19,11 @@ const (
 	defaultQualityTolerance  = 0.7
 )
 
-type Point struct {
-	X float64
-	Y float64
-	Z float64
-}
-
-type Quaternion struct {
-	X float64
-	Y float64
-	Z float64
-	W float64
-}
-
-type Pose struct {
-	Position    Point
-	Orientation Quaternion
+type localization struct {
+	pose           geometry.Pose
+	matchScore     int32
+	qualityPercent float32
+	numPoints      int32
 }
 
 type LocalizationProvider struct {
@@ -44,7 +34,7 @@ type LocalizationProvider struct {
 	sub              zenohsession.Subscriber
 
 	localized atomic.Bool
-	pose      atomic.Pointer[Pose]
+	pose      atomic.Pointer[geometry.Pose]
 
 	lastDebugLog time.Time
 }
@@ -71,14 +61,14 @@ func NewLocalizationProvider(topic string, qualityTolerance float32) *Localizati
 	}
 
 	p := &LocalizationProvider{
-		log:              logger.Get(),
+		log:              logger.Get().Named("unitree_go2_localization"),
 		topic:            topic,
 		qualityTolerance: qualityTolerance,
 	}
 
 	sess, err := zenohsession.Open()
 	if err != nil {
-		p.log.Warn("go2 localization: zenoh unavailable, provider disabled", zap.Error(err))
+		p.log.Warn("zenoh unavailable, provider disabled", zap.Error(err))
 		return p
 	}
 	p.session = sess
@@ -87,12 +77,12 @@ func NewLocalizationProvider(topic string, qualityTolerance float32) *Localizati
 	if err != nil {
 		sess.Close()
 		p.session = nil
-		p.log.Warn("go2 localization: failed to declare subscriber", zap.Error(err))
+		p.log.Warn("failed to declare subscriber", zap.Error(err))
 		return p
 	}
 	p.sub = sub
 
-	p.log.Info("go2 localization: provider initialized",
+	p.log.Info("provider initialized",
 		zap.String("topic", topic),
 		zap.Float32("quality_tolerance", qualityTolerance),
 	)
@@ -102,13 +92,13 @@ func NewLocalizationProvider(topic string, qualityTolerance float32) *Localizati
 // onSample decodes an incoming Localization message and updates state.
 func (p *LocalizationProvider) onSample(data []byte) {
 	if len(data) == 0 {
-		p.log.Warn("go2 localization: received empty message")
+		p.log.Warn("received empty message")
 		return
 	}
 
 	msg, err := deserializeLocalization(data)
 	if err != nil {
-		p.log.Error("go2 localization: failed to decode message", zap.Error(err))
+		p.log.Error("failed to decode message", zap.Error(err))
 		return
 	}
 	p.process(msg)
@@ -139,7 +129,7 @@ func (p *LocalizationProvider) IsLocalized() bool {
 }
 
 // Pose returns the latest localization pose, or nil if none has been received.
-func (p *LocalizationProvider) Pose() *Pose {
+func (p *LocalizationProvider) Pose() *geometry.Pose {
 	return p.pose.Load()
 }
 
@@ -155,14 +145,7 @@ func (p *LocalizationProvider) Stop() {
 		p.session = nil
 	}
 
-	p.log.Info("go2 localization: provider stopped")
-}
-
-type localization struct {
-	pose           Pose
-	matchScore     int32
-	qualityPercent float32
-	numPoints      int32
+	p.log.Info("provider stopped")
 }
 
 // deserializeLocalization decodes a CDR-encoded Localization message.
@@ -183,14 +166,14 @@ func deserializeLocalization(data []byte) (localization, error) {
 	var m localization
 
 	if len(data) < 16 {
-		return m, fmt.Errorf("go2 localization: payload too short (%d bytes)", len(data))
+		return m, fmt.Errorf("payload too short (%d bytes)", len(data))
 	}
 
 	// Skip CDR encapsulation header (4 bytes) and header.stamp (sec + nanosec).
 	pos := 4 + 8
 
 	if pos+4 > len(data) {
-		return m, fmt.Errorf("go2 localization: truncated at frame_id length")
+		return m, fmt.Errorf("truncated at frame_id length")
 	}
 	frameIDLen := int(binary.LittleEndian.Uint32(data[pos:]))
 	pos += 4 + frameIDLen
@@ -205,7 +188,7 @@ func deserializeLocalization(data []byte) (localization, error) {
 
 	const nFloats = 7
 	if pos+nFloats*8+12 > len(data) {
-		return m, fmt.Errorf("go2 localization: truncated at pose/trailer")
+		return m, fmt.Errorf("truncated at pose/trailer")
 	}
 
 	readF64 := func() float64 {

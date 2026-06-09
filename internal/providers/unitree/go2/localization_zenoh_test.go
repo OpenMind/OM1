@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/geometry"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -67,7 +68,7 @@ func TestLocalizationProcess(t *testing.T) {
 	p := &LocalizationProvider{log: zap.NewNop(), qualityTolerance: defaultQualityTolerance}
 
 	p.process(localization{
-		pose:           Pose{Position: Point{X: 1, Y: 2, Z: 3}},
+		pose:           geometry.Pose{Position: geometry.Point{X: 1, Y: 2, Z: 3}},
 		qualityPercent: 0.5,
 	})
 	require.False(t, p.IsLocalized())
@@ -75,7 +76,7 @@ func TestLocalizationProcess(t *testing.T) {
 	require.InDelta(t, 1.0, p.Pose().Position.X, 1e-9)
 
 	p.process(localization{
-		pose:           Pose{Position: Point{X: 4, Y: 5, Z: 6}},
+		pose:           geometry.Pose{Position: geometry.Point{X: 4, Y: 5, Z: 6}},
 		qualityPercent: 0.7,
 	})
 	require.True(t, p.IsLocalized())

@@ -22,3 +22,18 @@ func TestFirstNonEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestTrimLower(t *testing.T) {
+	cases := map[string]string{
+		"Kitchen":   "kitchen",
+		"  SOFA  ":  "sofa",
+		"\tTable\n": "table",
+		"":          "",
+		"   ":       "",
+	}
+	for in, want := range cases {
+		if got := TrimLower(in); got != want {
+			t.Fatalf("TrimLower(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
