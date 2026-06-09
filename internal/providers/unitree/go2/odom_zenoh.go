@@ -16,8 +16,6 @@ import (
 const (
 	defaultOdomTopic = "odom"
 	radToDeg         = 57.2958
-
-	debugLogInterval = 15 * time.Second
 )
 
 type RobotState string
