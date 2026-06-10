@@ -103,6 +103,17 @@ type moveMPPIConnector struct {
 	mu       sync.Mutex
 	active   bool
 	issuedAt time.Time
+
+	// minActiveHold is the minimum time an active goal must run before a new
+	// "stand still" command will preempt it.  At hertz=1 the LLM picks a fresh
+	// action every second and any single "stand still" tick used to wipe out
+	// perfectly-good in-progress goals (looks like the robot is stuck because
+	// it keeps starting and immediately stopping).  Holding briefly lets MPPI
+	// get real progress, while a sustained "stand still" intent (two ticks in
+	// a row, or one tick after the goal has had a chance to run) still stops
+	// the robot.
+	minActiveHold time.Duration
+	lastAction    string
 }
 
 // NewMoveMPPIConnector builds the MPPI-backed autonomy connector from its config.
@@ -115,15 +126,19 @@ func NewMoveMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 	aiRespTopic := util.StringFrom(cfg["ai_response_topic"], defaultAIRespTopic)
 
 	c := &moveMPPIConnector{
-		log:          log,
-		odom:         go2.OdomZenoh(),
-		paths:        providers.NewPathsProvider(),
-		mode:         util.StringFrom(cfg["mode"], ""),
-		rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
-		goalDistance: mppiGoalDistanceM,
+		log:           log,
+		odom:          go2.OdomZenoh(),
+		paths:         providers.NewPathsProvider(),
+		mode:          util.StringFrom(cfg["mode"], ""),
+		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		goalDistance:  mppiGoalDistanceM,
+		minActiveHold: 3 * time.Second,
 	}
 	if d, ok := cfg["goal_distance"].(float64); ok && d > 0 {
 		c.goalDistance = d
+	}
+	if h, ok := cfg["min_active_hold_seconds"].(float64); ok && h >= 0 {
+		c.minActiveHold = time.Duration(h * float64(time.Second))
 	}
 	c.aiControlEnabled.Store(true)
 
@@ -166,7 +181,7 @@ func NewMoveMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 func (c *moveMPPIConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("move_go2_autonomy/move_mppi: unexpected input type %T", input)
+		return nil, fmt.Errorf("unitree_go2_autonomy/move_mppi: unexpected input type %T", input)
 	}
 	action, _ := args["action"].(string)
 
@@ -182,12 +197,35 @@ func (c *moveMPPIConnector) Connect(_ context.Context, input actions.Input) (act
 		return nil, nil
 	}
 
-	// "stand still" is honoured even mid-move: it cancels the active goal.
+	// "stand still" is honoured when:
+	//   - the connector is idle (no active goal), OR
+	//   - the active goal has run for at least ``minActiveHold`` seconds, OR
+	//   - the previous AI command was also "stand still" (i.e. the LLM is
+	//     consistently asking for stop, not just a one-tick blip).
+	// This stops single-tick LLM noise (the LLM picks an action every
+	// ``hertz`` seconds and "stand still" appears in several of its prompt
+	// examples) from cancelling perfectly-good in-progress moves.
 	if action == "stand still" {
-		c.cancelGoal()
-		c.log.Info("stand still")
+		c.mu.Lock()
+		active := c.active
+		runFor := time.Since(c.issuedAt)
+		c.mu.Unlock()
+
+		deliberate := !active ||
+			runFor >= c.minActiveHold ||
+			c.lastAction == "stand still"
+		if deliberate {
+			c.cancelGoal()
+			c.log.Info("stand still")
+		} else {
+			c.log.Info("ignoring stand still - active goal still progressing",
+				zap.Duration("run_for", runFor),
+				zap.Duration("min_hold", c.minActiveHold))
+		}
+		c.lastAction = action
 		return nil, nil
 	}
+	c.lastAction = action
 
 	c.mu.Lock()
 	busy := c.active
@@ -235,7 +273,9 @@ func (c *moveMPPIConnector) issueGoal(options []uint32, label string) {
 	angleRad := pathAngles[options[c.rng.Intn(len(options))]] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
-	c.publishGoal(bx, by, angleRad)
+	if err := c.publishGoal(bx, by, angleRad); err != nil {
+		return
+	}
 	c.markActive()
 	c.log.Info("issued mppi goal",
 		zap.String("label", label),
@@ -248,36 +288,42 @@ func (c *moveMPPIConnector) issueRetreat(allowed bool) {
 		c.log.Warn("cannot retreat due to barrier")
 		return
 	}
-	c.publishReverseGoal(mppiReverseDistanceM)
+	if err := c.publishReverseGoal(mppiReverseDistanceM); err != nil {
+		return
+	}
 	c.markActive()
 	c.log.Info("issued mppi reverse goal")
 }
 
 // publishGoal serialises and sends a body-frame goal pose to om_mppi.
-func (c *moveMPPIConnector) publishGoal(x, y, yaw float64) {
+func (c *moveMPPIConnector) publishGoal(x, y, yaw float64) error {
 	if c.goalPub == nil {
-		return
+		return fmt.Errorf("goal publisher unavailable")
 	}
 	if err := c.goalPub.Put(serializePose(x, y, yaw, false)); err != nil {
 		c.log.Error("goal put failed", zap.Error(err))
+		return err
 	}
+	return nil
 }
 
 // publishReverseGoal sends a goal `distance` behind the robot at the same
 // heading, flagged so om_mppi reverses straight instead of U-turning (which
 // needs rotation room a cornered robot does not have).
-func (c *moveMPPIConnector) publishReverseGoal(distance float64) {
+func (c *moveMPPIConnector) publishReverseGoal(distance float64) error {
 	if c.goalPub == nil {
-		return
+		return fmt.Errorf("goal publisher unavailable")
 	}
 	if err := c.goalPub.Put(serializePose(-distance, 0, 0, true)); err != nil {
 		c.log.Error("reverse goal put failed", zap.Error(err))
+		return err
 	}
+	return nil
 }
 
 // cancelGoal stops the planner by sending a goal at the origin and clears state.
 func (c *moveMPPIConnector) cancelGoal() {
-	c.publishGoal(0, 0, 0)
+	_ = c.publishGoal(0, 0, 0)
 	c.mu.Lock()
 	c.active = false
 	c.mu.Unlock()
@@ -327,7 +373,7 @@ func (c *moveMPPIConnector) Tick(ctx context.Context) {
 
 	if stale {
 		c.log.Info("mppi goal timeout - clearing and stopping")
-		c.publishGoal(0, 0, 0)
+		_ = c.publishGoal(0, 0, 0)
 	}
 }
 

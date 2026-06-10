@@ -50,7 +50,7 @@
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
         enable_tts_interrupt: true,
-        silence_rate: 2,
+        silence_rate: 5,
       },
     },
     {
@@ -63,7 +63,7 @@
       llm_label: "Move",
       connector: "move_mppi",
       config: {
-        goal_distance: 0.8,
+        goal_distance: 1.0,
       },
     },
   ],
