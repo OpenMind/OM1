@@ -25,7 +25,7 @@
   },
   memory: {
     enabled: true,
-  }
+  },
 
   modes: {
     approaching: {
@@ -164,7 +164,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           name: "face_memory",
           llm_label: "face_memory",
           connector: "face_memory",
-        },
+        }
       ],
       backgrounds: [],
       lifecycle_hooks: [
@@ -311,7 +311,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           name: "face_memory",
           llm_label: "face_memory",
           connector: "face_memory",
-        },
+        }
       ],
       backgrounds: [],
       lifecycle_hooks: [
