@@ -289,6 +289,11 @@ func (g *GreetingConversationStateMachineProvider) ProcessConversation(llmOutput
 	result := g.calc.CalculateCompletionConfidence(factors)
 	g.recordConfidence(result.Overall)
 
+	if voice != nil && g.io.TickCounter() == voice.Tick {
+		g.turnCount++
+		g.lastUserUtterance = voice.Input
+	}
+
 	newState := g.determineNextState(result)
 	g.previousState = g.currentState
 	if newState != g.currentState {
@@ -299,12 +304,6 @@ func (g *GreetingConversationStateMachineProvider) ProcessConversation(llmOutput
 			zap.String("to", string(g.currentState)),
 			zap.Float64("confidence", result.Overall),
 		)
-	}
-
-	// Count a turn when the latest voice input arrived during the current tick.
-	if voice != nil && g.io.TickCounter() == voice.Tick {
-		g.turnCount++
-		g.lastUserUtterance = voice.Input
 	}
 
 	command := g.generateCommand(result)
@@ -376,10 +375,14 @@ func (g *GreetingConversationStateMachineProvider) determineNextState(r Confiden
 	llmState := r.Factors.ConversationState
 	timeInState := time.Since(g.stateEntryTime).Seconds()
 
-	// Force finish if we've had too many turns to prevent infinite conversations
 	if g.turnCount >= g.maxTurnCount {
 		g.log.Info("greeting: maximum turn count reached - forcing finish",
 			zap.Int("max_turn_count", g.maxTurnCount))
+		return StateFinished
+	}
+
+	if llmState == StateFinished {
+		g.log.Info("greeting: LLM indicates finished")
 		return StateFinished
 	}
 
