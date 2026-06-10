@@ -24,11 +24,11 @@ func init() {
 const defaultGreetingLLMType = "GeminiLLM"
 
 const (
-	defaultVisionBaseURL = "https://api.openmind.com/api/core/gemini"
-	defaultVisionModel   = "gemini-2.5-flash"
-	defaultVisionMaxTok  = 1024
-	defaultVisionMaxAge  = 5 * time.Second
-	defaultVisionMaxWait = 3 * time.Second
+	defaultVisionBaseURL     = "https://api.openmind.com/api/core/gemini"
+	defaultVisionModel       = "gemini-2.5-flash"
+	defaultVisionMaxTok      = 1024
+	defaultVisionRTSPURL     = "rtsp://localhost:8554/top_camera_raw"
+	defaultVisionGrabTimeout = 2 * time.Second
 )
 
 const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is in front of you. " +
@@ -136,22 +136,22 @@ func (r *Runner) visionGreeting(ctx context.Context, cfg map[string]any, prompt 
 		return "", false
 	}
 
-	maxAge := defaultVisionMaxAge
-	if sec := util.FloatFrom(cfg["vlm_max_frame_age_sec"], 0); sec > 0 {
-		maxAge = time.Duration(sec * float64(time.Second))
+	grabTimeout := defaultVisionGrabTimeout
+	if sec := util.FloatFrom(cfg["vlm_grab_timeout_sec"], 0); sec > 0 {
+		grabTimeout = time.Duration(sec * float64(time.Second))
 	}
 
-	maxWait := defaultVisionMaxWait
-	if sec := util.FloatFrom(cfg["vlm_max_frame_wait_sec"], -1); sec >= 0 {
-		maxWait = time.Duration(sec * float64(time.Second))
-	}
+	grabCtx, cancel := context.WithTimeout(ctx, grabTimeout)
+	defer cancel()
 
-	var encoded string
-	if jpeg, _, ok := providers.LatestFrame().WaitForFresh(ctx, maxAge, maxWait); ok {
-		encoded = base64.StdEncoding.EncodeToString(jpeg)
-	} else {
+	jpeg, err := video.GrabFrame(grabCtx, video.VideoRTSPStreamConfig{
+		RTSPURL: util.FirstNonEmpty(stringVal(cfg, "rtsp_url"), defaultVisionRTSPURL),
+	})
+	if err != nil {
+		r.log.Warn("greeting_start_hook: failed to grab frame, falling back to text-only greeting", zap.Error(err))
 		return "", false
 	}
+	encoded := base64.StdEncoding.EncodeToString(jpeg)
 
 	describer := video.NewDescriber(video.Describer{
 		Name:      "greeting_hook",

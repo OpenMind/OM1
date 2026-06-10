@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"context"
 	"testing"
 	"time"
 )
@@ -67,58 +66,5 @@ func TestLatestFrameGetFreshStaleness(t *testing.T) {
 	}
 	if _, _, ok := p.GetFresh(2 * time.Minute); !ok {
 		t.Fatal("frame within maxAge should be returned")
-	}
-}
-
-func TestLatestFrameWaitForFreshImmediate(t *testing.T) {
-	p := &LatestFrameProvider{}
-	p.Set([]byte{0x01}, time.Now())
-
-	got, _, ok := p.WaitForFresh(context.Background(), time.Second, time.Second)
-	if !ok || len(got) != 1 {
-		t.Fatalf("expected an already-fresh frame to return immediately, ok=%v got=%v", ok, got)
-	}
-}
-
-func TestLatestFrameWaitForFreshArrives(t *testing.T) {
-	p := &LatestFrameProvider{}
-
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		p.Set([]byte{0x07}, time.Now())
-	}()
-
-	got, _, ok := p.WaitForFresh(context.Background(), time.Second, time.Second)
-	if !ok || len(got) != 1 || got[0] != 0x07 {
-		t.Fatalf("expected to receive the frame that arrived during the wait, ok=%v got=%v", ok, got)
-	}
-}
-
-func TestLatestFrameWaitForFreshTimeout(t *testing.T) {
-	p := &LatestFrameProvider{}
-
-	start := time.Now()
-	if _, _, ok := p.WaitForFresh(context.Background(), time.Second, 30*time.Millisecond); ok {
-		t.Fatal("expected timeout when no frame arrives")
-	}
-	if elapsed := time.Since(start); elapsed < 30*time.Millisecond {
-		t.Fatalf("returned before timeout elapsed: %v", elapsed)
-	}
-}
-
-func TestLatestFrameWaitForFreshNoWait(t *testing.T) {
-	p := &LatestFrameProvider{}
-	if _, _, ok := p.WaitForFresh(context.Background(), time.Second, 0); ok {
-		t.Fatal("non-positive timeout should not block and should report no frame")
-	}
-}
-
-func TestLatestFrameWaitForFreshContextCancel(t *testing.T) {
-	p := &LatestFrameProvider{}
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	if _, _, ok := p.WaitForFresh(ctx, time.Second, time.Minute); ok {
-		t.Fatal("expected no frame when context is already cancelled")
 	}
 }
