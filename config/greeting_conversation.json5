@@ -144,6 +144,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           connector: "greeting_conversation_elevenlabs",
           config: {
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            max_rounds: 50,
           },
         },
         {
