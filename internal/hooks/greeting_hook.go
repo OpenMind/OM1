@@ -40,6 +40,16 @@ const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting w
 	"Finish by offering help, for example: \"{help_message}\". " +
 	"Respond with only the greeting text, with no quotes or commentary."
 
+const defaultVisionGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is right in front of you. " +
+	"The current time is {current_time}. " +
+	"Look carefully at the attached image from your camera and generate a single warm, natural spoken greeting of one or two short sentences. " +
+	"Make it feel personal and present by naturally referencing something specific you genuinely see — for example the person's appearance or clothing, what they are doing or holding, how many people are present, or the setting around them. " +
+	"Only mention details you can actually see in the image; never invent anything. " +
+	"If you recognize a specific person ({closest_name}), greet them by name; otherwise greet generically. " +
+	"You may reflect the time of day in your greeting when it feels natural. " +
+	"Finish by offering help, for example: \"{help_message}\". " +
+	"Respond with only the greeting text, with no quotes or commentary."
+
 // greetingStartHook handles the start of a greeting conversation by generating a
 // greeting message using an LLM and sending it to the TTS provider.
 func (r *Runner) greetingStartHook(ctx context.Context, cfg, vars map[string]any) error {
@@ -97,6 +107,11 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 		promptTemplate = defaultGreetingPrompt
 	}
 
+	visionTemplate := stringVal(cfg, "vision_prompt")
+	if strings.TrimSpace(visionTemplate) == "" {
+		visionTemplate = defaultVisionGreetingPrompt
+	}
+
 	promptVars := make(map[string]any, len(vars)+5)
 	for k, v := range vars {
 		promptVars[k] = v
@@ -107,11 +122,11 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 	promptVars["help_message"] = helpMessage
 	promptVars["current_time"] = time.Now().Format("Monday, January 2, 2006 at 3:04 PM")
 
-	prompt := formatTemplate(promptTemplate, promptVars)
-
-	if greeting, ok := r.visionGreeting(ctx, cfg, prompt); ok {
+	if greeting, ok := r.visionGreeting(ctx, cfg, formatTemplate(visionTemplate, promptVars)); ok {
 		return greeting, nil
 	}
+
+	prompt := formatTemplate(promptTemplate, promptVars)
 
 	model, err := r.greetingLLM(cfg)
 	if err != nil {
