@@ -74,9 +74,9 @@ func (r *Runner) greetingStartHook(ctx context.Context, cfg, vars map[string]any
 		r.log.Warn("greeting_start_hook: face snapshot failed", zap.Error(snapErr))
 	}
 
-	memCtx := r.recallMemory(ctx, snapshot.ClosestUUID)
+	memContext := r.recallMemory(ctx, snapshot.ClosestUUID)
 
-	if greeting, genErr := r.generateGreeting(ctx, cfg, vars, snapshot, memCtx, robotName, helpMessage); genErr != nil {
+	if greeting, genErr := r.generateGreeting(ctx, cfg, vars, snapshot, memContext, robotName, helpMessage); genErr != nil {
 		r.log.Warn("greeting_start_hook: llm generation failed, using static greeting", zap.Error(genErr))
 		provider.AddText(staticGreeting(snapshot, snapErr, robotName, helpMessage))
 	} else {
@@ -95,26 +95,26 @@ func (r *Runner) recallMemory(ctx context.Context, uuid string) string {
 		return ""
 	}
 
-	memCtx := strings.TrimSpace(r.memory.SearchAndFormat(ctx, "", uuid))
-	if memCtx != "" {
+	memContext := strings.TrimSpace(r.memory.SearchAndFormat(ctx, "", uuid))
+	if memContext != "" {
 		r.log.Info("greeting_start_hook: recalled memory",
-			zap.String("uuid", uuid), zap.Int("chars", len(memCtx)))
+			zap.String("uuid", uuid), zap.Int("chars", len(memContext)))
 	}
-	return memCtx
+	return memContext
 }
 
-func memoryClause(memCtx string) string {
-	if memCtx == "" {
+func memoryClause(memContext string) string {
+	if memContext == "" {
 		return ""
 	}
-	return "Here is what you remember about them from past interactions: " + memCtx +
+	return "Here is what you remember about them from past interactions: " + memContext +
 		" Naturally reference this to make the greeting personal, but never invent details. "
 }
 
 // generateGreeting constructs the prompt for the greeting, attempts to generate a greeting using vision when possible, and falls back to text-only LLM generation when vision fails or is unavailable.
 // ToDo:
 // - add more context to the prompt, e.g. recent conversation history if available, etc.
-func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, memCtx, robotName, helpMessage string) (string, error) {
+func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, memContext, robotName, helpMessage string) (string, error) {
 	if robotName == "" {
 		robotName = "a friendly robot"
 	}
@@ -148,7 +148,7 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 	promptVars["closest_name"] = closestName
 	promptVars["help_message"] = helpMessage
 	promptVars["current_time"] = time.Now().Format("Monday, January 2, 2006 at 3:04 PM")
-	promptVars["memory"] = memoryClause(memCtx)
+	promptVars["memory"] = memoryClause(memContext)
 
 	if greeting, ok := r.visionGreeting(ctx, cfg, formatTemplate(visionTemplate, promptVars)); ok {
 		return greeting, nil
