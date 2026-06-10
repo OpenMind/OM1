@@ -28,6 +28,7 @@ const (
 	defaultVisionModel   = "gemini-2.5-flash"
 	defaultVisionMaxTok  = 1024
 	defaultVisionMaxAge  = 5 * time.Second
+	defaultVisionMaxWait = 3 * time.Second
 )
 
 const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is in front of you. " +
@@ -140,11 +141,16 @@ func (r *Runner) visionGreeting(ctx context.Context, cfg map[string]any, prompt 
 		maxAge = time.Duration(sec * float64(time.Second))
 	}
 
+	maxWait := defaultVisionMaxWait
+	if sec := util.FloatFrom(cfg["vlm_max_frame_wait_sec"], -1); sec >= 0 {
+		maxWait = time.Duration(sec * float64(time.Second))
+	}
+
 	var encoded string
-	if jpeg, _, ok := providers.LatestFrame().GetFresh(maxAge); ok {
+	if jpeg, _, ok := providers.LatestFrame().WaitForFresh(ctx, maxAge, maxWait); ok {
 		encoded = base64.StdEncoding.EncodeToString(jpeg)
 	} else {
-		r.log.Warn("greeting_start_hook: no recent frame, generating greeting without image")
+		return "", false
 	}
 
 	describer := video.NewDescriber(video.Describer{
