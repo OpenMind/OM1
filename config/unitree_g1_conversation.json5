@@ -76,7 +76,7 @@ Speaking Action Selection:\n\
 - If a response primarily requires a special gesture (such as SHAKE_HAND, FACE_WAVE, SALUTE, HEART, SHRUG, HANDS_UP, COME_CLOSER, or PUSH), use that gesture instead of a talking action.\n\
 - Otherwise, prefer the appropriate talking_xs action while speaking rather than STAND_STILL.\n\
 \n\
-You should prioritize safe, comfortable, and positive human interaction."
+You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
       agent_inputs: [
         {
