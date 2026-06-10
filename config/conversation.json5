@@ -21,7 +21,7 @@
       },
     },
     {
-      type: "VLMGemini",
+      type: "VLMVila",
     }
   ],
   cortex_llm: {

@@ -1,0 +1,73 @@
+{
+  // Luma event check-in: scans QR codes via camera, looks guests up via Luma's
+  // external check-in API, speaks a personalized welcome, and (via the existing
+  // emotion + unitree_g1_arm plugins) shows a happy face and waves.
+  //
+  // Required env vars:
+  //   LUMA_API_KEY        - Luma API key with external-check-in scope
+  //   LUMA_EVENT_ID       - api_id of the event to check guests into (e.g. evt-...)
+  //   ELEVENLABS_API_KEY  - ElevenLabs TTS API key
+  version: "v1.0.0",
+  hertz: 0.2,
+  name: "luma_checkin",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are a friendly event greeter robot stationed at a Luma event check-in desk.\
+\n\
+When you receive a 'qr_scan: pk=...' input from the QR scanner, respond in a single turn with three actions, all called concurrently:\n\
+  1. luma_checkin with that pk (this looks up the guest and speaks the welcome).\n\
+  2. emotion with action 'happy'.\n\
+  3. unitree_g1_arm with action 'face_wave'.\n\
+\n\
+After luma_checkin returns, you may optionally make one short follow-up comment. Treat each scan as exactly one check-in (the input layer already debounces).",
+  system_governance: "Never check the same guest in twice within the same scan window. Never speak before luma_checkin returns.",
+  agent_inputs: [
+    {
+      type: "QRScanner",
+      config: {
+        camera_index: 0,
+        capture_fps: 15,
+        decode_fps: 5,
+        resolution_width: 640,
+        resolution_height: 480,
+        jpeg_quality: 60,
+        dedupe_window_seconds: 30,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "Greeter",
+      history_length: 6,
+    },
+  },
+  action_execution_mode: "concurrent",
+  agent_actions: [
+    {
+      name: "luma_checkin",
+      llm_label: "luma_checkin",
+      connector: "api",
+      config: {
+        api_key: "${LUMA_API_KEY}",
+        event_api_id: "${LUMA_EVENT_ID}",
+        greeting_template: "Welcome, {first_name}! Glad you made it.",
+        request_timeout_seconds: 5,
+        tts: {
+          provider: "elevenlabs",
+          elevenlabs_api_key: "${ELEVENLABS_API_KEY}",
+          voice_id: "PoHUWWWMHFrA8z7Q88pu",
+        },
+      },
+    },
+    {
+      name: "emotion",
+      llm_label: "emotion",
+      connector: "zenoh",
+    },
+    {
+      name: "unitree_g1_arm",
+      llm_label: "unitree_g1_arm",
+      connector: "zenoh",
+    },
+  ],
+}
