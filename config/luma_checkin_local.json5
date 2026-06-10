@@ -7,7 +7,7 @@ version: "v1.0.0",
   system_governance: "Only call luma_checkin. Never invent pk values; only use the one in the latest qr_scan input. Ignore 'none' inputs.",
   agent_inputs: [
     {
-      type: "VLMVila",
+      type: "VLMGemini",
     },
   ],
   cortex_llm: {

@@ -137,14 +137,27 @@ func (v *VideoStream) cameraInput() string {
 
 // ffmpegArgs constructs the ffmpeg command-line arguments for the configured stream.
 func (v *VideoStream) ffmpegArgs(cam string) []string {
-	inputFormat := "v4l2"
 	if runtime.GOOS == "darwin" {
-		inputFormat = "avfoundation"
+		// avfoundation rejects yuv420p (its default) and requires an explicit pixel
+		// format. yuyv422 is universally supported by built-in Mac cameras.
+		return []string{
+			"-loglevel", "error",
+			"-f", "avfoundation",
+			"-framerate", strconv.Itoa(v.cfg.FPS),
+			"-pixel_format", "yuyv422",
+			"-video_size", fmt.Sprintf("%dx%d", v.cfg.Width, v.cfg.Height),
+			"-i", cam,
+			"-an",
+			"-c:v", "mjpeg",
+			"-qscale:v", strconv.Itoa(jpegQScale(v.cfg.JPEGQuality)),
+			"-f", "image2pipe",
+			"pipe:1",
+		}
 	}
 
 	return []string{
 		"-loglevel", "error",
-		"-f", inputFormat,
+		"-f", "v4l2",
 		"-framerate", strconv.Itoa(v.cfg.FPS),
 		"-video_size", fmt.Sprintf("%dx%d", v.cfg.Width, v.cfg.Height),
 		"-i", cam,
