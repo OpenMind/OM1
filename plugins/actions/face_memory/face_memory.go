@@ -24,6 +24,16 @@ import (
 	"github.com/openmind/om1/internal/providers/tts"
 )
 
+const (
+	faceMemoryDefaultBaseURL        = "http://127.0.0.1:6793"
+	faceMemoryDefaultRecentSec      = 1.0
+	faceMemoryDefaultPollMs         = 200
+	faceMemoryDefaultTimeoutSec     = 8
+	faceMemoryDefaultHTTPTimeoutSec = 5.0
+	faceMemoryDefaultTopK           = 3
+	faceMemoryDefaultMinSim         = 0.30
+)
+
 // FaceMemoryOp is the enum of supported operations.
 type FaceMemoryOp string
 
@@ -61,7 +71,7 @@ func init() {
 			"set_name (rename person currently visible).",
 		FaceMemoryInput{},
 	)
-	actions.Register("face_memory", NewConnector)
+	actions.Register("face_memory/face_memory", NewConnector)
 }
 
 type Config struct {
@@ -102,19 +112,19 @@ func NewConnector(configMap map[string]any) (actions.Connector, error) {
 		return nil, fmt.Errorf("face_memory: api_key required")
 	}
 	if cfg.FaceHTTPBaseURL == "" {
-		cfg.FaceHTTPBaseURL = "http://127.0.0.1:6793"
+		cfg.FaceHTTPBaseURL = faceMemoryDefaultBaseURL
 	}
 	if cfg.FaceRecentSec == 0 {
-		cfg.FaceRecentSec = 1.0
+		cfg.FaceRecentSec = faceMemoryDefaultRecentSec
 	}
 	if cfg.PollMs == 0 {
-		cfg.PollMs = 200
+		cfg.PollMs = faceMemoryDefaultPollMs
 	}
 	if cfg.TimeoutSec == 0 {
-		cfg.TimeoutSec = 8
+		cfg.TimeoutSec = faceMemoryDefaultTimeoutSec
 	}
 	if cfg.HTTPTimeoutSec == 0 {
-		cfg.HTTPTimeoutSec = 5.0
+		cfg.HTTPTimeoutSec = faceMemoryDefaultHTTPTimeoutSec
 	}
 	if cfg.VoiceID == "" {
 		cfg.VoiceID = tts.DefaultVoiceID
@@ -129,10 +139,10 @@ func NewConnector(configMap map[string]any) (actions.Connector, error) {
 		cfg.Rate = tts.DefaultRate
 	}
 	if cfg.DefaultTopK == 0 {
-		cfg.DefaultTopK = 3
+		cfg.DefaultTopK = faceMemoryDefaultTopK
 	}
 	if cfg.DefaultMinSim == 0 {
-		cfg.DefaultMinSim = 0.30
+		cfg.DefaultMinSim = faceMemoryDefaultMinSim
 	}
 
 	log := logger.Get()
