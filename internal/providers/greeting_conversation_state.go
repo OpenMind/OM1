@@ -211,15 +211,13 @@ func (c *ConfidenceCalculator) ShouldTransitionToFinished(r ConfidenceResult, ti
 	return false
 }
 
-// GreetingConversationStateMachineProvider manages greeting conversation state
-// transitions based on confidence scores.
 type GreetingConversationStateMachineProvider struct {
 	mu sync.Mutex
 
 	currentState          ConversationState
 	previousState         ConversationState
 	stateEntryTime        time.Time
-	conversationStartTime time.Time // zero value means "not started"
+	conversationStartTime time.Time
 	turnCount             int
 	maxTurnCount          int
 	lastUserUtterance     string
@@ -233,6 +231,8 @@ type GreetingConversationStateMachineProvider struct {
 	log *zap.Logger
 }
 
+const DefaultMaxTurnCount = 3
+
 var (
 	greetingOnce     sync.Once
 	greetingInstance *GreetingConversationStateMachineProvider
@@ -240,7 +240,7 @@ var (
 
 // Greeting returns the singleton GreetingConversationStateMachineProvider.
 func Greeting() *GreetingConversationStateMachineProvider {
-	greetingOnce.Do(func() { greetingInstance = NewGreetingConversationStateMachineProvider(3) })
+	greetingOnce.Do(func() { greetingInstance = NewGreetingConversationStateMachineProvider(DefaultMaxTurnCount) })
 	return greetingInstance
 }
 
@@ -550,6 +550,17 @@ func (g *GreetingConversationStateMachineProvider) MaxTurnCount() int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.maxTurnCount
+}
+
+// SetMaxTurnCount sets the maximum number of back-and-forth exchanges before
+// the conversation is forced to finish. A value less than 1 is ignored.
+func (g *GreetingConversationStateMachineProvider) SetMaxTurnCount(n int) {
+	if n < 1 {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.maxTurnCount = n
 }
 
 const finalTurnGuidance = "\nGreeting status: This is the final exchange of this greeting conversation. " +

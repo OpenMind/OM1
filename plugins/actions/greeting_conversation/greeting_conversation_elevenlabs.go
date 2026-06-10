@@ -67,6 +67,7 @@ type Config struct {
 	ModelID          string `json:"model_id"`
 	OutputFormat     string `json:"output_format"`
 	Rate             int    `json:"rate"`
+	MaxRounds        int    `json:"max_rounds"`
 }
 
 // Connector implements the greeting conversation action using the ElevenLabs TTS provider.
@@ -117,6 +118,9 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 	}, log)
 
 	greeting := providers.Greeting()
+	if cfg.MaxRounds > 0 {
+		greeting.SetMaxTurnCount(cfg.MaxRounds)
+	}
 	greeting.StartConversation()
 
 	c := &Connector{
