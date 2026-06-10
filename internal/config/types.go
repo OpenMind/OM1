@@ -15,6 +15,7 @@ type SystemConfig struct {
 	Backgrounds      []PluginSpec `json:"backgrounds"`
 	MCPServers       []MCPSpec    `json:"mcp_servers"`
 	KnowledgeBase    *KBSpec      `json:"knowledge_base"`
+	Memory           *MemorySpec  `json:"memory"`
 	LifecycleHooks   []HookSpec   `json:"lifecycle_hooks"`
 
 	APIKey  string `json:"api_key"`
@@ -106,6 +107,11 @@ type KBSpec struct {
 	BaseURL  string  `json:"base_url"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
+}
+
+// MemorySpec describes the optional long-term memory system.
+type MemorySpec struct {
+	Enabled bool `json:"enabled"`
 }
 
 // RuntimeConfig is the resolved, instantiated state for the active mode.

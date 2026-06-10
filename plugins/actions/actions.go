@@ -2,6 +2,7 @@ package actions
 
 import (
 	_ "github.com/openmind/om1/plugins/actions/emotion"
+	_ "github.com/openmind/om1/plugins/actions/face_memory"
 	_ "github.com/openmind/om1/plugins/actions/greeting_conversation"
 	_ "github.com/openmind/om1/plugins/actions/navigation"
 	_ "github.com/openmind/om1/plugins/actions/speak"
