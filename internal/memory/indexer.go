@@ -490,13 +490,13 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 		filePath := filepath.Join(dailyDir, entry.Name())
 		if fileDate.Before(cutoff) {
 			_ = os.Remove(filePath)
-			idx.log.Info("memory: deleted expired daily log", zap.String("file", entry.Name()))
+			idx.log.Info("deleted expired daily log", zap.String("file", entry.Name()))
 			continue
 		}
 
 		chunks, parseErr := ParseDailyFile(filePath)
 		if parseErr != nil {
-			idx.log.Warn("memory: failed to parse daily file", zap.String("file", entry.Name()), zap.Error(parseErr))
+			idx.log.Warn("failed to parse daily file", zap.String("file", entry.Name()), zap.Error(parseErr))
 			continue
 		}
 		allChunks = append(allChunks, chunks...)
@@ -508,7 +508,7 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 			validHashes[hashText(c.Text)] = struct{}{}
 		}
 		if pruned := idx.PruneHashes(validHashes); pruned > 0 {
-			idx.log.Info("memory: pruned stale entries", zap.Int("count", pruned))
+			idx.log.Info("pruned stale entries", zap.Int("count", pruned))
 		}
 	}
 
@@ -517,7 +517,7 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 		if loadErr != nil {
 			return loadErr
 		}
-		idx.log.Info("memory: populated index",
+		idx.log.Info("populated index",
 			zap.Int("chunks", len(allChunks)),
 			zap.Int("new", loaded),
 			zap.Int("valid_days", validDays),

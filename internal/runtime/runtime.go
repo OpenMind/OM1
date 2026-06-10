@@ -172,7 +172,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			rt.log,
 		),
 		sensors:   modeConfig.sensors,
-		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
+		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, memoryManager, rt.log),
 		memory:    memoryManager,
 	}
 	if len(modeConfig.backgroundList) > 0 {
@@ -461,7 +461,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 			name, _ := rt.ioProvider.GetDynamicVar("current_user_name")
 			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), uuid, name)
 		}
-		current.memory.Summarize()
+		current.memory.Summarize(ctx)
 	}
 
 	rt.ioProvider.RecordTick(tickStart)

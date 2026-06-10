@@ -23,6 +23,10 @@ const (
 	facePresenceDescriptor  = "Face Presence Sensor"
 	facePresenceIOKey       = "FacePresence"
 	facePresenceMaxMessages = 10
+
+	facePresenceDefaultBaseURL         = "http://127.0.0.1:6793"
+	facePresenceDefaultRecentSec       = 1.0
+	facePresenceDefaultPollIntervalSec = 0.2
 )
 
 type FacePresenceConfig struct {
@@ -48,13 +52,13 @@ func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = "http://127.0.0.1:6793"
+		cfg.BaseURL = facePresenceDefaultBaseURL
 	}
 	if cfg.RecentSec <= 0 {
-		cfg.RecentSec = 1.0
+		cfg.RecentSec = facePresenceDefaultRecentSec
 	}
 	if cfg.PollIntervalSec <= 0 {
-		cfg.PollIntervalSec = 0.2
+		cfg.PollIntervalSec = facePresenceDefaultPollIntervalSec
 	}
 
 	log := logger.Get().Named("FacePresence")
