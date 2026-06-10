@@ -557,7 +557,7 @@ func (g *GreetingConversationStateMachineProvider) EndingGuidance() string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if g.turnCount+1 > g.maxTurnCount {
+	if g.turnCount+1 >= g.maxTurnCount {
 		return finalTurnGuidance
 	}
 
