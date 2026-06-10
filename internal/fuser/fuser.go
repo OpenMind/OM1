@@ -6,6 +6,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
 	"go.uber.org/zap"
 )
@@ -15,6 +16,7 @@ type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
+	memory        *memory.Manager
 	log           *zap.Logger
 }
 
@@ -24,8 +26,8 @@ type KnowledgeBase interface {
 }
 
 // NewFuser constructs a Fuser with the given runtime configuration, agent actions, knowledge base, and logger.
-func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, log *zap.Logger) *Fuser {
-	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, log: log}
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory *memory.Manager, log *zap.Logger) *Fuser {
+	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, memory: memory, log: log}
 }
 
 // Fuse combines the prompt components into a single string to be sent to the LLM.
@@ -58,7 +60,7 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 		builder.WriteString("\n")
 	}
 
-	// 3. Knowledge-base context (RAG).
+	// 3a. Knowledge-base context (RAG).
 	if f.knowledgeBase != nil && f.runtimeConfig.KnowledgeBase != nil {
 		if question := f.voiceQuery(); question != "" {
 			documents, err := f.knowledgeBase.Query(ctx, question, f.runtimeConfig.KnowledgeBase.TopK)
@@ -72,6 +74,23 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 					builder.WriteString("\n")
 				}
 				builder.WriteString("\n")
+			}
+		}
+	}
+
+	// 3b. Long-term memory context.
+	if f.memory != nil {
+		user := memory.ResolveCurrentUser()
+		providers.IO().SetDynamicVar("current_user_id", user.UUID)
+		providers.IO().SetDynamicVar("current_user_name", user.Name)
+
+		if question := f.voiceQuery(); question != "" {
+			memCtx := f.memory.SearchAndFormat(ctx, question, user.UUID)
+			if memCtx != "" {
+				builder.WriteString("MEMORY:\n")
+				builder.WriteString(memCtx)
+				builder.WriteString("\n\nProactively reference MEMORY in your responses. Prioritize it over your own knowledge.\n\n")
+				f.log.Info("memory: injecting context", zap.Int("chars", len(memCtx)), zap.String("uuid", user.UUID))
 			}
 		}
 	}
