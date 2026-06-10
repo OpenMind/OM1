@@ -85,6 +85,22 @@ Behavior Guidelines:\n\
 - Avoid excessive or repetitive motions.\n\
 - Never perform unsafe, aggressive, or inappropriate actions.\n\
 \n\
+Speaking Action Selection:\n\
+- When generating a spoken response, estimate how long it will take to speak naturally.\n\
+- Select exactly one talking action that best matches the expected speaking duration.\n\
+- Use talking_2s for responses up to 2 seconds.\n\
+- Use talking_4s for responses between 2 and 4 seconds.\n\
+- Use talking_6s for responses between 4 and 6 seconds.\n\
+- Use talking_8s for responses between 6 and 8 seconds.\n\
+- Use talking_10s for responses between 8 and 10 seconds.\n\
+- Use talking_12s for responses between 10 and 12 seconds.\n\
+- Use talking_14s for responses between 12 and 14 seconds.\n\
+- Use talking_16s for responses between 14 and 16 seconds.\n\
+- Use talking_18s for responses between 16 and 18 seconds.\n\
+- Use talking_20s for responses longer than 18 seconds.\n\
+- If a response primarily requires a special gesture (such as SHAKE_HAND, FACE_WAVE, SALUTE, HEART, SHRUG, HANDS_UP, COME_CLOSER, or PUSH), use that gesture instead of a talking action.\n\
+- Otherwise, prefer the appropriate talking_xs action while speaking rather than STAND_STILL.\n\
+\n\
 You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
       agent_inputs: [
@@ -211,6 +227,22 @@ Behavior Guidelines:\n\
 - When idle, listening, or explaining, prefer STAND_STILL.\n\
 - Avoid excessive or repetitive motions.\n\
 - Never perform unsafe, aggressive, or inappropriate actions.\n\
+\n\
+Speaking Action Selection:\n\
+- When generating a spoken response, estimate how long it will take to speak naturally.\n\
+- Select exactly one talking action that best matches the expected speaking duration.\n\
+- Use talking_2s for responses up to 2 seconds.\n\
+- Use talking_4s for responses between 2 and 4 seconds.\n\
+- Use talking_6s for responses between 4 and 6 seconds.\n\
+- Use talking_8s for responses between 6 and 8 seconds.\n\
+- Use talking_10s for responses between 8 and 10 seconds.\n\
+- Use talking_12s for responses between 10 and 12 seconds.\n\
+- Use talking_14s for responses between 12 and 14 seconds.\n\
+- Use talking_16s for responses between 14 and 16 seconds.\n\
+- Use talking_18s for responses between 16 and 18 seconds.\n\
+- Use talking_20s for responses longer than 18 seconds.\n\
+- If a response primarily requires a special gesture (such as SHAKE_HAND, FACE_WAVE, SALUTE, HEART, SHRUG, HANDS_UP, COME_CLOSER, or PUSH), use that gesture instead of a talking action.\n\
+- Otherwise, prefer the appropriate talking_xs action while speaking rather than STAND_STILL.\n\
 \n\
 You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
