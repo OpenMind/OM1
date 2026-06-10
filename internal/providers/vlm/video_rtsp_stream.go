@@ -129,6 +129,33 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 	})
 }
 
+// GrabFrame captures a single frame from the RTSP source using ffmpeg and returns it as a JPEG-encoded byte slice.
+func GrabFrame(ctx context.Context, cfg VideoRTSPStreamConfig) ([]byte, error) {
+	v := NewVideoRTSPStream(cfg)
+
+	args := []string{
+		"-loglevel", "error",
+		"-rtsp_transport", "tcp",
+		"-i", v.cfg.RTSPURL,
+		"-an",
+		"-vf", fmt.Sprintf("scale=%d:%d", v.cfg.Width, v.cfg.Height),
+		"-frames:v", "1",
+		"-c:v", "mjpeg",
+		"-qscale:v", strconv.Itoa(jpegQScale(v.cfg.JPEGQuality)),
+		"-f", "image2pipe",
+		"pipe:1",
+	}
+
+	out, err := exec.CommandContext(ctx, "ffmpeg", args...).Output()
+	if err != nil {
+		return nil, fmt.Errorf("grab frame from %s: %w", v.cfg.RTSPURL, err)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("grab frame from %s: ffmpeg produced no output", v.cfg.RTSPURL)
+	}
+	return out, nil
+}
+
 // ffmpegArgs builds the ffmpeg argument list for RTSP capture.
 func (v *VideoRTSPStream) ffmpegArgs() []string {
 	return []string{

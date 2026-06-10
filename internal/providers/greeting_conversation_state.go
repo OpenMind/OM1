@@ -211,15 +211,13 @@ func (c *ConfidenceCalculator) ShouldTransitionToFinished(r ConfidenceResult, ti
 	return false
 }
 
-// GreetingConversationStateMachineProvider manages greeting conversation state
-// transitions based on confidence scores.
 type GreetingConversationStateMachineProvider struct {
 	mu sync.Mutex
 
 	currentState          ConversationState
 	previousState         ConversationState
 	stateEntryTime        time.Time
-	conversationStartTime time.Time // zero value means "not started"
+	conversationStartTime time.Time
 	turnCount             int
 	maxTurnCount          int
 	lastUserUtterance     string
@@ -233,6 +231,8 @@ type GreetingConversationStateMachineProvider struct {
 	log *zap.Logger
 }
 
+const DefaultMaxTurnCount = 3
+
 var (
 	greetingOnce     sync.Once
 	greetingInstance *GreetingConversationStateMachineProvider
@@ -240,7 +240,7 @@ var (
 
 // Greeting returns the singleton GreetingConversationStateMachineProvider.
 func Greeting() *GreetingConversationStateMachineProvider {
-	greetingOnce.Do(func() { greetingInstance = NewGreetingConversationStateMachineProvider(3) })
+	greetingOnce.Do(func() { greetingInstance = NewGreetingConversationStateMachineProvider(DefaultMaxTurnCount) })
 	return greetingInstance
 }
 
@@ -289,6 +289,11 @@ func (g *GreetingConversationStateMachineProvider) ProcessConversation(llmOutput
 	result := g.calc.CalculateCompletionConfidence(factors)
 	g.recordConfidence(result.Overall)
 
+	if voice != nil && g.io.TickCounter() == voice.Tick {
+		g.turnCount++
+		g.lastUserUtterance = voice.Input
+	}
+
 	newState := g.determineNextState(result)
 	g.previousState = g.currentState
 	if newState != g.currentState {
@@ -299,12 +304,6 @@ func (g *GreetingConversationStateMachineProvider) ProcessConversation(llmOutput
 			zap.String("to", string(g.currentState)),
 			zap.Float64("confidence", result.Overall),
 		)
-	}
-
-	// Count a turn when the latest voice input arrived during the current tick.
-	if voice != nil && g.io.TickCounter() == voice.Tick {
-		g.turnCount++
-		g.lastUserUtterance = voice.Input
 	}
 
 	command := g.generateCommand(result)
@@ -376,10 +375,14 @@ func (g *GreetingConversationStateMachineProvider) determineNextState(r Confiden
 	llmState := r.Factors.ConversationState
 	timeInState := time.Since(g.stateEntryTime).Seconds()
 
-	// Force finish if we've had too many turns to prevent infinite conversations
 	if g.turnCount >= g.maxTurnCount {
 		g.log.Info("greeting: maximum turn count reached - forcing finish",
 			zap.Int("max_turn_count", g.maxTurnCount))
+		return StateFinished
+	}
+
+	if llmState == StateFinished {
+		g.log.Info("greeting: LLM indicates finished")
 		return StateFinished
 	}
 
@@ -549,6 +552,17 @@ func (g *GreetingConversationStateMachineProvider) MaxTurnCount() int {
 	return g.maxTurnCount
 }
 
+// SetMaxTurnCount sets the maximum number of back-and-forth exchanges before
+// the conversation is forced to finish. A value less than 1 is ignored.
+func (g *GreetingConversationStateMachineProvider) SetMaxTurnCount(n int) {
+	if n < 1 {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.maxTurnCount = n
+}
+
 const finalTurnGuidance = "\nGreeting status: This is the final exchange of this greeting conversation. " +
 	"Give a brief, warm goodbye in your response and set conversation_state to \"finished\".\n"
 
@@ -557,7 +571,7 @@ func (g *GreetingConversationStateMachineProvider) EndingGuidance() string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if g.turnCount+1 > g.maxTurnCount {
+	if g.turnCount+1 >= g.maxTurnCount {
 		return finalTurnGuidance
 	}
 

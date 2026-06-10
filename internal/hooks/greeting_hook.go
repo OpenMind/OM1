@@ -24,10 +24,11 @@ func init() {
 const defaultGreetingLLMType = "GeminiLLM"
 
 const (
-	defaultVisionBaseURL = "https://api.openmind.com/api/core/gemini"
-	defaultVisionModel   = "gemini-2.5-flash"
-	defaultVisionMaxTok  = 1024
-	defaultVisionMaxAge  = 5 * time.Second
+	defaultVisionBaseURL     = "https://api.openmind.com/api/core/gemini"
+	defaultVisionModel       = "gemini-2.5-flash"
+	defaultVisionMaxTok      = 1024
+	defaultVisionRTSPURL     = "rtsp://localhost:8554/top_camera_raw"
+	defaultVisionGrabTimeout = 2 * time.Second
 )
 
 const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is in front of you. " +
@@ -35,6 +36,16 @@ const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting w
 	"Generate a single warm, natural spoken greeting of one or two short sentences. " +
 	"Here is what you currently see: {scene}. " +
 	"If a specific person is recognized ({closest_name}), greet them by name; otherwise greet generically. " +
+	"You may reflect the time of day in your greeting when it feels natural. " +
+	"Finish by offering help, for example: \"{help_message}\". " +
+	"Respond with only the greeting text, with no quotes or commentary."
+
+const defaultVisionGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is right in front of you. " +
+	"The current time is {current_time}. " +
+	"Look carefully at the attached image from your camera and generate a single warm, natural spoken greeting of one or two short sentences. " +
+	"Make it feel personal and present by naturally referencing something specific you genuinely see — for example the person's appearance or clothing, what they are doing or holding, how many people are present, or the setting around them. " +
+	"Only mention details you can actually see in the image; never invent anything. " +
+	"If you recognize a specific person ({closest_name}), greet them by name; otherwise greet generically. " +
 	"You may reflect the time of day in your greeting when it feels natural. " +
 	"Finish by offering help, for example: \"{help_message}\". " +
 	"Respond with only the greeting text, with no quotes or commentary."
@@ -96,6 +107,11 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 		promptTemplate = defaultGreetingPrompt
 	}
 
+	visionTemplate := stringVal(cfg, "vision_prompt")
+	if strings.TrimSpace(visionTemplate) == "" {
+		visionTemplate = defaultVisionGreetingPrompt
+	}
+
 	promptVars := make(map[string]any, len(vars)+5)
 	for k, v := range vars {
 		promptVars[k] = v
@@ -106,11 +122,11 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 	promptVars["help_message"] = helpMessage
 	promptVars["current_time"] = time.Now().Format("Monday, January 2, 2006 at 3:04 PM")
 
-	prompt := formatTemplate(promptTemplate, promptVars)
-
-	if greeting, ok := r.visionGreeting(ctx, cfg, prompt); ok {
+	if greeting, ok := r.visionGreeting(ctx, cfg, formatTemplate(visionTemplate, promptVars)); ok {
 		return greeting, nil
 	}
+
+	prompt := formatTemplate(promptTemplate, promptVars)
 
 	model, err := r.greetingLLM(cfg)
 	if err != nil {
@@ -135,17 +151,22 @@ func (r *Runner) visionGreeting(ctx context.Context, cfg map[string]any, prompt 
 		return "", false
 	}
 
-	maxAge := defaultVisionMaxAge
-	if sec := util.FloatFrom(cfg["vlm_max_frame_age_sec"], 0); sec > 0 {
-		maxAge = time.Duration(sec * float64(time.Second))
+	grabTimeout := defaultVisionGrabTimeout
+	if sec := util.FloatFrom(cfg["vlm_grab_timeout_sec"], 0); sec > 0 {
+		grabTimeout = time.Duration(sec * float64(time.Second))
 	}
 
-	var encoded string
-	if jpeg, _, ok := providers.LatestFrame().GetFresh(maxAge); ok {
-		encoded = base64.StdEncoding.EncodeToString(jpeg)
-	} else {
-		r.log.Warn("greeting_start_hook: no recent frame, generating greeting without image")
+	grabCtx, cancel := context.WithTimeout(ctx, grabTimeout)
+	defer cancel()
+
+	jpeg, err := video.GrabFrame(grabCtx, video.VideoRTSPStreamConfig{
+		RTSPURL: util.FirstNonEmpty(stringVal(cfg, "rtsp_url"), defaultVisionRTSPURL),
+	})
+	if err != nil {
+		r.log.Warn("greeting_start_hook: failed to grab frame, falling back to text-only greeting", zap.Error(err))
+		return "", false
 	}
+	encoded := base64.StdEncoding.EncodeToString(jpeg)
 
 	describer := video.NewDescriber(video.Describer{
 		Name:      "greeting_hook",
