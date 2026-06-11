@@ -318,7 +318,7 @@ func (idx *MemoryIndex) SaveToDisk(dir string) error {
 	if err != nil {
 		return fmt.Errorf("memory index: create graph file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	w := bufio.NewWriter(f)
 	if err := idx.graph.Export(w); err != nil {
 		return fmt.Errorf("memory index: export graph: %w", err)
@@ -363,10 +363,10 @@ func (idx *MemoryIndex) LoadFromDisk(dir string) error {
 	}
 	graph := hnsw.NewGraph[int]()
 	if err := graph.Import(bufio.NewReader(f)); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("memory index: import graph: %w", err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	// Load document metadata.
 	raw, err := os.ReadFile(filepath.Join(dir, "index.meta.json"))

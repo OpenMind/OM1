@@ -2,6 +2,7 @@
   // A single mode whose input contains a greeting. The scripted cortex LLM
   // reacts to "Hello" by emitting a `speak` tool call, which must reach the
   // recording connector wired to the speak action.
+  version: "v1.1.0",
   name: "speak on greeting",
   description: "input -> fuser -> cortex LLM -> speak action",
   hertz: 50,

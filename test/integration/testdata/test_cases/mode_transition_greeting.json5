@@ -3,6 +3,7 @@
   // a "person", which fires an input-triggered transition into `greet`. The greet
   // mode then reacts to its own input and speaks a welcome — proving the runtime
   // tears down one mode and brings up the next end-to-end.
+  version: "v1.1.0",
   name: "patrol transitions to greeting",
   description: "input keyword triggers a mode transition; new mode produces an action",
   default_mode: "patrol",

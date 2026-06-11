@@ -81,7 +81,7 @@ func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
 		w.log.Error("failed to write interaction", zap.Error(err))
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString(entry); err != nil {
 		w.log.Error("failed to write interaction", zap.Error(err))
@@ -212,13 +212,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err

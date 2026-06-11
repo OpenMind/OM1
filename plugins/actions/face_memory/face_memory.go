@@ -7,13 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"go.uber.org/zap"
 
@@ -102,7 +98,7 @@ type Connector struct {
 	lastMatchName  string
 }
 
-var dedupSuffixRE = regexp.MustCompile(`_\d+$`)
+// var dedupSuffixRE = regexp.MustCompile(`_\d+$`)
 
 func NewConnector(configMap map[string]any) (actions.Connector, error) {
 	var cfg Config
@@ -680,7 +676,7 @@ func (c *Connector) postJSON(path string, body map[string]any) map[string]any {
 		c.log.Warn("face_memory: HTTP error", zap.String("url", url), zap.Error(err))
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	data, _ := io.ReadAll(resp.Body)
 	var out map[string]any
 	if err := json.Unmarshal(data, &out); err != nil {
@@ -700,12 +696,12 @@ func (c *Connector) writeSimilarMatches(line string) {
 	c.log.Info("face_memory: similar_matches", zap.String("line", line))
 }
 
-func (c *Connector) speak(message string) {
-	if message == "" {
-		return
-	}
-	c.tts.AddText(message)
-}
+// func (c *Connector) speak(message string) {
+// 	if message == "" {
+// 		return
+// 	}
+// 	c.tts.AddText(message)
+// }
 
 func (c *Connector) clearState() {
 	c.mu.Lock()
@@ -763,15 +759,15 @@ func (c *Connector) waitAnyFace(ctx context.Context, timeoutSec int) bool {
 	return false
 }
 
-func displayName(id string) string {
-	if id == "" {
-		return ""
-	}
-	cleaned := dedupSuffixRE.ReplaceAllString(id, "")
-	cleaned = strings.ReplaceAll(cleaned, "-", " ")
-	cleaned = strings.ReplaceAll(cleaned, "_", " ")
-	return cases.Title(language.English).String(strings.ToLower(cleaned))
-}
+// func displayName(id string) string {
+// 	if id == "" {
+// 		return ""
+// 	}
+// 	cleaned := dedupSuffixRE.ReplaceAllString(id, "")
+// 	cleaned = strings.ReplaceAll(cleaned, "-", " ")
+// 	cleaned = strings.ReplaceAll(cleaned, "_", " ")
+// 	return cases.Title(language.English).String(strings.ToLower(cleaned))
+// }
 
 func shortUUID(uuid string) string {
 	if len(uuid) >= 8 {

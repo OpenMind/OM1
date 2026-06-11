@@ -3,6 +3,7 @@
   // to any mode) publishes a context flag (awake=true) onto the mode-context bus.
   // The runtime re-evaluates and switches idle -> active, which then acts. Proves
   // that global_backgrounds are loaded, started once, and run regardless of mode.
+  version: "v1.1.0",
   name: "global background drives a context-aware transition",
   description: "a global_background publishes a flag that transitions the mode and the new mode acts",
   default_mode: "idle",
