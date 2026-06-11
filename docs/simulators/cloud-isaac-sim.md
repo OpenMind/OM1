@@ -112,7 +112,7 @@ From here, you can:
 Run OM1 on your local machine and connect to the cloud simulator:
 
 1. Copy your **API Key** from the portal and ensure `OM_API_KEY` is set in your environment or `.env` file.
-2. Open `config/cloud_sim.json5` in your local OM1 repo. This config targets a Unitree Go2 in the cloud simulator with voice input, VLM, and autonomous movement. You can adjust the `system_prompt_base`, robot inputs, and actions to match your use case.
+2. Open `config/unitree_go2_autonomy.json5` in your local OM1 repo. This config targets a Unitree Go2 in the cloud simulator with voice input, VLM, and autonomous movement. You can adjust the `system_prompt_base`, robot inputs, and actions to match your use case.
 3. Run the config:
 
 ```bash
