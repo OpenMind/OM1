@@ -164,7 +164,7 @@ func (s *Summarizer) Run(ctx context.Context) {
 	promptContent := formatNumberedChunks(newChunks)
 	selected, err := s.selectCandidates(ctx, promptContent)
 	if err != nil {
-		s.log.Error("memory: candidate selection failed", zap.Error(err))
+		s.log.Error("candidate selection failed", zap.Error(err))
 		return
 	}
 
@@ -175,7 +175,7 @@ func (s *Summarizer) Run(ctx context.Context) {
 		chunk := newChunks[idx]
 		userID := parseUserFromChunk(chunk.Text)
 		s.signals.MarkCandidate(chunk.Text, userID)
-		s.log.Debug("memory: marked candidate",
+		s.log.Debug("marked candidate",
 			zap.Int("section", idx+1),
 			zap.String("user", userID),
 		)
@@ -186,13 +186,13 @@ func (s *Summarizer) Run(ctx context.Context) {
 		changedUsers := s.promoteAndSummarize(ctx, promotable)
 		for _, uid := range changedUsers {
 			if err := s.generateSummary(ctx, uid); err != nil {
-				s.log.Warn("memory: summary generation failed", zap.String("user", uid), zap.Error(err))
+				s.log.Warn("summary generation failed", zap.String("user", uid), zap.Error(err))
 			}
 		}
 	}
 
 	if expired := s.signals.ExpireCandidates(); expired > 0 {
-		s.log.Info("memory: expired candidates", zap.Int("count", expired))
+		s.log.Info("expired candidates", zap.Int("count", expired))
 	}
 
 	s.writeLastSummary()
@@ -242,7 +242,7 @@ func (s *Summarizer) llmCall(ctx context.Context, messages []chatMessage) (strin
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
@@ -388,7 +388,7 @@ func (s *Summarizer) promoteAndSummarize(ctx context.Context, candidates []Candi
 			{Role: "user", Content: promptContent},
 		})
 		if err != nil {
-			s.log.Error("memory: compare LLM failed", zap.String("user", uid), zap.Error(err))
+			s.log.Error("compare LLM failed", zap.String("user", uid), zap.Error(err))
 			continue
 		}
 		if strings.EqualFold(strings.TrimSpace(result), "NONE") || result == "" {
@@ -638,7 +638,7 @@ func (s *Summarizer) applyDecisions(decisions []scoredDecision) []string {
 		if added > 0 || len(ops) > 0 {
 			out, _ := json.MarshalIndent(data, "", "  ")
 			_ = os.WriteFile(factsPath, out, 0o644)
-			s.log.Info("memory: updated facts", zap.String("user", uid), zap.Int("added", added))
+			s.log.Info("updated facts", zap.String("user", uid), zap.Int("added", added))
 		}
 	}
 

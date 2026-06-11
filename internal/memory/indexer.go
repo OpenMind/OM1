@@ -318,7 +318,7 @@ func (idx *MemoryIndex) SaveToDisk(dir string) error {
 	if err != nil {
 		return fmt.Errorf("memory index: create graph file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	w := bufio.NewWriter(f)
 	if err := idx.graph.Export(w); err != nil {
 		return fmt.Errorf("memory index: export graph: %w", err)
@@ -363,10 +363,10 @@ func (idx *MemoryIndex) LoadFromDisk(dir string) error {
 	}
 	graph := hnsw.NewGraph[int]()
 	if err := graph.Import(bufio.NewReader(f)); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("memory index: import graph: %w", err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	// Load document metadata.
 	raw, err := os.ReadFile(filepath.Join(dir, "index.meta.json"))
@@ -490,13 +490,13 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 		filePath := filepath.Join(dailyDir, entry.Name())
 		if fileDate.Before(cutoff) {
 			_ = os.Remove(filePath)
-			idx.log.Info("memory: deleted expired daily log", zap.String("file", entry.Name()))
+			idx.log.Info("deleted expired daily log", zap.String("file", entry.Name()))
 			continue
 		}
 
 		chunks, parseErr := ParseDailyFile(filePath)
 		if parseErr != nil {
-			idx.log.Warn("memory: failed to parse daily file", zap.String("file", entry.Name()), zap.Error(parseErr))
+			idx.log.Warn("failed to parse daily file", zap.String("file", entry.Name()), zap.Error(parseErr))
 			continue
 		}
 		allChunks = append(allChunks, chunks...)
@@ -508,7 +508,7 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 			validHashes[hashText(c.Text)] = struct{}{}
 		}
 		if pruned := idx.PruneHashes(validHashes); pruned > 0 {
-			idx.log.Info("memory: pruned stale entries", zap.Int("count", pruned))
+			idx.log.Info("pruned stale entries", zap.Int("count", pruned))
 		}
 	}
 
@@ -517,7 +517,7 @@ func BuildIndex(ctx context.Context, idx *MemoryIndex, dailyDir string, validDay
 		if loadErr != nil {
 			return loadErr
 		}
-		idx.log.Info("memory: populated index",
+		idx.log.Info("populated index",
 			zap.Int("chunks", len(allChunks)),
 			zap.Int("new", loaded),
 			zap.Int("valid_days", validDays),

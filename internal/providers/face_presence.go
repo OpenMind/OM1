@@ -14,6 +14,15 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
+const (
+	facePresenceDefaultBaseURL                = "http://127.0.0.1:6793"
+	facePresenceDefaultRecentSec              = 1.0
+	facePresenceDefaultTimeout                = 2 * time.Second
+	facePresenceDefaultAnonNewcomerThrSec     = 180.0     // 3 min
+	facePresenceDefaultNamedRecentThrSec      = 86_400.0  // 1 day
+	facePresenceDefaultNamedLongAbsenceThrSec = 604_800.0 // 7 days
+)
+
 // FacePresenceConfig configures the provider.
 type FacePresenceConfig struct {
 	BaseURL   string
@@ -35,22 +44,22 @@ type FacePresenceProvider struct {
 // NewFacePresenceProvider constructs a provider.
 func NewFacePresenceProvider(cfg FacePresenceConfig) *FacePresenceProvider {
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = "http://127.0.0.1:6793"
+		cfg.BaseURL = facePresenceDefaultBaseURL
 	}
 	if cfg.RecentSec <= 0 {
-		cfg.RecentSec = 1.0
+		cfg.RecentSec = facePresenceDefaultRecentSec
 	}
 	if cfg.Timeout <= 0 {
-		cfg.Timeout = 2 * time.Second
+		cfg.Timeout = facePresenceDefaultTimeout
 	}
 	if cfg.AnonNewcomerThrSec <= 0 {
-		cfg.AnonNewcomerThrSec = 180.0
+		cfg.AnonNewcomerThrSec = facePresenceDefaultAnonNewcomerThrSec
 	}
 	if cfg.NamedRecentThrSec <= 0 {
-		cfg.NamedRecentThrSec = 86_400.0
+		cfg.NamedRecentThrSec = facePresenceDefaultNamedRecentThrSec
 	}
 	if cfg.NamedLongAbsenceThrSec <= 0 {
-		cfg.NamedLongAbsenceThrSec = 604_800.0
+		cfg.NamedLongAbsenceThrSec = facePresenceDefaultNamedLongAbsenceThrSec
 	}
 	return &FacePresenceProvider{
 		cfg: cfg,
@@ -92,9 +101,9 @@ type PresenceSnapshot struct {
 // providerForDefaults holds thresholds used by ToText. Updated via SetDefaults.
 var providerForDefaults = &FacePresenceProvider{
 	cfg: FacePresenceConfig{
-		AnonNewcomerThrSec:     180.0,
-		NamedRecentThrSec:      86_400.0,
-		NamedLongAbsenceThrSec: 604_800.0,
+		AnonNewcomerThrSec:     facePresenceDefaultAnonNewcomerThrSec,
+		NamedRecentThrSec:      facePresenceDefaultNamedRecentThrSec,
+		NamedLongAbsenceThrSec: facePresenceDefaultNamedLongAbsenceThrSec,
 	},
 }
 

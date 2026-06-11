@@ -33,7 +33,7 @@ func TestStartSlamHook(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.startSlamHook(context.Background(), map[string]any{
 		"base_url": srv.URL,
 		"api_key":  "secret",
@@ -51,7 +51,7 @@ func TestStartSlamHookError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.startSlamHook(context.Background(), map[string]any{"base_url": srv.URL}, nil)
 	require.ErrorContains(t, err, "boom")
 }
@@ -75,7 +75,7 @@ func TestStopSlamHook(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.stopSlamHook(context.Background(), map[string]any{
 		"base_url": srv.URL,
 		"map_name": "office",
@@ -100,7 +100,7 @@ func TestStopSlamHookDefaultMapName(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	require.NoError(t, runner.stopSlamHook(context.Background(), map[string]any{"base_url": srv.URL}, nil))
 	require.Equal(t, slamDefaultMap, savedMapName, "map_name defaults to \"map\"")
 }
@@ -119,7 +119,7 @@ func TestStopSlamHookSaveFailureSkipsStop(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.stopSlamHook(context.Background(), map[string]any{"base_url": srv.URL}, nil)
 	require.ErrorContains(t, err, "save failed")
 	require.Equal(t, []string{"/maps/save"}, paths, "stop is not called when save fails")

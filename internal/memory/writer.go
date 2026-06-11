@@ -42,7 +42,7 @@ func NewWriter(memoryRoot string, log *zap.Logger) (*Writer, error) {
 	candidate := filepath.Join(filepath.Dir(memoryRoot), "gallery")
 	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
 		galleryDir = candidate
-		log.Info("memory: gallery detected for photo sync", zap.String("path", galleryDir))
+		log.Info("gallery detected for photo sync", zap.String("path", galleryDir))
 	}
 
 	return &Writer{
@@ -78,13 +78,13 @@ func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
 
 	f, err := os.OpenFile(dailyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		w.log.Error("memory: failed to write interaction", zap.Error(err))
+		w.log.Error("failed to write interaction", zap.Error(err))
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString(entry); err != nil {
-		w.log.Error("memory: failed to write interaction", zap.Error(err))
+		w.log.Error("failed to write interaction", zap.Error(err))
 	}
 }
 
@@ -109,7 +109,7 @@ func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, u
 	meta := map[string]string{"source": dateStr + ".md", "user_id": uuid}
 
 	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta}); err != nil {
-		w.log.Warn("memory: write-through index failed", zap.Error(err))
+		w.log.Warn("write-through index failed", zap.Error(err))
 	}
 }
 
@@ -139,7 +139,7 @@ func (w *Writer) ensureUserDir(uuid, name string) {
 		}
 		data, _ := json.MarshalIndent(profile, "", "  ")
 		_ = os.WriteFile(profilePath, data, 0o644)
-		w.log.Info("memory: created user profile", zap.String("uuid", uuid), zap.Strings("names", names))
+		w.log.Info("created user profile", zap.String("uuid", uuid), zap.Strings("names", names))
 	}
 
 	factsPath := filepath.Join(userDir, "facts.json")
@@ -195,7 +195,7 @@ func (w *Writer) syncPhotos(uuid string) {
 			continue
 		}
 		if err := copyFile(filepath.Join(srcDir, name), dst); err != nil {
-			w.log.Warn("memory: photo sync failed", zap.String("file", name), zap.Error(err))
+			w.log.Warn("photo sync failed", zap.String("file", name), zap.Error(err))
 		}
 	}
 
@@ -212,13 +212,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err

@@ -2,6 +2,7 @@
   // Negative transition test: a person-keyword rule exists, but the patrol input
   // never mentions a person, so the robot stays in patrol and keeps acting there.
   // The greet mode must never run. Mirrors the Python mode_no_transition case.
+  version: "v1.1.0",
   name: "no transition when keyword absent",
   description: "input-triggered rule does not fire; original mode keeps acting",
   default_mode: "patrol",
