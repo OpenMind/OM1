@@ -17,6 +17,7 @@ import (
 
 const (
 	scannerName        = "QRScanner"
+	scannerRTSPName    = "QRScannerRTSP"
 	scannerDescriptor  = "QR Scanner"
 	scannerMaxMessages = 8
 	scanChannelBuffer  = 4
@@ -24,11 +25,13 @@ const (
 
 func init() {
 	inputs.Register(scannerName, NewQRScanner)
+	inputs.Register(scannerRTSPName, NewQRScannerRTSP)
 }
 
 // Config holds the JSON configuration for the QRScanner input plugin.
 type Config struct {
 	CameraIndex         int     `json:"camera_index"`
+	RTSPURL             string  `json:"rtsp_url"`
 	CaptureFPS          int     `json:"capture_fps"`
 	DecodeFPS           int     `json:"decode_fps"`
 	Width               int     `json:"resolution_width"`
@@ -43,6 +46,7 @@ type frameSource interface {
 }
 
 type sensor struct {
+	name      string
 	cfg       Config
 	log       *zap.Logger
 	source    frameSource
@@ -54,18 +58,10 @@ type sensor struct {
 	cancel   context.CancelFunc
 }
 
-// NewQRScanner constructs a QRScanner sensor from the decoded config map.
+// NewQRScanner constructs a camera-backed QRScanner sensor.
 func NewQRScanner(configMap map[string]any) (inputs.Sensor, error) {
 	cfg := parseConfig(configMap)
-	log := logger.Get().Named(scannerName)
-	log.Info("initializing",
-		zap.Int("camera_index", cfg.CameraIndex),
-		zap.Int("capture_fps", cfg.CaptureFPS),
-		zap.Int("decode_fps", cfg.DecodeFPS),
-		zap.Int("width", cfg.Width),
-		zap.Int("height", cfg.Height),
-		zap.Float64("dedupe_window_seconds", cfg.DedupeWindowSeconds),
-	)
+	log := newLogger(scannerName, cfg)
 
 	source := video.NewVideoStream(video.VideoStreamConfig{
 		DeviceIndex: cfg.CameraIndex,
@@ -74,14 +70,50 @@ func NewQRScanner(configMap map[string]any) (inputs.Sensor, error) {
 		Height:      cfg.Height,
 		JPEGQuality: cfg.JPEGQuality,
 	})
+	return newSensor(cfg, log, source), nil
+}
 
+// NewQRScannerRTSP constructs an RTSP-backed QRScanner sensor.
+func NewQRScannerRTSP(configMap map[string]any) (inputs.Sensor, error) {
+	cfg := parseConfig(configMap)
+	if cfg.RTSPURL == "" {
+		cfg.RTSPURL = "rtsp://localhost:8554/top_camera_raw"
+	}
+	log := newLogger(scannerRTSPName, cfg)
+
+	source := video.NewVideoRTSPStream(video.VideoRTSPStreamConfig{
+		RTSPURL:     cfg.RTSPURL,
+		FPS:         cfg.CaptureFPS,
+		Width:       cfg.Width,
+		Height:      cfg.Height,
+		JPEGQuality: cfg.JPEGQuality,
+	})
+	return newSensor(cfg, log, source), nil
+}
+
+func newLogger(name string, cfg Config) *zap.Logger {
+	log := logger.Get().Named(name)
+	log.Info("initializing",
+		zap.Int("camera_index", cfg.CameraIndex),
+		zap.String("rtsp_url", cfg.RTSPURL),
+		zap.Int("capture_fps", cfg.CaptureFPS),
+		zap.Int("decode_fps", cfg.DecodeFPS),
+		zap.Int("width", cfg.Width),
+		zap.Int("height", cfg.Height),
+		zap.Float64("dedupe_window_seconds", cfg.DedupeWindowSeconds),
+	)
+	return log
+}
+
+func newSensor(cfg Config, log *zap.Logger, source frameSource) *sensor {
 	window := time.Duration(cfg.DedupeWindowSeconds * float64(time.Second))
 	return &sensor{
+		name:      log.Name(),
 		cfg:       cfg,
 		log:       log,
 		source:    source,
 		debouncer: newDebouncer(window),
-	}, nil
+	}
 }
 
 func parseConfig(configMap map[string]any) Config {
@@ -209,7 +241,7 @@ func (s *sensor) FormattedLatestBuffer() string {
 	result := fmt.Sprintf("\n%s: '%s'\n", scannerDescriptor, latest.Message)
 
 	ts := time.Unix(0, int64(latest.Timestamp*1e9))
-	providers.IO().AddInput(scannerName, latest.Message, ts)
+	providers.IO().AddInput(s.name, latest.Message, ts)
 	s.messages = nil
 
 	return result

@@ -1,0 +1,44 @@
+{
+version: "v1.0.0",
+  hertz: 0.2,
+  name: "luma_checkin_local",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are a test harness for the Luma check-in flow. The Vision input emits a line of the form 'qr_scan: pk=<pk> event=<event-id>' when it sees a Luma check-in QR code, or 'none' when it does not. When you see 'qr_scan: pk=...', immediately call the luma_checkin action with that pk value. When you see 'none', do nothing. Do not narrate.",
+  system_governance: "Only call luma_checkin. Never invent pk values; only use the one in the latest qr_scan input. Ignore 'none' inputs.",
+  agent_inputs: [
+    {
+      type: "QRScannerRTSP",
+      config: {
+        camera_index: 0,
+        capture_fps: 15,
+        decode_fps: 5,
+        dedupe_window_seconds: 30,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "Greeter",
+      history_length: 4,
+    },
+  },
+  agent_actions: [
+    {
+      name: "luma_checkin",
+      llm_label: "luma_checkin",
+      connector: "api",
+      config: {
+        api_key: "${LUMA_API_KEY}",
+        event_api_id: "${LUMA_EVENT_ID}",
+        greeting_template: "Welcome, {first_name}! Confirmed for {email}.",
+        request_timeout_seconds: 5,
+        tts: {
+          provider: "elevenlabs",
+          elevenlabs_api_key: "${ELEVENLABS_API_KEY}",
+          voice_id: "PoHUWWWMHFrA8z7Q88pu",
+        },
+      },
+    },
+  ],
+}
