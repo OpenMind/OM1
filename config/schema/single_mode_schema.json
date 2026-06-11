@@ -78,8 +78,21 @@
                 }
             }
         },
-        "backgrounds": {
+        "agent_backgrounds": {
             "type": "array",
+            "description": "Mode-scoped background tasks. In a single-mode config these run for the synthesized default mode.",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
+        },
+        "global_backgrounds": {
+            "type": "array",
+            "description": "System-wide background tasks that start once at startup and run for the lifetime of the runtime.",
             "items": {
                 "type": "object",
                 "required": ["type"],

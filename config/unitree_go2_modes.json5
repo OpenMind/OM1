@@ -124,7 +124,7 @@
           connector: "location",
         },
       ],
-      backgrounds: [
+      agent_backgrounds: [
         {
           type: "UnitreeGo2FrontierExploration",
         },

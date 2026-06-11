@@ -46,7 +46,7 @@
       ],
       action_execution_mode: "concurrent",
       agent_actions: [],
-      backgrounds: [
+      agent_backgrounds: [
         {
           type: "ApproachingPerson",
         },
@@ -166,7 +166,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           connector: "face_memory",
         }
       ],
-      backgrounds: [],
+      agent_backgrounds: [],
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
@@ -313,7 +313,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           connector: "face_memory",
         }
       ],
-      backgrounds: [],
+      agent_backgrounds: [],
       lifecycle_hooks: [
         {
           hook_type: "on_startup",

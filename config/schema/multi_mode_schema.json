@@ -182,11 +182,35 @@
                                 "type": "array",
                                 "items": {"type": "string"}
                             }
+                        },
+                        "agent_backgrounds": {
+                            "type": "array",
+                            "description": "Mode-scoped background tasks that run only while this mode is active.",
+                            "items": {
+                                "type": "object",
+                                "required": ["type"],
+                                "properties": {
+                                    "type": {"type": "string"},
+                                    "config": {"type": "object"}
+                                }
+                            }
                         }
                     }
                 }
             },
             "additionalProperties": false
+        },
+        "global_backgrounds": {
+            "type": "array",
+            "description": "System-wide background tasks that start once at startup and keep running across every mode switch until shutdown.",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
         },
         "transition_rules": {
             "type": "array",

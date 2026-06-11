@@ -145,7 +145,7 @@ func normalize(systemConfig *SystemConfig) {
 			AgentInputs:      systemConfig.AgentInputs,
 			CortexLLM:        systemConfig.CortexLLM,
 			AgentActions:     systemConfig.AgentActions,
-			Backgrounds:      systemConfig.Backgrounds,
+			AgentBackgrounds: systemConfig.AgentBackgrounds,
 			MCPServers:       systemConfig.MCPServers,
 			LifecycleHooks:   systemConfig.LifecycleHooks,
 		},

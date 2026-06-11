@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/actions"
+	"github.com/openmind/om1/internal/backgrounds"
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/llm"
@@ -20,16 +21,42 @@ import (
 )
 
 const (
-	mockInputType    = "mock_input"
-	scriptedLLMType  = "scripted_llm"
-	recordingConnKey = "recording"
+	mockInputType      = "mock_input"
+	scriptedLLMType    = "scripted_llm"
+	recordingConnKey   = "recording"
+	mockBackgroundType = "mock_background"
 )
 
 func init() {
 	inputs.Register(mockInputType, newMockSensor)
 	llm.Register(scriptedLLMType, newScriptedLLM)
 	actions.Register(recordingConnKey, newRecordingConnector)
+	backgrounds.Register(mockBackgroundType, newMockBackground)
 }
+
+type mockBackground struct {
+	publishContext map[string]any
+}
+
+func newMockBackground(cfg map[string]any) (backgrounds.Background, error) {
+	b := &mockBackground{}
+	if pc, ok := cfg["publish_context"].(map[string]any); ok {
+		b.publishContext = pc
+	}
+	return b, nil
+}
+
+func (b *mockBackground) Run(ctx context.Context) {
+	if len(b.publishContext) > 0 {
+		providers.ModeContext().Publish(b.publishContext)
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(20 * time.Millisecond):
+	}
+}
+
+func (b *mockBackground) Stop() {}
 
 type recordedCall struct {
 	Label string
