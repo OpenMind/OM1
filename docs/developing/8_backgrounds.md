@@ -36,7 +36,7 @@ Background tasks come in two scopes:
 - **`global_backgrounds`** (system-wide): declared at the top level of the config.
   They start once when the runtime starts and keep running across every mode
   switch until shutdown. Use this scope for tasks that must observe or act
-  continuously regardless of the current mode (mirrors `global_lifecycle_hooks`).
+  continuously regardless of the current mode.
 
 ```json5
 {
@@ -55,6 +55,3 @@ Background tasks come in two scopes:
 }
 ```
 
-Both scopes use the same `Background` plugin interface and registry — the only
-difference is lifecycle. Mode-scoped tasks are torn down and rebuilt on each mode
-transition; global tasks are not.
