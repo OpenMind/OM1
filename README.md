@@ -17,27 +17,6 @@ The Go runtime covers the core agent pipeline, but several capabilities availabl
 > [!NOTE]
 > However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It is now deprecated and will not be maintained.
 
-### Feature Comparison
-
-| Capability | Python | Go | Notes |
-| --- | :---: | :---: | --- |
-| Core agent runtime (input → LLM → action) | ✅ | ✅ | Fully supported in both. |
-| LLM providers (OpenAI, xAI, DeepSeek, Anthropic, Gemini, NearAI, Ollama, OpenRouter, Qwen) | ✅ | ✅ | Broad provider support in both. |
-| ASR (ElevenLabs, Google, Riva) | ✅ | ✅ | Including RTSP streaming variants. |
-| Text-to-Speech (`speak`) | ✅ | ✅ | Supported in both. |
-| Visual Language Models (VLM) | ✅ | ✅ | OpenAI/Gemini are supported. |
-| Metrics & observability (Prometheus + Grafana) | ✅ | ✅ | Supported in both. |
-| Simulators (Gazebo, Isaac Sim) | ✅ | ✅ | Two types of the Zenoh backends are supported. |
-| Hardware connectors (ROS2, Zenoh, CycloneDDS) | ✅ | 🚧 | Go currently focuses on Zenoh; broader connector parity in progress. |
-| Locomotion & robot actions (move/navigate variants for Go2, G1, TurtleBot4, etc.) | ✅ | 🚧 | Go currently ships `arm_g1`, `emotion`, `greeting_conversation`, `speak`. |
-| Sensor inputs (GPS, RTK, LIDAR, odometry, localization, battery) | ✅ | 🚧 | Under development for Go. |
-| Web & social inputs (Twitter/X, news, weather) | ✅ | 🚧 | Under development for Go. |
-| Messaging integrations (Telegram, Discord) | ✅ | 🚧 | Under development for Go. |
-| Full autonomy with BrainPack (Navigation, SLAM, Auto Charging) | ✅ | 🚧 | Under development for Go. |
-
-> [!NOTE]
-> ✅ available · 🚧 under development. If a capability you need is marked 🚧, the [Python runtime](https://github.com/OpenMind/OM1/tree/python) is the recommended choice for now.
-
 ## Capabilities of OM1
 
 * **Modular Architecture**: Written in Go for performance and seamless integration.
