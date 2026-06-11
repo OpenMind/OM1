@@ -22,6 +22,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
+	"github.com/openmind/om1/internal/util"
 )
 
 const (
@@ -171,7 +172,7 @@ func (c *Connector) Connect(ctx context.Context, input actions.Input) (actions.O
 	if !ok {
 		return nil, fmt.Errorf("face_memory: unexpected input type %T", input)
 	}
-	op := stringArg(args, "op")
+	op := util.StringFrom(args["op"], "")
 	switch op {
 	case "selfie":
 		return c.doSelfie(ctx, args)
@@ -195,15 +196,15 @@ func (c *Connector) Tick(ctx context.Context) { <-ctx.Done() }
 func (c *Connector) Stop()                    {}
 
 func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, error) {
-	name := strings.TrimSpace(stringArg(args, "id"))
+	name := strings.TrimSpace(util.StringFrom(args["id"], ""))
 	if name == "" {
 		c.writeStatus("result=bad_id detail=empty")
 		c.log.Error("face_memory/selfie: empty id")
 		return nil, nil
 	}
 
-	timeoutSec := intArg(args, "timeout_sec", c.cfg.TimeoutSec)
-	force := boolArg(args, "force", false)
+	timeoutSec := util.IntFrom(args["timeout_sec"], c.cfg.TimeoutSec)
+	force := util.BoolFrom(args["force"], false)
 
 	// Disable blur for enrollment so the demo view shows the face.
 	origBlur := c.getBlur()
@@ -212,7 +213,7 @@ func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, err
 
 	if !c.waitAnyFace(ctx, timeoutSec) {
 		c.writeStatus("result=low_quality reason=no_one_present")
-		c.speak("I don't see anyone in front of me yet.")
+		// c.speak("I don't see anyone in front of me yet.")
 		return nil, nil
 	}
 
@@ -242,10 +243,10 @@ func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, err
 
 func (c *Connector) dispatchSelfieResponse(resp map[string]any, claimedID string) {
 	if ok, _ := resp["ok"].(bool); ok {
-		savedID := strOr(resp, "id", claimedID)
-		merged := boolOr(resp, "merged", false)
-		samples := intOr(resp, "samples_saved", 0)
-		display := displayName(savedID)
+		savedID := util.StringFrom(resp["id"], claimedID)
+		merged := util.BoolFrom(resp["merged"], false)
+		samples := util.IntFrom(resp["samples_saved"], 0)
+		// display := displayName(savedID)
 
 		c.mu.Lock()
 		c.lastEnrolledID = savedID
@@ -258,58 +259,58 @@ func (c *Connector) dispatchSelfieResponse(resp map[string]any, claimedID string
 		}
 		c.writeStatus(fmt.Sprintf("result=%s id=%s samples=%d merged=%t",
 			tag, savedID, samples, merged))
-		if merged {
-			c.speak(fmt.Sprintf("Welcome back, %s!", display))
-		} else {
-			c.speak(fmt.Sprintf("Nice to meet you, %s! I'll remember you next time.", display))
-		}
+		// if merged {
+		// 	c.speak(fmt.Sprintf("Welcome back, %s!", display))
+		// } else {
+		// 	c.speak(fmt.Sprintf("Nice to meet you, %s! I'll remember you next time.", display))
+		// }
 		c.log.Info("face_memory/selfie: enroll ok",
 			zap.String("tag", tag), zap.String("id", savedID), zap.Int("samples", samples))
 		return
 	}
 
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "ambiguous_subjects":
-		n := intOr(resp, "n_engaged", 0)
+		n := util.IntFrom(resp["n_engaged"], 0)
 		c.writeStatus(fmt.Sprintf("result=ambiguous engaged=%d", n))
-		c.speak("I see a few people. Could you step closer so I can focus on you?")
+		// c.speak("I see a few people. Could you step closer so I can focus on you?")
 		c.clearState()
 	case "face_belongs_to":
-		matched := strOr(resp, "name", "someone")
-		sim := floatOr(resp, "sim", 0.0)
-		display := displayName(matched)
+		matched := util.StringFrom(resp["name"], "someone")
+		sim := util.FloatFrom(resp["sim"], 0.0)
+		// display := displayName(matched)
 		c.mu.Lock()
 		c.lastMatchName = matched
 		c.mu.Unlock()
 		c.writeStatus(fmt.Sprintf("result=face_belongs_to claimed=%s matched=%s sim=%.3f",
 			claimedID, matched, sim))
-		c.speak(fmt.Sprintf("You look a lot like %s. Are you %s, or someone different?",
-			display, display))
+		// c.speak(fmt.Sprintf("You look a lot like %s. Are you %s, or someone different?",
+		// display, display))
 	case "no_valid_frames":
 		c.writeStatus("result=low_quality")
-		c.speak("I can't see your face clearly. Could you look at me directly?")
+		// c.speak("I can't see your face clearly. Could you look at me directly?")
 		c.clearState()
 	case "insufficient_samples":
-		got := intOr(resp, "got", 0)
+		got := util.IntFrom(resp["got"], 0)
 		c.writeStatus(fmt.Sprintf("result=partial got=%d", got))
-		c.speak("Hold still — almost got it.")
+		// c.speak("Hold still — almost got it.")
 		c.clearState()
 	case "busy":
 		c.writeStatus("result=busy retries=1")
-		c.speak("One sec, finishing the last one.")
+		// c.speak("One sec, finishing the last one.")
 		c.clearState()
 	case "bad_id":
-		detail := strOr(resp, "detail", "")
+		detail := util.StringFrom(resp["detail"], "")
 		c.writeStatus(fmt.Sprintf("result=bad_id detail=%s", detail))
 		c.clearState()
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
-		c.speak("I can't see right now — please try again in a moment.")
+		// c.speak("I can't see right now — please try again in a moment.")
 		c.clearState()
 	default:
 		c.writeStatus(fmt.Sprintf("result=unknown error=%s", errStr))
-		c.speak("Something went wrong. Could you try again?")
+		// c.speak("Something went wrong. Could you try again?")
 		c.clearState()
 	}
 }
@@ -332,19 +333,19 @@ func (c *Connector) doCorrectIdentity(_ context.Context, args map[string]any) (a
 	uuid, count, err := c.resolveNameToUUID(fromID)
 	if err != nil {
 		c.writeStatus("result=network_error")
-		c.speak("I had trouble updating that.")
+		// c.speak("I had trouble updating that.")
 		return nil, nil
 	}
 	switch count {
 	case 0:
 		c.writeStatus(fmt.Sprintf("result=name_not_found from=%s", fromID))
-		c.speak(fmt.Sprintf("I don't have anyone named %s saved.", displayName(fromID)))
+		// c.speak(fmt.Sprintf("I don't have anyone named %s saved.", displayName(fromID)))
 		return nil, nil
 	case 1:
 		// fall through
 	default:
 		c.writeStatus(fmt.Sprintf("result=ambiguous from=%s count=%d", fromID, count))
-		c.speak(fmt.Sprintf("I have more than one %s saved — I can't tell which one you meant.", displayName(fromID)))
+		// c.speak(fmt.Sprintf("I have more than one %s saved — I can't tell which one you meant.", displayName(fromID)))
 		return nil, nil
 	}
 
@@ -386,35 +387,35 @@ func (c *Connector) resolveNameToUUID(name string) (string, int, error) {
 func (c *Connector) dispatchRenameResponse(resp map[string]any, fromID, toID, uuid string) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
-		c.speak("I had trouble updating that.")
+		// c.speak("I had trouble updating that.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		samples := intOr(resp, "sample_count", 0)
+		samples := util.IntFrom(resp["sample_count"], 0)
 		c.writeStatus(fmt.Sprintf(
 			"result=success from=%s to=%s uuid=%s samples=%d",
 			fromID, toID, shortUUID(uuid), samples,
 		))
-		c.speak(fmt.Sprintf("Got it, I've updated your name to %s.", displayName(toID)))
+		// c.speak(fmt.Sprintf("Got it, I've updated your name to %s.", displayName(toID)))
 		c.log.Info("face_memory/correct_identity: ok",
 			zap.String("from", fromID), zap.String("to", toID),
 			zap.String("uuid", uuid), zap.Int("samples", samples))
 		return
 	}
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "uuid_not_found":
 		c.writeStatus(fmt.Sprintf("result=uuid_not_found uuid=%s", shortUUID(uuid)))
-		c.speak("I couldn't find that identity anymore — maybe it was deleted.")
+		// c.speak("I couldn't find that identity anymore — maybe it was deleted.")
 	case "bad_name":
-		detail := strOr(resp, "detail", "")
-		c.writeStatus(fmt.Sprintf("result=bad_id detail=%s", detail))
+		// detail := util.StringFrom(resp["detail"], "")
+		// c.writeStatus(fmt.Sprintf("result=bad_id detail=%s", detail))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
-		c.speak("I can't update names right now.")
+		// c.speak("I can't update names right now.")
 	default:
 		c.writeStatus(fmt.Sprintf("result=unknown error=%s", errStr))
-		c.speak("Something went wrong updating that.")
+		// c.speak("Something went wrong updating that.")
 	}
 }
 
@@ -427,48 +428,48 @@ func (c *Connector) doForgetLast(_ context.Context, _ map[string]any) (any, erro
 func (c *Connector) dispatchForgetResponse(resp map[string]any) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
-		c.speak("I couldn't undo that.")
+		// c.speak("I couldn't undo that.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		uuid := strOr(resp, "uuid", "")
-		name := strOr(resp, "name", "")
+		uuid := util.StringFrom(resp["uuid"], "")
+		name := util.StringFrom(resp["name"], "")
 		c.writeStatus(fmt.Sprintf("result=success uuid=%s name=%s", shortUUID(uuid), name))
-		if name != "" {
-			c.speak(fmt.Sprintf("OK, I've forgotten %s. Let's try again.", displayName(name)))
-		} else {
-			c.speak("OK, I've forgotten that one. Let's try again.")
-		}
+		// if name != "" {
+		// 	c.speak(fmt.Sprintf("OK, I've forgotten %s. Let's try again.", displayName(name)))
+		// } else {
+		// 	c.speak("OK, I've forgotten that one. Let's try again.")
+		// }
 		c.log.Info("face_memory/forget_last: ok",
 			zap.String("uuid", uuid), zap.String("name", name))
 		return
 	}
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "no_recent_enrollment":
 		c.writeStatus("result=no_recent_enrollment")
-		c.speak("There's nothing recent for me to forget.")
+		// c.speak("There's nothing recent for me to forget.")
 	case "stale_enrollment":
 		c.writeStatus("result=stale_enrollment")
-		c.speak("Too much time has passed — I can't undo that anymore.")
+		// c.speak("Too much time has passed — I can't undo that anymore.")
 	case "uuid_mismatch":
-		detail := strOr(resp, "detail", "")
+		detail := util.StringFrom(resp["detail"], "")
 		c.writeStatus(fmt.Sprintf("result=uuid_mismatch detail=%s", detail))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
-		c.speak("I can't undo that right now.")
+		// c.speak("I can't undo that right now.")
 	default:
 		c.writeStatus(fmt.Sprintf("result=unknown error=%s", errStr))
-		c.speak("Something went wrong undoing that.")
+		// c.speak("Something went wrong undoing that.")
 	}
 }
 
 func (c *Connector) doFindSimilar(_ context.Context, args map[string]any) (any, error) {
-	topK := intArg(args, "top_k", c.cfg.DefaultTopK)
+	topK := util.IntFrom(args["top_k"], c.cfg.DefaultTopK)
 	if topK < 1 {
 		topK = c.cfg.DefaultTopK
 	}
-	minSim := floatOr(args, "min_sim", c.cfg.DefaultMinSim)
+	minSim := util.FloatFrom(args["min_sim"], c.cfg.DefaultMinSim)
 
 	resp := c.postJSON("/gallery/find_similar_current", map[string]any{
 		"top_k":   topK,
@@ -498,11 +499,11 @@ func (c *Connector) dispatchFindSimilarResponse(resp map[string]any) {
 			if !ok {
 				continue
 			}
-			name := strOr(match, "name", "")
-			sim := floatOr(match, "sim", 0.0)
+			name := util.StringFrom(match["name"], "")
+			sim := util.FloatFrom(match["sim"], 0.0)
 			label := name
 			if label == "" {
-				uuid := strOr(match, "uuid", "")
+				uuid := util.StringFrom(match["uuid"], "")
 				if len(uuid) >= 6 {
 					label = "anon_" + uuid[:6]
 				} else {
@@ -524,7 +525,7 @@ func (c *Connector) dispatchFindSimilarResponse(resp map[string]any) {
 		c.log.Info("face_memory/find_similar: ok", zap.Int("matches", len(rawMatches)))
 		return
 	}
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "no_visible_face":
 		c.writeSimilarMatches("result=no_visible_face")
@@ -542,8 +543,8 @@ func (c *Connector) dispatchFindSimilarResponse(resp map[string]any) {
 }
 
 func (c *Connector) doMerge(_ context.Context, args map[string]any) (any, error) {
-	targetName := strings.ToLower(strings.TrimSpace(strOr(args, "target_name", "")))
-	confirmedBy := strings.TrimSpace(strOr(args, "confirmed_by", ""))
+	targetName := strings.ToLower(strings.TrimSpace(util.StringFrom(args["target_name"], "")))
+	confirmedBy := strings.TrimSpace(util.StringFrom(args["confirmed_by"], ""))
 
 	if targetName == "" {
 		c.writeStatus("result=missing_target_name")
@@ -565,12 +566,12 @@ func (c *Connector) doMerge(_ context.Context, args map[string]any) (any, error)
 func (c *Connector) dispatchMergeResponse(resp map[string]any, targetName string) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
-		c.speak("I had trouble combining those identities.")
+		// c.speak("I had trouble combining those identities.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		samples := intOr(resp, "samples_merged", 0)
-		sim := floatOr(resp, "sim", 0.0)
+		samples := util.IntFrom(resp["samples_merged"], 0)
+		sim := util.FloatFrom(resp["sim"], 0.0)
 		c.writeStatus(fmt.Sprintf(
 			"result=success target_name=%s samples=%d sim=%.2f",
 			targetName, samples, sim,
@@ -580,33 +581,33 @@ func (c *Connector) dispatchMergeResponse(resp map[string]any, targetName string
 			zap.Int("samples", samples), zap.Float64("sim", sim))
 		return
 	}
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "missing_target_name":
 		c.writeStatus("result=missing_target_name")
 	case "no_visible_face":
 		c.writeStatus("result=no_visible_face")
-		c.speak("I can't see anyone in front of me right now.")
+		// c.speak("I can't see anyone in front of me right now.")
 	case "source_is_named":
-		srcName := strOr(resp, "source_name", "")
+		srcName := util.StringFrom(resp["source_name"], "")
 		c.writeStatus(fmt.Sprintf("result=source_is_named source_name=%s", srcName))
 	case "target_name_not_found":
 		c.writeStatus(fmt.Sprintf("result=target_name_not_found target_name=%s", targetName))
 	case "ambiguous_target":
 		c.writeStatus(fmt.Sprintf("result=ambiguous_target target_name=%s", targetName))
-		c.speak("I have a few people with that name — could you help me figure out which?")
+		// c.speak("I have a few people with that name — could you help me figure out which?")
 	case "no_centroid":
 		c.writeStatus("result=no_centroid")
 	case "same_uuid":
 		c.writeStatus("result=same_uuid")
 	case "uuid_not_found":
-		role := strOr(resp, "role", "?")
+		role := util.StringFrom(resp["role"], "?")
 		c.writeStatus(fmt.Sprintf("result=uuid_not_found role=%s", role))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
 	default:
 		c.writeStatus(fmt.Sprintf("result=unknown error=%s", errStr))
-		c.speak("Something went wrong combining those identities.")
+		// c.speak("Something went wrong combining those identities.")
 	}
 }
 
@@ -629,39 +630,39 @@ func (c *Connector) doSetName(_ context.Context, args map[string]any) (any, erro
 func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID string) {
 	if resp == nil {
 		c.writeStatus("result=network_error")
-		c.speak("I had trouble updating that name.")
+		// c.speak("I had trouble updating that name.")
 		return
 	}
 	if ok, _ := resp["ok"].(bool); ok {
-		name := strOr(resp, "name", toID)
-		prev := strOr(resp, "prev_name", "")
-		uuid := strOr(resp, "uuid", "")
+		name := util.StringFrom(resp["name"], toID)
+		prev := util.StringFrom(resp["prev_name"], "")
+		uuid := util.StringFrom(resp["uuid"], "")
 		c.writeStatus(fmt.Sprintf(
 			"result=success name=%s prev_name=%s uuid=%s",
 			name, prev, shortUUID(uuid),
 		))
-		c.speak(fmt.Sprintf("Got it — I'll call you %s from now on.", displayName(name)))
+		// c.speak(fmt.Sprintf("Got it — I'll call you %s from now on.", displayName(name)))
 		c.log.Info("face_memory/set_name: ok",
 			zap.String("name", name), zap.String("prev", prev), zap.String("uuid", uuid))
 		return
 	}
-	errStr := strOr(resp, "error", "unknown")
+	errStr := util.StringFrom(resp["error"], "unknown")
 	switch errStr {
 	case "no_visible_face":
 		c.writeStatus("result=no_visible_face")
-		c.speak("I can't see anyone in front of me right now.")
+		// c.speak("I can't see anyone in front of me right now.")
 	case "bad_name":
-		detail := strOr(resp, "detail", "")
+		detail := util.StringFrom(resp["detail"], "")
 		c.writeStatus(fmt.Sprintf("result=bad_id detail=%s", detail))
 	case "uuid_not_found":
 		c.writeStatus("result=uuid_not_found")
-		c.speak("I couldn't find that person anymore.")
+		// c.speak("I couldn't find that person anymore.")
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
-		c.speak("I can't update names right now.")
+		// c.speak("I can't update names right now.")
 	default:
 		c.writeStatus(fmt.Sprintf("result=unknown error=%s", errStr))
-		c.speak("Something went wrong updating that name.")
+		// c.speak("Something went wrong updating that name.")
 	}
 }
 
@@ -715,7 +716,7 @@ func (c *Connector) clearState() {
 
 func (c *Connector) dispatchNetworkError() {
 	c.writeStatus("result=network_error")
-	c.speak("I lost connection for a moment.")
+	// c.speak("I lost connection for a moment.")
 	c.clearState()
 }
 
@@ -779,47 +780,7 @@ func shortUUID(uuid string) string {
 	return uuid
 }
 
-func stringArg(m map[string]any, k string) string { s, _ := m[k].(string); return s }
-func boolArg(m map[string]any, k string, d bool) bool {
-	if v, ok := m[k].(bool); ok {
-		return v
-	}
-	return d
-}
-func intArg(m map[string]any, k string, d int) int {
-	switch v := m[k].(type) {
-	case float64:
-		return int(v)
-	case int:
-		return v
-	}
-	return d
-}
+// normID extracts a string arg and normalizes it to a lowercase, trimmed id.
 func normID(args map[string]any, k string) string {
-	s, _ := args[k].(string)
-	return strings.ToLower(strings.TrimSpace(s))
-}
-func strOr(m map[string]any, k, d string) string {
-	if s, ok := m[k].(string); ok {
-		return s
-	}
-	return d
-}
-func boolOr(m map[string]any, k string, d bool) bool {
-	if v, ok := m[k].(bool); ok {
-		return v
-	}
-	return d
-}
-func intOr(m map[string]any, k string, d int) int {
-	if v, ok := m[k].(float64); ok {
-		return int(v)
-	}
-	return d
-}
-func floatOr(m map[string]any, k string, d float64) float64 {
-	if v, ok := m[k].(float64); ok {
-		return v
-	}
-	return d
+	return util.TrimLower(util.StringFrom(args[k], ""))
 }

@@ -9,7 +9,7 @@ GO_FILES := $(shell find . -name '*.go' -type f)
 LDFLAGS := -s -w
 BUILD_FLAGS := -v
 
-CONFIG ?= greeting
+CONFIG ?= conversation
 
 ZENOH_C_VERSION=1.9.0
 ZENOH_C_DIR=.zenoh-c
