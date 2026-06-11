@@ -109,12 +109,6 @@ Step 6: Start OM1
 
 Refer to the [Installation Guide](../developing/1_get-started.md) for detailed instructions.
 
-Then add the optional Python CycloneDDS module to OM1, run
-
-```bash
-uv pip install -r pyproject.toml --extra dds
-```
-
 Setup your API key in `.bashrc` file and run your simulation agent:
 
 Get your API key from the [portal](https://portal.openmind.com), and add it to `bashrc`
@@ -130,7 +124,7 @@ export OM_API_KEY="<your_api_key>"
 Now, run the simulation agent
 
 ```bash
-make run CONFIG=simulation
+CONFIG=unitree_go2_autonomy USE_SIM=true make dev
 ```
 
 Step 7: Teleoperate the robot in simulation
