@@ -29,7 +29,7 @@ func newRC() *config.RuntimeConfig {
 }
 
 func TestFuseBasic(t *testing.T) {
-	f := NewFuser(newRC(), nil, nil, zap.NewNop())
+	f := NewFuser(newRC(), nil, nil, nil, zap.NewNop())
 	out, err := f.Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Contains(t, out, "You are a robot.")
@@ -41,7 +41,7 @@ func TestFuseIncludesGovernanceAndExamples(t *testing.T) {
 	rc := newRC()
 	rc.SystemGovernance = "Be safe."
 	rc.PromptExamples = "Example: greet."
-	out, err := NewFuser(rc, nil, nil, zap.NewNop()).Fuse(context.Background(), nil)
+	out, err := NewFuser(rc, nil, nil, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Contains(t, out, "Governance rules:")
 	require.Contains(t, out, "Be safe.")
@@ -49,7 +49,7 @@ func TestFuseIncludesGovernanceAndExamples(t *testing.T) {
 }
 
 func TestFuseIncludesObservations(t *testing.T) {
-	out, err := NewFuser(newRC(), nil, nil, zap.NewNop()).
+	out, err := NewFuser(newRC(), nil, nil, nil, zap.NewNop()).
 		Fuse(context.Background(), []string{"saw a person", "", "heard a sound"})
 	require.NoError(t, err)
 	require.Contains(t, out, "Current observations:")
@@ -64,7 +64,7 @@ func TestFuseVisibleActions(t *testing.T) {
 		{LLMLabel: "hidden", ExcludeFromPrompt: true},
 		{LLMLabel: "move"},
 	}
-	out, err := NewFuser(newRC(), acts, nil, zap.NewNop()).Fuse(context.Background(), nil)
+	out, err := NewFuser(newRC(), acts, nil, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Contains(t, out, "Available actions:")
 	require.Contains(t, out, "- speak")
@@ -84,7 +84,7 @@ func TestFuseIncludesKnowledgeBase(t *testing.T) {
 	rc.KnowledgeBase = &config.KBSpec{Name: "kb", TopK: 2}
 	kb := &fakeKB{docs: []string{"It is noon.", "The museum opens at 9."}}
 
-	out, err := NewFuser(rc, nil, kb, zap.NewNop()).Fuse(context.Background(), nil)
+	out, err := NewFuser(rc, nil, kb, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Equal(t, "what time is it?", kb.gotQ, "the voice query is forwarded to the KB")
 	require.Contains(t, out, "Relevant context:")
@@ -100,7 +100,7 @@ func TestFuseSkipsKBWhenNoVoice(t *testing.T) {
 	rc.KnowledgeBase = &config.KBSpec{Name: "kb"}
 	kb := &fakeKB{docs: []string{"unused"}}
 
-	out, err := NewFuser(rc, nil, kb, zap.NewNop()).Fuse(context.Background(), nil)
+	out, err := NewFuser(rc, nil, kb, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Empty(t, kb.gotQ, "KB is not queried without a fresh voice input")
 	require.NotContains(t, out, "Relevant context:")
@@ -117,7 +117,7 @@ func TestFuseToleratesKBError(t *testing.T) {
 	rc.KnowledgeBase = &config.KBSpec{Name: "kb"}
 	kb := &fakeKB{err: context.DeadlineExceeded}
 
-	out, err := NewFuser(rc, nil, kb, zap.NewNop()).Fuse(context.Background(), nil)
+	out, err := NewFuser(rc, nil, kb, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err, "a KB failure is logged, not fatal")
 	require.NotContains(t, out, "Relevant context:")
 }
