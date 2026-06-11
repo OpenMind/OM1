@@ -35,6 +35,11 @@ func Load(nameOrPath string) (*SystemConfig, error) {
 		return nil, fmt.Errorf("unmarshal config %s: %w", path, err)
 	}
 
+	configName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	if _, err := VerifyRuntimeVersion(systemConfig.Version, configName); err != nil {
+		return nil, err
+	}
+
 	normalize(&systemConfig)
 	return &systemConfig, nil
 }
@@ -145,7 +150,7 @@ func normalize(systemConfig *SystemConfig) {
 			AgentInputs:      systemConfig.AgentInputs,
 			CortexLLM:        systemConfig.CortexLLM,
 			AgentActions:     systemConfig.AgentActions,
-			Backgrounds:      systemConfig.Backgrounds,
+			AgentBackgrounds: systemConfig.AgentBackgrounds,
 			MCPServers:       systemConfig.MCPServers,
 			LifecycleHooks:   systemConfig.LifecycleHooks,
 		},

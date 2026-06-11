@@ -22,7 +22,6 @@ func TestWriter_AppendInteraction(t *testing.T) {
 	w.AppendInteraction("Hello robot", testUUID, "alice")
 	w.AppendInteraction("What is your name?", testUUID, "alice")
 
-	// Daily file should exist.
 	dailyPath := w.dailyPath()
 	content, err := os.ReadFile(dailyPath)
 	require.NoError(t, err)

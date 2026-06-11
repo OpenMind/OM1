@@ -48,12 +48,12 @@ func (r *Reader) EnsureIndex(ctx context.Context) error {
 	if r.indexReady {
 		return nil
 	}
-	r.log.Info("memory: building index...")
+	r.log.Info("building index...")
 	if err := BuildIndex(ctx, r.index, r.dailyDir, DefaultValidDurationDays); err != nil {
 		return fmt.Errorf("memory: build index: %w", err)
 	}
 	r.indexReady = true
-	r.log.Info("memory: index initialized", zap.Int("chunks", r.index.Size()))
+	r.log.Info("index initialized", zap.Int("chunks", r.index.Size()))
 	return nil
 }
 
@@ -195,7 +195,7 @@ func (r *Reader) ReadUserFacts(userID string) string {
 		} `json:"facts"`
 	}
 	if err := json.Unmarshal(raw, &data); err != nil {
-		r.log.Warn("memory: failed to read facts", zap.String("user", userID), zap.Error(err))
+		r.log.Warn("failed to read facts", zap.String("user", userID), zap.Error(err))
 		return ""
 	}
 

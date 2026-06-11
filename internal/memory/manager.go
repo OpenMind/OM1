@@ -21,13 +21,15 @@ type Manager struct {
 
 // NewManager creates a fully initialized Manager.
 func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
+	log = log.Named("memory")
+
 	reader := NewReader(memoryRoot, "", DefaultMinScore, log)
 
 	indexDir := filepath.Join(memoryRoot, "index")
 	if err := reader.Index().LoadFromDisk(indexDir); err != nil {
-		log.Info("memory: no persisted index, will build from scratch")
+		log.Info("no persisted index, will build from scratch")
 	} else {
-		log.Info("memory: loaded persisted index", zap.Int("chunks", reader.Index().Size()))
+		log.Info("loaded persisted index", zap.Int("chunks", reader.Index().Size()))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -38,13 +40,13 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 	}
 
 	if err := reader.Index().SaveToDisk(indexDir); err != nil {
-		log.Warn("memory: failed to persist index", zap.Error(err))
+		log.Warn("failed to persist index", zap.Error(err))
 	}
 
 	m := &Manager{reader: reader, signals: NewSignalStore(memoryRoot), indexDir: indexDir, log: log}
 
 	if pruned := m.signals.PruneStale(DefaultValidDurationDays); pruned > 0 {
-		log.Info("memory: pruned stale signals", zap.Int("count", pruned))
+		log.Info("pruned stale signals", zap.Int("count", pruned))
 	}
 
 	writer, err := NewWriter(memoryRoot, log)
@@ -90,12 +92,12 @@ func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, uuid, name 
 }
 
 // MaybeSummarize triggers background summarization.
-func (m *Manager) Summarize() {
+func (m *Manager) Summarize(ctx context.Context) {
 	if m.summarizer != nil && m.summarizer.CheckEligibility() {
 		go func() {
-			m.summarizer.Run(context.Background())
+			m.summarizer.Run(ctx)
 			if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
-				m.log.Warn("memory: failed to persist index", zap.Error(err))
+				m.log.Warn("failed to persist index", zap.Error(err))
 			}
 		}()
 	}

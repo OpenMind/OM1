@@ -83,12 +83,12 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 		user := memory.ResolveCurrentUser()
 
 		if question := f.voiceQuery(); question != "" {
-			memCtx := f.memory.SearchAndFormat(ctx, question, user.UUID)
-			if memCtx != "" {
+			memContext := f.memory.SearchAndFormat(ctx, question, user.UUID)
+			if memContext != "" {
 				builder.WriteString("MEMORY:\n")
-				builder.WriteString(memCtx)
+				builder.WriteString(memContext)
 				builder.WriteString("\n\nProactively reference MEMORY in your responses. Prioritize it over your own knowledge.\n\n")
-				f.log.Info("memory: injecting context", zap.Int("chars", len(memCtx)), zap.String("uuid", user.UUID))
+				f.log.Info("memory: injecting context", zap.Int("chars", len(memContext)), zap.String("uuid", user.UUID))
 			}
 		}
 	}
