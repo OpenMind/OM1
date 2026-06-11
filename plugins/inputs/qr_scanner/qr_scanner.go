@@ -3,7 +3,9 @@ package qr_scanner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/luma"
 	video "github.com/openmind/om1/internal/providers/vlm"
 )
 
@@ -21,6 +24,9 @@ const (
 	scannerDescriptor  = "QR Scanner"
 	scannerMaxMessages = 8
 	scanChannelBuffer  = 4
+
+	defaultGreetingTemplate = "Welcome, {first_name}!"
+	defaultLumaTimeout      = 4 * time.Second
 )
 
 func init() {
@@ -28,21 +34,40 @@ func init() {
 	inputs.Register(scannerRTSPName, NewQRScannerRTSP)
 }
 
+// LumaConfig configures an optional guest lookup against Luma. When set, every
+// scan that passes dedupe is enriched with the guest's name and a personalized
+// greeting before being emitted, so downstream LLM/speak doesn't have to
+// hallucinate the name.
+type LumaConfig struct {
+	APIKey                string  `json:"api_key"`
+	BaseURL               string  `json:"base_url"`
+	EventAPIID            string  `json:"event_api_id"`
+	GreetingTemplate      string  `json:"greeting_template"`
+	RequestTimeoutSeconds float64 `json:"request_timeout_seconds"`
+}
+
 // Config holds the JSON configuration for the QRScanner input plugin.
 type Config struct {
-	CameraIndex         int     `json:"camera_index"`
-	RTSPURL             string  `json:"rtsp_url"`
-	CaptureFPS          int     `json:"capture_fps"`
-	DecodeFPS           int     `json:"decode_fps"`
-	Width               int     `json:"resolution_width"`
-	Height              int     `json:"resolution_height"`
-	JPEGQuality         int     `json:"jpeg_quality"`
-	DedupeWindowSeconds float64 `json:"dedupe_window_seconds"`
+	CameraIndex         int         `json:"camera_index"`
+	RTSPURL             string      `json:"rtsp_url"`
+	CaptureFPS          int         `json:"capture_fps"`
+	DecodeFPS           int         `json:"decode_fps"`
+	Width               int         `json:"resolution_width"`
+	Height              int         `json:"resolution_height"`
+	JPEGQuality         int         `json:"jpeg_quality"`
+	DedupeWindowSeconds float64     `json:"dedupe_window_seconds"`
+	Luma                *LumaConfig `json:"luma"`
 }
 
 type frameSource interface {
 	Start(ctx context.Context) <-chan video.Frame
 	Stop()
+}
+
+// guestLookup is the slice of luma.Client behavior the scanner uses;
+// abstracted for tests.
+type guestLookup interface {
+	GetGuest(ctx context.Context, pk string) (*luma.Guest, error)
 }
 
 type sensor struct {
@@ -51,6 +76,11 @@ type sensor struct {
 	log       *zap.Logger
 	source    frameSource
 	debouncer *debouncer
+
+	luma             guestLookup
+	greetingTmpl     string
+	lumaTimeout      time.Duration
+	expectedEventID  string
 
 	mu       sync.Mutex
 	messages []inputs.Message
@@ -107,13 +137,33 @@ func newLogger(name string, cfg Config) *zap.Logger {
 
 func newSensor(cfg Config, log *zap.Logger, source frameSource) *sensor {
 	window := time.Duration(cfg.DedupeWindowSeconds * float64(time.Second))
-	return &sensor{
+	s := &sensor{
 		name:      log.Name(),
 		cfg:       cfg,
 		log:       log,
 		source:    source,
 		debouncer: newDebouncer(window),
 	}
+
+	if cfg.Luma != nil && cfg.Luma.APIKey != "" && cfg.Luma.EventAPIID != "" {
+		timeout := time.Duration(cfg.Luma.RequestTimeoutSeconds * float64(time.Second))
+		if timeout <= 0 {
+			timeout = defaultLumaTimeout
+		}
+		s.luma = luma.NewClient(cfg.Luma.BaseURL, cfg.Luma.APIKey, cfg.Luma.EventAPIID, timeout)
+		s.lumaTimeout = timeout
+		s.expectedEventID = cfg.Luma.EventAPIID
+		s.greetingTmpl = cfg.Luma.GreetingTemplate
+		if s.greetingTmpl == "" {
+			s.greetingTmpl = defaultGreetingTemplate
+		}
+		log.Info("luma lookup enabled",
+			zap.String("event_api_id", cfg.Luma.EventAPIID),
+			zap.Duration("timeout", timeout),
+		)
+	}
+
+	return s
 }
 
 func parseConfig(configMap map[string]any) Config {
@@ -192,7 +242,7 @@ func (s *sensor) Listen(ctx context.Context) (<-chan any, error) {
 					continue
 				}
 
-				msg := fmt.Sprintf("qr_scan: pk=%s event=%s", pk, eventID)
+				msg := s.formatScanMessage(ctx, pk, eventID)
 				s.log.Info("emitted scan", zap.String("pk", pk), zap.String("event", eventID))
 				select {
 				case out <- msg:
@@ -272,4 +322,51 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+// formatScanMessage builds the observation string emitted into the LLM prompt.
+// When a Luma client is configured, it does a guest lookup and embeds the
+// resolved name and personalized greeting directly so the LLM doesn't have to
+// hallucinate them when relaying to speak. On lookup failure or auth/event
+// mismatch, the message falls back to a bare scan or a known failure marker
+// so prompt logic can branch.
+func (s *sensor) formatScanMessage(ctx context.Context, pk, eventID string) string {
+	if s.luma == nil {
+		return fmt.Sprintf("qr_scan: pk=%s event=%s", pk, eventID)
+	}
+
+	if s.expectedEventID != "" && eventID != "" && eventID != s.expectedEventID {
+		s.log.Info("scan event mismatch",
+			zap.String("expected", s.expectedEventID),
+			zap.String("got", eventID),
+		)
+		return fmt.Sprintf("qr_scan_failed: pk=%s reason=event_mismatch", pk)
+	}
+
+	lookupCtx, cancel := context.WithTimeout(ctx, s.lumaTimeout)
+	defer cancel()
+
+	guest, err := s.luma.GetGuest(lookupCtx, pk)
+	if err != nil {
+		switch {
+		case errors.Is(err, luma.ErrNotFound):
+			s.log.Info("luma lookup: not found", zap.String("pk", pk))
+			return fmt.Sprintf("qr_scan_failed: pk=%s reason=guest_not_registered", pk)
+		case errors.Is(err, luma.ErrUnauthorized):
+			s.log.Error("luma lookup: unauthorized")
+			return fmt.Sprintf("qr_scan_failed: pk=%s reason=luma_auth", pk)
+		default:
+			s.log.Warn("luma lookup failed", zap.String("pk", pk), zap.Error(err))
+			return fmt.Sprintf("qr_scan_failed: pk=%s reason=lookup_error", pk)
+		}
+	}
+	if guest == nil {
+		return fmt.Sprintf("qr_scan_failed: pk=%s reason=empty_response", pk)
+	}
+
+	name := luma.FirstName(guest)
+	greeting := luma.FormatGreeting(s.greetingTmpl, guest)
+	greeting = strings.ReplaceAll(greeting, `"`, `'`)
+	s.log.Info("luma lookup ok", zap.String("pk", pk), zap.String("name", name))
+	return fmt.Sprintf(`qr_scan: name=%s greeting="%s"`, name, greeting)
 }
