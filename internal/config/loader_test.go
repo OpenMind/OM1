@@ -84,6 +84,7 @@ func TestLoadFullConfig(t *testing.T) {
 	path := filepath.Join(dir, "test.json5")
 	contents := `{
 		// system config
+		version: "v1.1.0",
 		name: "tester",
 		hertz: 2.0,
 		api_key: "${OM1_API_KEY}",
