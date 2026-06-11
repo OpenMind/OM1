@@ -27,9 +27,6 @@
     enabled: true,
   },
 
-  // System-wide VLM: captures frames and publishes the latest frame and scene
-  // description once for the whole runtime. Modes read it via the VLMBackground
-  // input and the greeting hook reads it via LatestDescription.
   global_backgrounds: [
     {
       type: "VLMGeminiRTSP",
