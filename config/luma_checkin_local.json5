@@ -7,7 +7,16 @@ version: "v1.0.0",
   system_governance: "Only call luma_checkin. Never invent pk values; only use the one in the latest qr_scan input. Ignore 'none' inputs.",
   agent_inputs: [
     {
-      type: "VLMGemini",
+      type: "QRScanner",
+      config: {
+        camera_index: 0,
+        capture_fps: 15,
+        decode_fps: 5,
+        resolution_width: 640,
+        resolution_height: 480,
+        jpeg_quality: 60,
+        dedupe_window_seconds: 30,
+      },
     },
   ],
   cortex_llm: {
