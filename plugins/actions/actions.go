@@ -3,7 +3,6 @@ package actions
 import (
 	_ "github.com/openmind/om1/plugins/actions/emotion"
 	_ "github.com/openmind/om1/plugins/actions/greeting_conversation"
-	_ "github.com/openmind/om1/plugins/actions/luma_checkin"
 	_ "github.com/openmind/om1/plugins/actions/navigation"
 	_ "github.com/openmind/om1/plugins/actions/speak"
 	_ "github.com/openmind/om1/plugins/actions/unitree/g1/arm"
