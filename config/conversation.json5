@@ -21,7 +21,12 @@
       },
     },
     {
-      type: "VLMVila",
+      type: "VLMGemini",
+      config: {
+        resolution_width: 1280,
+        resolution_height: 720,
+        fps: 30,
+      },
     }
   ],
   cortex_llm: {
