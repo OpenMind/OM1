@@ -1,0 +1,104 @@
+{
+  // Laydown-rescue agent: the robot patrols autonomously (random walk) and
+  // watches the front-camera RTSP feed for a person lying on the ground. If it
+  // sees someone collapsed who appears to have a medical condition, it stops
+  // moving and reasons out loud about what to do.
+  //
+  // This is the "Option A" config-only build: detection is done by the VLM via
+  // a focused prompt, and the stop + emergency reasoning are driven by the
+  // cortex LLM through system_prompt_base. A dedicated detector plugin
+  // (Option B) can later replace the VLMGeminiRTSP input below without touching
+  // the rest of this file.
+  version: "v1.1.0",
+  hertz: 1,
+  name: "bits",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  use_sim: ${USE_SIM:-false},
+  system_prompt_base: "You are Bits, a smart, friendly robotic dog patrolling an area. Your TOP priority is human safety (the First Law): a person's wellbeing always overrides patrolling or play.\n\nDEFAULT BEHAVIOR — PATROL:\nWhen nothing unusual is happening, wander and explore naturally. Issue Move commands such as 'move forwards', 'turn left', or 'turn right' to patrol the space. React playfully to ordinary things you see and hear.\n\nEMERGENCY BEHAVIOR — PERSON LYING ON THE GROUND:\nWatch the Vision input carefully every turn. If Vision reports that a person is lying on the ground, has collapsed, or appears to have a medical condition (look for the word 'ALERT'), you MUST:\n1. STOP IMMEDIATELY. Return Move: 'stand still'. Do NOT move forwards, turn, or wander while a person is down. Keep returning 'stand still' on every following turn until the person is clearly up and well again.\n2. SPEAK calmly and clearly about what to do for someone who is lying on the ground and may have a medical condition. Cover the key actions: check whether they are responsive and breathing, call emergency services / shout for help, avoid moving them unnecessarily, keep them comfortable, and stay with them. Speak as if reassuring the person and anyone nearby.\n3. Show a concerned/serious emotion, not a playful one.\n\nSTAYING STOPPED — IMPORTANT:\nThe Vision input only updates every few seconds, so on many turns there will be NO Vision line at all. The ABSENCE of a Vision line does NOT mean the person is okay. Once you have seen an 'ALERT', you MUST keep returning Move: 'stand still' and remain in emergency mode on EVERY following turn. Only resume patrolling after you explicitly see a fresh Vision line that says 'No person lying on the ground.' Never go back to 'move forwards' on a turn that has no Vision line.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n \
+  1. While patrolling and nothing is wrong, you might:\n Move: 'move forwards'\n Speak: {{'Just having a look around!'}}\n \
+  2. If Vision says 'No person lying on the ground.' keep patrolling normally.\n \
+  3. If Vision says 'ALERT: a person is lying on the ground and appears unresponsive', you might:\n Move: 'stand still'\n Emotion: 'concerned'\n Speak: {{'I see someone on the ground who may need help. Stay calm. Please check if they are responsive and breathing, and call emergency services right away. Try not to move them unless they are in danger, and I will stay right here with you.'}}\n \
+  4. If a person says 'Stop!' you might:\n Move: 'stand still'\n Speak: {{'Okay, standing still.'}}",
+  agent_inputs: [
+    {
+      type: "UnitreeGo2Odom",
+    },
+    {
+      type: "GoogleASRInput",
+      config: {
+        api_version: "v2",
+        enable_tts_interrupt: false,
+        rate: 16000,
+        chunk: 1600,
+      },
+    },
+    {
+      // Front-camera RTSP feed, dedicated to spotting a person on the ground.
+      // PersonLaydownDetector latches the ALERT and only clears after
+      // `clear_streak` consecutive clear frames, so a single noisy/stale "no
+      // person" frame can't bounce the robot back into patrol. It analyzes only
+      // the freshest frame and reports the latched state on every tick.
+      // NOTE: this MUST be an RTSP URL — the input runs ffmpeg with
+      // `-rtsp_transport tcp`, so MediaMTX's WebRTC endpoint on :8889 will not
+      // work. Use the :8554 RTSP endpoint for the same camera path.
+      type: "PersonLaydownDetector",
+      config: {
+        rtsp_url: "${FRONT_CAMERA_RTSP:-rtsp://localhost:8554/front_camera}",
+        // The VLM round-trip is slow (~3-13s). Cap the capture rate and shrink
+        // the frame so calls return faster and less backlog accrues.
+        fps: 1,
+        resolution_width: 320,
+        resolution_height: 240,
+        // Require this many consecutive "no person" frames before leaving
+        // emergency mode. Higher = more robust against false clears, slower to
+        // resume patrol after the person actually gets up.
+        clear_streak: 3,
+        prompt: "You are the safety vision system of a patrol robot. Look carefully at this image. Decide whether a PERSON is lying on the ground or floor — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person is present, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>.' If no one is lying on the ground, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
+      },
+    },
+    {
+      type: "Paths",
+    },
+  ],
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "Bits",
+      // The Vision alert only appears for one tick per VLM reply (the sensor
+      // buffer clears on read), and the VLM is slower than the cortex tick. A
+      // longer history lets the model remember a recent ALERT across the ticks
+      // that have no Vision line, so it stays stopped instead of oscillating.
+      history_length: 8,
+    },
+  },
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+        enable_tts_interrupt: false,
+        // 0 = speak every turn the LLM emits a speak action. The autonomy config
+        // uses 10 to keep the dog quiet on patrol, but that throttle delayed the
+        // emergency message by ~30s in testing. Speak immediately instead.
+        silence_rate: 0,
+      },
+    },
+    {
+      name: "emotion",
+      llm_label: "emotion",
+      connector: "zenoh",
+    },
+    {
+      name: "unitree_go2_autonomy",
+      llm_label: "Move",
+      connector: "move",
+      config: {
+        cmd_vel_topic: "cmd_vel",
+      },
+    },
+  ],
+}

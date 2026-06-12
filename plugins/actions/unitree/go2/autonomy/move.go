@@ -190,6 +190,17 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
+	// "stand still" is an emergency stop: honor it BEFORE the moving/pending
+	// guards below so it can interrupt a turn-then-advance cycle already in
+	// flight (otherwise the robot finishes the move and ignores the stop).
+	if action == "stand still" {
+		c.mu.Lock()
+		c.abortLocked()
+		c.mu.Unlock()
+		c.log.Info("stand still - aborting any movement in progress")
+		return nil, nil
+	}
+
 	pos := c.odom.Position()
 
 	if pos.Moving {
