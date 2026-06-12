@@ -92,12 +92,12 @@ build: download-zenohc
 .PHONY: run
 run: build
 	@echo "Running $(BINARY_NAME) with config: $(CONFIG)"
-	$(BUILD_DIR)/$(BINARY_NAME) -config ./config/$(CONFIG).json5
+	$(BUILD_DIR)/$(BINARY_NAME) -config $(CONFIG)
 
 .PHONY: dev
 dev: download-zenohc
 	@echo "Running in dev mode with config: $(CONFIG)"
-	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ./config/$(CONFIG).json5 -log-level debug
+	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config $(CONFIG) -log-level debug
 
 .PHONY: lint
 lint: download-zenohc
