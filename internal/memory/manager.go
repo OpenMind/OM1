@@ -58,7 +58,14 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 
 	if apiKey != "" {
 		m.summarizer = NewSummarizer(memoryRoot, apiKey, m.signals, log)
-		m.summarizer.Run(context.Background())
+		go func() {
+			if m.summarizer.CheckEligibility() {
+				m.summarizer.Run(context.Background())
+				if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
+					m.log.Warn("failed to persist index", zap.Error(err))
+				}
+			}
+		}()
 	}
 
 	log.Info("long-term memory enabled", zap.String("root", memoryRoot))
