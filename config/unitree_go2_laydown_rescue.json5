@@ -49,15 +49,20 @@
       type: "PersonLaydownDetector",
       config: {
         rtsp_url: "${FRONT_CAMERA_RTSP:-rtsp://localhost:8554/front_camera}",
-        // Capture rate. Because frames are batched (not one HTTP call each), a
-        // higher fps improves temporal coverage of a walk-by without adding
-        // round-trips — only batch size grows, and that is capped below.
+        // Capture rate.
         fps: 2,
-        resolution_width: 320,
-        resolution_height: 240,
-        // Max frames sent in one multi-image VLM request. Bounds per-call
-        // latency and token cost; should cover fps * worst-case-call-seconds.
-        max_frames_per_call: 6,
+        // SPEED is upload-bound (request bytes = resolution x jpeg_quality x
+        // frames), NOT token-bound — so resolution/quality/batch are the latency
+        // knobs, while detail:high (set in the plugin) costs only model tokens we
+        // don't care about. 320x240 was too small to see a body; 640x480 gives
+        // the model enough pixels while keeping each frame small to upload fast.
+        resolution_width: 640,
+        resolution_height: 480,
+        // Moderate quality: enough to preserve a body's shape, small on the wire.
+        jpeg_quality: 80,
+        // Few frames per call to keep the upload (and latency) low; a downed
+        // person is stationary, so we don't need many frames for coverage.
+        max_frames_per_call: 2,
         // DEBUG: when set, every batch of frames sent to the VLM is written here
         // as JPEGs plus a verdicts.jsonl line (timestamp + verdict + frame
         // names), so missed detections can be inspected offline. Leave empty /

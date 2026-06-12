@@ -23,7 +23,12 @@ type Describer struct {
 	Model     string
 	Prompt    string
 	MaxTokens int
-	Log       *zap.Logger
+	// Detail is the image fidelity hint sent to the vision model ("low" or
+	// "high"). Empty defaults to "low". "high" lets the model resolve small or
+	// distant subjects (e.g. a person lying on the floor) at the cost of more
+	// tokens and latency.
+	Detail string
+	Log    *zap.Logger
 }
 
 type chatResponse struct {
@@ -61,6 +66,11 @@ func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, er
 // paying for one HTTP request per frame. Empty entries are skipped; an empty
 // slice produces a text-only request.
 func (d *Describer) DescribeImages(ctx context.Context, jpegBase64s []string) (string, error) {
+	detail := d.Detail
+	if detail == "" {
+		detail = "low"
+	}
+
 	content := []any{
 		map[string]any{"type": "text", "text": d.Prompt},
 	}
@@ -72,7 +82,7 @@ func (d *Describer) DescribeImages(ctx context.Context, jpegBase64s []string) (s
 			"type": "image_url",
 			"image_url": map[string]any{
 				"url":    "data:image/jpeg;base64," + jpegBase64,
-				"detail": "low",
+				"detail": detail,
 			},
 		})
 	}

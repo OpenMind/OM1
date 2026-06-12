@@ -166,11 +166,15 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		maxBatch:    maxBatch,
 		debugDir:    debugDir,
 		describer: video.NewDescriber(video.Describer{
-			Name:      "PersonLaydownDetector",
-			APIKey:    cfg.APIKey,
-			BaseURL:   cfg.BaseURL,
-			Model:     cfg.Model,
-			Prompt:    cfg.Prompt,
+			Name:    "PersonLaydownDetector",
+			APIKey:  cfg.APIKey,
+			BaseURL: cfg.BaseURL,
+			Model:   cfg.Model,
+			Prompt:  cfg.Prompt,
+			// A downed person is often small/foreshortened in frame; "high"
+			// detail is what lets the model actually resolve them. Low detail was
+			// causing confirmed misses on frames where the person was clearly visible.
+			Detail:    "high",
 			MaxTokens: cfg.MaxTokens,
 			Log:       log,
 		}),
