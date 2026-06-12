@@ -38,19 +38,26 @@
       // Front-camera RTSP feed, dedicated to spotting a person on the ground.
       // PersonLaydownDetector latches the ALERT and only clears after
       // `clear_streak` consecutive clear frames, so a single noisy/stale "no
-      // person" frame can't bounce the robot back into patrol. It analyzes only
-      // the freshest frame and reports the latched state on every tick.
+      // person" frame can't bounce the robot back into patrol. Instead of
+      // analyzing only the freshest frame (which can skip past a person seen
+      // only between calls), it batches every frame captured during the previous
+      // VLM call into a single multi-image request, so a brief walk-by view is
+      // not lost.
       // NOTE: this MUST be an RTSP URL — the input runs ffmpeg with
       // `-rtsp_transport tcp`, so MediaMTX's WebRTC endpoint on :8889 will not
       // work. Use the :8554 RTSP endpoint for the same camera path.
       type: "PersonLaydownDetector",
       config: {
         rtsp_url: "${FRONT_CAMERA_RTSP:-rtsp://localhost:8554/front_camera}",
-        // The VLM round-trip is slow (~3-13s). Cap the capture rate and shrink
-        // the frame so calls return faster and less backlog accrues.
-        fps: 1,
+        // Capture rate. Because frames are batched (not one HTTP call each), a
+        // higher fps improves temporal coverage of a walk-by without adding
+        // round-trips — only batch size grows, and that is capped below.
+        fps: 2,
         resolution_width: 320,
         resolution_height: 240,
+        // Max frames sent in one multi-image VLM request. Bounds per-call
+        // latency and token cost; should cover fps * worst-case-call-seconds.
+        max_frames_per_call: 6,
         // Require this many consecutive "no person" frames before leaving
         // emergency mode. Higher = more robust against false clears, slower to
         // resume patrol after the person actually gets up.
@@ -60,7 +67,7 @@
         // arrive. Guarantees a visible, predictable stop instead of a ~6s blip
         // that depends on VLM call cadence. Raise for a longer guaranteed stop.
         min_hold_seconds: 15,
-        prompt: "You are the safety vision system of a patrol robot. Look carefully at this image. Decide whether a PERSON is lying on the ground or floor — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person is present, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>.' If no one is lying on the ground, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
+        prompt: "You are the safety vision system of a patrol robot. You are shown one or more sequential video frames from the robot's camera. Look carefully at EVERY frame. Decide whether a PERSON is lying on the ground or floor in ANY of the frames — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person appears in any frame, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>.' If no person is lying on the ground in any frame, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
       },
     },
     {

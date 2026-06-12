@@ -48,10 +48,26 @@ func NewDescriber(d Describer) *Describer {
 // frame capture failed. An empty result is returned (without error) when the
 // model produces no choices.
 func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, error) {
+	var imgs []string
+	if jpegBase64 != "" {
+		imgs = []string{jpegBase64}
+	}
+	return d.DescribeImages(ctx, imgs)
+}
+
+// DescribeImages is like Describe but attaches multiple frames to a single
+// request. The model sees every frame in one round-trip, so callers can cover a
+// span of time (e.g. all frames captured during the previous VLM call) without
+// paying for one HTTP request per frame. Empty entries are skipped; an empty
+// slice produces a text-only request.
+func (d *Describer) DescribeImages(ctx context.Context, jpegBase64s []string) (string, error) {
 	content := []any{
 		map[string]any{"type": "text", "text": d.Prompt},
 	}
-	if jpegBase64 != "" {
+	for _, jpegBase64 := range jpegBase64s {
+		if jpegBase64 == "" {
+			continue
+		}
 		content = append(content, map[string]any{
 			"type": "image_url",
 			"image_url": map[string]any{

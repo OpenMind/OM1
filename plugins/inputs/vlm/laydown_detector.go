@@ -43,20 +43,27 @@ const defaultClearStreak = 3
 
 // laydownBufferSize is the frame-channel depth. It must comfortably exceed
 // fps * worst-case-VLM-call-seconds so frames produced during a slow call are
-// kept (not dropped) and drainLatestFrame can hand us the freshest one.
+// kept (not dropped) and can be batched into the next request.
 const laydownBufferSize = 16
+
+// defaultMaxBatch caps how many frames are sent in a single multi-image VLM
+// request. It bounds per-call latency and token cost while still covering every
+// frame captured during the previous (~2-3s) call at a modest fps.
+const defaultMaxBatch = 6
 
 // laydownDefaults mirrors geminiDefaults but ships a detection-focused prompt and
 // a small token budget (the reply is a single line).
 var laydownDefaults = providerDefaults{
 	baseURL: geminiDefaults.baseURL,
 	model:   geminiDefaults.model,
-	prompt: "You are the safety vision system of a patrol robot. Look carefully at this image. " +
-		"Decide whether a PERSON is lying on the ground or floor — collapsed, fallen, slumped, or " +
-		"otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a " +
-		"person is present, respond exactly in this form: 'ALERT: a person is lying on the ground. " +
-		"<brief description of their position and any visible signs of a medical condition>.' If no one " +
-		"is lying on the ground, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
+	prompt: "You are the safety vision system of a patrol robot. You are shown one or more " +
+		"sequential video frames from the robot's camera. Look carefully at EVERY frame. " +
+		"Decide whether a PERSON is lying on the ground or floor in ANY of the frames — collapsed, " +
+		"fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in " +
+		"ONE line. If such a person appears in any frame, respond exactly in this form: 'ALERT: a " +
+		"person is lying on the ground. <brief description of their position and any visible signs of " +
+		"a medical condition>.' If no person is lying on the ground in any frame, respond exactly: " +
+		"'No person lying on the ground.' Do not explain your reasoning.",
 	maxTokens: 1024,
 }
 
@@ -67,6 +74,7 @@ type laydownDetector struct {
 	source      frameSource
 	clearStreak int
 	minHold     time.Duration
+	maxBatch    int
 
 	mu         sync.Mutex
 	latest     inputs.Message
@@ -90,8 +98,9 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	var extra struct {
-		ClearStreak    int     `json:"clear_streak"`
-		MinHoldSeconds float64 `json:"min_hold_seconds"`
+		ClearStreak      int     `json:"clear_streak"`
+		MinHoldSeconds   float64 `json:"min_hold_seconds"`
+		MaxFramesPerCall int     `json:"max_frames_per_call"`
 	}
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &extra)
@@ -101,6 +110,10 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		clearStreak = defaultClearStreak
 	}
 	minHold := time.Duration(extra.MinHoldSeconds * float64(time.Second))
+	maxBatch := extra.MaxFramesPerCall
+	if maxBatch <= 0 {
+		maxBatch = defaultMaxBatch
+	}
 
 	log := logger.Get().Named("PersonLaydownDetector")
 	log.Info("initializing",
@@ -109,6 +122,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		zap.Int("fps", cfg.FPS),
 		zap.Int("clear_streak", clearStreak),
 		zap.Duration("min_hold", minHold),
+		zap.Int("max_frames_per_call", maxBatch),
 	)
 
 	source := video.NewVideoRTSPStream(video.VideoRTSPStreamConfig{
@@ -131,6 +145,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		source:      source,
 		clearStreak: clearStreak,
 		minHold:     minHold,
+		maxBatch:    maxBatch,
 		describer: video.NewDescriber(video.Describer{
 			Name:      "PersonLaydownDetector",
 			APIKey:    cfg.APIKey,
@@ -167,13 +182,22 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					return
 				}
 
-				// Drop the backlog: analyse only the most recent frame so a slow
-				// VLM call can't make us classify a stale, pre-collapse image.
-				frame = drainLatestFrame(frames, frame)
+				// Batch the backlog instead of dropping it: every frame captured
+				// while the previous call was in flight is sent together in one
+				// multi-image request, so a person who only appears in a frame
+				// between calls (e.g. during a walk-by) can no longer slip through.
+				batch := drainAllFrames(frames, frame, s.maxBatch)
 
-				providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
+				imgs := make([]string, 0, len(batch))
+				for _, f := range batch {
+					imgs = append(imgs, base64.StdEncoding.EncodeToString(f.JPEG))
+				}
+				newest := batch[len(batch)-1]
+				oldest := batch[0]
+				providers.LatestFrame().Set(newest.JPEG, newest.Timestamp)
+
 				start := time.Now()
-				text, err := s.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
+				text, err := s.describer.DescribeImages(ctx, imgs)
 				callLatency := time.Since(start)
 				if err != nil {
 					if ctx.Err() != nil {
@@ -183,12 +207,14 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					continue
 				}
 
-				// call_ms = VLM round-trip; frame_age_ms = capture-to-verdict lag
-				// (round-trip + any time the frame waited in the queue). The latter
-				// is the true detection latency the cortex reacts to.
+				// call_ms = VLM round-trip; newest_age_ms = capture-to-verdict lag
+				// of the freshest frame (the true reaction latency); window_ms = the
+				// span of time the batch covers (0 when only one frame was queued).
 				s.log.Info("vlm latency",
+					zap.Int("frames", len(batch)),
 					zap.Int64("call_ms", callLatency.Milliseconds()),
-					zap.Int64("frame_age_ms", time.Since(frame.Timestamp).Milliseconds()),
+					zap.Int64("newest_age_ms", time.Since(newest.Timestamp).Milliseconds()),
+					zap.Int64("window_ms", newest.Timestamp.Sub(oldest.Timestamp).Milliseconds()),
 					zap.String("verdict", text),
 				)
 
@@ -210,20 +236,31 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 	return out, nil
 }
 
-// drainLatestFrame returns the newest frame currently available on the channel,
-// discarding any older queued frames.
-func drainLatestFrame(frames <-chan video.Frame, current video.Frame) video.Frame {
+// drainAllFrames collects the current frame plus every other frame already
+// queued, returning them in chronological order. When more than maxBatch frames
+// are available it keeps the most recent maxBatch (the freshest views, and a
+// bound on per-call latency and token cost).
+func drainAllFrames(frames <-chan video.Frame, current video.Frame, maxBatch int) []video.Frame {
+	batch := []video.Frame{current}
 	for {
 		select {
 		case f, ok := <-frames:
 			if !ok {
-				return current
+				return capTail(batch, maxBatch)
 			}
-			current = f
+			batch = append(batch, f)
 		default:
-			return current
+			return capTail(batch, maxBatch)
 		}
 	}
+}
+
+// capTail returns at most max trailing elements of b (the most recent frames).
+func capTail(b []video.Frame, max int) []video.Frame {
+	if max > 0 && len(b) > max {
+		return b[len(b)-max:]
+	}
+	return b
 }
 
 // classify applies the latch+debounce and returns the verdict text to surface to
