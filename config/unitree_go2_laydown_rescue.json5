@@ -67,9 +67,13 @@
         resolution_height: 720,
         // Higher quality so a body's outline survives compression for the VLM.
         jpeg_quality: 90,
-        // Few frames per call to keep the upload (and latency) low; a downed
-        // person is stationary, so we don't need many frames for coverage.
-        max_frames_per_call: 2,
+        // ONE frame per call: latency is upload-bound (request bytes = resolution
+        // x jpeg_quality x frames), and each detector round-trip gates how fast
+        // the dog reacts. A downed person is stationary, so a single frame is
+        // enough; sending 2 doubled the upload and pushed call_ms to 4-7s, leaving
+        // the robot's view ~6s stale. If walk-by misses during patrol reappear,
+        // bump back to 2.
+        max_frames_per_call: 1,
         // DEBUG: when set, every batch of frames sent to the VLM is written here
         // as JPEGs plus a verdicts.jsonl line (timestamp + verdict + frame
         // names), so missed detections can be inspected offline. Leave empty /
