@@ -81,10 +81,7 @@
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
         enable_tts_interrupt: false,
-        // 0 = speak every turn the LLM emits a speak action. The autonomy config
-        // uses 10 to keep the dog quiet on patrol, but that throttle delayed the
-        // emergency message by ~30s in testing. Speak immediately instead.
-        silence_rate: 0,
+        silence_rate: 5,
       },
     },
     {

@@ -52,7 +52,7 @@ var laydownDefaults = providerDefaults{
 		"person is present, respond exactly in this form: 'ALERT: a person is lying on the ground. " +
 		"<brief description of their position and any visible signs of a medical condition>.' If no one " +
 		"is lying on the ground, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
-	maxTokens: 64,
+	maxTokens: 1024,
 }
 
 type laydownDetector struct {
@@ -155,7 +155,9 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 				frame = drainLatestFrame(frames, frame)
 
 				providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
+				start := time.Now()
 				text, err := s.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
+				callLatency := time.Since(start)
 				if err != nil {
 					if ctx.Err() != nil {
 						return
@@ -163,6 +165,16 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					s.log.Warn("vision request failed", zap.Error(err))
 					continue
 				}
+
+				// call_ms = VLM round-trip; frame_age_ms = capture-to-verdict lag
+				// (round-trip + any time the frame waited in the queue). The latter
+				// is the true detection latency the cortex reacts to.
+				s.log.Info("vlm latency",
+					zap.Int64("call_ms", callLatency.Milliseconds()),
+					zap.Int64("frame_age_ms", time.Since(frame.Timestamp).Milliseconds()),
+					zap.String("verdict", text),
+				)
+
 				if text == "" {
 					continue
 				}
