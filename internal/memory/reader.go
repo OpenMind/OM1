@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -124,7 +125,7 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 		totalChars += len(doc.Text)
 	}
 
-	return strings.Join(parts, "\n\n")
+	return r.normalizeUserTags(strings.Join(parts, "\n\n"))
 }
 
 // readProfileVisitInfo reads profile.json and formats visit info.
@@ -218,4 +219,34 @@ func (r *Reader) ReadUserFacts(userID string) string {
 		lines = append(lines, fmt.Sprintf("- [%s] %s", cat, f.Fact))
 	}
 	return strings.Join(lines, "\n")
+}
+
+var longHexInTag = regexp.MustCompile(`\[User: ([0-9a-fA-F]{12,})\]`)
+
+func (r *Reader) normalizeUserTags(text string) string {
+	return longHexInTag.ReplaceAllStringFunc(text, func(match string) string {
+		sub := longHexInTag.FindStringSubmatch(match)
+		uuid := sub[1]
+		if name := r.profileName(uuid); name != "" {
+			return "[User: " + name + "]"
+		}
+		return "[User: anon_" + uuid[:6] + "]"
+	})
+}
+
+func (r *Reader) profileName(uuid string) string {
+	raw, err := os.ReadFile(filepath.Join(r.usersDir, uuid, "profile.json"))
+	if err != nil {
+		return ""
+	}
+	var p struct {
+		Names []string `json:"names"`
+	}
+	if json.Unmarshal(raw, &p) != nil {
+		return ""
+	}
+	if len(p.Names) > 0 {
+		return p.Names[0]
+	}
+	return ""
 }
