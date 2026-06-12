@@ -15,6 +15,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/luma"
+	"github.com/openmind/om1/internal/providers/tts"
 	video "github.com/openmind/om1/internal/providers/vlm"
 )
 
@@ -46,17 +47,31 @@ type LumaConfig struct {
 	RequestTimeoutSeconds float64 `json:"request_timeout_seconds"`
 }
 
+// SpeakConfig, when set, makes the scanner push the resolved greeting straight
+// to the ElevenLabs TTS provider on a successful Luma lookup, bypassing the
+// LLM entirely. This avoids cortex-tick hallucinations where Gemini invents
+// greetings on empty observations.
+type SpeakConfig struct {
+	APIKey           string `json:"api_key"`
+	ElevenLabsAPIKey string `json:"elevenlabs_api_key"`
+	VoiceID          string `json:"voice_id"`
+	ModelID          string `json:"model_id"`
+	OutputFormat     string `json:"output_format"`
+	Rate             int    `json:"rate"`
+}
+
 // Config holds the JSON configuration for the QRScanner input plugin.
 type Config struct {
-	CameraIndex         int         `json:"camera_index"`
-	RTSPURL             string      `json:"rtsp_url"`
-	CaptureFPS          int         `json:"capture_fps"`
-	DecodeFPS           int         `json:"decode_fps"`
-	Width               int         `json:"resolution_width"`
-	Height              int         `json:"resolution_height"`
-	JPEGQuality         int         `json:"jpeg_quality"`
-	DedupeWindowSeconds float64     `json:"dedupe_window_seconds"`
-	Luma                *LumaConfig `json:"luma"`
+	CameraIndex         int          `json:"camera_index"`
+	RTSPURL             string       `json:"rtsp_url"`
+	CaptureFPS          int          `json:"capture_fps"`
+	DecodeFPS           int          `json:"decode_fps"`
+	Width               int          `json:"resolution_width"`
+	Height              int          `json:"resolution_height"`
+	JPEGQuality         int          `json:"jpeg_quality"`
+	DedupeWindowSeconds float64      `json:"dedupe_window_seconds"`
+	Luma                *LumaConfig  `json:"luma"`
+	Speak               *SpeakConfig `json:"speak"`
 }
 
 type frameSource interface {
@@ -70,6 +85,12 @@ type guestLookup interface {
 	GetGuest(ctx context.Context, pk string) (*luma.Guest, error)
 }
 
+// ttsSpeaker is the slice of *tts.ElevenLabsProvider the scanner uses to
+// bypass the LLM and push a greeting straight to audio. Abstracted for tests.
+type ttsSpeaker interface {
+	AddText(text string)
+}
+
 type sensor struct {
 	name      string
 	cfg       Config
@@ -77,10 +98,11 @@ type sensor struct {
 	source    frameSource
 	debouncer *debouncer
 
-	luma             guestLookup
-	greetingTmpl     string
-	lumaTimeout      time.Duration
-	expectedEventID  string
+	luma            guestLookup
+	greetingTmpl    string
+	lumaTimeout     time.Duration
+	expectedEventID string
+	speak           ttsSpeaker
 
 	mu       sync.Mutex
 	messages []inputs.Message
@@ -163,7 +185,37 @@ func newSensor(cfg Config, log *zap.Logger, source frameSource) *sensor {
 		)
 	}
 
+	if cfg.Speak != nil && cfg.Speak.APIKey != "" {
+		s.speak = newTTSSpeaker(*cfg.Speak, log)
+		log.Info("direct tts enabled (greeting bypasses LLM)")
+	}
+
 	return s
+}
+
+// newTTSSpeaker builds the singleton ElevenLabs provider with the supplied
+// config. Wrapped so tests can substitute via setSpeak.
+func newTTSSpeaker(cfg SpeakConfig, log *zap.Logger) ttsSpeaker {
+	if cfg.VoiceID == "" {
+		cfg.VoiceID = tts.DefaultVoiceID
+	}
+	if cfg.ModelID == "" {
+		cfg.ModelID = tts.DefaultModelID
+	}
+	if cfg.OutputFormat == "" {
+		cfg.OutputFormat = tts.DefaultOutputFormat
+	}
+	if cfg.Rate == 0 {
+		cfg.Rate = tts.DefaultRate
+	}
+	return tts.ElevenLabs(tts.ElevenLabsConfig{
+		APIKey:           cfg.APIKey,
+		ElevenLabsAPIKey: cfg.ElevenLabsAPIKey,
+		VoiceID:          cfg.VoiceID,
+		ModelID:          cfg.ModelID,
+		OutputFormat:     cfg.OutputFormat,
+		Rate:             cfg.Rate,
+	}, log.Named("speak/elevenlabs_tts"))
 }
 
 func parseConfig(configMap map[string]any) Config {
@@ -366,6 +418,10 @@ func (s *sensor) formatScanMessage(ctx context.Context, pk, eventID string) stri
 
 	name := luma.FirstName(guest)
 	greeting := luma.FormatGreeting(s.greetingTmpl, guest)
+	if s.speak != nil {
+		s.speak.AddText(greeting)
+		s.log.Info("greeting pushed to tts", zap.String("pk", pk), zap.String("name", name))
+	}
 	greeting = strings.ReplaceAll(greeting, `"`, `'`)
 	s.log.Info("luma lookup ok", zap.String("pk", pk), zap.String("name", name))
 	return fmt.Sprintf(`qr_scan: name=%s greeting="%s"`, name, greeting)
