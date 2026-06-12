@@ -122,9 +122,13 @@ func (v *VideoStream) stream(ctx context.Context, cam string) error {
 }
 
 func (v *VideoStream) logFFmpegStderr(r io.ReadCloser) {
+	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		v.log.Warn("VideoStream: ffmpeg", zap.String("stderr", scanner.Text()))
+	}
+	if err := scanner.Err(); err != nil {
+		v.log.Warn("VideoStream: ffmpeg stderr read error", zap.Error(err))
 	}
 }
 
@@ -169,11 +173,11 @@ func (v *VideoStream) ffmpegArgs(cam string) []string {
 		"-loglevel", "error",
 		"-f", "v4l2",
 	}
+	if v.cfg.FPS > 0 {
+		args = append(args, "-framerate", strconv.Itoa(v.cfg.FPS))
+	}
 	if v.cfg.Width > 0 && v.cfg.Height > 0 {
 		args = append(args, "-video_size", fmt.Sprintf("%dx%d", v.cfg.Width, v.cfg.Height))
-		if v.cfg.FPS > 0 {
-			args = append(args, "-framerate", strconv.Itoa(v.cfg.FPS))
-		}
 	}
 	return append(args,
 		"-i", cam,

@@ -282,6 +282,9 @@ func (s *sensor) Listen(ctx context.Context) (<-chan any, error) {
 
 				text, err := decodeQR(frame.JPEG)
 				if err != nil {
+					if !errors.Is(err, errQRNotFound) {
+						s.log.Debug("decode error", zap.Error(err))
+					}
 					continue
 				}
 				eventID, pk, valid := parseLumaCheckinURL(text)

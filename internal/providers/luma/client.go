@@ -110,7 +110,10 @@ func (c *Client) GetGuest(ctx context.Context, pk string) (*Guest, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("luma get-guest read body: %w", err)
+	}
 	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusNotFound:
