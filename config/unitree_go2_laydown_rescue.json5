@@ -29,7 +29,12 @@
       type: "GoogleASRInput",
       config: {
         api_version: "v2",
-        enable_tts_interrupt: false,
+        // Barge-in: keep streaming the mic to the recognizer WHILE the robot is
+        // speaking (otherwise it goes deaf during playback), and the moment a
+        // transcript is accepted, interrupt TTS (kill playback + flush the
+        // queue) so the robot stops talking and listens. Lets a bystander cut in
+        // with "I called 911" / "she's breathing" instead of waiting it out.
+        enable_tts_interrupt: true,
         rate: 16000,
         chunk: 1600,
       },
@@ -54,12 +59,13 @@
         // SPEED is upload-bound (request bytes = resolution x jpeg_quality x
         // frames), NOT token-bound — so resolution/quality/batch are the latency
         // knobs, while detail:high (set in the plugin) costs only model tokens we
-        // don't care about. 320x240 was too small to see a body; 640x480 gives
-        // the model enough pixels while keeping each frame small to upload fast.
-        resolution_width: 640,
-        resolution_height: 480,
-        // Moderate quality: enough to preserve a body's shape, small on the wire.
-        jpeg_quality: 80,
+        // don't care about. 320x240 missed bodies; 640x480 caught some but not
+        // all; 960x720 (still 4:3, ~2.25x the pixels) gives the model more to
+        // work with while a 2-frame batch keeps the upload quick.
+        resolution_width: 960,
+        resolution_height: 720,
+        // Higher quality so a body's outline survives compression for the VLM.
+        jpeg_quality: 90,
         // Few frames per call to keep the upload (and latency) low; a downed
         // person is stationary, so we don't need many frames for coverage.
         max_frames_per_call: 2,
@@ -102,8 +108,18 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-        enable_tts_interrupt: false,
-        silence_rate: 5,
+        // Interrupt is driven from the ASR side (see GoogleASRInput above); this
+        // flag is here for parity and is a no-op for the elevenlabs connector.
+        enable_tts_interrupt: true,
+        silence_rate: 3,
+        // Each emergency turn produces a ~15-20s spoken message, but the cortex
+        // emits one every few seconds — far faster than playback. Without this,
+        // the queue (depth 8) fills with stale emergency speech that keeps
+        // playing for ~2 minutes AFTER the person gets up and patrol resumes.
+        // skip_when_busy drops a new utterance while one is still playing/queued,
+        // so speech is "freshest-only": when the situation clears, at most the
+        // one in-flight utterance finishes (~17s) instead of a long backlog.
+        skip_when_busy: true,
       },
     },
     {
