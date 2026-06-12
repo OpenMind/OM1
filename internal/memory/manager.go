@@ -61,9 +61,6 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 		go func() {
 			if m.summarizer.CheckEligibility() {
 				m.summarizer.Run(context.Background())
-				if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
-					m.log.Warn("failed to persist index", zap.Error(err))
-				}
 			}
 		}()
 	}
