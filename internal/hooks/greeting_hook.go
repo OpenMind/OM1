@@ -92,8 +92,6 @@ func memoryClause(memContext string) string {
 }
 
 // generateGreeting constructs a prompt using the snapshot and other context, calls the LLM to generate a greeting, and returns the greeting text.
-// ToDo:
-// - add more context to the prompt, e.g. recent conversation history if available, etc.
 func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, memContext, robotName, helpMessage string) (string, error) {
 	if robotName == "" {
 		robotName = "a friendly robot"
@@ -133,10 +131,12 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 	if err != nil {
 		return "", err
 	}
+
 	greeting := strings.TrimSpace(resp.TextContent)
 	if greeting == "" {
 		return "", fmt.Errorf("llm returned empty greeting")
 	}
+
 	return greeting, nil
 }
 
@@ -146,14 +146,17 @@ func (r *Runner) sceneDescription(snapshot providers.PresenceSnapshot) string {
 	if faces := strings.TrimSpace(snapshot.ToText()); faces != "" {
 		parts = append(parts, faces)
 	}
+
 	if desc, _, ok := video.LatestDescription().Get(); ok {
 		if desc = strings.TrimSpace(desc); desc != "" {
 			parts = append(parts, desc)
 		}
 	}
+
 	if len(parts) == 0 {
 		return "No one is clearly in view."
 	}
+
 	return strings.Join(parts, " ")
 }
 
@@ -168,11 +171,13 @@ func (r *Runner) greetingLLM(cfg map[string]any) (llm.LLM, error) {
 	if apiKey := stringVal(cfg, "api_key"); apiKey != "" {
 		llmCfg["api_key"] = apiKey
 	}
+
 	if nested, ok := cfg["llm_config"].(map[string]any); ok {
 		for k, v := range nested {
 			llmCfg[k] = v
 		}
 	}
+
 	if model := stringVal(cfg, "llm_model"); model != "" {
 		llmCfg["model"] = model
 	}
