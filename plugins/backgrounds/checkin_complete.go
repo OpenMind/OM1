@@ -52,7 +52,7 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 		cfg.FaceRecentSec = 1.0
 	}
 	if cfg.FaceMinArea <= 0 {
-		cfg.FaceMinArea = 15000
+		cfg.FaceMinArea = 3000
 	}
 	if cfg.PollSec <= 0 {
 		cfg.PollSec = 1.0

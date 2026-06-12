@@ -45,7 +45,7 @@ func NewFaceSizeWatch(configMap map[string]any) (bg.Background, error) {
 		cfg.PollSec = 0.5
 	}
 	if cfg.MinFaceArea <= 0 {
-		cfg.MinFaceArea = 15000
+		cfg.MinFaceArea = 3000
 	}
 
 	log := logger.Get().Named("FaceSizeWatch")

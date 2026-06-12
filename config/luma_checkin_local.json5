@@ -1,0 +1,47 @@
+{
+  version: "v1.0.5",
+  hertz: 0.2,
+  name: "luma_checkin_local",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are a friendly event greeter robot. The QR Scanner input emits one of these messages when it sees a check-in QR:\n  - 'qr_scan: name=<first> greeting=\"<greeting>\"' on a successful guest lookup.\n  - 'qr_scan_failed: pk=<pk> reason=<reason>' on a failure.\n  - 'qr_scan: pk=<pk> event=<event-id>' if Luma lookup is disabled (no enrichment).\n\nOnly act when the CURRENT tick has one of these lines under 'Current observations'. On 'qr_scan: name=...': call speak with EXACTLY the quoted greeting text from the observation as the action argument — do not paraphrase, do not invent names. On 'qr_scan_failed:' or a bare 'qr_scan: pk=...' (no name): do nothing. If 'Current observations' is empty or has no qr_scan line, do nothing — do not call any action. Do not narrate.",
+  system_governance: "",
+  agent_inputs: [
+    {
+      type: "QRScanner",
+      config: {
+        camera_index: 0,
+        capture_fps: 30,
+        decode_fps: 5,
+        resolution_width: 1280,
+        resolution_height: 720,
+        jpeg_quality: 60,
+        dedupe_window_seconds: 30,
+        luma: {
+          api_key: "${LUMA_API_KEY}",
+          event_api_id: "${LUMA_EVENT_ID}",
+          greeting_template: "Welcome, {first_name}! I'm so glad to see you here today at our PopUp Store. I hope you have a great day.",
+          request_timeout_seconds: 4,
+        },
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "GeminiLLM",
+    config: {
+      agent_name: "Greeter",
+      history_length: 0,
+    },
+  },
+  action_execution_mode: "concurrent",
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id: "PoHUWWWMHFrA8z7Q88pu",
+      },
+    },
+  ],
+}
