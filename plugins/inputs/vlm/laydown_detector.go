@@ -41,6 +41,11 @@ func init() {
 
 const defaultClearStreak = 3
 
+// laydownBufferSize is the frame-channel depth. It must comfortably exceed
+// fps * worst-case-VLM-call-seconds so frames produced during a slow call are
+// kept (not dropped) and drainLatestFrame can hand us the freshest one.
+const laydownBufferSize = 16
+
 // laydownDefaults mirrors geminiDefaults but ships a detection-focused prompt and
 // a small token budget (the reply is a single line).
 var laydownDefaults = providerDefaults{
@@ -61,11 +66,13 @@ type laydownDetector struct {
 	describer   *video.Describer
 	source      frameSource
 	clearStreak int
+	minHold     time.Duration
 
 	mu         sync.Mutex
 	latest     inputs.Message
 	hasLatest  bool
 	alerted    bool
+	alertedAt  time.Time
 	clearCount int
 	lastAlert  string
 	stopped    bool
@@ -83,7 +90,8 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	var extra struct {
-		ClearStreak int `json:"clear_streak"`
+		ClearStreak    int     `json:"clear_streak"`
+		MinHoldSeconds float64 `json:"min_hold_seconds"`
 	}
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &extra)
@@ -92,6 +100,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 	if clearStreak <= 0 {
 		clearStreak = defaultClearStreak
 	}
+	minHold := time.Duration(extra.MinHoldSeconds * float64(time.Second))
 
 	log := logger.Get().Named("PersonLaydownDetector")
 	log.Info("initializing",
@@ -99,6 +108,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		zap.String("model", cfg.Model),
 		zap.Int("fps", cfg.FPS),
 		zap.Int("clear_streak", clearStreak),
+		zap.Duration("min_hold", minHold),
 	)
 
 	source := video.NewVideoRTSPStream(video.VideoRTSPStreamConfig{
@@ -107,6 +117,12 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		Width:       cfg.Width,
 		Height:      cfg.Height,
 		JPEGQuality: cfg.JPEGQuality,
+		// The default 1-slot buffer drops the NEWEST frame while a (~2-3s) VLM
+		// call is in flight, so the next frame we read is already ~one call-length
+		// stale — that's why frame_age_ms runs ~2x call_ms. A deeper buffer lets
+		// frames produced during the call accumulate so drainLatestFrame can pick
+		// the freshest one, cutting capture-to-verdict lag to ~1x the call time.
+		BufferSize: laydownBufferSize,
 	})
 
 	return &laydownDetector{
@@ -114,6 +130,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		log:         log,
 		source:      source,
 		clearStreak: clearStreak,
+		minHold:     minHold,
 		describer: video.NewDescriber(video.Describer{
 			Name:      "PersonLaydownDetector",
 			APIKey:    cfg.APIKey,
@@ -217,6 +234,9 @@ func (s *laydownDetector) classify(text string) string {
 	defer s.mu.Unlock()
 
 	if strings.Contains(strings.ToUpper(text), "ALERT") {
+		if !s.alerted {
+			s.alertedAt = time.Now()
+		}
 		s.alerted = true
 		s.clearCount = 0
 		s.lastAlert = text
@@ -225,17 +245,30 @@ func (s *laydownDetector) classify(text string) string {
 
 	if s.alerted {
 		s.clearCount++
-		if s.clearCount < s.clearStreak {
-			// Debounced: hold the alert, ignore this lone clear frame.
-			s.log.Debug("holding alert through clear frame",
+		held := time.Since(s.alertedAt)
+
+		// Clear only when BOTH conditions hold: enough consecutive clear frames
+		// AND the alert has been latched for at least minHold wall-clock time.
+		// The time floor guarantees a visible, predictable stop duration even
+		// when clear frames arrive in a fast burst.
+		streakMet := s.clearCount >= s.clearStreak
+		holdMet := s.minHold <= 0 || held >= s.minHold
+		if !streakMet || !holdMet {
+			s.log.Debug("holding alert",
 				zap.Int("clear_count", s.clearCount),
 				zap.Int("clear_streak", s.clearStreak),
+				zap.Duration("held", held),
+				zap.Duration("min_hold", s.minHold),
 			)
 			return s.lastAlert
 		}
+
 		s.alerted = false
 		s.clearCount = 0
-		s.log.Info("alert cleared after consecutive clear frames", zap.Int("clear_streak", s.clearStreak))
+		s.log.Info("alert cleared",
+			zap.Int("clear_streak", s.clearStreak),
+			zap.Duration("held", held),
+		)
 	}
 
 	return text

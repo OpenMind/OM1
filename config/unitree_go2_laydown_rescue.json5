@@ -55,6 +55,11 @@
         // emergency mode. Higher = more robust against false clears, slower to
         // resume patrol after the person actually gets up.
         clear_streak: 3,
+        // Once an ALERT latches, stay stopped for AT LEAST this many seconds of
+        // wall-clock before clearing, regardless of how fast "no person" frames
+        // arrive. Guarantees a visible, predictable stop instead of a ~6s blip
+        // that depends on VLM call cadence. Raise for a longer guaranteed stop.
+        min_hold_seconds: 15,
         prompt: "You are the safety vision system of a patrol robot. Look carefully at this image. Decide whether a PERSON is lying on the ground or floor — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person is present, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>.' If no one is lying on the ground, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
       },
     },
