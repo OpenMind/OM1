@@ -23,10 +23,6 @@ type Describer struct {
 	Model     string
 	Prompt    string
 	MaxTokens int
-	// Detail is the image fidelity hint sent to the vision model ("low" or
-	// "high"). Empty defaults to "low". "high" lets the model resolve small or
-	// distant subjects (e.g. a person lying on the floor) at the cost of more
-	// tokens and latency.
 	Detail string
 	Log    *zap.Logger
 }
@@ -47,11 +43,7 @@ func NewDescriber(d Describer) *Describer {
 	return &d
 }
 
-// Describe sends the prompt to the vision endpoint and returns the generated
-// text. When jpegBase64 is non-empty the frame is attached as an image; when it
-// is empty the request is text-only, so callers can still get a response if
-// frame capture failed. An empty result is returned (without error) when the
-// model produces no choices.
+// Describe sends the prompt with an optional single frame; empty jpegBase64 is text-only.
 func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, error) {
 	var imgs []string
 	if jpegBase64 != "" {
@@ -60,11 +52,7 @@ func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, er
 	return d.DescribeImages(ctx, imgs)
 }
 
-// DescribeImages is like Describe but attaches multiple frames to a single
-// request. The model sees every frame in one round-trip, so callers can cover a
-// span of time (e.g. all frames captured during the previous VLM call) without
-// paying for one HTTP request per frame. Empty entries are skipped; an empty
-// slice produces a text-only request.
+// DescribeImages attaches multiple frames to one request; empty entries are skipped.
 func (d *Describer) DescribeImages(ctx context.Context, jpegBase64s []string) (string, error) {
 	detail := d.Detail
 	if detail == "" {

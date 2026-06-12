@@ -36,11 +36,6 @@ type ElevenLabsConfig struct {
 	OutputFormat     string `json:"output_format"`
 	Rate             int    `json:"rate"`
 	SilenceRate      int    `json:"silence_rate"`
-	// SkipWhenBusy drops a new utterance when TTS is already speaking or has
-	// queued audio, instead of enqueueing it. This keeps speech "freshest-only":
-	// useful for agents (e.g. an emergency monitor) that emit long messages every
-	// tick faster than they can be played, where a backlog would otherwise
-	// outlive the situation that produced it.
 	SkipWhenBusy bool `json:"skip_when_busy"`
 }
 
@@ -126,9 +121,6 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
-	// Drop the utterance if playback is still in progress or queued, so a
-	// burst of long messages (e.g. emergency guidance every tick) can't build a
-	// backlog that keeps speaking long after the situation has changed.
 	if e.skipWhenBusy && tts.Busy() {
 		e.log.Info("skipping (tts busy)", zap.String("text", text))
 		return nil, nil

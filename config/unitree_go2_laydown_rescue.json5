@@ -1,14 +1,6 @@
 {
-  // Laydown-rescue agent: the robot patrols autonomously (random walk) and
-  // watches the front-camera RTSP feed for a person lying on the ground. If it
-  // sees someone collapsed who appears to have a medical condition, it stops
-  // moving and reasons out loud about what to do.
-  //
-  // This is the "Option A" config-only build: detection is done by the VLM via
-  // a focused prompt, and the stop + emergency reasoning are driven by the
-  // cortex LLM through system_prompt_base. A dedicated detector plugin
-  // (Option B) can later replace the VLMGeminiRTSP input below without touching
-  // the rest of this file.
+  // Laydown-rescue agent: patrols, watches the front camera for a downed person,
+  // then approaches, stops, and gives spoken first-aid guidance.
   version: "v1.1.0",
   hertz: 1,
   name: "bits",
@@ -30,63 +22,30 @@
       type: "GoogleASRInput",
       config: {
         api_version: "v2",
-        // Barge-in: keep streaming the mic to the recognizer WHILE the robot is
-        // speaking (otherwise it goes deaf during playback), and the moment a
-        // transcript is accepted, interrupt TTS (kill playback + flush the
-        // queue) so the robot stops talking and listens. Lets a bystander cut in
-        // with "I called 911" / "she's breathing" instead of waiting it out.
+        // Barge-in: keep listening while speaking, and interrupt TTS on detected speech.
         enable_tts_interrupt: true,
         rate: 16000,
         chunk: 1600,
       },
     },
     {
-      // Front-camera RTSP feed, dedicated to spotting a person on the ground.
-      // PersonLaydownDetector latches the ALERT and only clears after
-      // `clear_streak` consecutive clear frames, so a single noisy/stale "no
-      // person" frame can't bounce the robot back into patrol. Instead of
-      // analyzing only the freshest frame (which can skip past a person seen
-      // only between calls), it batches every frame captured during the previous
-      // VLM call into a single multi-image request, so a brief walk-by view is
-      // not lost.
-      // NOTE: this MUST be an RTSP URL — the input runs ffmpeg with
-      // `-rtsp_transport tcp`, so MediaMTX's WebRTC endpoint on :8889 will not
-      // work. Use the :8554 RTSP endpoint for the same camera path.
+      // Front-camera laydown detector; latches the ALERT until clear_streak clear
+      // frames. URL must be RTSP (:8554) — it runs ffmpeg over TCP, not WebRTC.
       type: "PersonLaydownDetector",
       config: {
         rtsp_url: "${FRONT_CAMERA_RTSP:-rtsp://localhost:8554/front_camera}",
-        // Capture rate.
         fps: 2,
-        // SPEED is upload-bound (request bytes = resolution x jpeg_quality x
-        // frames), NOT token-bound — so resolution/quality/batch are the latency
-        // knobs, while detail:high (set in the plugin) costs only model tokens we
-        // don't care about. 320x240 missed bodies; 640x480 caught some but not
-        // all; 960x720 (still 4:3, ~2.25x the pixels) gives the model more to
-        // work with while a 2-frame batch keeps the upload quick.
+        // Resolution/quality/frame-count trade detection accuracy against VLM latency.
         resolution_width: 960,
         resolution_height: 720,
-        // Higher quality so a body's outline survives compression for the VLM.
         jpeg_quality: 90,
-        // ONE frame per call: latency is upload-bound (request bytes = resolution
-        // x jpeg_quality x frames), and each detector round-trip gates how fast
-        // the dog reacts. A downed person is stationary, so a single frame is
-        // enough; sending 2 doubled the upload and pushed call_ms to 4-7s, leaving
-        // the robot's view ~6s stale. If walk-by misses during patrol reappear,
-        // bump back to 2.
+        // One frame keeps each VLM call fast; bump to 2 if walk-bys get missed.
         max_frames_per_call: 1,
-        // DEBUG: when set, every batch of frames sent to the VLM is written here
-        // as JPEGs plus a verdicts.jsonl line (timestamp + verdict + frame
-        // names), so missed detections can be inspected offline. Leave empty /
-        // remove to disable. Writes a lot of files — only enable for debugging.
+        // DEBUG only: dumps every batch + a verdicts.jsonl here; writes many files.
         image_log_dir: "${LAYDOWN_DEBUG_DIR:-./laydown_debug}",
-        // Require this many consecutive "no person" frames before leaving
-        // emergency mode. Higher = more robust against false clears, slower to
-        // resume patrol after the person actually gets up.
+        // Consecutive "no person" frames required before leaving emergency mode.
         clear_streak: 3,
-        // Once an ALERT latches, stay stopped for AT LEAST this many seconds of
-        // wall-clock before clearing, regardless of how fast "no person" frames
-        // arrive. Guarantees a visible, predictable stop instead of a ~6s blip
-        // that depends on VLM call cadence. Raise for a longer guaranteed stop.
+        // Minimum seconds to stay stopped after an ALERT before it can clear.
         min_hold_seconds: 15,
         prompt: "You are the safety vision system of a patrol robot. You are shown one or more sequential video frames from the robot's camera. Look carefully at EVERY frame. Decide whether a PERSON is lying on the ground or floor in ANY of the frames — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person appears in any frame, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>. Location in view: <left, center, or right — which side of the frame the person is on>. Distance: <near if the person fills a large part of the frame and is clearly close, or far if they appear small or far away>.' If no person is lying on the ground in any frame, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
       },
@@ -99,10 +58,7 @@
     type: "GeminiLLM",
     config: {
       agent_name: "Bits",
-      // The Vision alert only appears for one tick per VLM reply (the sensor
-      // buffer clears on read), and the VLM is slower than the cortex tick. A
-      // longer history lets the model remember a recent ALERT across the ticks
-      // that have no Vision line, so it stays stopped instead of oscillating.
+      // Lets the model remember a recent ALERT across the ticks that have no Vision line.
       history_length: 8,
     },
   },
@@ -113,17 +69,10 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-        // Interrupt is driven from the ASR side (see GoogleASRInput above); this
-        // flag is here for parity and is a no-op for the elevenlabs connector.
+        // No-op for elevenlabs; interrupt is driven from the ASR side.
         enable_tts_interrupt: true,
         silence_rate: 3,
-        // Each emergency turn produces a ~15-20s spoken message, but the cortex
-        // emits one every few seconds — far faster than playback. Without this,
-        // the queue (depth 8) fills with stale emergency speech that keeps
-        // playing for ~2 minutes AFTER the person gets up and patrol resumes.
-        // skip_when_busy drops a new utterance while one is still playing/queued,
-        // so speech is "freshest-only": when the situation clears, at most the
-        // one in-flight utterance finishes (~17s) instead of a long backlog.
+        // Drop new utterances while one is playing so emergency speech can't back up.
         skip_when_busy: true,
       },
     },

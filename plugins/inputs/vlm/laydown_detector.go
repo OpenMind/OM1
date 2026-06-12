@@ -19,42 +19,21 @@ import (
 	video "github.com/openmind/om1/internal/providers/vlm"
 )
 
-// PersonLaydownDetector is an RTSP+VLM input specialised for spotting a person
-// lying on the ground. It differs from the generic VLM sensor in three ways that
-// matter for a safety reaction:
-//
-//  1. Latching with debounce — an ALERT is asserted on the first detection and
-//     held until `clear_streak` CONSECUTIVE clear frames arrive. A single noisy
-//     "no person" frame (the VLM flip-flops, and slow calls return stale frames)
-//     can no longer bounce the robot back into patrol.
-//  2. Freshest-frame-only — the backlog of frames queued behind a slow VLM call
-//     is drained and only the most recent frame is analysed, so a clear verdict
-//     can't come from a seconds-old pre-collapse frame.
-//  3. Persistent buffer — the latest latched verdict is reported on EVERY cortex
-//     tick (not cleared after one read), so there are no "no Vision line" gaps
-//     for the cortex to misread as "all clear".
-//
-// It registers under the type name "PersonLaydownDetector" and is a drop-in
-// replacement for VLMGeminiRTSP in a config: same "Vision:" prefix and same
-// ALERT / "No person lying on the ground." vocabulary.
+// PersonLaydownDetector is an RTSP+VLM input for spotting a downed person: it
+// latches the ALERT with debounce and reports the verdict on every cortex tick.
 func init() {
 	inputs.Register("PersonLaydownDetector", NewPersonLaydownDetector)
 }
 
 const defaultClearStreak = 3
 
-// laydownBufferSize is the frame-channel depth. It must comfortably exceed
-// fps * worst-case-VLM-call-seconds so frames produced during a slow call are
-// kept (not dropped) and can be batched into the next request.
+// laydownBufferSize is the frame-channel depth, sized so frames produced during a
+// slow VLM call accumulate instead of being dropped.
 const laydownBufferSize = 16
 
-// defaultMaxBatch caps how many frames are sent in a single multi-image VLM
-// request. It bounds per-call latency and token cost while still covering every
-// frame captured during the previous (~2-3s) call at a modest fps.
+// defaultMaxBatch caps frames sent in one multi-image request, bounding latency and cost.
 const defaultMaxBatch = 6
 
-// laydownDefaults mirrors geminiDefaults but ships a detection-focused prompt and
-// a small token budget (the reply is a single line).
 var laydownDefaults = providerDefaults{
 	baseURL: geminiDefaults.baseURL,
 	model:   geminiDefaults.model,
@@ -121,9 +100,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 
 	log := logger.Get().Named("PersonLaydownDetector")
 
-	// When image_log_dir is set, every batch of frames sent to the VLM and the
-	// verdict it returned are written to disk for offline inspection (to tell
-	// missed detections apart from frames where the person was out of view).
 	debugDir := extra.ImageLogDir
 	if debugDir != "" {
 		if err := os.MkdirAll(debugDir, 0o755); err != nil {
@@ -149,11 +125,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		Width:       cfg.Width,
 		Height:      cfg.Height,
 		JPEGQuality: cfg.JPEGQuality,
-		// The default 1-slot buffer drops the NEWEST frame while a (~2-3s) VLM
-		// call is in flight, so the next frame we read is already ~one call-length
-		// stale — that's why frame_age_ms runs ~2x call_ms. A deeper buffer lets
-		// frames produced during the call accumulate so drainLatestFrame can pick
-		// the freshest one, cutting capture-to-verdict lag to ~1x the call time.
 		BufferSize: laydownBufferSize,
 	})
 
@@ -171,9 +142,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 			BaseURL: cfg.BaseURL,
 			Model:   cfg.Model,
 			Prompt:  cfg.Prompt,
-			// A downed person is often small/foreshortened in frame; "high"
-			// detail is what lets the model actually resolve them. Low detail was
-			// causing confirmed misses on frames where the person was clearly visible.
 			Detail:    "high",
 			MaxTokens: cfg.MaxTokens,
 			Log:       log,
@@ -181,8 +149,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 	}, nil
 }
 
-// Listen captures frames, analyses only the freshest one per VLM call, and emits
-// the latched verdict.
+// Listen batches the queued frames per VLM call and emits the latched verdict.
 func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	s.mu.Lock()
@@ -205,10 +172,6 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					return
 				}
 
-				// Batch the backlog instead of dropping it: every frame captured
-				// while the previous call was in flight is sent together in one
-				// multi-image request, so a person who only appears in a frame
-				// between calls (e.g. during a walk-by) can no longer slip through.
 				batch := drainAllFrames(frames, frame, s.maxBatch)
 
 				imgs := make([]string, 0, len(batch))
@@ -230,9 +193,6 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					continue
 				}
 
-				// call_ms = VLM round-trip; newest_age_ms = capture-to-verdict lag
-				// of the freshest frame (the true reaction latency); window_ms = the
-				// span of time the batch covers (0 when only one frame was queued).
 				s.log.Info("vlm latency",
 					zap.Int("frames", len(batch)),
 					zap.Int64("call_ms", callLatency.Milliseconds()),
@@ -266,10 +226,8 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 	return out, nil
 }
 
-// drainAllFrames collects the current frame plus every other frame already
-// queued, returning them in chronological order. When more than maxBatch frames
-// are available it keeps the most recent maxBatch (the freshest views, and a
-// bound on per-call latency and token cost).
+// drainAllFrames returns the current frame plus all queued ones in order, keeping
+// at most the most recent maxBatch.
 func drainAllFrames(frames <-chan video.Frame, current video.Frame, maxBatch int) []video.Frame {
 	batch := []video.Frame{current}
 	for {
@@ -293,9 +251,7 @@ func capTail(b []video.Frame, max int) []video.Frame {
 	return b
 }
 
-// debugRecord is one line of the verdicts.jsonl image-log: the verdict the VLM
-// returned for a batch, its timing, and the JPEG filenames that batch was saved
-// under (in capture order).
+// debugRecord is one verdicts.jsonl line: a batch's verdict, timing, and JPEG names.
 type debugRecord struct {
 	Time        string   `json:"time"`          // wall-clock time the verdict returned
 	UnixMs      int64    `json:"unix_ms"`       // same, epoch milliseconds (sortable)
@@ -306,9 +262,7 @@ type debugRecord struct {
 	Frames      []string `json:"frames"`        // JPEG filenames, oldest -> newest
 }
 
-// dumpDebug writes the exact frames sent to the VLM and appends the verdict to
-// verdicts.jsonl, so a bad "No person" can be inspected: was the person visible
-// in these frames (model miss) or genuinely out of view (overshoot/FOV)?
+// dumpDebug writes the batch frames and appends its verdict to verdicts.jsonl.
 func (s *laydownDetector) dumpDebug(batch []video.Frame, verdict string, callMs, newestAgeMs, windowMs int64) {
 	names := make([]string, 0, len(batch))
 	for i, f := range batch {
@@ -344,9 +298,8 @@ func (s *laydownDetector) dumpDebug(batch []video.Frame, verdict string, callMs,
 	_, _ = f.Write(append(line, '\n'))
 }
 
-// classify applies the latch+debounce and returns the verdict text to surface to
-// the cortex. ALERT asserts immediately; clearing requires clearStreak
-// consecutive non-alert frames.
+// classify applies the latch+debounce: ALERT asserts immediately, clearing requires
+// clearStreak consecutive non-alert frames.
 func (s *laydownDetector) classify(text string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -365,10 +318,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.clearCount++
 		held := time.Since(s.alertedAt)
 
-		// Clear only when BOTH conditions hold: enough consecutive clear frames
-		// AND the alert has been latched for at least minHold wall-clock time.
-		// The time floor guarantees a visible, predictable stop duration even
-		// when clear frames arrive in a fast burst.
+		// Clear only when both the clear streak and the min-hold time are met.
 		streakMet := s.clearCount >= s.clearStreak
 		holdMet := s.minHold <= 0 || held >= s.minHold
 		if !streakMet || !holdMet {
@@ -396,8 +346,7 @@ func (s *laydownDetector) Poll(context.Context) (any, error) {
 	return nil, nil
 }
 
-// RawToText records the latest verdict. It does not clear the buffer, so the
-// current latched state is reported on every cortex tick.
+// RawToText records the latest verdict without clearing it, so it persists across ticks.
 func (s *laydownDetector) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
 	text, ok := raw.(string)
 	if !ok || text == "" {
@@ -413,9 +362,7 @@ func (s *laydownDetector) RawToText(_ context.Context, raw any) (*inputs.Message
 	return msg, nil
 }
 
-// FormattedLatestBuffer returns the current latched verdict, prefixed like the
-// generic VLM sensor so existing prompts ("Vision:") keep working. It does not
-// clear the buffer.
+// FormattedLatestBuffer returns the latched verdict with the "Vision:" prefix.
 func (s *laydownDetector) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -432,8 +379,7 @@ func (s *laydownDetector) FormattedLatestBuffer() string {
 	return result
 }
 
-// TriggersTick wakes the cortex as soon as a fresh verdict arrives instead of
-// waiting for the next periodic tick.
+// TriggersTick wakes the cortex as soon as a fresh verdict arrives.
 func (s *laydownDetector) TriggersTick() bool {
 	return true
 }
