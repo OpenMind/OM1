@@ -1,6 +1,4 @@
 {
-  // Laydown-rescue agent: patrols, watches the front camera for a downed person,
-  // then approaches, stops, and gives spoken first-aid guidance.
   version: "v1.1.0",
   hertz: 1,
   name: "bits",
@@ -22,30 +20,22 @@
       type: "GoogleASRInput",
       config: {
         api_version: "v2",
-        // Barge-in: keep listening while speaking, and interrupt TTS on detected speech.
         enable_tts_interrupt: true,
         rate: 16000,
         chunk: 1600,
       },
     },
     {
-      // Front-camera laydown detector; latches the ALERT until clear_streak clear
-      // frames. URL must be RTSP (:8554) — it runs ffmpeg over TCP, not WebRTC.
       type: "PersonLaydownDetector",
       config: {
         rtsp_url: "${FRONT_CAMERA_RTSP:-rtsp://localhost:8554/front_camera}",
         fps: 2,
-        // Resolution/quality/frame-count trade detection accuracy against VLM latency.
         resolution_width: 960,
         resolution_height: 720,
         jpeg_quality: 90,
-        // One frame keeps each VLM call fast; bump to 2 if walk-bys get missed.
         max_frames_per_call: 1,
-        // DEBUG only: dumps every batch + a verdicts.jsonl here; writes many files.
         image_log_dir: "${LAYDOWN_DEBUG_DIR:-./laydown_debug}",
-        // Consecutive "no person" frames required before leaving emergency mode.
         clear_streak: 3,
-        // Minimum seconds to stay stopped after an ALERT before it can clear.
         min_hold_seconds: 15,
         prompt: "You are the safety vision system of a patrol robot. You are shown one or more sequential video frames from the robot's camera. Look carefully at EVERY frame. Decide whether a PERSON is lying on the ground or floor in ANY of the frames — i.e. collapsed, fallen, slumped, or otherwise not standing or sitting upright in a normal way. Respond in ONE line. If such a person appears in any frame, respond exactly in this form: 'ALERT: a person is lying on the ground. <brief description of their position and any visible signs of a medical condition, e.g. not moving, unresponsive, distressed>. Location in view: <left, center, or right — which side of the frame the person is on>. Distance: <near if the person fills a large part of the frame and is clearly close, or far if they appear small or far away>.' If no person is lying on the ground in any frame, respond exactly: 'No person lying on the ground.' Do not explain your reasoning.",
       },
@@ -58,7 +48,6 @@
     type: "GeminiLLM",
     config: {
       agent_name: "Bits",
-      // Lets the model remember a recent ALERT across the ticks that have no Vision line.
       history_length: 8,
     },
   },
@@ -69,10 +58,8 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-        // No-op for elevenlabs; interrupt is driven from the ASR side.
         enable_tts_interrupt: true,
         silence_rate: 3,
-        // Drop new utterances while one is playing so emergency speech can't back up.
         skip_when_busy: true,
       },
     },
