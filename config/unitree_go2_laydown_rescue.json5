@@ -58,6 +58,11 @@
         // Max frames sent in one multi-image VLM request. Bounds per-call
         // latency and token cost; should cover fps * worst-case-call-seconds.
         max_frames_per_call: 6,
+        // DEBUG: when set, every batch of frames sent to the VLM is written here
+        // as JPEGs plus a verdicts.jsonl line (timestamp + verdict + frame
+        // names), so missed detections can be inspected offline. Leave empty /
+        // remove to disable. Writes a lot of files — only enable for debugging.
+        image_log_dir: "${LAYDOWN_DEBUG_DIR:-./laydown_debug}",
         // Require this many consecutive "no person" frames before leaving
         // emergency mode. Higher = more robust against false clears, slower to
         // resume patrol after the person actually gets up.
