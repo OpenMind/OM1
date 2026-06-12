@@ -9,8 +9,6 @@
     {
       type: "QRScannerRTSP",
       config: {
-        capture_fps: 15,
-        decode_fps: 5,
         dedupe_window_seconds: 30,
         luma: {
           api_key: "${LUMA_API_KEY}",
