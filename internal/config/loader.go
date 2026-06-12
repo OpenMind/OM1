@@ -46,11 +46,14 @@ func Load(nameOrPath string) (*SystemConfig, error) {
 
 // resolvePath determines the actual file path of the configuration based on the provided name or path.
 func resolvePath(nameOrPath string) (string, error) {
-	if filepath.IsAbs(nameOrPath) {
-		return nameOrPath, nil
+	if nameOrPath == "" {
+		return "", fmt.Errorf("config name or path is empty")
 	}
 
-	if strings.HasSuffix(nameOrPath, ".json5") || strings.HasSuffix(nameOrPath, ".json") {
+	if filepath.IsAbs(nameOrPath) ||
+		strings.HasSuffix(nameOrPath, ".json5") ||
+		strings.HasSuffix(nameOrPath, ".json") ||
+		strings.ContainsRune(nameOrPath, os.PathSeparator) {
 		return nameOrPath, nil
 	}
 
