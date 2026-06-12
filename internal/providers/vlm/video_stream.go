@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	defaultWidth       = 640
+	defaultHeight      = 480
 	defaultFPS         = 30
 	defaultJPEGQuality = 30
 	cameraRetryDelay   = 2 * time.Second
@@ -40,6 +42,18 @@ type VideoStream struct {
 }
 
 func NewVideoStream(cfg VideoStreamConfig) *VideoStream {
+	if cfg.FPS <= 0 {
+		cfg.FPS = defaultFPS
+	}
+
+	if cfg.Width <= 0 {
+		cfg.Width = defaultWidth
+	}
+
+	if cfg.Height <= 0 {
+		cfg.Height = defaultHeight
+	}
+
 	if cfg.JPEGQuality <= 0 {
 		cfg.JPEGQuality = defaultJPEGQuality
 	}
