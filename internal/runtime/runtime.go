@@ -505,6 +505,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), uuid, name)
 		}
 		current.memory.Summarize(ctx)
+		current.memory.Upload(ctx)
 	}
 
 	rt.ioProvider.RecordTick(tickStart)

@@ -32,4 +32,4 @@ config/cron_job/
 coverage.out
 
 # Memory
-memory/
+/memory/

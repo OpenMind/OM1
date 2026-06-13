@@ -9,11 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager bundles the memory Reader, Writer, and Summarizer.
+// Manager bundles the memory Reader, Writer, Summarizer, and Uploader.
 type Manager struct {
 	reader     *Reader
 	writer     *Writer
 	summarizer *Summarizer
+	uploader   *Uploader
 	signals    *SignalStore
 	indexDir   string
 	log        *zap.Logger
@@ -58,6 +59,7 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 
 	if apiKey != "" {
 		m.summarizer = NewSummarizer(memoryRoot, apiKey, m.signals, log)
+		m.uploader = NewUploader(memoryRoot, apiKey, log)
 		go func() {
 			if m.summarizer.CheckEligibility() {
 				m.summarizer.Run(context.Background())
@@ -95,13 +97,24 @@ func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, uuid, name 
 	}
 }
 
-// MaybeSummarize triggers background summarization.
+// Summarize triggers background summarization.
 func (m *Manager) Summarize(ctx context.Context) {
 	if m.summarizer != nil && m.summarizer.CheckEligibility() {
 		go func() {
 			m.summarizer.Run(ctx)
 			if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
 				m.log.Warn("failed to persist index", zap.Error(err))
+			}
+		}()
+	}
+}
+
+// Upload checks if enough new chunks have accumulated and triggers a background upload.
+func (m *Manager) Upload(ctx context.Context) {
+	if m.uploader != nil && m.uploader.CheckEligibility() {
+		go func() {
+			if err := m.uploader.UploadOnce(ctx); err != nil {
+				m.log.Warn("memory upload failed", zap.Error(err))
 			}
 		}()
 	}
