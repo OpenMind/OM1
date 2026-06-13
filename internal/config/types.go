@@ -5,25 +5,24 @@ type SystemConfig struct {
 	Version string `json:"version"`
 	Name    string `json:"name"`
 
-	Hertz            float64      `json:"hertz"`
-	SystemPromptBase string       `json:"system_prompt_base"`
-	SystemGovernance string       `json:"system_governance"`
-	PromptExamples   string       `json:"system_prompt_examples"`
-	AgentInputs      []PluginSpec `json:"agent_inputs"`
-	CortexLLM        PluginSpec   `json:"cortex_llm"`
-	AgentActions     []ActionSpec `json:"agent_actions"`
-	Backgrounds      []PluginSpec `json:"backgrounds"`
-	MCPServers       []MCPSpec    `json:"mcp_servers"`
-	KnowledgeBase    *KBSpec      `json:"knowledge_base"`
-	LifecycleHooks   []HookSpec   `json:"lifecycle_hooks"`
+	Hertz             float64      `json:"hertz"`
+	SystemPromptBase  string       `json:"system_prompt_base"`
+	SystemGovernance  string       `json:"system_governance"`
+	PromptExamples    string       `json:"system_prompt_examples"`
+	AgentInputs       []PluginSpec `json:"agent_inputs"`
+	CortexLLM         PluginSpec   `json:"cortex_llm"`
+	AgentActions      []ActionSpec `json:"agent_actions"`
+	AgentBackgrounds  []PluginSpec `json:"agent_backgrounds"`
+	GlobalBackgrounds []PluginSpec `json:"global_backgrounds"`
+	MCPServers        []MCPSpec    `json:"mcp_servers"`
+	KnowledgeBase     *KBSpec      `json:"knowledge_base"`
+	Memory            *MemorySpec  `json:"memory"`
+	LifecycleHooks    []HookSpec   `json:"lifecycle_hooks"`
 
 	APIKey  string `json:"api_key"`
 	RobotIP string `json:"robot_ip"`
 	URID    string `json:"URID"`
 
-	// UseSim routes simulation topics (CLOUD_TOPICS) to the cloud broker over a
-	// WebSocket session instead of the local Zenoh network. Mirrors the Python
-	// use_sim flag.
 	UseSim bool `json:"use_sim"`
 
 	UseTracer bool `json:"use_tracer"`
@@ -46,7 +45,7 @@ type ModeConfig struct {
 	AgentInputs      []PluginSpec `json:"agent_inputs"`
 	CortexLLM        PluginSpec   `json:"cortex_llm"`
 	AgentActions     []ActionSpec `json:"agent_actions"`
-	Backgrounds      []PluginSpec `json:"backgrounds"`
+	AgentBackgrounds []PluginSpec `json:"agent_backgrounds"`
 	MCPServers       []MCPSpec    `json:"mcp_servers"`
 	LifecycleHooks   []HookSpec   `json:"lifecycle_hooks"`
 	TimeoutSeconds   float64      `json:"timeout_seconds"`
@@ -106,6 +105,11 @@ type KBSpec struct {
 	BaseURL  string  `json:"base_url"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
+}
+
+// MemorySpec describes the optional long-term memory system.
+type MemorySpec struct {
+	Enabled bool `json:"enabled"`
 }
 
 // RuntimeConfig is the resolved, instantiated state for the active mode.

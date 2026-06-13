@@ -20,12 +20,18 @@ Then dive into any recipe that interests you!
 
 ### Linting and Testing (Mandatory)
 
-To check/format/lint your code before committing, install [pre-commit](https://pre-commit.com/) and execute `pre-commit install`. This ensures that pre-commit checks run before each commit.
-
-Additionally, you can manually trigger all checks by running
+Run repository checks before committing:
 
 ```bash
-pre-commit run --all-files
+make check
+```
+
+Or run individual checks when needed:
+
+```bash
+make fmt
+make lint
+make test
 ```
 
 ### Unit Testing

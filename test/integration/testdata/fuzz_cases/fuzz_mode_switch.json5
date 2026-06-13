@@ -5,6 +5,7 @@
   // action when it is *not* transitioning, so recorded actions reveal which mode
   // was active. Used only by FuzzModeSwitching (not by the discovery runner — it
   // lives outside testdata/test_cases/).
+  version: "v1.1.0",
   name: "fuzz mode switching",
   default_mode: "alpha",
 

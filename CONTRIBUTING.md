@@ -67,14 +67,16 @@ Before contributing, please take a moment to read through the following guidelin
 
 7. **Local Testing**
 
-    Install pre-commit and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Alternatively, you can manually trigger all checks by running
+    Run the repository checks locally before pushing changes:
 
     ```bash
-    pre-commit run --all-files
+    make check
     ```
 
-    To run the linter and tests, use:
+    Or run individual checks as needed:
+
     ```bash
+    make fmt
     make lint
     make test
     ```
@@ -98,7 +100,7 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Coding Style and Conventions:**
 
-*   **Code Style:**  Follow standard Go conventions and use `gofmt` for formatting. Run `make fmt` before committing, or let `pre-commit` handle it.
+*   **Code Style:**  Follow standard Go conventions and use `gofmt` for formatting. Run `make fmt` before committing.
 *   **Documentation:**  Write clear and comprehensive comments for exported functions and types.
 *   **Tests:** Write unit tests to ensure your code works as expected. Use the standard Go testing package.
 *   **Naming:** Use idiomatic Go naming conventions (e.g., camelCase for unexported, PascalCase for exported).

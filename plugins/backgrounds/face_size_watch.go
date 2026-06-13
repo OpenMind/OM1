@@ -28,6 +28,7 @@ type FaceSizeWatch struct {
 	log      *zap.Logger
 	provider *providers.FacePresenceProvider
 	period   time.Duration
+	minArea  float64
 }
 
 func NewFaceSizeWatch(configMap map[string]any) (bg.Background, error) {
@@ -51,10 +52,9 @@ func NewFaceSizeWatch(configMap map[string]any) (bg.Background, error) {
 	log := logger.Get().Named("FaceSizeWatch")
 
 	provider := providers.NewFacePresenceProvider(providers.FacePresenceConfig{
-		BaseURL:     cfg.BaseURL,
-		RecentSec:   cfg.RecentSec,
-		Timeout:     2 * time.Second,
-		MinFaceArea: cfg.MinFaceArea,
+		BaseURL:   cfg.BaseURL,
+		RecentSec: cfg.RecentSec,
+		Timeout:   2 * time.Second,
 	})
 
 	log.Info("initialized",
@@ -67,6 +67,7 @@ func NewFaceSizeWatch(configMap map[string]any) (bg.Background, error) {
 		log:      log,
 		provider: provider,
 		period:   time.Duration(cfg.PollSec * float64(time.Second)),
+		minArea:  cfg.MinFaceArea,
 	}, nil
 }
 
@@ -80,9 +81,12 @@ func (f *FaceSizeWatch) Run(ctx context.Context) {
 		return
 	}
 
-	// FetchSnapshot already filters by MinFaceArea, so any face in the
-	// snapshot is large enough. Count known + unknown faces.
-	totalFaces := len(snap.Names) + snap.UnknownFaces
+	var totalFaces int
+	for _, face := range snap.Faces {
+		if float64(face.Area) >= f.minArea {
+			totalFaces++
+		}
+	}
 	if totalFaces > 0 {
 		f.log.Info("face close enough, triggering transition",
 			zap.Int("faces", totalFaces),

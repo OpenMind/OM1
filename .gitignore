@@ -30,3 +30,6 @@ config/cron_job/
 
 # Test
 coverage.out
+
+# Memory
+memory/

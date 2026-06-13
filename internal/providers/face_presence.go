@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -13,223 +14,272 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
-// faceInfo is a single face entry in the /who response.
-type faceInfo struct {
-	Name string  `json:"name"`
-	Area float64 `json:"area"`
-}
+const (
+	facePresenceDefaultBaseURL                = "http://127.0.0.1:6793"
+	facePresenceDefaultRecentSec              = 1.0
+	facePresenceDefaultTimeout                = 2 * time.Second
+	facePresenceDefaultAnonNewcomerThrSec     = 180.0     // 3 min
+	facePresenceDefaultNamedRecentThrSec      = 86_400.0  // 1 day
+	facePresenceDefaultNamedLongAbsenceThrSec = 604_800.0 // 7 days
+)
 
-// whoResponse is the body returned by POST {base_url}/who.
-type whoResponse struct {
-	Faces    []faceInfo `json:"faces"`
-	ServerTS float64    `json:"server_ts"`
-}
-
-// PresenceSnapshot is the canonical record derived from a /who response.
-type PresenceSnapshot struct {
-	// Timestamp is the server timestamp in UNIX epoch seconds (falls back to local time if missing).
-	Timestamp float64
-	// Names holds the known identities present (deduplicated, ordered by face area descending).
-	Names []string
-	// UnknownFaces is the count of unknown faces present.
-	UnknownFaces int
-	// ClosestName is the name of the person with the largest face area, or "unknown" if unavailable.
-	ClosestName string
-}
-
-// ToText produces a concise, natural sentence describing who is in view,
-// handling any number of known people and unknown faces.
-//
-// Examples:
-//   - names=["wendy"], unknown=0      -> "In Camera View: 1 known (wendy). Closest: wendy."
-//   - names=["wendy","alice"], unk=2  -> "In Camera View: 2 known (wendy and alice) and 2 unknown faces. ..."
-//   - names=[], unknown=1             -> "In Camera View: 1 unknown face. Closest: unknown."
-//   - names=[], unknown=0             -> "No one in view."
-func (s PresenceSnapshot) ToText() string {
-	seen := make(map[string]struct{})
-	var valid []string
-	for _, name := range s.Names {
-		cleaned := strings.TrimSpace(name)
-		if cleaned == "" || strings.EqualFold(cleaned, "unknown") {
-			continue
-		}
-		if _, ok := seen[cleaned]; ok {
-			continue
-		}
-		seen[cleaned] = struct{}{}
-		valid = append(valid, cleaned)
-	}
-
-	knownCount := len(valid)
-	unknownCount := s.UnknownFaces
-	if unknownCount < 0 {
-		unknownCount = 0
-	}
-
-	if knownCount == 0 && unknownCount == 0 {
-		return "No one in view."
-	}
-
-	var parts []string
-	if knownCount > 0 {
-		parts = append(parts, fmt.Sprintf("%d known (%s)", knownCount, joinNames(valid)))
-	}
-	if unknownCount > 0 {
-		suffix := "s"
-		if unknownCount == 1 {
-			suffix = ""
-		}
-		parts = append(parts, fmt.Sprintf("%d unknown face%s", unknownCount, suffix))
-	}
-
-	result := "In Camera View: " + strings.Join(parts, " and ") + "."
-	if s.ClosestName != "" {
-		result += fmt.Sprintf(" Closest: %s.", s.ClosestName)
-	}
-	return result
-}
-
-// joinNames joins a list of names into a human-readable string with proper conjunctions.
-func joinNames(names []string) string {
-	switch len(names) {
-	case 0:
-		return ""
-	case 1:
-		return names[0]
-	case 2:
-		return names[0] + " and " + names[1]
-	default:
-		return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
-	}
-}
-
-// FacePresenceConfig configures a FacePresenceProvider.
+// FacePresenceConfig configures the provider.
 type FacePresenceConfig struct {
-	// BaseURL is the base HTTP URL of the face stream API (e.g. "http://127.0.0.1:6793").
-	BaseURL string
-	// RecentSec is the lookback window passed to /who (seconds of presence history).
+	BaseURL   string
 	RecentSec float64
-	// Timeout bounds each HTTP request.
-	Timeout time.Duration
-	// MinFaceArea is the minimum face area (in pixels) for a detection to be counted.
-	MinFaceArea float64
+	Timeout   time.Duration
+
+	// Thresholds (seconds). 0 → use defaults.
+	AnonNewcomerThrSec     float64 // default 180 (3 min)
+	NamedRecentThrSec      float64 // default 86_400 (1 day)
+	NamedLongAbsenceThrSec float64 // default 604_800 (7 days)
 }
 
-// FacePresenceProvider fetches face-presence snapshots from a face HTTP service.
+// FacePresenceProvider fetches /who snapshots and renders them as text.
 type FacePresenceProvider struct {
-	baseURL     string
-	recentSec   float64
-	timeout     time.Duration
-	minFaceArea float64
-	client      *http.Client
+	cfg    FacePresenceConfig
+	client *http.Client
 }
 
-// NewFacePresenceProvider constructs a FacePresenceProvider from cfg, applying
-// sane defaults for any zero-valued field.
+// NewFacePresenceProvider constructs a provider.
 func NewFacePresenceProvider(cfg FacePresenceConfig) *FacePresenceProvider {
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = "http://127.0.0.1:6793"
+		cfg.BaseURL = facePresenceDefaultBaseURL
 	}
 	if cfg.RecentSec <= 0 {
-		cfg.RecentSec = 1.0
+		cfg.RecentSec = facePresenceDefaultRecentSec
 	}
 	if cfg.Timeout <= 0 {
-		cfg.Timeout = 2 * time.Second
+		cfg.Timeout = facePresenceDefaultTimeout
 	}
-	if cfg.MinFaceArea <= 0 {
-		cfg.MinFaceArea = 500
+	if cfg.AnonNewcomerThrSec <= 0 {
+		cfg.AnonNewcomerThrSec = facePresenceDefaultAnonNewcomerThrSec
+	}
+	if cfg.NamedRecentThrSec <= 0 {
+		cfg.NamedRecentThrSec = facePresenceDefaultNamedRecentThrSec
+	}
+	if cfg.NamedLongAbsenceThrSec <= 0 {
+		cfg.NamedLongAbsenceThrSec = facePresenceDefaultNamedLongAbsenceThrSec
 	}
 	return &FacePresenceProvider{
-		baseURL:     strings.TrimRight(cfg.BaseURL, "/"),
-		recentSec:   cfg.RecentSec,
-		timeout:     cfg.Timeout,
-		minFaceArea: cfg.MinFaceArea,
-		client:      httpclient.Default(),
+		cfg: cfg,
+		client: &http.Client{
+			Transport: httpclient.Default().Transport,
+			Timeout:   cfg.Timeout,
+		},
 	}
 }
 
-// FetchSnapshot POSTs to {base_url}/who with the configured lookback window and
-// builds a PresenceSnapshot. Faces smaller than MinFaceArea are ignored; names
-// are deduplicated and ordered by descending face area.
-func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnapshot, error) {
-	body, err := json.Marshal(map[string]any{"recent_sec": p.recentSec})
-	if err != nil {
-		return PresenceSnapshot{}, err
+// FaceEntry is one face in a /who snapshot. Pointer fields distinguish null from zero.
+type FaceEntry struct {
+	Name           string   `json:"name"` // "sean" / "anon_73d0a4" / "unknown"
+	UUID           string   `json:"uuid"` // full 32-hex; "" for unknown
+	Tier           string   `json:"tier"` // "confident" / "tentative" / "uncertain"
+	Sim            float64  `json:"sim"`  // raw cosine sim
+	TrackID        int      `json:"track_id"`
+	Area           int      `json:"area,omitempty"`
+	CreatedAgoSec  *float64 `json:"created_ago_sec"`   // UUID age in seconds; null for unknown
+	LastSeenAgoSec *float64 `json:"last_seen_ago_sec"` // sticky session-start gap; null until first confident match
+	LastSeenISO    *string  `json:"last_seen_iso"`     // ISO timestamp of previous sighting
+}
+
+// PresenceSnapshot is the parsed /who response.
+// Closest* fields describe the largest-area face; new code should iterate Faces.
+type PresenceSnapshot struct {
+	OK       bool        `json:"ok"`
+	Faces    []FaceEntry `json:"faces"`
+	ServerTS float64     `json:"server_ts"`
+
+	// Derived (populated by FetchSnapshot, not from JSON).
+	ClosestName  string  `json:"-"`
+	ClosestUUID  string  `json:"-"`
+	ClosestTier  string  `json:"-"`
+	ClosestSim   float64 `json:"-"`
+	UnknownFaces int     `json:"-"`
+}
+
+// providerForDefaults holds thresholds used by ToText. Updated via SetDefaults.
+var providerForDefaults = &FacePresenceProvider{
+	cfg: FacePresenceConfig{
+		AnonNewcomerThrSec:     facePresenceDefaultAnonNewcomerThrSec,
+		NamedRecentThrSec:      facePresenceDefaultNamedRecentThrSec,
+		NamedLongAbsenceThrSec: facePresenceDefaultNamedLongAbsenceThrSec,
+	},
+}
+
+// SetDefaults updates the package-level thresholds (call once at startup).
+func SetDefaults(cfg FacePresenceConfig) {
+	if cfg.AnonNewcomerThrSec > 0 {
+		providerForDefaults.cfg.AnonNewcomerThrSec = cfg.AnonNewcomerThrSec
 	}
+	if cfg.NamedRecentThrSec > 0 {
+		providerForDefaults.cfg.NamedRecentThrSec = cfg.NamedRecentThrSec
+	}
+	if cfg.NamedLongAbsenceThrSec > 0 {
+		providerForDefaults.cfg.NamedLongAbsenceThrSec = cfg.NamedLongAbsenceThrSec
+	}
+}
 
-	reqCtx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, p.baseURL+"/who", bytes.NewReader(body))
+// FetchSnapshot calls POST /who and returns the parsed result.
+// Populates derived Closest* and UnknownFaces fields before returning.
+func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnapshot, error) {
+	body, _ := json.Marshal(map[string]any{"recent_sec": p.cfg.RecentSec})
+	req, err := http.NewRequestWithContext(
+		ctx, "POST", p.cfg.BaseURL+"/who", bytes.NewReader(body),
+	)
 	if err != nil {
-		return PresenceSnapshot{}, err
+		return PresenceSnapshot{}, fmt.Errorf("build /who request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return PresenceSnapshot{}, err
+		return PresenceSnapshot{}, fmt.Errorf("/who request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return PresenceSnapshot{}, fmt.Errorf("face presence: /who returned status %d", resp.StatusCode)
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return PresenceSnapshot{}, fmt.Errorf("/who body read: %w", err)
+	}
+	var snap PresenceSnapshot
+	if err := json.Unmarshal(data, &snap); err != nil {
+		return PresenceSnapshot{}, fmt.Errorf("/who decode: %w (body=%s)", err, string(data))
 	}
 
-	var data whoResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return PresenceSnapshot{}, err
-	}
-
-	// Keep only sufficiently large faces, then order by descending area so the
-	// first element is the face closest to the camera.
-	var filtered []faceInfo
-	for _, f := range data.Faces {
-		if f.Area >= p.minFaceArea {
-			filtered = append(filtered, f)
+	// Populate Closest* from the largest visible face with a UUID.
+	// Anon names are left empty so the hook's fallback kicks in.
+	var bestArea int
+	for _, f := range snap.Faces {
+		if f.Name == "unknown" || f.Name == "" {
+			snap.UnknownFaces++
 		}
-	}
-	sorted := make([]faceInfo, len(filtered))
-	copy(sorted, filtered)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Area > sorted[j].Area })
-
-	closestName := "unknown"
-	if len(sorted) > 0 {
-		if n := strings.TrimSpace(sorted[0].Name); n != "" && !strings.EqualFold(n, "unknown") {
-			closestName = n
-		}
-	}
-
-	seen := make(map[string]struct{})
-	var names []string
-	for _, f := range sorted {
-		n := strings.TrimSpace(f.Name)
-		if n == "" || strings.EqualFold(n, "unknown") {
+		if f.UUID == "" {
 			continue
 		}
-		if _, ok := seen[n]; ok {
-			continue
+		if f.Area > bestArea {
+			bestArea = f.Area
+			snap.ClosestUUID = f.UUID
+			snap.ClosestTier = f.Tier
+			snap.ClosestSim = f.Sim
+			if strings.HasPrefix(f.Name, "anon_") {
+				snap.ClosestName = ""
+			} else {
+				snap.ClosestName = f.Name
+			}
 		}
-		seen[n] = struct{}{}
-		names = append(names, n)
+	}
+	return snap, nil
+}
+
+// ToText renders the snapshot into one LLM-readable line.
+// Returns "" when no actionable faces are present.
+func (s *PresenceSnapshot) ToText() string {
+	if s == nil || len(s.Faces) == 0 {
+		return ""
 	}
 
-	unknownCount := 0
-	for _, f := range filtered {
-		if strings.EqualFold(strings.TrimSpace(f.Name), "unknown") {
-			unknownCount++
+	// Sort by area desc.
+	faces := make([]FaceEntry, len(s.Faces))
+	copy(faces, s.Faces)
+	sort.SliceStable(faces, func(i, j int) bool {
+		if faces[i].Area != faces[j].Area {
+			return faces[i].Area > faces[j].Area
+		}
+		return faces[i].TrackID < faces[j].TrackID
+	})
+
+	// Bucket into named/anon; drop unknown (transient, no UUID).
+	var named, anons []FaceEntry
+	for _, f := range faces {
+		switch {
+		case strings.HasPrefix(f.Name, "anon_"):
+			anons = append(anons, f)
+		case f.Name == "unknown" || f.Name == "":
+			// drop
+		default:
+			named = append(named, f)
 		}
 	}
 
-	timestamp := data.ServerTS
-	if timestamp == 0 {
-		timestamp = float64(time.Now().UnixNano()) / 1e9
+	if len(named) == 0 && len(anons) == 0 {
+		return ""
 	}
 
-	return PresenceSnapshot{
-		Timestamp:    timestamp,
-		Names:        names,
-		UnknownFaces: unknownCount,
-		ClosestName:  closestName,
-	}, nil
+	total := len(named) + len(anons)
+	descriptor := fmt.Sprintf("FacePresence: %d face", total)
+	if total != 1 {
+		descriptor += "s"
+	}
+
+	var parts []string
+	for _, f := range named {
+		parts = append(parts, formatNamedEntry(f))
+	}
+	for _, f := range anons {
+		parts = append(parts, formatAnonEntry(f))
+	}
+
+	return fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
+}
+
+// formatNamedEntry — three-tier label based on last-seen gap.
+func formatNamedEntry(f FaceEntry) string {
+	cfg := providerForDefaults.cfg
+	if f.LastSeenAgoSec == nil {
+		return fmt.Sprintf("%s (recognized)", f.Name)
+	}
+	gap := *f.LastSeenAgoSec
+	switch {
+	case gap < cfg.NamedRecentThrSec:
+		return fmt.Sprintf("%s (recognized)", f.Name)
+	case gap < cfg.NamedLongAbsenceThrSec:
+		days := int(gap / 86_400.0)
+		if days <= 1 {
+			return fmt.Sprintf("%s (recognized, 1 day ago)", f.Name)
+		}
+		return fmt.Sprintf("%s (recognized, %d days ago)", f.Name, days)
+	default:
+		dateStr := lastSeenDate(f.LastSeenISO)
+		if dateStr == "" {
+			return fmt.Sprintf("%s (recognized, long time ago)", f.Name)
+		}
+		return fmt.Sprintf("%s (recognized, last seen %s)", f.Name, dateStr)
+	}
+}
+
+// formatAnonEntry — newcomer (<3 min) vs met-before (≥3 min).
+func formatAnonEntry(f FaceEntry) string {
+	cfg := providerForDefaults.cfg
+	if f.LastSeenAgoSec == nil {
+		return fmt.Sprintf("%s (newcomer)", f.Name)
+	}
+	gap := *f.LastSeenAgoSec
+	if gap < cfg.AnonNewcomerThrSec {
+		return fmt.Sprintf("%s (newcomer)", f.Name)
+	}
+	dateStr := lastSeenDate(f.LastSeenISO)
+	if dateStr == "" {
+		return fmt.Sprintf("%s (met before)", f.Name)
+	}
+	return fmt.Sprintf("%s (met before, last seen %s)", f.Name, dateStr)
+}
+
+// lastSeenDate extracts a "2006-01-02" date from an ISO timestamp.
+func lastSeenDate(isoPtr *string) string {
+	if isoPtr == nil || *isoPtr == "" {
+		return ""
+	}
+	iso := *isoPtr
+	cutLen := len(iso)
+	if cutLen > 19 {
+		cutLen = 19
+	}
+	if t, err := time.Parse("2006-01-02T15:04:05", iso[:cutLen]); err == nil {
+		return t.Format("2006-01-02")
+	}
+	// Fallback: take first 10 chars if they look like a date
+	if len(iso) >= 10 && iso[4] == '-' && iso[7] == '-' {
+		return iso[:10]
+	}
+	return ""
 }

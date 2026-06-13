@@ -36,6 +36,7 @@ type CheckinComplete struct {
 	period      time.Duration
 	scanIOKey   string
 	gracePeriod time.Duration
+	minArea     float64
 	scanSeen    bool
 	scanTime    time.Time
 }
@@ -67,10 +68,9 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 	log := logger.Get().Named("CheckinComplete")
 
 	face := providers.NewFacePresenceProvider(providers.FacePresenceConfig{
-		BaseURL:     cfg.FaceBaseURL,
-		RecentSec:   cfg.FaceRecentSec,
-		Timeout:     2 * time.Second,
-		MinFaceArea: cfg.FaceMinArea,
+		BaseURL:   cfg.FaceBaseURL,
+		RecentSec: cfg.FaceRecentSec,
+		Timeout:   2 * time.Second,
 	})
 
 	log.Info("initialized",
@@ -84,6 +84,7 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 		period:      time.Duration(cfg.PollSec * float64(time.Second)),
 		scanIOKey:   cfg.ScanIOKey,
 		gracePeriod: time.Duration(cfg.GracePeriodSec * float64(time.Second)),
+		minArea:     cfg.FaceMinArea,
 	}, nil
 }
 
@@ -121,7 +122,12 @@ func (c *CheckinComplete) Run(ctx context.Context) {
 		return
 	}
 
-	totalFaces := len(snap.Names) + snap.UnknownFaces
+	var totalFaces int
+	for _, face := range snap.Faces {
+		if float64(face.Area) >= c.minArea {
+			totalFaces++
+		}
+	}
 	if totalFaces > 0 {
 		util.Sleep(ctx, c.period)
 		return

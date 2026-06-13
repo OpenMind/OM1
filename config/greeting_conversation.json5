@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.5",
+  version: "v1.1.0",
 
   // Mode system configuration for Unitree Go2
   default_mode: "greeting",
@@ -23,6 +23,15 @@
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
     min_score: 0.6,
   },
+  memory: {
+    enabled: true,
+  },
+
+  global_backgrounds: [
+    {
+      type: "VLMGeminiRTSP",
+    },
+  ],
 
   modes: {
     approaching: {
@@ -43,7 +52,7 @@
       ],
       action_execution_mode: "concurrent",
       agent_actions: [],
-      backgrounds: [
+      agent_backgrounds: [
         {
           type: "ApproachingPerson",
         },
@@ -126,7 +135,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           type: "GreetingStatus",
         },
         {
-          type: "VLMGeminiRTSP",
+          type: "VLMBackground",
         }
       ],
       cortex_llm: {
@@ -157,8 +166,13 @@ You should prioritize safe, comfortable, and positive human interaction.",
           llm_label: "robot_action",
           connector: "zenoh",
         },
+        {
+          name: "face_memory",
+          llm_label: "face_memory",
+          connector: "face_memory",
+        }
       ],
-      backgrounds: [],
+      agent_backgrounds: [],
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
@@ -261,7 +275,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           type: "FacePresence",
         },
         {
-          type: "VLMGeminiRTSP",
+          type: "VLMBackground",
         }
       ],
       cortex_llm: {
@@ -299,8 +313,13 @@ You should prioritize safe, comfortable, and positive human interaction.",
           llm_label: "robot_action",
           connector: "zenoh",
         },
+        {
+          name: "face_memory",
+          llm_label: "face_memory",
+          connector: "face_memory",
+        }
       ],
-      backgrounds: [],
+      agent_backgrounds: [],
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
