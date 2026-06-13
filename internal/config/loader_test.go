@@ -66,9 +66,13 @@ func TestNormalizePreservesExistingModes(t *testing.T) {
 func TestResolvePath(t *testing.T) {
 	require.Equal(t, "/abs/path.json5", mustResolve(t, "/abs/path.json5"), "absolute paths pass through")
 	require.Equal(t, "rel/config.json", mustResolve(t, "rel/config.json"), "explicit .json suffix passes through")
+	require.Equal(t, "some/dir/agent", mustResolve(t, "some/dir/agent"), "relative paths with a separator pass through")
 
 	_, err := resolvePath("nonexistent-config-name")
 	require.Error(t, err, "bare names that resolve to no file error out")
+
+	_, err = resolvePath("")
+	require.Error(t, err, "empty config errors out")
 }
 
 func mustResolve(t *testing.T, in string) string {
