@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	uploadChunkThreshold = 10
-	defaultUploadURL     = "http://localhost:3001/api/core/memory/upload"
+	uploadChunkThreshold = 100
+	defaultUploadURL     = "https://api.openmind.com/api/core/memory/upload"
 	uploadTimeout        = 60 * time.Second
 )
 
