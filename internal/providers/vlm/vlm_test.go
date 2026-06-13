@@ -141,9 +141,9 @@ func TestParseAVFoundationDevices(t *testing.T) {
 
 func TestNewVideoStreamDefaults(t *testing.T) {
 	v := NewVideoStream(VideoStreamConfig{})
-	assert.Equal(t, 0, v.cfg.FPS)
-	assert.Equal(t, 0, v.cfg.Width)
-	assert.Equal(t, 0, v.cfg.Height)
+	assert.Equal(t, defaultFPS, v.cfg.FPS)
+	assert.Equal(t, defaultWidth, v.cfg.Width)
+	assert.Equal(t, defaultHeight, v.cfg.Height)
 	assert.Equal(t, defaultJPEGQuality, v.cfg.JPEGQuality)
 }
 
