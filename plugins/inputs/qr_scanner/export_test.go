@@ -61,3 +61,7 @@ type FakeLookup struct {
 func (f *FakeLookup) GetGuest(_ context.Context, _ string) (*luma.Guest, error) {
 	return f.Guest, f.Err
 }
+
+func (f *FakeLookup) CheckIn(_ context.Context, _ *luma.Guest) error {
+	return nil
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"bytes"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,8 +19,9 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://public-api.luma.com"
-	GetGuestPath   = "/v1/event/get-guest"
+	DefaultBaseURL     = "https://public-api.luma.com"
+	GetGuestPath       = "/v1/event/get-guest"
+	CheckInURL         = "https://api.luma.com/event/admin/update-check-in"
 )
 
 var (
@@ -60,24 +62,33 @@ type Client struct {
 	baseURL    string
 	apiKey     string
 	eventAPIID string
+	sessionKey string
 	http       HTTPDoer
 	timeout    time.Duration
 }
 
-func NewClient(baseURL, apiKey, eventAPIID string, timeout time.Duration) *Client {
+func NewClient(baseURL, apiKey, eventAPIID string, timeout time.Duration, opts ...func(*Client)) *Client {
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
-	return &Client{
+	c := &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		apiKey:     apiKey,
 		eventAPIID: eventAPIID,
 		http:       httpclient.Default(),
 		timeout:    timeout,
 	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
+}
+
+func WithSessionKey(key string) func(*Client) {
+	return func(c *Client) { c.sessionKey = key }
 }
 
 // SetHTTPDoer overrides the underlying http client. Intended for tests.
@@ -173,6 +184,51 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 		req.Body = body
 	}
 	return c.http.Do(req)
+}
+
+// CheckIn marks a guest as checked-in via Luma's admin endpoint.
+// Requires a session key (from a logged-in browser session).
+func (c *Client) CheckIn(ctx context.Context, guest *Guest) error {
+	if c.sessionKey == "" {
+		return fmt.Errorf("luma check-in: no session key configured")
+	}
+	if guest == nil || guest.APIID == "" {
+		return fmt.Errorf("luma check-in: missing guest api_id")
+	}
+
+	payload := map[string]string{
+		"event_api_id":    c.eventAPIID,
+		"rsvp_api_id":     guest.APIID,
+		"check_in_method": "guest-list",
+		"check_in_status": "checked-in",
+		"type":            "guest",
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("luma check-in marshal: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, CheckInURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("luma check-in request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", "luma.auth-session-key="+c.sessionKey)
+
+	resp, err := c.do(req)
+	if err != nil {
+		return fmt.Errorf("luma check-in: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("luma check-in %d: %s", resp.StatusCode, string(respBody))
+	}
+	return nil
 }
 
 // FirstName picks the best available first-name field from a Guest record.

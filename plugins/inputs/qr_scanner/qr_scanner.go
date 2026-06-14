@@ -45,6 +45,7 @@ type LumaConfig struct {
 	EventAPIID            string  `json:"event_api_id"`
 	GreetingTemplate      string  `json:"greeting_template"`
 	RequestTimeoutSeconds float64 `json:"request_timeout_seconds"`
+	SessionKey            string  `json:"session_key"`
 }
 
 // SpeakConfig, when set, makes the scanner push the resolved greeting straight
@@ -79,10 +80,9 @@ type frameSource interface {
 	Stop()
 }
 
-// guestLookup is the slice of luma.Client behavior the scanner uses;
-// abstracted for tests.
 type guestLookup interface {
 	GetGuest(ctx context.Context, pk string) (*luma.Guest, error)
+	CheckIn(ctx context.Context, guest *luma.Guest) error
 }
 
 // ttsSpeaker is the slice of *tts.ElevenLabsProvider the scanner uses to
@@ -172,7 +172,11 @@ func newSensor(cfg Config, log *zap.Logger, source frameSource) *sensor {
 		if timeout <= 0 {
 			timeout = defaultLumaTimeout
 		}
-		s.luma = luma.NewClient(cfg.Luma.BaseURL, cfg.Luma.APIKey, cfg.Luma.EventAPIID, timeout)
+		var opts []func(*luma.Client)
+		if cfg.Luma.SessionKey != "" {
+			opts = append(opts, luma.WithSessionKey(cfg.Luma.SessionKey))
+		}
+		s.luma = luma.NewClient(cfg.Luma.BaseURL, cfg.Luma.APIKey, cfg.Luma.EventAPIID, timeout, opts...)
 		s.lumaTimeout = timeout
 		s.expectedEventID = cfg.Luma.EventAPIID
 		s.greetingTmpl = cfg.Luma.GreetingTemplate
@@ -421,6 +425,13 @@ func (s *sensor) formatScanMessage(ctx context.Context, pk, eventID string) stri
 
 	name := luma.FirstName(guest)
 	greeting := luma.FormatGreeting(s.greetingTmpl, guest)
+
+	if err := s.luma.CheckIn(ctx, guest); err != nil {
+		s.log.Warn("luma check-in failed", zap.String("pk", pk), zap.Error(err))
+	} else {
+		s.log.Info("luma check-in ok", zap.String("pk", pk), zap.String("name", name))
+	}
+
 	if s.speak != nil {
 		s.speak.AddText(greeting)
 		s.log.Info("greeting pushed to tts", zap.String("pk", pk), zap.String("name", name))
