@@ -119,7 +119,7 @@ func (c *Client) GetGuest(ctx context.Context, pk string) (*Guest, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -222,7 +222,7 @@ func (c *Client) CheckIn(ctx context.Context, guest *Guest) error {
 	if err != nil {
 		return fmt.Errorf("luma check-in: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	respBody, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {

@@ -42,12 +42,12 @@ func NewTestSensor(lookup GuestLookup, greetingTmpl, expectedEventID string, tim
 type TestSensor struct{ *sensor }
 
 func (s *TestSensor) FormatScanMessage(ctx context.Context, pk, eventID string) string {
-	return s.sensor.formatScanMessage(ctx, pk, eventID)
+	return s.formatScanMessage(ctx, pk, eventID)
 }
 
 // SetSpeaker injects a fake ttsSpeaker so tests can verify the direct-TTS
 // path without touching the real ElevenLabs singleton.
-func (s *TestSensor) SetSpeaker(sp Speaker) { s.sensor.speak = sp }
+func (s *TestSensor) SetSpeaker(sp Speaker) { s.speak = sp }
 
 // Speaker is the test-side alias for the unexported ttsSpeaker interface.
 type Speaker = ttsSpeaker

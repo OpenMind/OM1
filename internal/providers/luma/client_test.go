@@ -140,7 +140,7 @@ func TestCheckIn_OK(t *testing.T) {
 		}
 		body, _ := io.ReadAll(req.Body)
 		var payload map[string]string
-		json.Unmarshal(body, &payload)
+		_ = json.Unmarshal(body, &payload)
 		if payload["rsvp_api_id"] != "gst-1" {
 			t.Fatalf("wrong rsvp_api_id: %s", payload["rsvp_api_id"])
 		}
