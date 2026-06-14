@@ -44,7 +44,9 @@ func TestGetGuest_OK_Envelope(t *testing.T) {
 		}
 		return jsonResp(200, guestEnvelope{
 			Guest: &Guest{APIID: "gst-1", UserFirstName: "Alice", UserEmail: "alice@x.com"},
-			Event: &struct{ APIID string `json:"api_id"` }{APIID: "evt-123"},
+			Event: &struct {
+				APIID string `json:"api_id"`
+			}{APIID: "evt-123"},
 		}), nil
 	})
 
