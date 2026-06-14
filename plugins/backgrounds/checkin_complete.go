@@ -19,12 +19,12 @@ func init() {
 }
 
 type checkinCompleteConfig struct {
-	FaceBaseURL     string  `json:"face_http_base_url"`
-	FaceRecentSec   float64 `json:"face_recent_sec"`
-	FaceMinArea     float64 `json:"min_face_area"`
-	PollSec         float64 `json:"poll_interval_sec"`
-	ScanIOKey       string  `json:"scan_io_key"`
-	GracePeriodSec  float64 `json:"grace_period_sec"`
+	FaceBaseURL    string  `json:"face_http_base_url"`
+	FaceRecentSec  float64 `json:"face_recent_sec"`
+	FaceMinArea    float64 `json:"min_face_area"`
+	PollSec        float64 `json:"poll_interval_sec"`
+	ScanIOKey      string  `json:"scan_io_key"`
+	GracePeriodSec float64 `json:"grace_period_sec"`
 }
 
 // CheckinComplete publishes checkin_complete:true to ModeContext once a

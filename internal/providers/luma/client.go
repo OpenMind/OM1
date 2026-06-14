@@ -4,11 +4,11 @@
 package luma
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"bytes"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	DefaultBaseURL     = "https://public-api.luma.com"
-	GetGuestPath       = "/v1/event/get-guest"
-	CheckInURL         = "https://api.luma.com/event/admin/update-check-in"
+	DefaultBaseURL = "https://public-api.luma.com"
+	GetGuestPath   = "/v1/event/get-guest"
+	CheckInURL     = "https://api.luma.com/event/admin/update-check-in"
 )
 
 var (
