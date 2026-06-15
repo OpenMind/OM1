@@ -49,5 +49,8 @@ func (s *CheckinStatusSensor) FormattedLatestBuffer() string {
 	return "\n" + in.Input + "\n"
 }
 
-func (s *CheckinStatusSensor) TriggersTick() bool { return true }
+func (s *CheckinStatusSensor) TriggersTick() bool {
+	in := providers.IO().GetInput("CheckinStatus")
+	return in != nil && in.Input != ""
+}
 func (s *CheckinStatusSensor) Stop()              {}
