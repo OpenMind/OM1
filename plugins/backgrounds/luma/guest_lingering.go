@@ -107,21 +107,19 @@ func (g *GuestLingering) Run(ctx context.Context) {
 		return
 	}
 
-	// Check if the primary guest's face is still present.
+	// Check if the primary guest's face is still present (by track_id or any large face as fallback).
 	var guestPresent bool
 	for _, face := range snap.Faces {
-		if primaryTrackID > 0 && face.TrackID == primaryTrackID && float64(face.Area) >= g.minArea {
+		if float64(face.Area) < g.minArea {
+			continue
+		}
+		if primaryTrackID > 0 && face.TrackID == primaryTrackID {
 			guestPresent = true
 			break
 		}
-	}
-	// Fallback: if no track_id match (e.g. ID reassigned), use largest face.
-	if !guestPresent && primaryTrackID == 0 {
-		for _, face := range snap.Faces {
-			if float64(face.Area) >= g.minArea {
-				guestPresent = true
-				break
-			}
+		if primaryTrackID == 0 {
+			guestPresent = true
+			break
 		}
 	}
 

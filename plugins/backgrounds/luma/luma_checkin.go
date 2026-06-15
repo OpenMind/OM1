@@ -80,28 +80,22 @@ func LumaCheckin(configMap map[string]any) (bg.Background, error) {
 }
 
 func (c *CheckinComplete) Run(ctx context.Context) {
-	// Step 1: pick up the latest successful check-in. Skip when there is none yet
-	// or when we've already acted on it.
 	checkin := luma.LastCheckIn()
 	if checkin == nil || !checkin.Time.After(c.lastHandled) {
 		util.Sleep(ctx, c.period)
 		return
 	}
 
-	// Step 2: wait a grace period after the check-in before checking for face
-	// departure, so the greeting has time to play.
 	if time.Since(checkin.Time) < c.gracePeriod {
 		util.Sleep(ctx, c.period)
 		return
 	}
 
-	// Read the primary guest's track_id stored by FaceSizeWatch.
 	var primaryTrackID int
 	if in := providers.IO().GetInput("PrimaryGuestTrackID"); in != nil && in.Input != "" {
 		primaryTrackID, _ = strconv.Atoi(in.Input)
 	}
 
-	// Step 3: check if the primary guest's face is gone.
 	snap, err := c.face.FetchSnapshot(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
@@ -111,23 +105,31 @@ func (c *CheckinComplete) Run(ctx context.Context) {
 		return
 	}
 
+	c.log.Debug("departure check",
+		zap.Int("primary_track_id", primaryTrackID),
+		zap.Int("num_faces", len(snap.Faces)),
+		zap.String("checkin_name", checkin.Name),
+	)
+
+	// Check if primary guest is still present by track_id or fallback to any large face.
 	for _, face := range snap.Faces {
-		if primaryTrackID > 0 && face.TrackID == primaryTrackID && float64(face.Area) >= c.minArea {
+		if float64(face.Area) < c.minArea {
+			continue
+		}
+		if primaryTrackID > 0 && face.TrackID == primaryTrackID {
+			util.Sleep(ctx, c.period)
+			return
+		}
+		if primaryTrackID == 0 {
 			util.Sleep(ctx, c.period)
 			return
 		}
 	}
-	// Fallback: if no track_id match, check if any large face remains.
-	if primaryTrackID == 0 {
-		for _, face := range snap.Faces {
-			if float64(face.Area) >= c.minArea {
-				util.Sleep(ctx, c.period)
-				return
-			}
-		}
-	}
 
-	c.log.Info("guest departed after successful check-in, triggering transition", zap.String("name", checkin.Name))
+	c.log.Info("guest departed after successful check-in, triggering transition",
+		zap.String("name", checkin.Name),
+		zap.Int("primary_track_id", primaryTrackID),
+	)
 	providers.ModeContext().Publish(map[string]any{"checkin_complete": true})
 	c.lastHandled = checkin.Time
 
