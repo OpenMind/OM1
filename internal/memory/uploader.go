@@ -171,8 +171,11 @@ func (u *Uploader) createTarGz(w io.Writer) error {
 		if err != nil {
 			return nil
 		}
+		if relPath == "." {
+			return nil
+		}
 
-		if relPath == "index" || strings.HasPrefix(relPath, "index/") {
+		if relPath == "index" || strings.HasPrefix(relPath, "index"+string(filepath.Separator)) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -270,5 +273,7 @@ func (u *Uploader) readMarker() *time.Time {
 }
 
 func (u *Uploader) writeMarker() {
-	_ = os.WriteFile(u.markerFile, []byte(time.Now().Format("2006-01-02 15:04")), 0o644)
+	if err := os.WriteFile(u.markerFile, []byte(time.Now().Format("2006-01-02 15:04")), 0o644); err != nil {
+		u.log.Warn("failed to write upload marker", zap.Error(err))
+	}
 }
