@@ -1,9 +1,8 @@
-package backgrounds
+package luma
 
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -11,11 +10,12 @@ import (
 	bg "github.com/openmind/om1/internal/backgrounds"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/luma"
 	"github.com/openmind/om1/internal/util"
 )
 
 func init() {
-	bg.Register("CheckinComplete", NewCheckinComplete)
+	bg.Register("LumaCheckin", LumaCheckin)
 }
 
 type checkinCompleteConfig struct {
@@ -23,25 +23,19 @@ type checkinCompleteConfig struct {
 	FaceRecentSec  float64 `json:"face_recent_sec"`
 	FaceMinArea    float64 `json:"min_face_area"`
 	PollSec        float64 `json:"poll_interval_sec"`
-	ScanIOKey      string  `json:"scan_io_key"`
 	GracePeriodSec float64 `json:"grace_period_sec"`
 }
 
-// CheckinComplete publishes checkin_complete:true to ModeContext once a
-// successful QR scan has been recorded AND the guest's face is no longer
-// visible (or too small).
 type CheckinComplete struct {
 	log         *zap.Logger
 	face        *providers.FacePresenceProvider
 	period      time.Duration
-	scanIOKey   string
 	gracePeriod time.Duration
 	minArea     float64
-	scanSeen    bool
-	scanTime    time.Time
+	lastHandled time.Time // timestamp of the scan we've already acted on
 }
 
-func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
+func LumaCheckin(configMap map[string]any) (bg.Background, error) {
 	var cfg checkinCompleteConfig
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &cfg)
@@ -58,9 +52,6 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 	if cfg.PollSec <= 0 {
 		cfg.PollSec = 1.0
 	}
-	if cfg.ScanIOKey == "" {
-		cfg.ScanIOKey = "QRScannerRTSP"
-	}
 	if cfg.GracePeriodSec <= 0 {
 		cfg.GracePeriodSec = 5.0
 	}
@@ -74,7 +65,6 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 	})
 
 	log.Info("initialized",
-		zap.String("scan_io_key", cfg.ScanIOKey),
 		zap.Float64("grace_period_sec", cfg.GracePeriodSec),
 	)
 
@@ -82,32 +72,23 @@ func NewCheckinComplete(configMap map[string]any) (bg.Background, error) {
 		log:         log,
 		face:        face,
 		period:      time.Duration(cfg.PollSec * float64(time.Second)),
-		scanIOKey:   cfg.ScanIOKey,
 		gracePeriod: time.Duration(cfg.GracePeriodSec * float64(time.Second)),
 		minArea:     cfg.FaceMinArea,
 	}, nil
 }
 
 func (c *CheckinComplete) Run(ctx context.Context) {
-	// Step 1: check if a successful scan has been recorded.
-	if !c.scanSeen {
-		if in := providers.IO().GetInput(c.scanIOKey); in != nil {
-			if strings.HasPrefix(in.Input, "qr_scan: name=") {
-				c.scanSeen = true
-				c.scanTime = in.Timestamp
-				c.log.Info("successful scan detected", zap.String("value", in.Input))
-			}
-		}
-	}
-
-	if !c.scanSeen {
+	// Step 1: pick up the latest successful check-in. Skip when there is none yet
+	// or when we've already acted on it.
+	checkin := luma.LastCheckIn()
+	if checkin == nil || !checkin.Time.After(c.lastHandled) {
 		util.Sleep(ctx, c.period)
 		return
 	}
 
-	// Step 2: wait a grace period after the scan before checking for face
+	// Step 2: wait a grace period after the check-in before checking for face
 	// departure, so the greeting has time to play.
-	if time.Since(c.scanTime) < c.gracePeriod {
+	if time.Since(checkin.Time) < c.gracePeriod {
 		util.Sleep(ctx, c.period)
 		return
 	}
@@ -133,9 +114,9 @@ func (c *CheckinComplete) Run(ctx context.Context) {
 		return
 	}
 
-	c.log.Info("guest departed after successful scan, triggering transition")
+	c.log.Info("guest departed after successful check-in, triggering transition", zap.String("name", checkin.Name))
 	providers.ModeContext().Publish(map[string]any{"checkin_complete": true})
-	c.scanSeen = false
+	c.lastHandled = checkin.Time
 
 	util.Sleep(ctx, c.period)
 }

@@ -1,6 +1,3 @@
-// Package luma provides a thin client for Luma's public API. Currently it only
-// exposes /v1/event/get-guest, which is enough to look up a guest by the pk
-// embedded in a check-in QR code and surface their name to the rest of OM1.
 package luma
 
 import (
@@ -53,17 +50,12 @@ type guestEnvelope struct {
 	} `json:"event"`
 }
 
-// HTTPDoer is satisfied by *http.Client; abstracted for tests.
-type HTTPDoer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
 type Client struct {
 	baseURL    string
 	apiKey     string
 	eventAPIID string
 	sessionKey string
-	http       HTTPDoer
+	http       *http.Client
 	timeout    time.Duration
 }
 
@@ -91,15 +83,10 @@ func WithSessionKey(key string) func(*Client) {
 	return func(c *Client) { c.sessionKey = key }
 }
 
-// SetHTTPDoer overrides the underlying http client. Intended for tests.
-func (c *Client) SetHTTPDoer(d HTTPDoer) { c.http = d }
-
 // EventAPIID returns the configured event id.
 func (c *Client) EventAPIID() string { return c.eventAPIID }
 
-// GetGuest fetches the guest record for the given key (g-<id> or ticket key).
-// Luma's get-guest requires both event_id (the configured event) and id (the
-// guest/ticket key from the QR).
+// GetGuest retrieves a guest record by its API ID.
 func (c *Client) GetGuest(ctx context.Context, pk string) (*Guest, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -186,8 +173,6 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 	return c.http.Do(req)
 }
 
-// CheckIn marks a guest as checked-in via Luma's admin endpoint.
-// Requires a session key (from a logged-in browser session).
 func (c *Client) CheckIn(ctx context.Context, guest *Guest) error {
 	if c.sessionKey == "" {
 		return fmt.Errorf("luma check-in: no session key configured")
@@ -246,23 +231,4 @@ func FirstName(g *Guest) string {
 		}
 	}
 	return "friend"
-}
-
-// FormatGreeting interpolates {first_name}, {last_name}, {name}, {email} into
-// template using the guest's fields.
-func FormatGreeting(template string, g *Guest) string {
-	if g == nil {
-		return template
-	}
-	name := g.UserName
-	if name == "" {
-		name = FirstName(g)
-	}
-	r := strings.NewReplacer(
-		"{first_name}", FirstName(g),
-		"{last_name}", g.UserLastName,
-		"{name}", name,
-		"{email}", g.UserEmail,
-	)
-	return r.Replace(template)
 }

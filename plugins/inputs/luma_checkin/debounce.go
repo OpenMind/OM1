@@ -1,4 +1,4 @@
-package qr_scanner
+package luma_checkin
 
 import (
 	"sync"

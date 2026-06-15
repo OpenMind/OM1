@@ -1,9 +1,7 @@
-package qr_scanner_test
+package luma_checkin
 
 import (
 	"testing"
-
-	"github.com/openmind/om1/plugins/inputs/qr_scanner"
 )
 
 func TestParseLumaCheckinURL(t *testing.T) {
@@ -100,7 +98,7 @@ func TestParseLumaCheckinURL(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotEvent, gotPK, gotOK := qr_scanner.ParseLumaCheckinURL(tc.input)
+			gotEvent, gotPK, gotOK := parseLumaCheckinURL(tc.input)
 			if gotOK != tc.wantOK {
 				t.Fatalf("ok mismatch: got %v want %v", gotOK, tc.wantOK)
 			}

@@ -1,4 +1,4 @@
-package qr_scanner_test
+package luma_checkin
 
 import (
 	"bytes"
@@ -10,8 +10,6 @@ import (
 
 	"github.com/makiuchi-d/gozxing"
 	"github.com/makiuchi-d/gozxing/qrcode"
-
-	"github.com/openmind/om1/plugins/inputs/qr_scanner"
 )
 
 func TestDecodeQRRoundTrip(t *testing.T) {
@@ -19,7 +17,7 @@ func TestDecodeQRRoundTrip(t *testing.T) {
 
 	jpegBytes := encodeQRAsJPEG(t, payload, 360)
 
-	got, err := qr_scanner.DecodeQR(jpegBytes)
+	got, err := decodeQR(jpegBytes)
 	if err != nil {
 		t.Fatalf("DecodeQR: %v", err)
 	}
@@ -31,8 +29,8 @@ func TestDecodeQRRoundTrip(t *testing.T) {
 func TestDecodeQRReturnsNotFoundOnBlankFrame(t *testing.T) {
 	jpegBytes := encodeBlankJPEG(t, 100, 100)
 
-	_, err := qr_scanner.DecodeQR(jpegBytes)
-	if !errors.Is(err, qr_scanner.ErrQRNotFound) {
+	_, err := decodeQR(jpegBytes)
+	if !errors.Is(err, errQRNotFound) {
 		t.Fatalf("expected ErrQRNotFound, got %v", err)
 	}
 }

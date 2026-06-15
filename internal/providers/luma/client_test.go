@@ -19,9 +19,9 @@ func stubClient(fn roundTripFunc) *http.Client {
 	return &http.Client{Transport: fn}
 }
 
-func newTestClient(doer HTTPDoer, opts ...func(*Client)) *Client {
+func newTestClient(doer *http.Client, opts ...func(*Client)) *Client {
 	c := NewClient("https://test.luma.com", "test-key", "evt-123", 5*time.Second, opts...)
-	c.SetHTTPDoer(doer)
+	c.http = doer
 	return c
 }
 
@@ -202,28 +202,6 @@ func TestFirstName(t *testing.T) {
 				t.Fatalf("got %q want %q", got, tc.want)
 			}
 		})
-	}
-}
-
-func TestFormatGreeting(t *testing.T) {
-	g := &Guest{
-		UserFirstName: "Alice",
-		UserLastName:  "Smith",
-		UserName:      "Alice Smith",
-		UserEmail:     "alice@x.com",
-	}
-	tmpl := "Hi {first_name} {last_name}, welcome {name}! Contact: {email}"
-	got := FormatGreeting(tmpl, g)
-	want := "Hi Alice Smith, welcome Alice Smith! Contact: alice@x.com"
-	if got != want {
-		t.Fatalf("got %q want %q", got, want)
-	}
-}
-
-func TestFormatGreeting_Nil(t *testing.T) {
-	got := FormatGreeting("Hello {first_name}!", nil)
-	if got != "Hello {first_name}!" {
-		t.Fatalf("got %q", got)
 	}
 }
 

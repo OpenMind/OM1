@@ -1,13 +1,11 @@
-package qr_scanner
+package luma_checkin
 
 import (
 	"net/url"
 	"strings"
 )
 
-// parseLumaCheckinURL extracts the event ID and pk from a Luma check-in URL of
-// the form https://luma.com/check-in/<eventID>?pk=<pk>. Accepted hosts are
-// luma.com, www.luma.com, and lu.ma.
+// parseLumaCheckinURL extracts the event ID and guest/ticket key from a Luma check-in URL.
 func parseLumaCheckinURL(s string) (eventID, pk string, ok bool) {
 	u, err := url.Parse(strings.TrimSpace(s))
 	if err != nil {

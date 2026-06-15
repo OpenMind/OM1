@@ -1,4 +1,4 @@
-package backgrounds
+package luma
 
 import (
 	"context"

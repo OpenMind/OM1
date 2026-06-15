@@ -1,4 +1,4 @@
-package qr_scanner
+package luma_checkin
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 
 // errQRNotFound signals that no QR code was found in the frame. Callers should
 // treat this as the common case and skip silently.
-var errQRNotFound = errors.New("qr_scanner: no qr code in frame")
+var errQRNotFound = errors.New("luma_checkin: no qr code in frame")
 
 // decodeQR decodes a single QR code from a JPEG-encoded frame. It returns the
 // raw text payload of the code, or errQRNotFound if no code is present.
