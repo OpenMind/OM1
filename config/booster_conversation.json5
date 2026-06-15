@@ -11,9 +11,11 @@
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
     min_score: 0.6,
   },
+  memory: {
+    enabled: true,
+  },
   agent_inputs: [
     {
-      name: "robot_action",
       type: "GoogleASRInput",
       config: {
         rate: 16000,
@@ -39,7 +41,6 @@
       implementation: "passthrough",
       connector: "elevenlabs_tts",
       config: {
-      name: "robot_action",
         enable_tts_interrupt: false,
       },
     },
