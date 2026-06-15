@@ -24,7 +24,7 @@ func Default() *http.Client {
 			DisableCompression:  false,
 			ForceAttemptHTTP2:   true,
 		}
-		defaultClient = &http.Client{Transport: transport}
+		defaultClient = &http.Client{Transport: transport, Timeout: 60 * time.Second}
 	})
 	return defaultClient
 }

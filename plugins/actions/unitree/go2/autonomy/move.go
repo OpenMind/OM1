@@ -220,11 +220,11 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 
 	switch action {
 	case "turn left":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left")
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", true)
 	case "turn right":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right")
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", true)
 	case "move forwards":
-		c.queuePathMove(pos, c.paths.Movement().Advance, "advance")
+		c.queuePathMove(pos, c.paths.Movement().Advance, "advance", false)
 	case "move back":
 		c.processMoveBack(pos)
 	case "stand still":
@@ -236,14 +236,21 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 	return nil, nil
 }
 
-// queuePathMove picks a random safe path from options, then queues a movement command.
-func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, label string) {
+// queuePathMove queues a movement toward a safe path: the smallest-magnitude
+// heading when gentlest, else a random one.
+func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, label string, gentlest bool) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
 
-	angle := pathAngles[options[c.rng.Intn(len(options))]]
+	var chosen uint32
+	if gentlest {
+		chosen = gentlestPath(options)
+	} else {
+		chosen = options[c.rng.Intn(len(options))]
+	}
+	angle := pathAngles[chosen]
 
 	c.queue(&moveCommand{
 		dx:           0.5,
@@ -253,6 +260,17 @@ func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, la
 		turnComplete: angle == 0,
 		speed:        moveSpeed,
 	})
+}
+
+// gentlestPath returns the option whose heading is closest to straight ahead.
+func gentlestPath(options []uint32) uint32 {
+	best := options[0]
+	for _, o := range options[1:] {
+		if math.Abs(pathAngles[o]) < math.Abs(pathAngles[best]) {
+			best = o
+		}
+	}
+	return best
 }
 
 // processMoveBack queues a straight retreat with no turning phase.
