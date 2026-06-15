@@ -111,8 +111,10 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 		return nil, nil
 	}
 
+	priority := tts.Priority.Load()
+
 	e.silenceMu.Lock()
-	if e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
+	if !priority && e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
 		e.silenceCounter++
 		e.silenceMu.Unlock()
 		e.log.Info("skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
@@ -121,7 +123,7 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
-	if e.skipWhenBusy && tts.Busy() {
+	if !priority && e.skipWhenBusy && tts.Busy() {
 		e.log.Info("skipping (tts busy)", zap.String("text", text))
 		return nil, nil
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/providers/tts"
 	video "github.com/openmind/om1/internal/providers/vlm"
 )
 
@@ -311,6 +312,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.alerted = true
 		s.clearCount = 0
 		s.lastAlert = text
+		tts.Priority.Store(true)
 		return text
 	}
 
@@ -333,6 +335,7 @@ func (s *laydownDetector) classify(text string) string {
 
 		s.alerted = false
 		s.clearCount = 0
+		tts.Priority.Store(false)
 		s.log.Info("alert cleared",
 			zap.Int("clear_streak", s.clearStreak),
 			zap.Duration("held", held),
@@ -394,6 +397,7 @@ func (s *laydownDetector) Stop() {
 	cancel := s.cancel
 	s.mu.Unlock()
 
+	tts.Priority.Store(false)
 	if cancel != nil {
 		cancel()
 	}

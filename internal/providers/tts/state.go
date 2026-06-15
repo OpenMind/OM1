@@ -4,6 +4,8 @@ import "sync/atomic"
 
 var Speaking atomic.Bool
 
+var Priority atomic.Bool
+
 var Interrupt atomic.Bool
 
 var generation atomic.Uint64
