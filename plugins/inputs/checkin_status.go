@@ -2,6 +2,7 @@ package inputs
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -28,7 +29,22 @@ func (s *CheckinStatusSensor) Listen(ctx context.Context) (<-chan any, error) {
 	out := make(chan any)
 	go func() {
 		defer close(out)
-		<-ctx.Done()
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				in := providers.IO().GetInput("CheckinStatus")
+				if in != nil && in.Input != "" {
+					select {
+					case out <- in.Input:
+					default:
+					}
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
 	}()
 	return out, nil
 }
@@ -37,8 +53,12 @@ func (s *CheckinStatusSensor) Poll(_ context.Context) (any, error) {
 	return nil, nil
 }
 
-func (s *CheckinStatusSensor) RawToText(_ context.Context, _ any) (*inputs.Message, error) {
-	return nil, nil
+func (s *CheckinStatusSensor) RawToText(_ context.Context, raw any) (*inputs.Message, error) {
+	msg, ok := raw.(string)
+	if !ok || msg == "" {
+		return nil, nil
+	}
+	return &inputs.Message{Message: msg}, nil
 }
 
 func (s *CheckinStatusSensor) FormattedLatestBuffer() string {
@@ -49,8 +69,5 @@ func (s *CheckinStatusSensor) FormattedLatestBuffer() string {
 	return "\n" + in.Input + "\n"
 }
 
-func (s *CheckinStatusSensor) TriggersTick() bool {
-	in := providers.IO().GetInput("CheckinStatus")
-	return in != nil && in.Input != ""
-}
+func (s *CheckinStatusSensor) TriggersTick() bool { return true }
 func (s *CheckinStatusSensor) Stop()              {}
