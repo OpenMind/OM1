@@ -3,6 +3,7 @@ package luma
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -81,16 +82,22 @@ func (f *FaceSizeWatch) Run(ctx context.Context) {
 		return
 	}
 
-	var totalFaces int
+	var largestArea int
+	var largestTrackID int
 	for _, face := range snap.Faces {
-		if float64(face.Area) >= f.minArea {
-			totalFaces++
+		if face.Area > largestArea {
+			largestArea = face.Area
+			largestTrackID = face.TrackID
 		}
 	}
-	if totalFaces > 0 {
+	if float64(largestArea) >= f.minArea {
 		f.log.Info("face close enough, triggering transition",
-			zap.Int("faces", totalFaces),
-			zap.String("closest", snap.ClosestName),
+			zap.Int("area", largestArea),
+			zap.Int("track_id", largestTrackID),
+		)
+		providers.IO().AddInput("PrimaryGuestTrackID",
+			fmt.Sprintf("%d", largestTrackID),
+			time.Now(),
 		)
 		providers.ModeContext().Publish(map[string]any{"face_close_enough": true})
 	}
