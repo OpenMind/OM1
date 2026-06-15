@@ -51,6 +51,8 @@ func (MoveAction) EnumValues() []string {
 	return []string{
 		"turn left",
 		"turn right",
+		"turn left slightly",
+		"turn right slightly",
 		"move forwards",
 		"move back",
 		"stand still",
@@ -67,7 +69,7 @@ func init() {
 		"Action interface for autonomous Unitree Go2 movement. "+
 			"Validates the requested direction against lidar-derived safe paths and "+
 			"drives the robot via geometry_msgs/Twist commands on the /cmd_vel Zenoh topic. "+
-			"Supported movements: turn left, turn right, move forwards, move back, stand still.",
+			"Supported movements: turn left, turn right, turn left slightly, turn right slightly, move forwards, move back, stand still.",
 		MoveInput{},
 	)
 	actions.Register("unitree_go2_autonomy/move", NewMoveConnector)
@@ -220,9 +222,13 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 
 	switch action {
 	case "turn left":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", true)
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", false)
 	case "turn right":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", true)
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", false)
+	case "turn left slightly":
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left slightly", true)
+	case "turn right slightly":
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right slightly", true)
 	case "move forwards":
 		c.queuePathMove(pos, c.paths.Movement().Advance, "advance", false)
 	case "move back":
