@@ -75,6 +75,7 @@ func LumaCheckin(configMap map[string]any) (bg.Background, error) {
 		period:      time.Duration(cfg.PollSec * float64(time.Second)),
 		gracePeriod: time.Duration(cfg.GracePeriodSec * float64(time.Second)),
 		minArea:     cfg.FaceMinArea,
+		lastHandled: time.Now(),
 	}, nil
 }
 

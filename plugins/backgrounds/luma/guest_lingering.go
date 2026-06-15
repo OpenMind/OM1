@@ -76,6 +76,7 @@ func NewGuestLingering(configMap map[string]any) (bg.Background, error) {
 		period:      time.Duration(cfg.PollSec * float64(time.Second)),
 		gracePeriod: time.Duration(cfg.GracePeriodSec * float64(time.Second)),
 		minArea:     cfg.MinFaceArea,
+		lastHandled: time.Now(),
 	}, nil
 }
 
