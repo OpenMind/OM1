@@ -313,6 +313,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.clearCount = 0
 		s.lastAlert = text
 		tts.Priority.Store(true)
+		providers.SetPersonDownAlert(true)
 		return text
 	}
 
@@ -336,6 +337,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.alerted = false
 		s.clearCount = 0
 		tts.Priority.Store(false)
+		providers.SetPersonDownAlert(false)
 		tts.RequestInterrupt()
 		s.log.Info("alert cleared",
 			zap.Int("clear_streak", s.clearStreak),
@@ -399,6 +401,7 @@ func (s *laydownDetector) Stop() {
 	s.mu.Unlock()
 
 	tts.Priority.Store(false)
+	providers.SetPersonDownAlert(false)
 	if cancel != nil {
 		cancel()
 	}

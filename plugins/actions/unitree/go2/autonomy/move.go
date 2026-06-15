@@ -222,9 +222,9 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 
 	switch action {
 	case "turn left":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", false)
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", providers.PersonDownAlert())
 	case "turn right":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", false)
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", providers.PersonDownAlert())
 	case "turn left slightly":
 		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left slightly", true)
 	case "turn right slightly":
