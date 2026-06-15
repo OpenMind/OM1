@@ -123,7 +123,7 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
 
-	if !priority && e.skipWhenBusy && tts.Busy() {
+	if e.skipWhenBusy && tts.Busy() {
 		e.log.Info("skipping (tts busy)", zap.String("text", text))
 		return nil, nil
 	}

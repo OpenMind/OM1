@@ -336,6 +336,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.alerted = false
 		s.clearCount = 0
 		tts.Priority.Store(false)
+		tts.RequestInterrupt()
 		s.log.Info("alert cleared",
 			zap.Int("clear_streak", s.clearStreak),
 			zap.Duration("held", held),
