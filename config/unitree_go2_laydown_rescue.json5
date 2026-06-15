@@ -1,6 +1,6 @@
 {
   version: "v1.1.0",
-  hertz: 0.1,
+  hertz: 0.5,
   name: "bits",
   api_key: "${OM_API_KEY:-openmind_free}",
   use_sim: ${USE_SIM:-false},
@@ -77,6 +77,7 @@
       connector: "move",
       config: {
         cmd_vel_topic: "cmd_vel",
+        gentle_turns: true,
       },
     },
   ],

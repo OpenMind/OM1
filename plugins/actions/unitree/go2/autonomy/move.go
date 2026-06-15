@@ -117,8 +117,9 @@ type moveConnector struct {
 
 	aiControlEnabled atomic.Bool
 
-	mode  string
-	guard *guardWatcher
+	mode        string
+	gentleTurns bool
+	guard       *guardWatcher
 
 	rng *rand.Rand
 
@@ -138,8 +139,9 @@ func NewMoveConnector(cfg map[string]any) (actions.Connector, error) {
 		log:   log,
 		odom:  go2.OdomZenoh(),
 		paths: providers.NewPathsProvider(),
-		mode:  util.StringFrom(cfg["mode"], ""),
-		rng:   rand.New(rand.NewSource(time.Now().UnixNano())),
+		mode:        util.StringFrom(cfg["mode"], ""),
+		gentleTurns: util.BoolFrom(cfg["gentle_turns"], false),
+		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	c.aiControlEnabled.Store(true)
 
@@ -222,9 +224,9 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 
 	switch action {
 	case "turn left":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", providers.PersonDownAlert())
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", c.gentleTurns || providers.PersonDownAlert())
 	case "turn right":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", providers.PersonDownAlert())
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", c.gentleTurns || providers.PersonDownAlert())
 	case "turn left slightly":
 		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left slightly", true)
 	case "turn right slightly":
