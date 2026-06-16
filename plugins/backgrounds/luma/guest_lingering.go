@@ -65,6 +65,8 @@ func NewGuestLingering(configMap map[string]any) (bg.Background, error) {
 		Timeout:   2 * time.Second,
 	})
 
+	providers.IO().AddInput("CheckinStatus", "", time.Now())
+
 	log.Info("initialized",
 		zap.Float64("min_face_area", cfg.MinFaceArea),
 		zap.Float64("grace_period_sec", cfg.GracePeriodSec),
