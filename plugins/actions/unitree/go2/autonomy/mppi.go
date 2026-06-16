@@ -64,7 +64,7 @@ type MPPIConnector struct {
 
 // NewMPPIConnector builds the MPPI-backed autonomy connector from its config.
 func NewMPPIConnector(cfg map[string]any) (actions.Connector, error) {
-	log := logger.Get().Named("unitree_go2_autonomy/move_mppi")
+	log := logger.Get().Named("unitree_go2_autonomy/mppi")
 
 	goalTopic := util.StringFrom(cfg["goal_topic"], defaultGoalTopic)
 	statusTopic := util.StringFrom(cfg["status_topic"], defaultStatusTopic)
