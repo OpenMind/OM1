@@ -19,13 +19,6 @@ import (
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
-// This connector is an alternative to the default turn-then-drive connector
-// (move.go). Instead of driving the robot itself, it picks an obstacle-free
-// direction from om_paths and publishes a goal point a short distance ahead on
-// "om/mppi/goal" (geometry_msgs/Pose, robot body frame). The om_mppi local
-// planner turns that goal into the smooth, obstacle-avoiding /cmd_vel that drives
-// the robot there, and reports completion on "om/mppi/status" (std_msgs/String),
-// which gates when the next AI command may be issued.
 const (
 	defaultGoalTopic   = "om/mppi/goal"
 	defaultStatusTopic = "om/mppi/status"
@@ -35,50 +28,11 @@ const (
 )
 
 func init() {
-	// The "unitree_go2_autonomy" interface is registered by move.go; this only
-	// adds an alternative connector implementation.
-	actions.Register("unitree_go2_autonomy/move_mppi", NewMoveMPPIConnector)
+	actions.Register("unitree_go2_autonomy/mppi", NewMPPIConnector)
 }
 
-// serializePose encodes a geometry_msgs/Pose in CDR little-endian format, ready
-// to publish on a ROS2 topic.  Yaw is encoded as a planar quaternion.
-//
-// Wire layout (absolute offsets from start of buffer):
-//
-//	[0]  CDR encapsulation header: 0x00 0x01 0x00 0x00
-//	[4]  position.x     float64 LE
-//	[12] position.y     float64 LE
-//	[20] position.z     float64 LE
-//	[28] orientation.x  float64 LE
-//	[36] orientation.y  float64 LE
-//	[44] orientation.z  float64 LE
-//	[52] orientation.w  float64 LE
-//
-// Every field is a float64 on an 8-byte aligned data offset, so no interior
-// padding is required.
-func serializePose(x, y, yaw float64, reverse bool) []byte {
-	buf := make([]byte, 0, 4+7*8)
-
-	// position.z carries the reverse flag (1 = back straight up).
-	z := 0.0
-	if reverse {
-		z = 1.0
-	}
-
-	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
-	buf = zenohsession.AppendFloat64LE(buf, x)
-	buf = zenohsession.AppendFloat64LE(buf, y)
-	buf = zenohsession.AppendFloat64LE(buf, z)
-	buf = zenohsession.AppendFloat64LE(buf, 0)
-	buf = zenohsession.AppendFloat64LE(buf, 0)
-	buf = zenohsession.AppendFloat64LE(buf, math.Sin(yaw/2))
-	buf = zenohsession.AppendFloat64LE(buf, math.Cos(yaw/2))
-
-	return buf
-}
-
-// moveMPPIConnector drives the Go2 by handing goals to the om_mppi planner.
-type moveMPPIConnector struct {
+// MPPIConnector drives the Go2 by handing goals to the om_mppi planner.
+type MPPIConnector struct {
 	log *zap.Logger
 
 	odom  *go2.OdomZenohProvider
@@ -104,20 +58,12 @@ type moveMPPIConnector struct {
 	active   bool
 	issuedAt time.Time
 
-	// minActiveHold is the minimum time an active goal must run before a new
-	// "stand still" command will preempt it.  At hertz=1 the LLM picks a fresh
-	// action every second and any single "stand still" tick used to wipe out
-	// perfectly-good in-progress goals (looks like the robot is stuck because
-	// it keeps starting and immediately stopping).  Holding briefly lets MPPI
-	// get real progress, while a sustained "stand still" intent (two ticks in
-	// a row, or one tick after the goal has had a chance to run) still stops
-	// the robot.
 	minActiveHold time.Duration
 	lastAction    string
 }
 
-// NewMoveMPPIConnector builds the MPPI-backed autonomy connector from its config.
-func NewMoveMPPIConnector(cfg map[string]any) (actions.Connector, error) {
+// NewMPPIConnector builds the MPPI-backed autonomy connector from its config.
+func NewMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 	log := logger.Get().Named("unitree_go2_autonomy/move_mppi")
 
 	goalTopic := util.StringFrom(cfg["goal_topic"], defaultGoalTopic)
@@ -125,7 +71,7 @@ func NewMoveMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 	aiReqTopic := util.StringFrom(cfg["ai_request_topic"], defaultAIRequestTopic)
 	aiRespTopic := util.StringFrom(cfg["ai_response_topic"], defaultAIRespTopic)
 
-	c := &moveMPPIConnector{
+	c := &MPPIConnector{
 		log:           log,
 		odom:          go2.OdomZenoh(),
 		paths:         providers.NewPathsProvider(),
@@ -178,7 +124,8 @@ func NewMoveMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 	return c, nil
 }
 
-func (c *moveMPPIConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
+// Connect accepts AI commands to move the robot, translating them into MPPI goals and publishing on the goal topic.
+func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("unitree_go2_autonomy/move_mppi: unexpected input type %T", input)
@@ -197,14 +144,6 @@ func (c *moveMPPIConnector) Connect(_ context.Context, input actions.Input) (act
 		return nil, nil
 	}
 
-	// "stand still" is honoured when:
-	//   - the connector is idle (no active goal), OR
-	//   - the active goal has run for at least ``minActiveHold`` seconds, OR
-	//   - the previous AI command was also "stand still" (i.e. the LLM is
-	//     consistently asking for stop, not just a one-tick blip).
-	// This stops single-tick LLM noise (the LLM picks an action every
-	// ``hertz`` seconds and "stand still" appears in several of its prompt
-	// examples) from cancelling perfectly-good in-progress moves.
 	if action == "stand still" {
 		c.mu.Lock()
 		active := c.active
@@ -262,9 +201,8 @@ func (c *moveMPPIConnector) Connect(_ context.Context, input actions.Input) (act
 	return nil, nil
 }
 
-// issueGoal picks a random safe path from options and publishes a goal point a
-// fixed distance ahead along it (body frame).
-func (c *moveMPPIConnector) issueGoal(options []uint32, label string) {
+// issueGoal selects a random option from the provided path indices.
+func (c *MPPIConnector) issueGoal(options []uint32, label string) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
@@ -283,7 +221,7 @@ func (c *moveMPPIConnector) issueGoal(options []uint32, label string) {
 }
 
 // issueRetreat publishes a goal a short distance straight behind the robot.
-func (c *moveMPPIConnector) issueRetreat(allowed bool) {
+func (c *MPPIConnector) issueRetreat(allowed bool) {
 	if !allowed {
 		c.log.Warn("cannot retreat due to barrier")
 		return
@@ -296,7 +234,7 @@ func (c *moveMPPIConnector) issueRetreat(allowed bool) {
 }
 
 // publishGoal serialises and sends a body-frame goal pose to om_mppi.
-func (c *moveMPPIConnector) publishGoal(x, y, yaw float64) error {
+func (c *MPPIConnector) publishGoal(x, y, yaw float64) error {
 	if c.goalPub == nil {
 		return fmt.Errorf("goal publisher unavailable")
 	}
@@ -307,10 +245,8 @@ func (c *moveMPPIConnector) publishGoal(x, y, yaw float64) error {
 	return nil
 }
 
-// publishReverseGoal sends a goal `distance` behind the robot at the same
-// heading, flagged so om_mppi reverses straight instead of U-turning (which
-// needs rotation room a cornered robot does not have).
-func (c *moveMPPIConnector) publishReverseGoal(distance float64) error {
+// publishReverseGoal sends a goal that commands the robot to back up in a straight line.
+func (c *MPPIConnector) publishReverseGoal(distance float64) error {
 	if c.goalPub == nil {
 		return fmt.Errorf("goal publisher unavailable")
 	}
@@ -322,7 +258,7 @@ func (c *moveMPPIConnector) publishReverseGoal(distance float64) error {
 }
 
 // cancelGoal stops the planner by sending a goal at the origin and clears state.
-func (c *moveMPPIConnector) cancelGoal() {
+func (c *MPPIConnector) cancelGoal() {
 	_ = c.publishGoal(0, 0, 0)
 	c.mu.Lock()
 	c.active = false
@@ -330,7 +266,7 @@ func (c *moveMPPIConnector) cancelGoal() {
 }
 
 // markActive records that a goal is in flight, for gating and timeout.
-func (c *moveMPPIConnector) markActive() {
+func (c *MPPIConnector) markActive() {
 	c.mu.Lock()
 	c.active = true
 	c.issuedAt = time.Now()
@@ -339,7 +275,7 @@ func (c *moveMPPIConnector) markActive() {
 
 // onStatus consumes om_mppi status updates; a terminal status frees the
 // connector to accept the next AI command.
-func (c *moveMPPIConnector) onStatus(data []byte) {
+func (c *MPPIConnector) onStatus(data []byte) {
 	status, _, err := readCDRString(data, 4, false)
 	if err != nil {
 		c.log.Error("failed to decode mppi status", zap.Error(err))
@@ -357,7 +293,7 @@ func (c *moveMPPIConnector) onStatus(data []byte) {
 
 // Tick is a safety backstop: if a goal never reports completion, clear it after
 // commandTimeout so the robot does not get stuck on a stale command.
-func (c *moveMPPIConnector) Tick(ctx context.Context) {
+func (c *MPPIConnector) Tick(ctx context.Context) {
 	select {
 	case <-ctx.Done():
 		return
@@ -379,7 +315,7 @@ func (c *moveMPPIConnector) Tick(ctx context.Context) {
 
 // onAIStatusRequest handles AI control enable/disable/status requests and
 // publishes the corresponding response (mirrors move.go).
-func (c *moveMPPIConnector) onAIStatusRequest(data []byte) {
+func (c *MPPIConnector) onAIStatusRequest(data []byte) {
 	if c.aiRespPub == nil {
 		return
 	}
@@ -416,7 +352,7 @@ func (c *moveMPPIConnector) onAIStatusRequest(data []byte) {
 }
 
 // Stop releases all Zenoh resources and the guard watcher.
-func (c *moveMPPIConnector) Stop() {
+func (c *MPPIConnector) Stop() {
 	if c.guard != nil {
 		c.guard.stop()
 		c.guard = nil
@@ -442,4 +378,40 @@ func (c *moveMPPIConnector) Stop() {
 		c.session = nil
 	}
 	c.log.Info("mppi connector stopped")
+}
+
+// serializePose encodes a geometry_msgs/Pose in CDR little-endian format, ready
+// to publish on a ROS2 topic.  Yaw is encoded as a planar quaternion.
+//
+// Wire layout (absolute offsets from start of buffer):
+//
+//	[0]  CDR encapsulation header: 0x00 0x01 0x00 0x00
+//	[4]  position.x     float64 LE
+//	[12] position.y     float64 LE
+//	[20] position.z     float64 LE
+//	[28] orientation.x  float64 LE
+//	[36] orientation.y  float64 LE
+//	[44] orientation.z  float64 LE
+//	[52] orientation.w  float64 LE
+//
+// Every field is a float64 on an 8-byte aligned data offset, so no interior
+// padding is required.
+func serializePose(x, y, yaw float64, reverse bool) []byte {
+	buf := make([]byte, 0, 4+7*8)
+
+	z := 0.0
+	if reverse {
+		z = 1.0
+	}
+
+	buf = append(buf, 0x00, 0x01, 0x00, 0x00)
+	buf = zenohsession.AppendFloat64LE(buf, x)
+	buf = zenohsession.AppendFloat64LE(buf, y)
+	buf = zenohsession.AppendFloat64LE(buf, z)
+	buf = zenohsession.AppendFloat64LE(buf, 0)
+	buf = zenohsession.AppendFloat64LE(buf, 0)
+	buf = zenohsession.AppendFloat64LE(buf, math.Sin(yaw/2))
+	buf = zenohsession.AppendFloat64LE(buf, math.Cos(yaw/2))
+
+	return buf
 }

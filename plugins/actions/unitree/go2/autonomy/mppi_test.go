@@ -46,8 +46,8 @@ func (f *fakeSession) Close() { f.closed = true }
 
 // newTestMPPI builds a connector wired to a fake goal publisher, bypassing the
 // real Zenoh session that the production constructor would open.
-func newTestMPPI(pub *fakePublisher) *moveMPPIConnector {
-	c := &moveMPPIConnector{
+func newTestMPPI(pub *fakePublisher) *MPPIConnector {
+	c := &MPPIConnector{
 		log:          zap.NewNop(),
 		goalPub:      pub,
 		goalDistance: mppiGoalDistanceM,
@@ -134,7 +134,7 @@ func TestPublishGoalAndReverse(t *testing.T) {
 }
 
 func TestPublishGoalNilPublisher(t *testing.T) {
-	c := &moveMPPIConnector{log: zap.NewNop()}
+	c := &MPPIConnector{log: zap.NewNop()}
 	if err := c.publishGoal(1, 1, 1); err == nil {
 		t.Error("expected error when publisher is nil")
 	}
@@ -298,7 +298,7 @@ func TestOnAIStatusRequest(t *testing.T) {
 }
 
 func TestOnAIStatusRequestNilPublisher(t *testing.T) {
-	c := &moveMPPIConnector{log: zap.NewNop()}
+	c := &MPPIConnector{log: zap.NewNop()}
 	c.aiControlEnabled.Store(true)
 	c.onAIStatusRequest(serializeAIStatusResponse("f", "r", aiCodeDisabled, "x"))
 	if !c.aiControlEnabled.Load() {
@@ -450,7 +450,7 @@ func TestStopReleasesResources(t *testing.T) {
 	aiReqSub := &fakeSubscriber{}
 	sess := &fakeSession{}
 
-	c := &moveMPPIConnector{
+	c := &MPPIConnector{
 		log:       zap.NewNop(),
 		goalPub:   goalPub,
 		aiRespPub: aiRespPub,
