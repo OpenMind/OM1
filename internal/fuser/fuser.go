@@ -46,7 +46,7 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 
 	// 1b. Current timestamp.
 	builder.WriteString("Current time is ")
-	builder.WriteString(time.Now().Format("January 2, 2006 15:04:05"))
+	builder.WriteString(time.Now().Format("Monday, January 2, 2006 at 3:04 PM"))
 	builder.WriteString(".\n\n")
 
 	// 2. Sensory inputs.
