@@ -23,8 +23,9 @@ const (
 	defaultGoalTopic   = "om/mppi/goal"
 	defaultStatusTopic = "om/mppi/status"
 
-	mppiGoalDistanceM    = 1.2 // goal distance ahead along the chosen path (m); under the 2.0 m om_path length
-	mppiReverseDistanceM = 0.6 // distance to back straight up on "move back" (m)
+	mppiGoalDistanceM     = 1.2 // goal distance ahead along the chosen path (m); under the 2.0 m om_path length
+	mppiReverseDistanceM  = 0.6 // distance to back straight up on "move back" (m)
+	mppiRecenterDistanceM = 0.3 // short goal distance for re-centering turns (m); turns while barely advancing
 )
 
 func init() {
@@ -234,9 +235,10 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
 }
 
-// issueRotation publishes an in-place rotation goal toward the gentlest safe
-// heading on the chosen side. The goal has zero translation, so the robot
-// re-centers a target without changing its distance to it.
+// issueRotation re-centers a target by turning toward the gentlest safe heading
+// on the chosen side. It uses a short goal distance (a small arc) so the robot
+// turns while barely advancing — the planner won't execute a zero-translation
+// goal, so the goal must move a little.
 func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
@@ -247,11 +249,14 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 		c.log.Info("already centered - holding")
 		return
 	}
-	if err := c.publishGoal(0, 0, angleRad); err != nil {
+	bx := mppiRecenterDistanceM * math.Cos(angleRad)
+	by := mppiRecenterDistanceM * math.Sin(angleRad)
+	if err := c.publishGoal(bx, by, angleRad); err != nil {
 		return
 	}
 	c.markActive()
-	c.log.Info("issued mppi rotation goal", zap.String("label", label), zap.Float64("yaw_rad", angleRad))
+	c.log.Info("issued mppi recenter goal", zap.String("label", label),
+		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
 }
 
 // issueRetreat publishes a goal a short distance straight behind the robot.
