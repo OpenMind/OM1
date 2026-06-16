@@ -130,6 +130,8 @@ func (c *CheckinComplete) Run(ctx context.Context) {
 		zap.String("name", checkin.Name),
 		zap.Int("primary_track_id", primaryTrackID),
 	)
+	// Clear any lingering signal so no further nudge ticks fire while we transition.
+	providers.IO().AddInput("CheckinStatus", "", time.Now())
 	providers.ModeContext().Publish(map[string]any{"checkin_complete": true})
 	c.lastHandled = checkin.Time
 
