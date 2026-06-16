@@ -64,6 +64,10 @@ func (p *ttsBase) AddText(text string) {
 
 // AddTextWithVoice enqueues text for TTS synthesis with a specific voice ID if supported by the provider.
 func (p *ttsBase) AddTextWithVoice(text, voiceID string) {
+	if Suppressed.Load() {
+		p.log.Info(p.name+": TTS suppressed, dropping", zap.String("text", text))
+		return
+	}
 	select {
 	case p.queue <- ttsRequest{text: text, voiceID: voiceID, generation: generation.Load()}:
 		pending.Add(1)

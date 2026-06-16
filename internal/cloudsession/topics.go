@@ -42,6 +42,8 @@ var CloudTopics = map[string]struct{}{
 	"om/paths/r200":        {},
 	"om/ai/request":        {},
 	"om/ai/response":       {},
+	"om/tts/request":       {},
+	"om/tts/response":      {},
 	"om/asr/text":          {},
 	"om/avatar/request":    {},
 	"om/avatar/response":   {},
