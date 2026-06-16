@@ -33,6 +33,7 @@ func TestFuseBasic(t *testing.T) {
 	out, err := f.Fuse(context.Background(), nil)
 	require.NoError(t, err)
 	require.Contains(t, out, "You are a robot.")
+	require.Contains(t, out, "Current time is ")
 	require.Contains(t, out, "What will you do next?")
 	require.NotContains(t, out, "Current observations:")
 }
