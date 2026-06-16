@@ -3,6 +3,7 @@ package fuser
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
@@ -42,6 +43,11 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 		builder.WriteString(f.runtimeConfig.SystemGovernance)
 		builder.WriteString("\n\n")
 	}
+
+	// 1b. Current timestamp.
+	builder.WriteString("Current time is ")
+	builder.WriteString(time.Now().Format("January 2, 2006 15:04:05"))
+	builder.WriteString(".\n\n")
 
 	// 2. Sensory inputs.
 	hasObservations := false
