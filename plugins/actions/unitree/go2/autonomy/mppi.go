@@ -128,7 +128,7 @@ func NewMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions.Output, error) {
 	args, ok := input.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("unitree_go2_autonomy/move_mppi: unexpected input type %T", input)
+		return nil, fmt.Errorf("unitree_go2_autonomy/mppi: unexpected input type %T", input)
 	}
 	action, _ := args["action"].(string)
 
