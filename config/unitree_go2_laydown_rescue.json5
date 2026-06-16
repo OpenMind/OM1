@@ -74,10 +74,11 @@
     {
       name: "unitree_go2_autonomy",
       llm_label: "Move",
-      connector: "move",
+      connector: "mppi",
       config: {
-        cmd_vel_topic: "cmd_vel",
         gentle_turns: true,
+        goal_distance: 0.6,
+        min_active_hold_seconds: 0,
       },
     },
   ],

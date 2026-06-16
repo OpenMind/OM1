@@ -47,8 +47,9 @@ type MPPIConnector struct {
 
 	aiControlEnabled atomic.Bool
 
-	mode  string
-	guard *guardWatcher
+	mode        string
+	gentleTurns bool
+	guard       *guardWatcher
 
 	rng *rand.Rand
 
@@ -76,6 +77,7 @@ func NewMPPIConnector(cfg map[string]any) (actions.Connector, error) {
 		odom:          go2.OdomZenoh(),
 		paths:         providers.NewPathsProvider(),
 		mode:          util.StringFrom(cfg["mode"], ""),
+		gentleTurns:   util.BoolFrom(cfg["gentle_turns"], false),
 		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
 		goalDistance:  mppiGoalDistanceM,
 		minActiveHold: 3 * time.Second,
@@ -188,11 +190,15 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 	move := c.paths.Movement()
 	switch action {
 	case "turn left":
-		c.issueGoal(move.TurnLeft, "turn left")
+		c.issueGoal(move.TurnLeft, "turn left", c.gentleTurns || providers.PersonDownAlert())
 	case "turn right":
-		c.issueGoal(move.TurnRight, "turn right")
+		c.issueGoal(move.TurnRight, "turn right", c.gentleTurns || providers.PersonDownAlert())
+	case "turn left slightly":
+		c.issueGoal(move.TurnLeft, "turn left slightly", true)
+	case "turn right slightly":
+		c.issueGoal(move.TurnRight, "turn right slightly", true)
 	case "move forwards":
-		c.issueGoal(move.Advance, "advance")
+		c.issueGoal(move.Advance, "advance", false)
 	case "move back":
 		c.issueRetreat(move.Retreat)
 	default:
@@ -202,14 +208,21 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 	return nil, nil
 }
 
-// issueGoal selects a random option from the provided path indices.
-func (c *MPPIConnector) issueGoal(options []uint32, label string) {
+// issueGoal selects a path from the provided indices and publishes a goal toward
+// it: the smallest-magnitude heading when gentlest, else a random one.
+func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
 
-	angleRad := pathAngles[options[c.rng.Intn(len(options))]] * math.Pi / 180.0
+	var chosen uint32
+	if gentlest {
+		chosen = gentlestPath(options)
+	} else {
+		chosen = options[c.rng.Intn(len(options))]
+	}
+	angleRad := pathAngles[chosen] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
