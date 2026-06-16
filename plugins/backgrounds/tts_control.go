@@ -24,6 +24,13 @@ const (
 	ttsCodeStatus  byte = 2
 )
 
+// ttsRequest is the decoded payload of an OMTTSRequest message.
+type ttsRequest struct {
+	frameID   string
+	requestID string
+	code      byte
+}
+
 func init() {
 	bg.Register("TTSControl", NewTTSControl)
 }
@@ -76,7 +83,6 @@ func (t *TTSControl) onTTSRequest(data []byte) {
 		tts.SetSuppressed(false)
 		t.log.Info("TTS enabled")
 	case ttsCodeStatus:
-		// Status request: report current state without changing it.
 	default:
 		t.log.Warn("unknown TTS request code", zap.Uint8("code", req.code))
 		return
@@ -120,13 +126,6 @@ func (t *TTSControl) Stop() {
 		t.session.Close()
 		t.session = nil
 	}
-}
-
-// ttsRequest is the decoded payload of an OMTTSRequest message.
-type ttsRequest struct {
-	frameID   string
-	requestID string
-	code      byte
 }
 
 // deserializeTTSRequest decodes the header frame_id, request_id, and code
