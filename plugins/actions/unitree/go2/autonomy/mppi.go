@@ -148,11 +148,13 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 		c.mu.Lock()
 		active := c.active
 		runFor := time.Since(c.issuedAt)
+		lastAction := c.lastAction
+		c.lastAction = action
 		c.mu.Unlock()
 
 		deliberate := !active ||
 			runFor >= c.minActiveHold ||
-			c.lastAction == "stand still"
+			lastAction == "stand still"
 		if deliberate {
 			c.cancelGoal()
 			c.log.Info("stand still")
@@ -161,12 +163,11 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 				zap.Duration("run_for", runFor),
 				zap.Duration("min_hold", c.minActiveHold))
 		}
-		c.lastAction = action
 		return nil, nil
 	}
-	c.lastAction = action
 
 	c.mu.Lock()
+	c.lastAction = action
 	busy := c.active
 	c.mu.Unlock()
 	if busy {
