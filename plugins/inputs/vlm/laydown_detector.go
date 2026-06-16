@@ -365,6 +365,10 @@ func (s *laydownDetector) RawToText(_ context.Context, raw any) (*inputs.Message
 	s.hasLatest = true
 	s.mu.Unlock()
 
+	// A fresh verdict replaced the latched one; bump the perception-frame counter so
+	// motion code re-centers at most once per frame instead of on every stale tick.
+	providers.BumpVisionSeq()
+
 	return msg, nil
 }
 

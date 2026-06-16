@@ -62,6 +62,10 @@ type MPPIConnector struct {
 
 	minActiveHold time.Duration
 	lastAction    string
+
+	// lastRecenterSeq is the vision frame the most recent re-center turn acted on,
+	// used to issue at most one slight turn per fresh VLM verdict.
+	lastRecenterSeq atomic.Uint64
 }
 
 // NewMPPIConnector builds the MPPI-backed autonomy connector from its config.
@@ -223,8 +227,7 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 	} else {
 		chosen = options[c.rng.Intn(len(options))]
 	}
-	// pathAngles is +right, but the goal frame is +left (CCW), so negate.
-	angleRad := -pathAngles[chosen] * math.Pi / 180.0
+	angleRad := pathAngles[chosen] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
@@ -245,8 +248,17 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
-	// pathAngles is +right, but the goal frame is +left (CCW), so negate.
-	angleRad := -pathAngles[gentlestPath(options)] * math.Pi / 180.0
+	// The cortex re-serves the latched VLM verdict every tick (~1 Hz) while the VLM
+	// only refreshes every few seconds, so a "turn slightly" decision repeats across
+	// stale ticks. Acting on each one double-turns and drives the person out of frame,
+	// so re-center at most once per fresh vision frame and hold in between.
+	seq := providers.VisionSeq()
+	if seq == c.lastRecenterSeq.Load() {
+		c.log.Info("re-center already issued for this vision frame - holding",
+			zap.String("label", label))
+		return
+	}
+	angleRad := pathAngles[gentlestPath(options)] * math.Pi / 180.0
 	if angleRad == 0 {
 		c.log.Info("already centered - holding")
 		return
@@ -256,6 +268,7 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
 		return
 	}
+	c.lastRecenterSeq.Store(seq)
 	c.markActive()
 	c.log.Info("issued mppi recenter goal", zap.String("label", label),
 		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
