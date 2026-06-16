@@ -223,7 +223,8 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 	} else {
 		chosen = options[c.rng.Intn(len(options))]
 	}
-	angleRad := pathAngles[chosen] * math.Pi / 180.0
+	// pathAngles is +right, but the goal frame is +left (CCW), so negate.
+	angleRad := -pathAngles[chosen] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
@@ -244,7 +245,8 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
-	angleRad := pathAngles[gentlestPath(options)] * math.Pi / 180.0
+	// pathAngles is +right, but the goal frame is +left (CCW), so negate.
+	angleRad := -pathAngles[gentlestPath(options)] * math.Pi / 180.0
 	if angleRad == 0 {
 		c.log.Info("already centered - holding")
 		return
