@@ -44,8 +44,6 @@ func (f *fakeSession) Put(string, []byte) error { return nil }
 
 func (f *fakeSession) Close() { f.closed = true }
 
-// newTestMPPI builds a connector wired to a fake goal publisher, bypassing the
-// real Zenoh session that the production constructor would open.
 func newTestMPPI(pub *fakePublisher) *MPPIConnector {
 	c := &MPPIConnector{
 		log:          zap.NewNop(),
@@ -61,8 +59,6 @@ func readF64(b []byte, off int) float64 {
 	return math.Float64frombits(binary.LittleEndian.Uint64(b[off:]))
 }
 
-// cdrString builds a CDR-encoded std_msgs/String payload matching what onStatus
-// expects to decode at offset 4.
 func cdrString(s string) []byte {
 	b := []byte{0x00, 0x01, 0x00, 0x00}
 	sb := append([]byte(s), 0x00)
@@ -390,9 +386,6 @@ func TestConnect(t *testing.T) {
 		t.Errorf("busy connector published %d goals, want 0", len(pub.puts))
 	}
 
-	// A single 'stand still' tick must not preempt a still-progressing recent
-	// goal: at hertz=1 the LLM picks an action every tick and 'stand still'
-	// shows up in several prompt examples.
 	pub = &fakePublisher{}
 	c = newTestMPPI(pub)
 	c.minActiveHold = 3 * time.Second
@@ -413,8 +406,6 @@ func TestConnect(t *testing.T) {
 		t.Error("stand still cleared active flag on fresh goal")
 	}
 
-	// Two consecutive 'stand still' ticks express a sustained intent and DO
-	// cancel, regardless of how recently the goal was issued.
 	pub = &fakePublisher{}
 	c = newTestMPPI(pub)
 	c.minActiveHold = 3 * time.Second
