@@ -10,7 +10,6 @@ var generation atomic.Uint64
 
 var pending atomic.Int64
 
-// Suppressed, when true, mutes all TTS output.
 var Suppressed atomic.Bool
 
 func Busy() bool {
@@ -22,7 +21,6 @@ func RequestInterrupt() {
 	Interrupt.Store(true)
 }
 
-// SetSuppressed mutes or unmutes TTS. Muting also interrupts in-flight speech.
 func SetSuppressed(suppressed bool) {
 	Suppressed.Store(suppressed)
 	switch {
