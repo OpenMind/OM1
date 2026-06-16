@@ -8,6 +8,15 @@
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4, and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
+## Pick Your Runtime
+
+OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. We migrated to Go for lower latency, better performance, efficient concurrency, a smaller memory footprint for edge devices, and simpler deployment as a single Go binary (with the Zenoh C library bundled alongside it).
+
+The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. The table below gives a high-level comparison to help you choose the right runtime for your use case.
+
+> [!NOTE]
+> However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It is now deprecated and will not be maintained.
+
 ## Capabilities of OM1
 
 * **Modular Architecture**: Written in Go for performance and seamless integration.
@@ -30,17 +39,9 @@ This quick start uses the default starter configuration to help you understand t
 ### Quick Start (5 Minutes)
 
 1. Install system dependencies.
-2. Clone the repository.
+2. Download the binary or clone the repository.
 3. Add your OpenMind API key.
 4. Launch OM1 and verify it is running.
-
-### Prerequisites
-
-- Go 1.23.0+ ([installation guide](https://go.dev/doc/install))
-- `make` build tool
-- Webcam access (recommended if configuring VLM)
-
-Install system packages:
 
 ### 1. Install System Dependencies
 
@@ -55,7 +56,40 @@ sudo apt-get update
 sudo apt-get install -y portaudio19-dev ffmpeg
 ```
 
-### 2. Clone
+> [!TIP]
+> Webcam access is recommended if configuring VLM.
+
+### 2. Download or Build
+
+#### Option A: Download Pre-built Binary (Recommended)
+
+No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases).
+
+Current pre-built binaries are available for:
+
+- `linux-amd64`
+- `linux-arm64`
+- `darwin-arm64`
+- `darwin-amd64`
+
+After downloading and extracting the archive, open a terminal in the extracted folder and run:
+
+```bash
+chmod +x om1
+```
+
+On macOS, if the binary is blocked by Gatekeeper, run:
+
+```bash
+xattr -d com.apple.quarantine om1 2>/dev/null || true
+```
+
+> [!NOTE]
+> The release archive already includes `config/`, `knowledge_base/`, and `libzenohc` files, so you do not need to clone the repository for runtime assets.
+
+#### Option B: Build from Source
+
+Requires Go 1.23.0+ ([installation guide](https://go.dev/doc/install)) and `make`.
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
@@ -68,30 +102,36 @@ make build
 
 Get your API key from [OpenMind Portal](https://portal.openmind.com/).
 
-1. Sign in to OpenMind Portal.
-2. Open the dashboard and create a new API key.
-3. Copy the generated key.
-
-Recommended (shell profile):
+Set via shell profile (recommended):
 ```bash
 export OM_API_KEY="<your_api_key>"
 ```
 
-Alternative (project-local):
+If you built from source from this repository, you can also use a project-local `.env` file:
 ```bash
 cp .env.example .env
+# Then set OM_API_KEY=<your_api_key> in .env
 ```
-
-Then set:
-```bash
-OM_API_KEY=<your_api_key>
-```
-in `.env`.
-
-You can also verify or adjust the fallback key location in `config/conversation.json5`.
 
 ### 4. Launch the Agent
 
+If using pre-built binary:
+
+On macOS:
+```bash
+export DYLD_LIBRARY_PATH="$PWD:$DYLD_LIBRARY_PATH"
+./om1 -config ./config/conversation.json5
+```
+
+On Linux:
+```bash
+export LD_LIBRARY_PATH="$PWD:$LD_LIBRARY_PATH"
+./om1 -config ./config/conversation.json5
+```
+
+If you run into permission issues on macOS, go to System Settings -> Privacy & Security and allow `om1` (and `libzenohc.dylib` if prompted).
+
+If built from source:
 ```bash
 CONFIG=conversation make run
 ```

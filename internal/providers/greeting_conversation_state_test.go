@@ -109,6 +109,31 @@ func TestStateMachineLifecycle(t *testing.T) {
 	require.Equal(t, 0, g.TurnCount())
 }
 
+func TestDetermineNextStateForcesFinishAtMaxTurnCount(t *testing.T) {
+	g := NewGreetingConversationStateMachineProvider(3)
+	g.currentState = StateConversing
+
+	r := ConfidenceResult{Factors: ConfidenceFactors{ConversationState: StateConversing}}
+
+	g.turnCount = 2
+	require.NotEqual(t, StateFinished, g.determineNextState(r),
+		"turn below max keeps conversing")
+
+	g.turnCount = 3
+	require.Equal(t, StateFinished, g.determineNextState(r),
+		"reaching max turn count forces finish")
+}
+
+func TestDetermineNextStateHonorsLLMFinished(t *testing.T) {
+	g := NewGreetingConversationStateMachineProvider(3)
+	g.currentState = StateConcluding
+	g.turnCount = 1
+
+	r := ConfidenceResult{Factors: ConfidenceFactors{ConversationState: StateFinished}}
+	require.Equal(t, StateFinished, g.determineNextState(r),
+		"an explicit finished state from the LLM ends the conversation")
+}
+
 func TestConfidenceHistoryTrend(t *testing.T) {
 	g := NewGreetingConversationStateMachineProvider(3)
 	require.Equal(t, "insufficient_data", g.confidenceTrend())

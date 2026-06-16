@@ -37,7 +37,7 @@ func TestStartNav2Hook(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.startNav2Hook(context.Background(), map[string]any{
 		"base_url": srv.URL,
 		"api_key":  "secret",
@@ -62,7 +62,7 @@ func TestStartNav2HookDefaultMapName(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	require.NoError(t, runner.startNav2Hook(context.Background(), map[string]any{"base_url": srv.URL}, nil))
 	require.Equal(t, nav2DefaultMap, gotMapName, "map_name defaults to \"map\"")
 }
@@ -74,7 +74,7 @@ func TestStartNav2HookError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.startNav2Hook(context.Background(), map[string]any{"base_url": srv.URL}, nil)
 	require.ErrorContains(t, err, "boom")
 }
@@ -88,7 +88,7 @@ func TestStopNav2Hook(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.stopNav2Hook(context.Background(), map[string]any{
 		"base_url": srv.URL,
 		"api_key":  "secret",
@@ -106,7 +106,7 @@ func TestStopNav2HookError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	runner := NewHooks(nil, zap.NewNop())
+	runner := NewHooks(nil, nil, zap.NewNop())
 	err := runner.stopNav2Hook(context.Background(), map[string]any{"base_url": srv.URL}, nil)
 	require.ErrorContains(t, err, "nope")
 }

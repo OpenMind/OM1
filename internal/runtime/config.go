@@ -15,10 +15,10 @@ type modeSetup struct {
 	cfg config.ModeConfig
 	sys *config.SystemConfig
 
-	sensors        []inputs.Sensor
-	cortexLLM      llm.LLM
-	agentActions   []*actions.AgentAction
-	backgroundList []backgrounds.Background
+	sensors          []inputs.Sensor
+	cortexLLM        llm.LLM
+	agentActions     []*actions.AgentAction
+	agentBackgrounds []backgrounds.Background
 }
 
 // NewModeSetup creates a new modeSetup for the given ModeConfig and SystemConfig.
@@ -75,14 +75,14 @@ func (m *modeSetup) loadComponents() error {
 	}
 
 	// Load backgrounds
-	m.backgroundList = make([]backgrounds.Background, 0, len(m.cfg.Backgrounds))
-	for _, spec := range m.cfg.Backgrounds {
+	m.agentBackgrounds = make([]backgrounds.Background, 0, len(m.cfg.AgentBackgrounds))
+	for _, spec := range m.cfg.AgentBackgrounds {
 		spec.Config = addMeta(spec.Config, meta)
 		background, err := backgrounds.Load(spec.Type, spec.Config)
 		if err != nil {
 			return fmt.Errorf("background %q: %w", spec.Type, err)
 		}
-		m.backgroundList = append(m.backgroundList, background)
+		m.agentBackgrounds = append(m.agentBackgrounds, background)
 	}
 
 	// Load lifecycle hooks
@@ -113,25 +113,46 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 	return rc
 }
 
-// buildMeta constructs a metadata map for the mode, including system-level values and the mode name.
+// buildMeta constructs a metadata map for the mode by combining system-level metadata with the mode name.
 func (m *modeSetup) buildMeta(modeName string) map[string]any {
-	meta := make(map[string]any)
-	if m.sys.APIKey != "" {
-		meta["api_key"] = m.sys.APIKey
-	}
-	if m.sys.RobotIP != "" {
-		meta["robot_ip"] = m.sys.RobotIP
-	}
-	if m.sys.URID != "" {
-		meta["URID"] = m.sys.URID
-	}
-	if m.sys.UseSim {
-		meta["use_sim"] = true
-	}
+	meta := buildSystemMeta(m.sys)
 	if modeName != "" {
 		meta["mode"] = modeName
 	}
 	return meta
+}
+
+// buildSystemMeta constructs a metadata map from the system configuration, including API key, robot IP, URID, and simulation flag.
+func buildSystemMeta(sys *config.SystemConfig) map[string]any {
+	meta := make(map[string]any)
+	if sys.APIKey != "" {
+		meta["api_key"] = sys.APIKey
+	}
+	if sys.RobotIP != "" {
+		meta["robot_ip"] = sys.RobotIP
+	}
+	if sys.URID != "" {
+		meta["URID"] = sys.URID
+	}
+	if sys.UseSim {
+		meta["use_sim"] = true
+	}
+	return meta
+}
+
+// loadGlobalBackgrounds initializes the global background tasks based on the system configuration.
+func loadGlobalBackgrounds(sys *config.SystemConfig) ([]backgrounds.Background, error) {
+	meta := buildSystemMeta(sys)
+	list := make([]backgrounds.Background, 0, len(sys.GlobalBackgrounds))
+	for _, spec := range sys.GlobalBackgrounds {
+		spec.Config = addMeta(cloneConfig(spec.Config), meta)
+		background, err := backgrounds.Load(spec.Type, spec.Config)
+		if err != nil {
+			return nil, fmt.Errorf("global background %q: %w", spec.Type, err)
+		}
+		list = append(list, background)
+	}
+	return list, nil
 }
 
 // cloneConfig returns a shallow copy of a config map so that callers can add

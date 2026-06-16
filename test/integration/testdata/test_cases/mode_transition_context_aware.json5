@@ -2,6 +2,7 @@
   // Context-aware transition: the patrol input publishes a context flag onto the
   // mode-context bus (threat_detected=true). The runtime re-evaluates and switches
   // to `alert`, which then acts. Proves the context_aware rule path.
+  version: "v1.1.0",
   name: "context flag transitions to alert",
   description: "context_aware rule transitions when a published flag matches",
   default_mode: "patrol",

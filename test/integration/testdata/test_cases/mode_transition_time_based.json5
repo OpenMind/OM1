@@ -2,6 +2,7 @@
   // Time-based transition: patrol holds for a short timeout, then the runtime
   // automatically switches to `active`, which then produces an action. Proves the
   // time-based rule path (checkTimeBased) drives a real mode switch.
+  version: "v1.1.0",
   name: "patrol times out into active",
   description: "time_based rule transitions modes after a timeout",
   default_mode: "patrol",

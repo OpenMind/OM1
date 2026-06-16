@@ -23,9 +23,9 @@ const (
 
 	statusConversation = byte(3)
 
-	tickInterval    = 10 * time.Second
-	ttsTimeout      = 30 * time.Second
-	ttsPollInterval = 100 * time.Millisecond
+	defaultTickInterval = 10 * time.Second
+	ttsTimeout          = 30 * time.Second
+	ttsPollInterval     = 100 * time.Millisecond
 )
 
 // ConversationStateEnum is the LLM-facing enum for the conversation_state field.
@@ -61,12 +61,14 @@ func init() {
 
 // Config holds the ElevenLabs TTS parameters for the greeting connector.
 type Config struct {
-	APIKey           string `json:"api_key"`
-	ElevenLabsAPIKey string `json:"elevenlabs_api_key"`
-	VoiceID          string `json:"voice_id"`
-	ModelID          string `json:"model_id"`
-	OutputFormat     string `json:"output_format"`
-	Rate             int    `json:"rate"`
+	APIKey           string  `json:"api_key"`
+	ElevenLabsAPIKey string  `json:"elevenlabs_api_key"`
+	VoiceID          string  `json:"voice_id"`
+	ModelID          string  `json:"model_id"`
+	OutputFormat     string  `json:"output_format"`
+	Rate             int     `json:"rate"`
+	MaxRounds        int     `json:"max_rounds"`
+	TickIntervalSec  float64 `json:"tick_interval_sec"`
 }
 
 // Connector implements the greeting conversation action using the ElevenLabs TTS provider.
@@ -75,6 +77,8 @@ type Connector struct {
 	tts      *tts.ElevenLabsProvider
 	greeting *providers.GreetingConversationStateMachineProvider
 	session  zenoh.Session
+
+	tickInterval time.Duration
 
 	mu                       sync.Mutex
 	greetingStatus           providers.ConversationState
@@ -117,13 +121,22 @@ func NewElevenLabsGreetingConversation(configMap map[string]any) (actions.Connec
 	}, log)
 
 	greeting := providers.Greeting()
+	if cfg.MaxRounds > 0 {
+		greeting.SetMaxTurnCount(cfg.MaxRounds)
+	}
 	greeting.StartConversation()
+
+	tickInterval := defaultTickInterval
+	if cfg.TickIntervalSec > 0 {
+		tickInterval = time.Duration(cfg.TickIntervalSec * float64(time.Second))
+	}
 
 	c := &Connector{
 		log:            log,
 		tts:            tts,
 		greeting:       greeting,
 		greetingStatus: providers.StateConversing,
+		tickInterval:   tickInterval,
 	}
 
 	if sess, err := zenoh.Open(); err != nil {
@@ -194,7 +207,7 @@ func (c *Connector) Tick(ctx context.Context) {
 	select {
 	case <-ctx.Done():
 		return
-	case <-time.After(tickInterval):
+	case <-time.After(c.tickInterval):
 	}
 
 	if c.waitingOnTTS() {

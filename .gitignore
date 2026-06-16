@@ -31,8 +31,5 @@ config/cron_job/
 # Test
 coverage.out
 
-# Python compiled files
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
+# Memory
+memory/

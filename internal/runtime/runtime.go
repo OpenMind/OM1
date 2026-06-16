@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
@@ -35,12 +37,19 @@ type modeState struct {
 	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
+	memory             *memory.Manager
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
 	actionDone     <-chan struct{}
 	backgroundDone <-chan struct{}
 	cortexDone     <-chan struct{}
+}
+
+type globalBackgroundState struct {
+	orchestrator *backgrounds.Orchestrator
+	done         <-chan struct{}
+	cancel       context.CancelFunc
 }
 
 type Runtime struct {
@@ -58,6 +67,8 @@ type Runtime struct {
 	modeTransitionHandlerOnce bool
 
 	modeTransitionCh chan string
+
+	globalBg globalBackgroundState
 }
 
 func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runtime {
@@ -81,6 +92,12 @@ func (rt *Runtime) Run(ctx context.Context) error {
 	if rt.opts.HotReload {
 		go rt.watchConfig(ctx)
 	}
+
+	globalBackgroundList, err := loadGlobalBackgrounds(rt.systemConfig)
+	if err != nil {
+		return err
+	}
+	rt.globalBg.orchestrator = backgrounds.NewOrchestrator(globalBackgroundList, rt.log)
 
 	initialMode := rt.manager.CurrentMode()
 	if err := rt.initializeMode(initialMode); err != nil {
@@ -108,10 +125,12 @@ func (rt *Runtime) Run(ctx context.Context) error {
 	}
 
 	rt.startOrchestrators(ctx)
+	rt.startGlobalBackgrounds(ctx)
 
 	<-ctx.Done()
 
 	rt.stopOrchestrators()
+	rt.stopGlobalBackgrounds()
 	rt.manager.Close()
 	rt.tracer.Stop()
 	return ctx.Err()
@@ -149,9 +168,14 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		}
 	}
 
+	var memoryManager *memory.Manager
+	if rt.systemConfig.Memory != nil && rt.systemConfig.Memory.Enabled {
+		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.log)
+	}
+
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, rt.log),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, memoryManager, rt.log),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,
@@ -163,11 +187,10 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			runtimeConfig.ActionDeps,
 			rt.log,
 		),
-		sensors:   modeConfig.sensors,
-		modeHooks: hooks.NewHooks(modeConfig.cfg.LifecycleHooks, rt.log),
-	}
-	if len(modeConfig.backgroundList) > 0 {
-		state.bgOrchestrator = backgrounds.NewOrchestrator(modeConfig.backgroundList, rt.log)
+		bgOrchestrator: backgrounds.NewOrchestrator(modeConfig.agentBackgrounds, rt.log),
+		sensors:        modeConfig.sensors,
+		modeHooks:      hooks.NewHooks(modeConfig.cfg.LifecycleHooks, memoryManager, rt.log),
+		memory:         memoryManager,
 	}
 
 	rt.mu.Lock()
@@ -176,6 +199,17 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	rt.log.Info("mode initialised", zap.String("mode", modeName))
 	return nil
+}
+
+// startGlobalBackgrounds starts the global background orchestrator if configured, using a context that can be cancelled on shutdown.
+func (rt *Runtime) startGlobalBackgrounds(ctx context.Context) {
+	if ctx.Err() != nil || rt.globalBg.orchestrator == nil {
+		return
+	}
+
+	globalCtx, cancel := context.WithCancel(ctx)
+	rt.globalBg.cancel = cancel
+	rt.globalBg.done = rt.globalBg.orchestrator.Start(globalCtx)
 }
 
 // startOrchestrators starts the orchestrators for the current mode in separate goroutines.
@@ -264,6 +298,24 @@ func (rt *Runtime) stopOrchestrators() {
 	}
 
 	wg.Wait()
+}
+
+// stopGlobalBackgrounds cancels the global background context and waits for the orchestrator to finish.
+func (rt *Runtime) stopGlobalBackgrounds() {
+	if rt.globalBg.cancel == nil {
+		return
+	}
+
+	rt.globalBg.cancel()
+
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer stopCancel()
+
+	select {
+	case <-rt.globalBg.done:
+	case <-stopCtx.Done():
+		rt.log.Warn("global background shutdown timed out")
+	}
 }
 
 // onModeTransition stops the current mode's orchestrators, initialises the new
@@ -443,6 +495,16 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 				}
 			}
 		}
+	}
+
+	if current.memory != nil {
+		voice := rt.ioProvider.GetInput("Voice")
+		if voice != nil && voice.Input != "" && voice.Tick == rt.ioProvider.TickCounter() {
+			uuid, _ := rt.ioProvider.GetDynamicVar("current_user_id")
+			name, _ := rt.ioProvider.GetDynamicVar("current_user_name")
+			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), uuid, name)
+		}
+		current.memory.Summarize(ctx)
 	}
 
 	rt.ioProvider.RecordTick(tickStart)

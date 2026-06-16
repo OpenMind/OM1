@@ -1,6 +1,7 @@
 {
   // Exercises concurrent multi-action output: a single LLM decision emits two
   // tool calls (move + speak) that must both be dispatched to their connectors.
+  version: "v1.1.0",
   name: "stop and warn on obstacle",
   description: "one LLM decision fans out to two concurrent actions",
   hertz: 50,

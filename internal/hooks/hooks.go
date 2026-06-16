@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers/tts"
 )
 
@@ -24,13 +25,15 @@ const (
 
 // Runner manages and executes lifecycle hooks based on their type and configuration.
 type Runner struct {
-	hooks []config.HookSpec
-	log   *zap.Logger
+	memory *memory.Manager
+	hooks  []config.HookSpec
+	log    *zap.Logger
 }
 
-// NewHooks creates a new Runner instance with the provided hooks and logger.
-func NewHooks(hooks []config.HookSpec, log *zap.Logger) *Runner {
-	return &Runner{hooks: hooks, log: log}
+// NewHooks creates a new Runner instance with the provided hooks, memory
+// manager, and logger.
+func NewHooks(hooks []config.HookSpec, memory *memory.Manager, log *zap.Logger) *Runner {
+	return &Runner{hooks: hooks, memory: memory, log: log}
 }
 
 // Run executes all hooks matching the given HookType, passing vars for template formatting.

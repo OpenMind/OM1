@@ -43,7 +43,7 @@ const rivaDefaultBaseURL = "ws://localhost:6790"
 // RivaASRConfig configures the local microphone-sourced Riva ASR sensor.
 type RivaASRConfig struct {
 	APIKey             string `json:"api_key"`
-	Rate               int    `json:"rate"`                 // sample rate Hz (default 48000)
+	Rate               int    `json:"rate"`                 // sample rate Hz (default 16000)
 	Chunk              int    `json:"chunk"`                // frames per buffer (default 12144)
 	BaseURL            string `json:"base_url"`             // override WS endpoint
 	MicDeviceIndex     int    `json:"microphone_device_id"` // -1 = default
@@ -76,7 +76,7 @@ func NewRivaASR(configMap map[string]any) (inputs.Sensor, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.Rate == 0 {
-		cfg.Rate = 48000
+		cfg.Rate = 16000
 	}
 	if cfg.Chunk == 0 {
 		cfg.Chunk = 12144

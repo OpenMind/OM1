@@ -35,17 +35,25 @@ func Load(nameOrPath string) (*SystemConfig, error) {
 		return nil, fmt.Errorf("unmarshal config %s: %w", path, err)
 	}
 
+	configName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	if _, err := VerifyRuntimeVersion(systemConfig.Version, configName); err != nil {
+		return nil, err
+	}
+
 	normalize(&systemConfig)
 	return &systemConfig, nil
 }
 
 // resolvePath determines the actual file path of the configuration based on the provided name or path.
 func resolvePath(nameOrPath string) (string, error) {
-	if filepath.IsAbs(nameOrPath) {
-		return nameOrPath, nil
+	if nameOrPath == "" {
+		return "", fmt.Errorf("config name or path is empty")
 	}
 
-	if strings.HasSuffix(nameOrPath, ".json5") || strings.HasSuffix(nameOrPath, ".json") {
+	if filepath.IsAbs(nameOrPath) ||
+		strings.HasSuffix(nameOrPath, ".json5") ||
+		strings.HasSuffix(nameOrPath, ".json") ||
+		strings.ContainsRune(nameOrPath, os.PathSeparator) {
 		return nameOrPath, nil
 	}
 
@@ -145,7 +153,7 @@ func normalize(systemConfig *SystemConfig) {
 			AgentInputs:      systemConfig.AgentInputs,
 			CortexLLM:        systemConfig.CortexLLM,
 			AgentActions:     systemConfig.AgentActions,
-			Backgrounds:      systemConfig.Backgrounds,
+			AgentBackgrounds: systemConfig.AgentBackgrounds,
 			MCPServers:       systemConfig.MCPServers,
 			LifecycleHooks:   systemConfig.LifecycleHooks,
 		},

@@ -14,6 +14,13 @@
         "default_mode": {"type": "string", "description": "The mode to initialize on startup."},
         "allow_manual_switching": {"type": "boolean", "description": "Whether the user can manually switch modes."},
         "mode_memory_enabled": {"type": "boolean", "description": "Whether to persist mode state across sessions."},
+        "memory": {
+            "type": "object",
+            "description": "Long-term memory configuration available to modes such as greetings.",
+            "properties": {
+                "enabled": {"type": "boolean", "description": "Whether long-term memory is enabled."}
+            }
+        },
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
         "use_sim": {"type": "boolean", "description": "Whether to use the cloud simulation environment instead of a real robot."},
         "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
@@ -182,11 +189,35 @@
                                 "type": "array",
                                 "items": {"type": "string"}
                             }
+                        },
+                        "agent_backgrounds": {
+                            "type": "array",
+                            "description": "Mode-scoped background tasks that run only while this mode is active.",
+                            "items": {
+                                "type": "object",
+                                "required": ["type"],
+                                "properties": {
+                                    "type": {"type": "string"},
+                                    "config": {"type": "object"}
+                                }
+                            }
                         }
                     }
                 }
             },
             "additionalProperties": false
+        },
+        "global_backgrounds": {
+            "type": "array",
+            "description": "System-wide background tasks that start once at startup and keep running across every mode switch until shutdown.",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
         },
         "transition_rules": {
             "type": "array",

@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.5",
+  version: "v1.1.0",
 
   // Mode system configuration for Unitree Go2
   default_mode: "welcome",
@@ -124,7 +124,7 @@
           connector: "location",
         },
       ],
-      backgrounds: [
+      agent_backgrounds: [
         {
           type: "UnitreeGo2FrontierExploration",
         },

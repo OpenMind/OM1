@@ -9,7 +9,7 @@ GO_FILES := $(shell find . -name '*.go' -type f)
 LDFLAGS := -s -w
 BUILD_FLAGS := -v
 
-CONFIG ?= greeting
+CONFIG ?= conversation
 
 ZENOH_C_VERSION=1.9.0
 ZENOH_C_DIR=.zenoh-c
@@ -92,12 +92,12 @@ build: download-zenohc
 .PHONY: run
 run: build
 	@echo "Running $(BINARY_NAME) with config: $(CONFIG)"
-	$(BUILD_DIR)/$(BINARY_NAME) -config ./config/$(CONFIG).json5
+	$(BUILD_DIR)/$(BINARY_NAME) -config $(CONFIG)
 
 .PHONY: dev
 dev: download-zenohc
 	@echo "Running in dev mode with config: $(CONFIG)"
-	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config ./config/$(CONFIG).json5 -log-level debug
+	$(DYLD_VAR)=$(ZENOH_C_ABS_DIR)/lib $(GO) run $(CMD_DIR) -config $(CONFIG) -log-level debug
 
 .PHONY: lint
 lint: download-zenohc

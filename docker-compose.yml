@@ -20,6 +20,8 @@ services:
     volumes:
       - ./config:/app/OM1/config
       - ${HOME}/shared_data/locations:/app/OM1/locations:rw
+      - ${HOME}/shared_data/memory:/app/OM1/memory:rw
+      - ${HOME}/shared_data/gallery:/app/OM1/gallery:ro
       - ./traces:/app/OM1/traces:rw
       - /dev/snd:/dev/snd:rw
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw

@@ -1,6 +1,7 @@
 {
   // The input never matches any LLM rule, so the cortex returns no tool calls and
   // no action connector should ever fire. Guards against spurious dispatches.
+  version: "v1.1.0",
   name: "no action when idle",
   description: "unmatched input produces no actions",
   hertz: 50,

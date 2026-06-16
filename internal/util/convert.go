@@ -20,6 +20,24 @@ func StringFrom(v any, def string) string {
 	return def
 }
 
+// IntFrom extracts an int from a JSON-decoded value, returning def when the
+// value is absent or not a recognized numeric type.
+func IntFrom(v any, def int) int {
+	if f, ok := ToFloat(v); ok {
+		return int(f)
+	}
+	return def
+}
+
+// BoolFrom extracts a bool from a JSON-decoded value, returning def when the
+// value is absent or not a bool.
+func BoolFrom(v any, def bool) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	return def
+}
+
 // ToFloat coerces a JSON-decoded numeric value to float64. The bool is false
 // when v is not a recognized numeric type.
 func ToFloat(v any) (float64, bool) {

@@ -54,7 +54,7 @@ func TestRunCommandHook(t *testing.T) {
 		{HookType: "on_exit", HandlerType: "command", HandlerConfig: map[string]any{
 			"command": "echo nope > " + marker + ".exit",
 		}},
-	}, zap.NewNop())
+	}, nil, zap.NewNop())
 
 	require.NoError(t, runner.Run(context.Background(), OnStartup, map[string]any{"msg": "started"}))
 
@@ -67,7 +67,7 @@ func TestRunCommandHook(t *testing.T) {
 func TestRunSwallowsHookErrors(t *testing.T) {
 	runner := NewHooks([]config.HookSpec{
 		{HookType: "on_startup", HandlerType: "command", HandlerConfig: map[string]any{"command": "exit 1"}},
-	}, zap.NewNop())
+	}, nil, zap.NewNop())
 	require.NoError(t, runner.Run(context.Background(), OnStartup, nil), "a failing hook is logged, not propagated")
 }
 
@@ -84,7 +84,7 @@ func TestExecuteFunctionHook(t *testing.T) {
 			"module_name": "testmod",
 			"function":    "fn_" + t.Name(),
 		}},
-	}, zap.NewNop())
+	}, nil, zap.NewNop())
 
 	require.NoError(t, runner.Run(context.Background(), OnEntry, map[string]any{"k": "v"}))
 	require.True(t, called, "the registered function hook was invoked")
