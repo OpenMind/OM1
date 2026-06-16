@@ -12,6 +12,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/luma"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -126,6 +127,12 @@ func (g *GuestLingering) Run(ctx context.Context) {
 	}
 
 	if guestPresent {
+		// Only emit a fresh nudge when TTS is idle, so nudges never pile up in the
+		// queue while the robot is still speaking or has speech queued.
+		if tts.Busy() {
+			util.Sleep(ctx, g.period)
+			return
+		}
 		g.log.Info("guest lingering after check-in",
 			zap.String("name", checkin.Name),
 			zap.Int("primary_track_id", primaryTrackID),
