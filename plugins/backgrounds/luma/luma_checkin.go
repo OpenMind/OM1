@@ -12,6 +12,7 @@ import (
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/luma"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -130,6 +131,7 @@ func (c *CheckinComplete) Run(ctx context.Context) {
 		zap.String("name", checkin.Name),
 		zap.Int("primary_track_id", primaryTrackID),
 	)
+	tts.RequestInterrupt()
 	providers.ModeContext().Publish(map[string]any{"checkin_complete": true})
 	c.lastHandled = checkin.Time
 
