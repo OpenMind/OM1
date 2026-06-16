@@ -227,7 +227,10 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 	} else {
 		chosen = options[c.rng.Intn(len(options))]
 	}
-	angleRad := pathAngles[chosen] * math.Pi / 180.0
+	// pathAngles is +right (TurnRight = +15..+60), but the mppi goal frame is +left
+	// (CCW, standard ROS) for both y and yaw — confirmed by odom: a +yaw goal drives
+	// odom yaw_m180_p180 positive, i.e. left. So negate to make "turn right" go right.
+	angleRad := -pathAngles[chosen] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
@@ -258,7 +261,8 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 			zap.String("label", label))
 		return
 	}
-	angleRad := pathAngles[gentlestPath(options)] * math.Pi / 180.0
+	// Negate: pathAngles is +right, mppi goal frame is +left (CCW). See issueGoal.
+	angleRad := -pathAngles[gentlestPath(options)] * math.Pi / 180.0
 	if angleRad == 0 {
 		c.log.Info("already centered - holding")
 		return
