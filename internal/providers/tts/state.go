@@ -25,7 +25,10 @@ func RequestInterrupt() {
 // SetSuppressed mutes or unmutes TTS. Muting also interrupts in-flight speech.
 func SetSuppressed(suppressed bool) {
 	Suppressed.Store(suppressed)
-	if suppressed {
+	switch {
+	case suppressed && Busy():
 		RequestInterrupt()
+	case !suppressed:
+		Interrupt.Store(false)
 	}
 }
