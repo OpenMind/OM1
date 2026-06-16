@@ -194,9 +194,9 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 	case "turn right":
 		c.issueGoal(move.TurnRight, "turn right", c.gentleTurns || providers.PersonDownAlert())
 	case "turn left slightly":
-		c.issueGoal(move.TurnLeft, "turn left slightly", true)
+		c.issueRotation(move.TurnLeft, "turn left slightly")
 	case "turn right slightly":
-		c.issueGoal(move.TurnRight, "turn right slightly", true)
+		c.issueRotation(move.TurnRight, "turn right slightly")
 	case "move forwards":
 		c.issueGoal(move.Advance, "advance", false)
 	case "move back":
@@ -232,6 +232,26 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 	c.log.Info("issued mppi goal",
 		zap.String("label", label),
 		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
+}
+
+// issueRotation publishes an in-place rotation goal toward the gentlest safe
+// heading on the chosen side. The goal has zero translation, so the robot
+// re-centers a target without changing its distance to it.
+func (c *MPPIConnector) issueRotation(options []uint32, label string) {
+	if len(options) == 0 {
+		c.log.Warn("cannot " + label + " due to barrier")
+		return
+	}
+	angleRad := pathAngles[gentlestPath(options)] * math.Pi / 180.0
+	if angleRad == 0 {
+		c.log.Info("already centered - holding")
+		return
+	}
+	if err := c.publishGoal(0, 0, angleRad); err != nil {
+		return
+	}
+	c.markActive()
+	c.log.Info("issued mppi rotation goal", zap.String("label", label), zap.Float64("yaw_rad", angleRad))
 }
 
 // issueRetreat publishes a goal a short distance straight behind the robot.
