@@ -1,6 +1,6 @@
 {
   version: "v1.1.0",
-  hertz: 0.5,
+  hertz: 1,
   name: "bits",
   api_key: "${OM_API_KEY:-openmind_free}",
   use_sim: ${USE_SIM:-false},
@@ -62,7 +62,7 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
-        silence_rate: 2,
+        silence_rate: 5,
         skip_when_busy: true,
       },
     },
