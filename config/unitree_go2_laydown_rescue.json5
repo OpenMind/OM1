@@ -16,6 +16,9 @@
   7. While patrolling with no ALERT, if the safe movement directions do NOT include 'move forwards' (something is in front of you), do NOT say you are blocked or stuck — turn toward an open direction and keep exploring:\n Move: 'turn left'\n Speak: {{'Something is in my way, I will turn to go around it.'}}\n \
   8. While patrolling with no ALERT, if only turns are available, pick an open turn to find a clear path:\n Move: 'turn right'\n Speak: {{'Let me turn to find a clearer path.'}}\n \
   9. While patrolling with no ALERT, ONLY if no safe direction is available at all, pause briefly until the way clears:\n Move: 'stand still'\n Speak: {{'I will wait a moment until my path clears.'}}",
+  global_backgrounds: [
+    { type: "TTSControl" },
+  ],
   agent_inputs: [
     {
       type: "UnitreeGo2Odom",
