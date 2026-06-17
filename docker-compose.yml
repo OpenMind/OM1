@@ -18,6 +18,7 @@ services:
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ./config:/app/OM1/config
       - ${HOME}/shared_data/locations:/app/OM1/locations:rw
       - ${HOME}/shared_data/memory:/app/OM1/memory:rw

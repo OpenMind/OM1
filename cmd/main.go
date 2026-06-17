@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -25,7 +26,7 @@ import (
 func main() {
 	var (
 		configName = flag.String("config", "", "config name or path (required)")
-		logLevel   = flag.String("log-level", "info", "log level: debug|info|warn|error")
+		logLevel   = flag.String("log-level", cmp.Or(os.Getenv("LOG_LEVEL"), "info"), "log level: debug|info|warn|error (env: LOG_LEVEL)")
 		hotReload  = flag.Bool("hot-reload", false, "reload config on file change")
 		checkSecs  = flag.Float64("check-interval", 1.0, "hot-reload check interval (seconds)")
 	)

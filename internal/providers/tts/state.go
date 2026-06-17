@@ -10,6 +10,8 @@ var generation atomic.Uint64
 
 var pending atomic.Int64
 
+var Suppressed atomic.Bool
+
 func Busy() bool {
 	return Speaking.Load() || pending.Load() > 0
 }
@@ -17,4 +19,14 @@ func Busy() bool {
 func RequestInterrupt() {
 	generation.Add(1)
 	Interrupt.Store(true)
+}
+
+func SetSuppressed(suppressed bool) {
+	Suppressed.Store(suppressed)
+	switch {
+	case suppressed && Busy():
+		RequestInterrupt()
+	case !suppressed:
+		Interrupt.Store(false)
+	}
 }
