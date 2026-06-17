@@ -314,6 +314,13 @@ func (s *laydownDetector) classify(text string) string {
 		s.lastAlert = text
 		tts.Priority.Store(true)
 		providers.SetPersonDownAlert(true)
+		// Latch "arrived" once we reach and are centered on the person, so motion code
+		// locks in place instead of chasing the jittery Location. Stays latched (a
+		// later off-center/far verdict won't unlock it) until the whole alert clears.
+		lower := strings.ToLower(text)
+		if strings.Contains(lower, "distance: near") && strings.Contains(lower, "in view: center") {
+			providers.SetPersonDownArrived(true)
+		}
 		return text
 	}
 
@@ -338,6 +345,7 @@ func (s *laydownDetector) classify(text string) string {
 		s.clearCount = 0
 		tts.Priority.Store(false)
 		providers.SetPersonDownAlert(false)
+		providers.SetPersonDownArrived(false)
 		tts.RequestInterrupt()
 		s.log.Info("alert cleared",
 			zap.Int("clear_streak", s.clearStreak),
@@ -406,6 +414,7 @@ func (s *laydownDetector) Stop() {
 
 	tts.Priority.Store(false)
 	providers.SetPersonDownAlert(false)
+	providers.SetPersonDownArrived(false)
 	if cancel != nil {
 		cancel()
 	}

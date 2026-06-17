@@ -175,6 +175,15 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
+	// Locked on: once we have arrived and centered on a downed person, hold position
+	// for the rest of the emergency and ignore every move command. The VLM Location is
+	// jittery, so re-centering now over-rotates and loses the person. Unlatches when
+	// the alert clears. ("stand still" was already handled above.)
+	if providers.PersonDownArrived() {
+		c.log.Info("arrived - locked on, holding position", zap.String("action", action))
+		return nil, nil
+	}
+
 	c.mu.Lock()
 	c.lastAction = action
 	busy := c.active
