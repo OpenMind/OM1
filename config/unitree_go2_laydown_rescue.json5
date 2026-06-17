@@ -44,7 +44,7 @@
         poll_period_ms: 100,
         clear_streak: 2,
         min_hold_seconds: 5,
-        lock_width_frac: 0.7,
+        lock_width_frac: 0.5,
         debug_dir: "${FALLEN_DEBUG_DIR:-fallen_debug}",
         debug_period_ms: 100,
       },
@@ -89,7 +89,7 @@
         // Move commands. Re-center, step forward, then lock on (hold) once the
         // person's bbox fills lock_width_frac of the frame width.
         geometry_driven: true,
-        lock_width_frac: 0.7,
+        lock_width_frac: 0.5,
         center_tolerance: 0.33,
       },
     },
