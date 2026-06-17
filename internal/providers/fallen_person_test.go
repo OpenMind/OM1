@@ -22,7 +22,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			raw: fallenResponse{
 				Alert:   true,
 				FrameHW: []float64{480, 640},
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "wendy", Bbox: []float64{160, 200, 480, 300}, Confidence: 0.9},
 				},
 			},
@@ -37,7 +37,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			raw: fallenResponse{
 				Alert:   true,
 				FrameHW: []float64{480, 640},
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "a", Bbox: []float64{500, 200, 620, 300}},
 				},
 			},
@@ -51,7 +51,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			raw: fallenResponse{
 				Alert:   true,
 				FrameHW: []float64{480, 640},
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "a", Bbox: []float64{20, 200, 140, 300}},
 				},
 			},
@@ -64,7 +64,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			name: "frame_hw absent falls back to 640 wide",
 			raw: fallenResponse{
 				Alert: true,
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "a", Bbox: []float64{288, 200, 352, 300}},
 				},
 			},
@@ -78,7 +78,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			raw: fallenResponse{
 				Alert:   true,
 				FrameHW: []float64{480, 640},
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "small", Bbox: []float64{0, 0, 20, 20}},
 					{Name: "big", Bbox: []float64{100, 100, 540, 380}},
 				},
@@ -97,7 +97,7 @@ func TestDeriveFallenGeometry(t *testing.T) {
 			raw: fallenResponse{
 				Alert:   true,
 				FrameHW: []float64{480, 640},
-				FallenNowDetails: []fallenDetail{
+				FallenNowDetails: []FallenDetection{
 					{Name: "bad", Bbox: []float64{300, 300, 300, 300}},
 				},
 			},

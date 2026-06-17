@@ -45,6 +45,10 @@
         clear_streak: 2,
         min_hold_seconds: 5,
         lock_width_frac: 0.7,
+        // Debug: when FALLEN_DEBUG_DIR is set, dump the decoded frame_b64 image and
+        // its analysis (verdicts.jsonl) to that directory, throttled to debug_period_ms.
+        debug_dir: "${FALLEN_DEBUG_DIR:-}",
+        debug_period_ms: 100,
       },
     },
     {

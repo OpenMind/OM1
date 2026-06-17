@@ -37,8 +37,8 @@ type FallenPersonConfig struct {
 	Timeout time.Duration
 }
 
-// fallenDetail mirrors one entry of the endpoint's fallen_now_details array.
-type fallenDetail struct {
+// FallenDetection mirrors one entry of the endpoint's fallen_now_details array.
+type FallenDetection struct {
 	Name       string    `json:"name"`
 	Bbox       []float64 `json:"bbox"` // [x1, y1, x2, y2] in frame pixels, origin top-left
 	Confidence float64   `json:"confidence"`
@@ -46,9 +46,10 @@ type fallenDetail struct {
 
 // fallenResponse is the subset of the /who response this provider consumes.
 type fallenResponse struct {
-	Alert            bool           `json:"alert"`
-	FallenNowDetails []fallenDetail `json:"fallen_now_details"`
-	FrameHW          []float64      `json:"frame_hw"` // [height, width]
+	Alert            bool              `json:"alert"`
+	FallenNowDetails []FallenDetection `json:"fallen_now_details"`
+	FrameHW          []float64         `json:"frame_hw"` // [height, width]
+	FrameB64         string            `json:"frame_b64"`
 }
 
 // FallenSnapshot is the geometry derived from the closest downed person, computed
@@ -70,6 +71,13 @@ type FallenSnapshot struct {
 
 	// HPos is the coarse band ("left", "center", "right") using the endpoint's thirds rule.
 	HPos string
+
+	// Detections is every downed-person detection from this response (for debug dumps).
+	Detections []FallenDetection
+	// FrameW is the frame width used for the geometry (from frame_hw, else the default).
+	FrameW float64
+	// FrameB64 is the raw base64 (or data-URL) frame image, decoded only when dumping.
+	FrameB64 string
 }
 
 // FallenPersonProvider polls the endpoint and renders downed-person geometry.
@@ -135,10 +143,15 @@ func deriveFallenGeometry(raw fallenResponse) FallenSnapshot {
 		frameW = raw.FrameHW[1]
 	}
 
-	snap := FallenSnapshot{Alert: raw.Alert}
+	snap := FallenSnapshot{
+		Alert:      raw.Alert,
+		Detections: raw.FallenNowDetails,
+		FrameW:     frameW,
+		FrameB64:   raw.FrameB64,
+	}
 
 	var (
-		best     fallenDetail
+		best     FallenDetection
 		bestArea float64
 		found    bool
 	)

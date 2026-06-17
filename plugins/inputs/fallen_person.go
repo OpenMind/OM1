@@ -2,8 +2,11 @@ package inputs
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +33,10 @@ const (
 	fallenDefaultClearStreak    = 2
 	fallenDefaultMinHoldSeconds = 5.0
 	fallenNoPersonText          = "No person lying on the ground."
+
+	// fallenDefaultDebugPeriod throttles debug dumps when debug_dir is set, so a fast
+	// poll loop does not flood the disk with frames.
+	fallenDefaultDebugPeriod = time.Second
 )
 
 type fallenPersonConfig struct {
@@ -40,6 +47,11 @@ type fallenPersonConfig struct {
 	ClearStreak    int     `json:"clear_streak"`
 	MinHoldSeconds float64 `json:"min_hold_seconds"`
 	LockWidthFrac  float64 `json:"lock_width_frac"`
+
+	// DebugDir, when set, enables dumping each polled frame (decoded from frame_b64)
+	// and its analysis to that directory. DebugPeriodMS throttles the dump rate.
+	DebugDir      string `json:"debug_dir"`
+	DebugPeriodMS int    `json:"debug_period_ms"`
 }
 
 type fallenPersonTracker struct {
@@ -49,6 +61,10 @@ type fallenPersonTracker struct {
 	clearStreak int
 	minHold     time.Duration
 	lockWidth   float64
+
+	debugDir    string
+	debugPeriod time.Duration
+	lastDebugAt time.Time
 
 	mu         sync.Mutex
 	latest     inputs.Message
@@ -85,7 +101,17 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 		lockWidth = providers.DefaultLockWidthFrac
 	}
 
+	debugPeriod := fallenDefaultDebugPeriod
+	if cfg.DebugPeriodMS > 0 {
+		debugPeriod = time.Duration(cfg.DebugPeriodMS) * time.Millisecond
+	}
 	log := logger.Get().Named("FallenPersonTracker")
+	if cfg.DebugDir != "" {
+		if err := os.MkdirAll(cfg.DebugDir, 0o755); err != nil {
+			log.Warn("debug dump disabled: cannot create debug_dir", zap.String("dir", cfg.DebugDir), zap.Error(err))
+			cfg.DebugDir = ""
+		}
+	}
 	log.Info("initializing",
 		zap.String("base_url", cfg.BaseURL),
 		zap.String("path", cfg.Path),
@@ -93,6 +119,7 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 		zap.Int("clear_streak", clearStreak),
 		zap.Float64("min_hold_seconds", minHoldSeconds),
 		zap.Float64("lock_width_frac", lockWidth),
+		zap.String("debug_dir", cfg.DebugDir),
 	)
 
 	return &fallenPersonTracker{
@@ -106,6 +133,8 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 		clearStreak: clearStreak,
 		minHold:     time.Duration(minHoldSeconds * float64(time.Second)),
 		lockWidth:   lockWidth,
+		debugDir:    cfg.DebugDir,
+		debugPeriod: debugPeriod,
 	}, nil
 }
 
@@ -140,6 +169,8 @@ func (s *fallenPersonTracker) Listen(ctx context.Context) (<-chan any, error) {
 				s.log.Debug("fallen poll failed", zap.Error(err))
 				continue
 			}
+
+			s.maybeDumpDebug(snap)
 
 			reading := s.classify(snap)
 			if reading == "" {
@@ -225,6 +256,112 @@ func (s *fallenPersonTracker) alertText(snap providers.FallenSnapshot) string {
 		"ALERT: a person is lying on the ground (%s). Location in view: %s. Distance: %s.",
 		who, snap.HPos, distance,
 	)
+}
+
+// fallenTarget is the chosen closest detection's geometry, embedded in a debug record.
+type fallenTarget struct {
+	Name       string  `json:"name"`
+	HPos       string  `json:"h_pos"`
+	NormErrX   float64 `json:"norm_err_x"`
+	WidthFrac  float64 `json:"width_frac"`
+	Confidence float64 `json:"confidence"`
+}
+
+// fallenDebugRecord is one verdicts.jsonl line: the analysis for a polled frame plus
+// the name of the image file written alongside it.
+type fallenDebugRecord struct {
+	Time       string                      `json:"time"`
+	UnixMs     int64                       `json:"unix_ms"`
+	Alert      bool                        `json:"alert"`
+	Present    bool                        `json:"present"`
+	Target     *fallenTarget               `json:"target,omitempty"`
+	Detections []providers.FallenDetection `json:"detections"`
+	FrameW     float64                     `json:"frame_w"`
+	Frame      string                      `json:"frame,omitempty"`
+}
+
+// maybeDumpDebug writes the decoded frame and its analysis when debug dumping is
+// enabled, throttled to debugPeriod. It runs only on the poll goroutine.
+func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot) {
+	if s.debugDir == "" {
+		return
+	}
+	now := time.Now()
+	if s.debugPeriod > 0 && now.Sub(s.lastDebugAt) < s.debugPeriod {
+		return
+	}
+	s.lastDebugAt = now
+
+	frameName := ""
+	if snap.FrameB64 != "" {
+		if img, ext, err := decodeFrame(snap.FrameB64); err != nil {
+			s.log.Warn("debug dump: decode frame_b64 failed", zap.Error(err))
+		} else {
+			frameName = fmt.Sprintf("frame_%d%s", now.UnixMilli(), ext)
+			if err := os.WriteFile(filepath.Join(s.debugDir, frameName), img, 0o644); err != nil {
+				s.log.Warn("debug dump: write frame failed", zap.Error(err))
+				frameName = ""
+			}
+		}
+	}
+
+	rec := fallenDebugRecord{
+		Time:       now.Format(time.RFC3339Nano),
+		UnixMs:     now.UnixMilli(),
+		Alert:      snap.Alert,
+		Present:    snap.Present,
+		Detections: snap.Detections,
+		FrameW:     snap.FrameW,
+		Frame:      frameName,
+	}
+	if snap.Present {
+		rec.Target = &fallenTarget{
+			Name:       snap.Name,
+			HPos:       snap.HPos,
+			NormErrX:   snap.NormErrX,
+			WidthFrac:  snap.WidthFrac,
+			Confidence: snap.Confidence,
+		}
+	}
+
+	line, err := json.Marshal(rec)
+	if err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(s.debugDir, "verdicts.jsonl"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		s.log.Warn("debug dump: open verdicts.jsonl failed", zap.Error(err))
+		return
+	}
+	defer func() { _ = f.Close() }()
+	_, _ = f.Write(append(line, '\n'))
+}
+
+// decodeFrame decodes a base64 image, tolerating a "data:image/...;base64," prefix,
+// and returns the bytes plus a file extension guessed from the data-URL mime or the
+// image's magic bytes.
+func decodeFrame(b64 string) ([]byte, string, error) {
+	ext := ".jpg"
+	if strings.HasPrefix(b64, "data:") {
+		if i := strings.Index(b64, ","); i >= 0 {
+			if strings.Contains(b64[:i], "image/png") {
+				ext = ".png"
+			}
+			b64 = b64[i+1:]
+		}
+	}
+	img, err := base64.StdEncoding.DecodeString(strings.TrimSpace(b64))
+	if err != nil {
+		return nil, "", err
+	}
+	switch {
+	case len(img) >= 4 && img[0] == 0x89 && img[1] == 'P' && img[2] == 'N' && img[3] == 'G':
+		ext = ".png"
+	case len(img) >= 2 && img[0] == 0xFF && img[1] == 0xD8:
+		ext = ".jpg"
+	}
+	return img, ext, nil
 }
 
 func (s *fallenPersonTracker) Poll(context.Context) (any, error) { return nil, nil }
