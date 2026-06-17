@@ -188,35 +188,40 @@ func (s *PresenceSnapshot) ToText() string {
 		return faces[i].TrackID < faces[j].TrackID
 	})
 
-	// Bucket into named/anon; drop unknown (transient, no UUID).
-	var named, anons []FaceEntry
-	for _, f := range faces {
-		switch {
-		case strings.HasPrefix(f.Name, "anon_"):
-			anons = append(anons, f)
-		case f.Name == "unknown" || f.Name == "":
-			// drop
-		default:
-			named = append(named, f)
+	var kept []*FaceEntry
+	for i := range faces {
+		f := &faces[i]
+		if f.Name == "unknown" || f.Name == "" {
+			continue
 		}
+		kept = append(kept, f)
 	}
 
-	if len(named) == 0 && len(anons) == 0 {
+	if len(kept) == 0 {
 		return ""
 	}
 
-	total := len(named) + len(anons)
-	descriptor := fmt.Sprintf("FacePresence: %d face", total)
-	if total != 1 {
+	closest := kept[0]
+
+	descriptor := fmt.Sprintf("FacePresence: %d face", len(kept))
+	if len(kept) != 1 {
 		descriptor += "s"
 	}
+	// Tell the model the list is ordered by proximity and what that implies.
+	descriptor += " (nearest first; nearest face is closest to the camera and most likely addressing the robot)"
 
 	var parts []string
-	for _, f := range named {
-		parts = append(parts, formatNamedEntry(f))
-	}
-	for _, f := range anons {
-		parts = append(parts, formatAnonEntry(f))
+	for _, f := range kept {
+		var entry string
+		if strings.HasPrefix(f.Name, "anon_") {
+			entry = formatAnonEntry(*f)
+		} else {
+			entry = formatNamedEntry(*f)
+		}
+		if f == closest {
+			entry += " [closest, likely speaking]"
+		}
+		parts = append(parts, entry)
 	}
 
 	return fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
