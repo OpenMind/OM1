@@ -46,7 +46,7 @@ var laydownDefaults = providerDefaults{
 		"person is lying on the ground. <brief description of their position and any visible signs of " +
 		"a medical condition>.' If no person is lying on the ground in any frame, respond exactly: " +
 		"'No person lying on the ground.' Do not explain your reasoning.",
-	maxTokens: 1024,
+	maxTokens: 2048,
 }
 
 type laydownDetector struct {
