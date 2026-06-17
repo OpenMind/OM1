@@ -22,7 +22,9 @@ func TestPresenceSnapshotToText_OneNamed(t *testing.T) {
 	}
 	text := snap.ToText()
 	require.Contains(t, text, "FacePresence: 1 face")
+	require.Contains(t, text, "nearest first")
 	require.Contains(t, text, "sean")
+	require.Contains(t, text, "sean (recognized) [closest, likely speaking]")
 }
 
 func TestPresenceSnapshotToText_NamedAndAnon(t *testing.T) {
@@ -36,6 +38,20 @@ func TestPresenceSnapshotToText_NamedAndAnon(t *testing.T) {
 	require.Contains(t, text, "2 faces")
 	require.Contains(t, text, "sean")
 	require.Contains(t, text, "anon_73d0a4")
+	require.Contains(t, text, "sean (recognized) [closest, likely speaking]")
+	require.NotContains(t, text, "anon_73d0a4 (newcomer) [closest")
+}
+
+func TestPresenceSnapshotToText_ClosestIsAnon(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "sean", UUID: "abc", Area: 800},
+			{Name: "anon_73d0a4", UUID: "def", Area: 3000},
+		},
+	}
+	text := snap.ToText()
+	require.Contains(t, text, "anon_73d0a4 (newcomer) [closest, likely speaking]")
+	require.NotContains(t, text, "sean (recognized) [closest")
 }
 
 func TestPresenceSnapshotToText_UnknownDropped(t *testing.T) {

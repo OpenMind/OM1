@@ -189,8 +189,10 @@ func (s *PresenceSnapshot) ToText() string {
 	})
 
 	// Bucket into named/anon; drop unknown (transient, no UUID).
-	var named, anons []FaceEntry
-	for _, f := range faces {
+	// Hold pointers into the sorted slice so identity survives bucketing.
+	var named, anons []*FaceEntry
+	for i := range faces {
+		f := &faces[i]
 		switch {
 		case strings.HasPrefix(f.Name, "anon_"):
 			anons = append(anons, f)
@@ -205,18 +207,39 @@ func (s *PresenceSnapshot) ToText() string {
 		return ""
 	}
 
+	// faces is sorted by area desc, so the first kept entry is the largest
+	// face = closest to camera = most likely the active speaker. Identify it
+	// before formatting so the marker survives the named-before-anon bucketing.
+	var closest *FaceEntry
+	for i := range faces {
+		if f := &faces[i]; f.Name != "unknown" && f.Name != "" {
+			closest = f
+			break
+		}
+	}
+
 	total := len(named) + len(anons)
 	descriptor := fmt.Sprintf("FacePresence: %d face", total)
 	if total != 1 {
 		descriptor += "s"
 	}
+	// Tell the model the list is ordered by proximity and what that implies.
+	descriptor += " (nearest first; nearest face is closest to the camera and most likely addressing the robot)"
 
 	var parts []string
 	for _, f := range named {
-		parts = append(parts, formatNamedEntry(f))
+		entry := formatNamedEntry(*f)
+		if f == closest {
+			entry += " [closest, likely speaking]"
+		}
+		parts = append(parts, entry)
 	}
 	for _, f := range anons {
-		parts = append(parts, formatAnonEntry(f))
+		entry := formatAnonEntry(*f)
+		if f == closest {
+			entry += " [closest, likely speaking]"
+		}
+		parts = append(parts, entry)
 	}
 
 	return fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
