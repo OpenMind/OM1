@@ -208,8 +208,7 @@ func (s *PresenceSnapshot) ToText() string {
 	}
 
 	// faces is sorted by area desc, so the first kept entry is the largest
-	// face = closest to camera = most likely the active speaker. Identify it
-	// before formatting so the marker survives the named-before-anon bucketing.
+	// face = closest to camera = most likely the active speaker.
 	var closest *FaceEntry
 	for i := range faces {
 		if f := &faces[i]; f.Name != "unknown" && f.Name != "" {
