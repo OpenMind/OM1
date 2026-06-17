@@ -63,9 +63,11 @@ type MPPIConnector struct {
 	minActiveHold time.Duration
 	lastAction    string
 
-	// lastRecenterSeq is the vision frame the most recent re-center turn acted on,
-	// used to issue at most one slight turn per fresh VLM verdict.
-	lastRecenterSeq atomic.Uint64
+	// lastAlertMoveSeq is the VLM verdict (vision sequence) the most recent move acted
+	// on while a person-down alert was active. It gates the dog to one move per fresh
+	// verdict during an alert, so it holds instead of acting on the stale latched
+	// verdict while the multi-second VLM call computes the next one.
+	lastAlertMoveSeq atomic.Uint64
 }
 
 // NewMPPIConnector builds the MPPI-backed autonomy connector from its config.
@@ -192,6 +194,19 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
+	// During a person-down alert, move at most once per fresh VLM verdict. The cortex
+	// re-serves the latched verdict on stale timer ticks while the multi-second VLM
+	// call computes the next one; without this gate the dog keeps moving on stale
+	// perception. Hold (do nothing) until a new verdict arrives. Patrol is unaffected.
+	if providers.PersonDownAlert() {
+		seq := providers.VisionSeq()
+		if seq == c.lastAlertMoveSeq.Load() {
+			c.log.Info("holding for fresh vision frame", zap.String("action", action))
+			return nil, nil
+		}
+		c.lastAlertMoveSeq.Store(seq)
+	}
+
 	move := c.paths.Movement()
 	switch action {
 	case "turn left":
@@ -251,17 +266,8 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
-	// The cortex re-serves the latched VLM verdict every tick (~1 Hz) while the VLM
-	// only refreshes every few seconds, so a "turn slightly" decision repeats across
-	// stale ticks. Acting on each one double-turns and drives the person out of frame,
-	// so re-center at most once per fresh vision frame and hold in between.
-	seq := providers.VisionSeq()
-	if seq == c.lastRecenterSeq.Load() {
-		c.log.Info("re-center already issued for this vision frame - holding",
-			zap.String("label", label))
-		return
-	}
 	// Negate: pathAngles is +right, mppi goal frame is +left (CCW). See issueGoal.
+	// (One-move-per-verdict gating during an alert is handled in Connect.)
 	angleRad := -pathAngles[gentlestPath(options)] * math.Pi / 180.0
 	if angleRad == 0 {
 		c.log.Info("already centered - holding")
@@ -272,7 +278,6 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
 		return
 	}
-	c.lastRecenterSeq.Store(seq)
 	c.markActive()
 	c.log.Info("issued mppi recenter goal", zap.String("label", label),
 		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
