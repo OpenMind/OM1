@@ -125,9 +125,10 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 	return &fallenPersonTracker{
 		log: log,
 		provider: providers.NewFallenPersonProvider(providers.FallenPersonConfig{
-			BaseURL: cfg.BaseURL,
-			Path:    cfg.Path,
-			Timeout: time.Duration(cfg.TimeoutMS) * time.Millisecond,
+			BaseURL:     cfg.BaseURL,
+			Path:        cfg.Path,
+			Timeout:     time.Duration(cfg.TimeoutMS) * time.Millisecond,
+			CacheFrames: clearStreak,
 		}),
 		pollPeriod:  pollPeriod,
 		clearStreak: clearStreak,
@@ -261,12 +262,15 @@ func (s *fallenPersonTracker) alertText(snap providers.FallenSnapshot) string {
 // Location/Distance mirror the human-readable verdict ("Location in view: <location>.
 // Distance: <distance>.") so the analysis is easy to scan.
 type fallenTarget struct {
-	Name       string  `json:"name"`
-	Location   string  `json:"location"` // left / center / right
-	Distance   string  `json:"distance"` // near / far
-	NormErrX   float64 `json:"norm_err_x"`
-	WidthFrac  float64 `json:"width_frac"`
-	Confidence float64 `json:"confidence"`
+	Name        string    `json:"name"`
+	Location    string    `json:"location"` // left / center / right
+	Distance    string    `json:"distance"` // near / far
+	NormErrX    float64   `json:"norm_err_x"`
+	WidthFrac   float64   `json:"width_frac"`
+	Confidence  float64   `json:"confidence"`
+	FaceMatched bool      `json:"face_matched"` // true when centering used the face bbox
+	BodyBbox    []float64 `json:"body_bbox,omitempty"`
+	FaceBbox    []float64 `json:"face_bbox,omitempty"`
 }
 
 // fallenDebugRecord is one verdicts.jsonl line: the analysis for a polled frame plus
@@ -278,6 +282,7 @@ type fallenDebugRecord struct {
 	Verdict    string                      `json:"verdict"`
 	Alert      bool                        `json:"alert"`
 	Present    bool                        `json:"present"`
+	Cached     bool                        `json:"cached"`
 	Target     *fallenTarget               `json:"target,omitempty"`
 	Detections []providers.FallenDetection `json:"detections"`
 	FrameW     float64                     `json:"frame_w"`
@@ -316,6 +321,7 @@ func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot, verd
 		Verdict:    verdict,
 		Alert:      snap.Alert,
 		Present:    snap.Present,
+		Cached:     snap.Cached,
 		Detections: snap.Detections,
 		FrameW:     snap.FrameW,
 		Frame:      frameName,
@@ -326,12 +332,15 @@ func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot, verd
 			distance = "near"
 		}
 		rec.Target = &fallenTarget{
-			Name:       snap.Name,
-			Location:   snap.HPos,
-			Distance:   distance,
-			NormErrX:   snap.NormErrX,
-			WidthFrac:  snap.WidthFrac,
-			Confidence: snap.Confidence,
+			Name:        snap.Name,
+			Location:    snap.HPos,
+			Distance:    distance,
+			NormErrX:    snap.NormErrX,
+			WidthFrac:   snap.WidthFrac,
+			Confidence:  snap.Confidence,
+			FaceMatched: snap.FaceBbox != nil,
+			BodyBbox:    snap.BodyBbox,
+			FaceBbox:    snap.FaceBbox,
 		}
 	}
 

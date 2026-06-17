@@ -5,6 +5,90 @@ import (
 	"testing"
 )
 
+func TestFallenCache(t *testing.T) {
+	p := &FallenPersonProvider{cfg: FallenPersonConfig{CacheFrames: 2}}
+
+	present := FallenSnapshot{Present: true, Alert: true, Name: "wendy", NormErrX: 0.4, WidthFrac: 0.3}
+	absent := FallenSnapshot{Present: false}
+
+	// Fresh detection passes through and is cached.
+	if got := p.cache(present); !got.Present || got.Cached {
+		t.Fatalf("fresh frame: got Present=%v Cached=%v, want Present=true Cached=false", got.Present, got.Cached)
+	}
+
+	// First two dropouts reuse the cached target, marked Cached.
+	for i := 1; i <= 2; i++ {
+		got := p.cache(absent)
+		if !got.Present || !got.Cached {
+			t.Fatalf("dropout %d: got Present=%v Cached=%v, want Present=true Cached=true", i, got.Present, got.Cached)
+		}
+		if got.Name != "wendy" || got.NormErrX != 0.4 {
+			t.Errorf("dropout %d: cached geometry not reused: %+v", i, got)
+		}
+	}
+
+	// Third consecutive dropout exceeds CacheFrames: cache expires, empty passes through.
+	if got := p.cache(absent); got.Present {
+		t.Fatalf("after cache expiry: got Present=true, want false")
+	}
+
+	// A fresh detection re-primes the cache.
+	if got := p.cache(present); !got.Present || got.Cached {
+		t.Fatalf("re-prime: got Present=%v Cached=%v, want Present=true Cached=false", got.Present, got.Cached)
+	}
+	if got := p.cache(absent); !got.Cached {
+		t.Errorf("re-prime dropout: want Cached=true, got %+v", got)
+	}
+}
+
+func TestDeriveFallenGeometryFaceMatch(t *testing.T) {
+	const eps = 1e-6
+	// Body centered (center 320), face off to the right (center 480) → centering must
+	// follow the face, distance must stay on the body width.
+	raw := fallenResponse{
+		Alert:   true,
+		FrameHW: []float64{480, 640},
+		FallenNowDetails: []FallenDetection{
+			{Name: "wendy", Bbox: []float64{120, 200, 520, 360}, Confidence: 0.84}, // body, cx=320, w=400
+		},
+		Faces: []FaceDetection{
+			{Name: "someone_else", Bbox: []float64{0, 0, 40, 40}},
+			{Name: "WENDY", Bbox: []float64{440, 180, 520, 260}}, // case-insensitive, cx=480
+		},
+	}
+	got := deriveFallenGeometry(raw)
+	if got.FaceBbox == nil {
+		t.Fatal("expected a matched face bbox")
+	}
+	if math.Abs(got.NormErrX-(480.0-320.0)/320.0) > eps {
+		t.Errorf("NormErrX = %v, want face-based 0.5", got.NormErrX)
+	}
+	if got.HPos != "right" {
+		t.Errorf("HPos = %q, want right (face position)", got.HPos)
+	}
+	if math.Abs(got.WidthFrac-400.0/640.0) > eps {
+		t.Errorf("WidthFrac = %v, want body-based %v", got.WidthFrac, 400.0/640.0)
+	}
+
+	// "unknown" downed person: never face-matched, steered by body (cx=320 → center).
+	rawUnknown := fallenResponse{
+		Alert:            true,
+		FrameHW:          []float64{480, 640},
+		FallenNowDetails: []FallenDetection{{Name: "unknown", Bbox: []float64{120, 200, 520, 360}}},
+		Faces:            []FaceDetection{{Name: "unknown", Bbox: []float64{600, 10, 639, 60}}},
+	}
+	gotU := deriveFallenGeometry(rawUnknown)
+	if !gotU.Present {
+		t.Fatal("unknown downed person should still be a present target")
+	}
+	if gotU.FaceBbox != nil {
+		t.Error("unknown name must not face-match")
+	}
+	if gotU.HPos != "center" {
+		t.Errorf("HPos = %q, want center (body-based)", gotU.HPos)
+	}
+}
+
 func TestDeriveFallenGeometry(t *testing.T) {
 	const eps = 1e-6
 
