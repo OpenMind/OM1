@@ -63,10 +63,7 @@ type MPPIConnector struct {
 	minActiveHold time.Duration
 	lastAction    string
 
-	// lastAlertMoveSeq is the VLM verdict (vision sequence) the most recent move acted
-	// on while a person-down alert was active. It gates the dog to one move per fresh
-	// verdict during an alert, so it holds instead of acting on the stale latched
-	// verdict while the multi-second VLM call computes the next one.
+	// lastAlertMoveSeq gates the dog to one move per VLM verdict during an alert.
 	lastAlertMoveSeq atomic.Uint64
 }
 
@@ -175,11 +172,6 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
-	// Locked on: once we have reached the person (a "near" verdict latched the arrival),
-	// hold position for the rest of the emergency and ignore every move command. Turns
-	// only happen while approaching (still "far"); once near we never turn again, since
-	// the VLM Location is jittery and re-centering now over-rotates and loses the person.
-	// Unlatches when the alert clears. ("stand still" was already handled above.)
 	if providers.PersonDownArrived() {
 		c.log.Info("arrived - locked on, holding position", zap.String("action", action))
 		return nil, nil
@@ -204,10 +196,6 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
-	// During a person-down alert, move at most once per fresh VLM verdict. The cortex
-	// re-serves the latched verdict on stale timer ticks while the multi-second VLM
-	// call computes the next one; without this gate the dog keeps moving on stale
-	// perception. Hold (do nothing) until a new verdict arrives. Patrol is unaffected.
 	if providers.PersonDownAlert() {
 		seq := providers.VisionSeq()
 		if seq == c.lastAlertMoveSeq.Load() {
@@ -238,8 +226,9 @@ func (c *MPPIConnector) Connect(_ context.Context, input actions.Input) (actions
 	return nil, nil
 }
 
-// issueGoal selects a path from the provided indices and publishes a goal toward
-// it: the smallest-magnitude heading when gentlest, else a random one.
+// issueGoal selects a path (smallest-magnitude heading when gentlest, else random)
+// and publishes a goal toward it. pathAngles is +right but the mppi goal frame is
+// +left (CCW), so the angle is negated.
 func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
@@ -252,9 +241,6 @@ func (c *MPPIConnector) issueGoal(options []uint32, label string, gentlest bool)
 	} else {
 		chosen = options[c.rng.Intn(len(options))]
 	}
-	// pathAngles is +right (TurnRight = +15..+60), but the mppi goal frame is +left
-	// (CCW, standard ROS) for both y and yaw — confirmed by odom: a +yaw goal drives
-	// odom yaw_m180_p180 positive, i.e. left. So negate to make "turn right" go right.
 	angleRad := -pathAngles[chosen] * math.Pi / 180.0
 	bx := c.goalDistance * math.Cos(angleRad)
 	by := c.goalDistance * math.Sin(angleRad)
@@ -276,8 +262,6 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
-	// Negate: pathAngles is +right, mppi goal frame is +left (CCW). See issueGoal.
-	// (One-move-per-verdict gating during an alert is handled in Connect.)
 	angleRad := -pathAngles[gentlestPath(options)] * math.Pi / 180.0
 	if angleRad == 0 {
 		c.log.Info("already centered - holding")
@@ -291,6 +275,17 @@ func (c *MPPIConnector) issueRotation(options []uint32, label string) {
 	c.markActive()
 	c.log.Info("issued mppi recenter goal", zap.String("label", label),
 		zap.Float64("goal_x", bx), zap.Float64("goal_y", by))
+}
+
+// gentlestPath returns the option whose heading is closest to straight ahead.
+func gentlestPath(options []uint32) uint32 {
+	best := options[0]
+	for _, o := range options[1:] {
+		if math.Abs(pathAngles[o]) < math.Abs(pathAngles[best]) {
+			best = o
+		}
+	}
+	return best
 }
 
 // issueRetreat publishes a goal a short distance straight behind the robot.

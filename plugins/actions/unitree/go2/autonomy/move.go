@@ -117,9 +117,8 @@ type moveConnector struct {
 
 	aiControlEnabled atomic.Bool
 
-	mode        string
-	gentleTurns bool
-	guard       *guardWatcher
+	mode  string
+	guard *guardWatcher
 
 	rng *rand.Rand
 
@@ -139,9 +138,8 @@ func NewMoveConnector(cfg map[string]any) (actions.Connector, error) {
 		log:   log,
 		odom:  go2.OdomZenoh(),
 		paths: providers.NewPathsProvider(),
-		mode:        util.StringFrom(cfg["mode"], ""),
-		gentleTurns: util.BoolFrom(cfg["gentle_turns"], false),
-		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		mode:  util.StringFrom(cfg["mode"], ""),
+		rng:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	c.aiControlEnabled.Store(true)
 
@@ -194,14 +192,6 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 		return nil, nil
 	}
 
-	if action == "stand still" {
-		c.mu.Lock()
-		c.abortLocked()
-		c.mu.Unlock()
-		c.log.Info("stand still - aborting any movement in progress")
-		return nil, nil
-	}
-
 	pos := c.odom.Position()
 
 	if pos.Moving {
@@ -224,15 +214,11 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 
 	switch action {
 	case "turn left":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left", c.gentleTurns || providers.PersonDownAlert())
+		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left")
 	case "turn right":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right", c.gentleTurns || providers.PersonDownAlert())
-	case "turn left slightly":
-		c.queuePathMove(pos, c.paths.Movement().TurnLeft, "turn left slightly", true)
-	case "turn right slightly":
-		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right slightly", true)
+		c.queuePathMove(pos, c.paths.Movement().TurnRight, "turn right")
 	case "move forwards":
-		c.queuePathMove(pos, c.paths.Movement().Advance, "advance", false)
+		c.queuePathMove(pos, c.paths.Movement().Advance, "advance")
 	case "move back":
 		c.processMoveBack(pos)
 	case "stand still":
@@ -244,21 +230,14 @@ func (c *moveConnector) Connect(_ context.Context, input actions.Input) (actions
 	return nil, nil
 }
 
-// queuePathMove queues a movement toward a safe path: the smallest-magnitude
-// heading when gentlest, else a random one.
-func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, label string, gentlest bool) {
+// queuePathMove picks a random safe path from options, then queues a movement command.
+func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, label string) {
 	if len(options) == 0 {
 		c.log.Warn("cannot " + label + " due to barrier")
 		return
 	}
 
-	var chosen uint32
-	if gentlest {
-		chosen = gentlestPath(options)
-	} else {
-		chosen = options[c.rng.Intn(len(options))]
-	}
-	angle := pathAngles[chosen]
+	angle := pathAngles[options[c.rng.Intn(len(options))]]
 
 	c.queue(&moveCommand{
 		dx:           0.5,
@@ -268,17 +247,6 @@ func (c *moveConnector) queuePathMove(pos go2.OdomPosition, options []uint32, la
 		turnComplete: angle == 0,
 		speed:        moveSpeed,
 	})
-}
-
-// gentlestPath returns the option whose heading is closest to straight ahead.
-func gentlestPath(options []uint32) uint32 {
-	best := options[0]
-	for _, o := range options[1:] {
-		if math.Abs(pathAngles[o]) < math.Abs(pathAngles[best]) {
-			best = o
-		}
-	}
-	return best
 }
 
 // processMoveBack queues a straight retreat with no turning phase.

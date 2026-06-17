@@ -314,11 +314,6 @@ func (s *laydownDetector) classify(text string) string {
 		s.lastAlert = text
 		tts.Priority.Store(true)
 		providers.SetPersonDownAlert(true)
-		// Latch "arrived" the first time we read "near" — the dog is then close enough
-		// and must hold, regardless of whether this frame reads left/center/right
-		// (the VLM Location is jittery, and requiring center too lets the dog keep
-		// approaching and over-shoot). Stays latched (a later far/off-center verdict
-		// won't unlock it) until the whole alert clears.
 		if strings.Contains(strings.ToLower(text), "distance: near") {
 			providers.SetPersonDownArrived(true)
 		}
@@ -329,7 +324,6 @@ func (s *laydownDetector) classify(text string) string {
 		s.clearCount++
 		held := time.Since(s.alertedAt)
 
-		// Clear only when both the clear streak and the min-hold time are met.
 		streakMet := s.clearCount >= s.clearStreak
 		holdMet := s.minHold <= 0 || held >= s.minHold
 		if !streakMet || !holdMet {
@@ -374,8 +368,6 @@ func (s *laydownDetector) RawToText(_ context.Context, raw any) (*inputs.Message
 	s.hasLatest = true
 	s.mu.Unlock()
 
-	// A fresh verdict replaced the latched one; bump the perception-frame counter so
-	// motion code re-centers at most once per frame instead of on every stale tick.
 	providers.BumpVisionSeq()
 
 	return msg, nil
