@@ -1,6 +1,9 @@
 package providers
 
-import "sync/atomic"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // personDownAlert is set while a downed-person ALERT is latched.
 var personDownAlert atomic.Bool
@@ -24,3 +27,33 @@ var visionSeq atomic.Uint64
 func BumpVisionSeq() { visionSeq.Add(1) }
 
 func VisionSeq() uint64 { return visionSeq.Load() }
+
+// FallenTarget is the geometry of the closest downed person, derived from a bbox
+// detector and carried from the perception input to the motion connector so the
+// robot can approach geometrically without the LLM in the loop.
+type FallenTarget struct {
+	Present    bool
+	NormErrX   float64 // horizontal offset from frame center, [-1, 1]; + = right, - = left
+	WidthFrac  float64 // bbox width as a fraction of frame width (distance proxy)
+	Confidence float64
+	Name       string
+}
+
+var (
+	fallenTargetMu   sync.RWMutex
+	fallenTargetData FallenTarget
+)
+
+// SetFallenTarget stores the latest downed-person geometry.
+func SetFallenTarget(t FallenTarget) {
+	fallenTargetMu.Lock()
+	fallenTargetData = t
+	fallenTargetMu.Unlock()
+}
+
+// FallenTargetSnapshot returns the latest downed-person geometry.
+func FallenTargetSnapshot() FallenTarget {
+	fallenTargetMu.RLock()
+	defer fallenTargetMu.RUnlock()
+	return fallenTargetData
+}

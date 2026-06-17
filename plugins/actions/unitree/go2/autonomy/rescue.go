@@ -86,6 +86,15 @@ type RescueConnector struct {
 
 	// lastAlertMoveSeq gates the dog to one move per VLM verdict during an alert.
 	lastAlertMoveSeq atomic.Uint64
+
+	// geometryDriven, when set, makes the connector approach a downed person directly
+	// from bbox geometry during an alert, ignoring LLM movement commands.
+	geometryDriven bool
+	lockWidthFrac  float64
+	centerTol      float64
+
+	// lastGeoSeq gates the geometric self-drive to one move per perception frame.
+	lastGeoSeq atomic.Uint64
 }
 
 // NewRescueConnector builds the MPPI-backed autonomy connector from its config.
@@ -112,6 +121,15 @@ func NewRescueConnector(cfg map[string]any) (actions.Connector, error) {
 	}
 	if h, ok := cfg["min_active_hold_seconds"].(float64); ok && h >= 0 {
 		c.minActiveHold = time.Duration(h * float64(time.Second))
+	}
+	c.geometryDriven = util.BoolFrom(cfg["geometry_driven"], false)
+	c.lockWidthFrac = providers.DefaultLockWidthFrac
+	if v, ok := cfg["lock_width_frac"].(float64); ok && v > 0 {
+		c.lockWidthFrac = v
+	}
+	c.centerTol = providers.DefaultCenterTol
+	if v, ok := cfg["center_tolerance"].(float64); ok && v > 0 {
+		c.centerTol = v
 	}
 	c.aiControlEnabled.Store(true)
 
@@ -147,6 +165,9 @@ func NewRescueConnector(cfg map[string]any) (actions.Connector, error) {
 		zap.String("goal_topic", goalTopic),
 		zap.String("status_topic", statusTopic),
 		zap.Float64("goal_distance", c.goalDistance),
+		zap.Bool("geometry_driven", c.geometryDriven),
+		zap.Float64("lock_width_frac", c.lockWidthFrac),
+		zap.Float64("center_tolerance", c.centerTol),
 		zap.String("mode", c.mode))
 	return c, nil
 }
@@ -168,6 +189,12 @@ func (c *RescueConnector) Connect(_ context.Context, input actions.Input) (actio
 
 	if !c.aiControlEnabled.Load() {
 		c.log.Info("AI control disabled - ignoring command")
+		return nil, nil
+	}
+
+	if c.geometryDriven && providers.PersonDownAlert() {
+		c.log.Info("geometry-driven approach active - ignoring LLM movement during alert",
+			zap.String("action", action))
 		return nil, nil
 	}
 
@@ -405,6 +432,89 @@ func (c *RescueConnector) Tick(ctx context.Context) {
 	if stale {
 		c.log.Info("mppi goal timeout - clearing and stopping")
 		_ = c.publishGoal(0, 0, 0)
+	}
+
+	if c.geometryDriven {
+		c.geometryDrive()
+	}
+}
+
+// geometryDrive approaches a downed person directly from bbox geometry while an alert
+// is active: it re-centers the target with a slight turn, steps forward once centered,
+// and locks on (holding position) once the target fills enough of the frame. It runs
+// at the Tick cadence, fully decoupled from the LLM, but reuses the same odom/barrier/
+// gating guards as LLM-driven moves and acts at most once per fresh perception frame.
+func (c *RescueConnector) geometryDrive() {
+	if !providers.PersonDownAlert() || providers.PersonDownArrived() {
+		return
+	}
+	target := providers.FallenTargetSnapshot()
+	if !target.Present {
+		return
+	}
+
+	seq := providers.VisionSeq()
+	if seq == c.lastGeoSeq.Load() {
+		return
+	}
+
+	c.mu.Lock()
+	busy := c.active
+	c.mu.Unlock()
+	if busy {
+		return
+	}
+
+	pos := c.odom.Position()
+	if pos.Moving {
+		return
+	}
+	if pos.OdomX == 0.0 {
+		c.log.Debug("bbox approach: waiting for location data")
+		return
+	}
+
+	c.lastGeoSeq.Store(seq)
+
+	move := c.paths.Movement()
+	switch approachDecision(target.NormErrX, target.WidthFrac, c.lockWidthFrac, c.centerTol) {
+	case approachLock:
+		providers.SetPersonDownArrived(true)
+		c.cancelGoal()
+		c.log.Info("bbox approach: locked on - holding position",
+			zap.Float64("width_frac", target.WidthFrac),
+			zap.Float64("lock_width_frac", c.lockWidthFrac))
+	case approachRecenterRight:
+		c.issueRotation(move.TurnRight, "bbox recenter right")
+	case approachRecenterLeft:
+		c.issueRotation(move.TurnLeft, "bbox recenter left")
+	case approachAdvance:
+		c.issueGoal(move.Advance, "bbox advance", false)
+	}
+}
+
+type approachAction int
+
+const (
+	approachAdvance approachAction = iota
+	approachRecenterLeft
+	approachRecenterRight
+	approachLock
+)
+
+// approachDecision maps the target's bbox geometry to the next approach move:
+// lock on once close enough (wide bbox), else re-center if off to a side, else step
+// forward. Lock is checked first so a centered-and-near target stops rather than steps.
+func approachDecision(normErrX, widthFrac, lockWidthFrac, centerTol float64) approachAction {
+	switch {
+	case widthFrac >= lockWidthFrac:
+		return approachLock
+	case normErrX > centerTol:
+		return approachRecenterRight
+	case normErrX < -centerTol:
+		return approachRecenterLeft
+	default:
+		return approachAdvance
 	}
 }
 
