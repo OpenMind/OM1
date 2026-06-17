@@ -24,7 +24,6 @@ func TestUploader_CheckEligibility_BelowThreshold(t *testing.T) {
 	dailyDir := filepath.Join(root, "daily")
 	require.NoError(t, os.MkdirAll(dailyDir, 0o755))
 
-	// Write 5 sections — below threshold of 100.
 	content := ""
 	for i := 0; i < 5; i++ {
 		content += "## 10:00:0" + string(rune('0'+i)) + "\nSome interaction\n\n"
@@ -43,7 +42,6 @@ func TestUploader_CheckEligibility_AboveThreshold(t *testing.T) {
 	dailyDir := filepath.Join(root, "daily")
 	require.NoError(t, os.MkdirAll(dailyDir, 0o755))
 
-	// Write 101 sections — above threshold.
 	content := ""
 	for i := 0; i < 101; i++ {
 		h := i / 3600
@@ -67,7 +65,6 @@ func TestUploader_CheckEligibility_RespectsMarker(t *testing.T) {
 
 	now := time.Now()
 	content := ""
-	// 50 sections before marker time, 60 after.
 	for i := 0; i < 110; i++ {
 		ts := now.Add(time.Duration(i-50) * time.Minute)
 		content += "## " + ts.Format("15:04:05") + "\nSome interaction\n\n"
@@ -77,7 +74,6 @@ func TestUploader_CheckEligibility_RespectsMarker(t *testing.T) {
 		[]byte(content), 0o644,
 	))
 
-	// Set marker to "now" — only 60 sections after marker.
 	u := NewUploader(root, "test-key", zap.NewNop())
 	require.NoError(t, os.WriteFile(u.markerFile, []byte(now.Format("2006-01-02 15:04")), 0o644))
 
@@ -86,7 +82,6 @@ func TestUploader_CheckEligibility_RespectsMarker(t *testing.T) {
 
 func TestUploader_CreateTarGz_ExcludesIndex(t *testing.T) {
 	root := t.TempDir()
-	// Create memory structure.
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "daily"), 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "index"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "daily", "2026-06-12.md"), []byte("test"), 0o644))
@@ -102,7 +97,6 @@ func TestUploader_CreateTarGz_ExcludesIndex(t *testing.T) {
 	require.NoError(t, u.createTarGz(tmpFile))
 	_ = tmpFile.Close()
 
-	// Verify archive contents.
 	entries := listTarEntries(t, tmpFile.Name())
 	assert.Contains(t, entries, "memory/daily/2026-06-12.md")
 	assert.NotContains(t, entries, "memory/index/index.graph")
