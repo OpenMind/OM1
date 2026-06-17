@@ -23,8 +23,8 @@ type Describer struct {
 	Model     string
 	Prompt    string
 	MaxTokens int
-	Detail string
-	Log    *zap.Logger
+	Detail    string
+	Log       *zap.Logger
 }
 
 type chatResponse struct {

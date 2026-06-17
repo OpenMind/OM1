@@ -51,8 +51,6 @@ func (MoveAction) EnumValues() []string {
 	return []string{
 		"turn left",
 		"turn right",
-		"turn left slightly",
-		"turn right slightly",
 		"move forwards",
 		"move back",
 		"stand still",
@@ -69,7 +67,7 @@ func init() {
 		"Action interface for autonomous Unitree Go2 movement. "+
 			"Validates the requested direction against lidar-derived safe paths and "+
 			"drives the robot via geometry_msgs/Twist commands on the /cmd_vel Zenoh topic. "+
-			"Supported movements: turn left, turn right, turn left slightly, turn right slightly, move forwards, move back, stand still.",
+			"Supported movements: turn left, turn right, move forwards, move back, stand still.",
 		MoveInput{},
 	)
 	actions.Register("unitree_go2_autonomy/move", NewMoveConnector)

@@ -36,7 +36,7 @@ type ElevenLabsConfig struct {
 	OutputFormat     string `json:"output_format"`
 	Rate             int    `json:"rate"`
 	SilenceRate      int    `json:"silence_rate"`
-	SkipWhenBusy bool `json:"skip_when_busy"`
+	SkipWhenBusy     bool   `json:"skip_when_busy"`
 }
 
 type ElevenLabsConnector struct {

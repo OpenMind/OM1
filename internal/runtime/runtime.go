@@ -382,8 +382,6 @@ func (rt *Runtime) handleModeTransitions(ctx context.Context) {
 	}
 }
 
-const cortexCallTimeout = 15 * time.Second
-
 // runCortexLoop runs the cortex loop for the current mode, ticking at the configured hertz
 // and also allowing immediate ticks when signaled by the InputOrchestrator.
 func (rt *Runtime) runCortexLoop(ctx context.Context) {
@@ -475,9 +473,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 
 	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
 
-	callCtx, cancel := context.WithTimeout(ctx, cortexCallTimeout)
-	response, err := current.cortexLLM.Call(callCtx, prompt, nil)
-	cancel()
+	response, err := current.cortexLLM.Call(ctx, prompt, nil)
 	if err != nil {
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return

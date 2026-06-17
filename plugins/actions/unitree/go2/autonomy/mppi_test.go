@@ -171,7 +171,7 @@ func TestIssueGoal(t *testing.T) {
 	pub := &fakePublisher{}
 	c := newTestMPPI(pub)
 
-	c.issueGoal(nil, "advance", false)
+	c.issueGoal(nil, "advance")
 	if len(pub.puts) != 0 {
 		t.Fatalf("blocked move published %d goals, want 0", len(pub.puts))
 	}
@@ -183,7 +183,7 @@ func TestIssueGoal(t *testing.T) {
 	}
 
 	// Path index 4 is straight ahead (0 deg): goal lies at goalDistance along +x.
-	c.issueGoal([]uint32{4}, "advance", false)
+	c.issueGoal([]uint32{4}, "advance")
 	if len(pub.puts) != 1 {
 		t.Fatalf("put count = %d, want 1", len(pub.puts))
 	}

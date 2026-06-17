@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -57,7 +55,6 @@ type laydownDetector struct {
 	clearStreak int
 	minHold     time.Duration
 	maxBatch    int
-	debugDir    string
 
 	mu         sync.Mutex
 	latest     inputs.Message
@@ -84,7 +81,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		ClearStreak      int     `json:"clear_streak"`
 		MinHoldSeconds   float64 `json:"min_hold_seconds"`
 		MaxFramesPerCall int     `json:"max_frames_per_call"`
-		ImageLogDir      string  `json:"image_log_dir"`
 	}
 	if b, err := json.Marshal(configMap); err == nil {
 		_ = json.Unmarshal(b, &extra)
@@ -101,15 +97,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 
 	log := logger.Get().Named("PersonLaydownDetector")
 
-	debugDir := extra.ImageLogDir
-	if debugDir != "" {
-		if err := os.MkdirAll(debugDir, 0o755); err != nil {
-			log.Warn("image_log_dir unusable, disabling image dump",
-				zap.String("dir", debugDir), zap.Error(err))
-			debugDir = ""
-		}
-	}
-
 	log.Info("initializing",
 		zap.String("rtsp_url", cfg.RTSPURL),
 		zap.String("model", cfg.Model),
@@ -117,7 +104,6 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		zap.Int("clear_streak", clearStreak),
 		zap.Duration("min_hold", minHold),
 		zap.Int("max_frames_per_call", maxBatch),
-		zap.String("image_log_dir", debugDir),
 	)
 
 	source := video.NewVideoRTSPStream(video.VideoRTSPStreamConfig{
@@ -126,7 +112,7 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		Width:       cfg.Width,
 		Height:      cfg.Height,
 		JPEGQuality: cfg.JPEGQuality,
-		BufferSize: laydownBufferSize,
+		BufferSize:  laydownBufferSize,
 	})
 
 	return &laydownDetector{
@@ -136,13 +122,12 @@ func NewPersonLaydownDetector(configMap map[string]any) (inputs.Sensor, error) {
 		clearStreak: clearStreak,
 		minHold:     minHold,
 		maxBatch:    maxBatch,
-		debugDir:    debugDir,
 		describer: video.NewDescriber(video.Describer{
-			Name:    "PersonLaydownDetector",
-			APIKey:  cfg.APIKey,
-			BaseURL: cfg.BaseURL,
-			Model:   cfg.Model,
-			Prompt:  cfg.Prompt,
+			Name:      "PersonLaydownDetector",
+			APIKey:    cfg.APIKey,
+			BaseURL:   cfg.BaseURL,
+			Model:     cfg.Model,
+			Prompt:    cfg.Prompt,
 			Detail:    "high",
 			MaxTokens: cfg.MaxTokens,
 			Log:       log,
@@ -202,13 +187,6 @@ func (s *laydownDetector) Listen(ctx context.Context) (<-chan any, error) {
 					zap.String("verdict", text),
 				)
 
-				if s.debugDir != "" {
-					s.dumpDebug(batch, text,
-						callLatency.Milliseconds(),
-						time.Since(newest.Timestamp).Milliseconds(),
-						newest.Timestamp.Sub(oldest.Timestamp).Milliseconds())
-				}
-
 				if text == "" {
 					continue
 				}
@@ -252,60 +230,13 @@ func capTail(b []video.Frame, max int) []video.Frame {
 	return b
 }
 
-// debugRecord is one verdicts.jsonl line: a batch's verdict, timing, and JPEG names.
-type debugRecord struct {
-	Time        string   `json:"time"`          // wall-clock time the verdict returned
-	UnixMs      int64    `json:"unix_ms"`       // same, epoch milliseconds (sortable)
-	Verdict     string   `json:"verdict"`       // raw text the VLM returned
-	CallMs      int64    `json:"call_ms"`       // VLM round-trip
-	NewestAgeMs int64    `json:"newest_age_ms"` // age of freshest frame at verdict time
-	WindowMs    int64    `json:"window_ms"`     // span of time the batch covers
-	Frames      []string `json:"frames"`        // JPEG filenames, oldest -> newest
-}
-
-// dumpDebug writes the batch frames and appends its verdict to verdicts.jsonl.
-func (s *laydownDetector) dumpDebug(batch []video.Frame, verdict string, callMs, newestAgeMs, windowMs int64) {
-	names := make([]string, 0, len(batch))
-	for i, f := range batch {
-		name := fmt.Sprintf("frame_%d_%d.jpg", f.Timestamp.UnixMilli(), i)
-		if err := os.WriteFile(filepath.Join(s.debugDir, name), f.JPEG, 0o644); err != nil {
-			s.log.Warn("image dump: write frame failed", zap.Error(err))
-			continue
-		}
-		names = append(names, name)
-	}
-
-	now := time.Now()
-	line, err := json.Marshal(debugRecord{
-		Time:        now.Format(time.RFC3339Nano),
-		UnixMs:      now.UnixMilli(),
-		Verdict:     verdict,
-		CallMs:      callMs,
-		NewestAgeMs: newestAgeMs,
-		WindowMs:    windowMs,
-		Frames:      names,
-	})
-	if err != nil {
-		return
-	}
-
-	f, err := os.OpenFile(filepath.Join(s.debugDir, "verdicts.jsonl"),
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		s.log.Warn("image dump: open verdicts.jsonl failed", zap.Error(err))
-		return
-	}
-	defer func() { _ = f.Close() }()
-	_, _ = f.Write(append(line, '\n'))
-}
-
 // classify applies the latch+debounce: ALERT asserts immediately, clearing requires
 // clearStreak consecutive non-alert frames.
 func (s *laydownDetector) classify(text string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if strings.Contains(strings.ToUpper(text), "ALERT") {
+	if strings.HasPrefix(strings.TrimSpace(strings.ToUpper(text)), "ALERT") {
 		if !s.alerted {
 			s.alertedAt = time.Now()
 		}
@@ -376,16 +307,18 @@ func (s *laydownDetector) RawToText(_ context.Context, raw any) (*inputs.Message
 // FormattedLatestBuffer returns the latched verdict with the "Vision:" prefix.
 func (s *laydownDetector) FormattedLatestBuffer() string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	hasLatest := s.hasLatest
+	latest := s.latest
+	s.mu.Unlock()
 
-	if !s.hasLatest {
+	if !hasLatest {
 		return ""
 	}
 
-	result := fmt.Sprintf("\n%s: '%s'\n", vlmDescriptor, s.latest.Message)
+	result := fmt.Sprintf("\n%s: '%s'\n", vlmDescriptor, latest.Message)
 
-	ts := time.Unix(0, int64(s.latest.Timestamp*1e9))
-	providers.IO().AddInput(s.name, s.latest.Message, ts)
+	ts := time.Unix(0, int64(latest.Timestamp*1e9))
+	providers.IO().AddInput(s.name, latest.Message, ts)
 
 	return result
 }
