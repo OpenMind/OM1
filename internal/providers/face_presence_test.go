@@ -6,10 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func f64(v float64) *float64  { return &v }
+func strptr(v string) *string { return &v }
 
 func TestPresenceSnapshotToText_Empty(t *testing.T) {
 	snap := PresenceSnapshot{}
@@ -52,6 +56,55 @@ func TestPresenceSnapshotToText_ClosestIsAnon(t *testing.T) {
 	text := snap.ToText()
 	require.Contains(t, text, "anon_73d0a4 (newcomer) [closest, likely speaking]")
 	require.NotContains(t, text, "sean (recognized) [closest")
+	require.Less(t, strings.Index(text, "anon_73d0a4"), strings.Index(text, "sean"))
+}
+
+func TestPresenceSnapshotToText_ThreeFacesAnonClosest(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "doyuan", UUID: "d1", Area: 1500},
+			{Name: "anon_78198", UUID: "a1", Area: 4000, LastSeenAgoSec: f64(600), LastSeenISO: strptr("2026-06-17T09:00:00Z")},
+			{Name: "anon_783098", UUID: "a2", Area: 500, LastSeenAgoSec: f64(600), LastSeenISO: strptr("2026-06-17T08:00:00Z")},
+		},
+	}
+	text := snap.ToText()
+
+	require.Contains(t, text, "FacePresence: 3 faces")
+	require.Contains(t, text, "nearest first")
+	require.Contains(t, text, "anon_78198 (met before, last seen 2026-06-17) [closest, likely speaking]")
+	iClosest := strings.Index(text, "anon_78198")
+	iMid := strings.Index(text, "doyuan")
+	iFar := strings.Index(text, "anon_783098")
+	require.Less(t, iClosest, iMid)
+	require.Less(t, iMid, iFar)
+
+	require.Equal(t, 1, strings.Count(text, "[closest, likely speaking]"))
+}
+
+func TestPresenceSnapshotToText_SingleClosestMarker(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "sean", UUID: "abc", Area: 1000}, // TrackID 0
+			{Name: "kim", UUID: "def", Area: 2000},  // TrackID 0
+			{Name: "lee", UUID: "ghi", Area: 500},   // TrackID 0
+		},
+	}
+	text := snap.ToText()
+	require.Equal(t, 1, strings.Count(text, "[closest, likely speaking]"))
+	require.Contains(t, text, "kim (recognized) [closest, likely speaking]")
+}
+
+func TestPresenceSnapshotToText_EqualAreaSingleMarker(t *testing.T) {
+	snap := PresenceSnapshot{
+		Faces: []FaceEntry{
+			{Name: "sean", UUID: "abc", Area: 1000, TrackID: 2},
+			{Name: "kim", UUID: "def", Area: 1000, TrackID: 1},
+		},
+	}
+	text := snap.ToText()
+	require.Equal(t, 1, strings.Count(text, "[closest, likely speaking]"))
+	require.Less(t, strings.Index(text, "kim"), strings.Index(text, "sean"))
+	require.Contains(t, text, "kim (recognized) [closest, likely speaking]")
 }
 
 func TestPresenceSnapshotToText_UnknownDropped(t *testing.T) {
