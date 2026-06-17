@@ -170,9 +170,8 @@ func (s *fallenPersonTracker) Listen(ctx context.Context) (<-chan any, error) {
 				continue
 			}
 
-			s.maybeDumpDebug(snap)
-
 			reading := s.classify(snap)
+			s.maybeDumpDebug(snap, reading)
 			if reading == "" {
 				continue
 			}
@@ -259,19 +258,24 @@ func (s *fallenPersonTracker) alertText(snap providers.FallenSnapshot) string {
 }
 
 // fallenTarget is the chosen closest detection's geometry, embedded in a debug record.
+// Location/Distance mirror the human-readable verdict ("Location in view: <location>.
+// Distance: <distance>.") so the analysis is easy to scan.
 type fallenTarget struct {
 	Name       string  `json:"name"`
-	HPos       string  `json:"h_pos"`
+	Location   string  `json:"location"` // left / center / right
+	Distance   string  `json:"distance"` // near / far
 	NormErrX   float64 `json:"norm_err_x"`
 	WidthFrac  float64 `json:"width_frac"`
 	Confidence float64 `json:"confidence"`
 }
 
 // fallenDebugRecord is one verdicts.jsonl line: the analysis for a polled frame plus
-// the name of the image file written alongside it.
+// the name of the image file written alongside it. Verdict is the exact text emitted
+// to the cortex this tick (e.g. "ALERT: ... Location in view: center. Distance: far.").
 type fallenDebugRecord struct {
 	Time       string                      `json:"time"`
 	UnixMs     int64                       `json:"unix_ms"`
+	Verdict    string                      `json:"verdict"`
 	Alert      bool                        `json:"alert"`
 	Present    bool                        `json:"present"`
 	Target     *fallenTarget               `json:"target,omitempty"`
@@ -280,9 +284,10 @@ type fallenDebugRecord struct {
 	Frame      string                      `json:"frame,omitempty"`
 }
 
-// maybeDumpDebug writes the decoded frame and its analysis when debug dumping is
-// enabled, throttled to debugPeriod. It runs only on the poll goroutine.
-func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot) {
+// maybeDumpDebug writes the decoded frame and its analysis (including the emitted
+// verdict) when debug dumping is enabled, throttled to debugPeriod. It runs only on
+// the poll goroutine.
+func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot, verdict string) {
 	if s.debugDir == "" {
 		return
 	}
@@ -308,6 +313,7 @@ func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot) {
 	rec := fallenDebugRecord{
 		Time:       now.Format(time.RFC3339Nano),
 		UnixMs:     now.UnixMilli(),
+		Verdict:    verdict,
 		Alert:      snap.Alert,
 		Present:    snap.Present,
 		Detections: snap.Detections,
@@ -315,9 +321,14 @@ func (s *fallenPersonTracker) maybeDumpDebug(snap providers.FallenSnapshot) {
 		Frame:      frameName,
 	}
 	if snap.Present {
+		distance := "far"
+		if snap.WidthFrac >= s.lockWidth {
+			distance = "near"
+		}
 		rec.Target = &fallenTarget{
 			Name:       snap.Name,
-			HPos:       snap.HPos,
+			Location:   snap.HPos,
+			Distance:   distance,
 			NormErrX:   snap.NormErrX,
 			WidthFrac:  snap.WidthFrac,
 			Confidence: snap.Confidence,
