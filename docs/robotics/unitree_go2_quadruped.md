@@ -205,7 +205,7 @@ uv run system_hw_test/go2_lidar.py en0
 
 ## Minimal Quadruped Functionality
 
-In this configuration, the quadruped observes its environment, listens and speaks, but there is no AI-controlled movement. You can manually control the dog's movements with an game controller.
+In this configuration, the quadruped observes its environment, listens and speaks, but there is no AI-controlled movement. You can manually control the dog's movements with a game controller.
 
 Run
 ```bash
