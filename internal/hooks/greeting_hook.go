@@ -32,18 +32,20 @@ const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting w
 	"Finish by offering help, for example: \"{help_message}\". " +
 	"Respond with only the greeting text, with no quotes or commentary."
 
-// greetingStartHook handles the start of a greeting conversation by generating a
-// greeting message using an LLM and sending it to the TTS provider.
 func (r *Runner) greetingStartHook(ctx context.Context, cfg, vars map[string]any) error {
+	return r.announceGenerated(ctx, cfg, vars, defaultGreetingPrompt, "How can I help you today?")
+}
+
+func (r *Runner) announceGenerated(ctx context.Context, cfg, vars map[string]any, defaultPrompt, defaultHelp string) error {
 	provider, err := r.greetingTTSProvider(cfg)
 	if err != nil {
-		r.log.Error("greeting_start_hook: error", zap.Error(err))
+		r.log.Error("greeting hook: error", zap.Error(err))
 		return err
 	}
 
 	robotName := formatTemplate(stringVal(cfg, "robot_name"), vars)
 
-	helpMessage := "How can I help you today?"
+	helpMessage := defaultHelp
 	if custom := formatTemplate(stringVal(cfg, "custom_message"), vars); custom != "" {
 		helpMessage = custom
 	}
@@ -51,20 +53,20 @@ func (r *Runner) greetingStartHook(ctx context.Context, cfg, vars map[string]any
 	face := providers.NewFacePresenceProvider(providers.FacePresenceConfig{})
 	snapshot, snapErr := face.FetchSnapshot(ctx)
 	if snapErr != nil {
-		r.log.Warn("greeting_start_hook: face snapshot failed", zap.Error(snapErr))
+		r.log.Warn("greeting hook: face snapshot failed", zap.Error(snapErr))
 	}
 
 	memContext := r.recallMemory(ctx, snapshot.ClosestUUID)
 
-	if greeting, genErr := r.generateGreeting(ctx, cfg, vars, snapshot, memContext, robotName, helpMessage); genErr != nil {
-		r.log.Warn("greeting_start_hook: llm generation failed, using static greeting", zap.Error(genErr))
+	if greeting, genErr := r.generateGreeting(ctx, cfg, vars, snapshot, memContext, robotName, helpMessage, defaultPrompt); genErr != nil {
+		r.log.Warn("greeting hook: llm generation failed, using static greeting", zap.Error(genErr))
 		provider.AddText(staticGreeting(snapshot, snapErr, robotName, helpMessage))
 	} else {
 		r.log.Info("greeting generated successfully", zap.String("greeting", greeting))
 		provider.AddText(greeting)
 	}
 
-	r.log.Info("greeting start hook executed successfully")
+	r.log.Info("greeting hook executed successfully")
 	return nil
 }
 
@@ -92,7 +94,7 @@ func memoryClause(memContext string) string {
 }
 
 // generateGreeting constructs a prompt using the snapshot and other context, calls the LLM to generate a greeting, and returns the greeting text.
-func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, memContext, robotName, helpMessage string) (string, error) {
+func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any, snapshot providers.PresenceSnapshot, memContext, robotName, helpMessage, defaultPrompt string) (string, error) {
 	if robotName == "" {
 		robotName = "a friendly robot"
 	}
@@ -106,7 +108,7 @@ func (r *Runner) generateGreeting(ctx context.Context, cfg, vars map[string]any,
 
 	promptTemplate := stringVal(cfg, "prompt")
 	if strings.TrimSpace(promptTemplate) == "" {
-		promptTemplate = defaultGreetingPrompt
+		promptTemplate = defaultPrompt
 	}
 
 	promptVars := make(map[string]any, len(vars)+6)
