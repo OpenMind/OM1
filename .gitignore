@@ -31,7 +31,8 @@ config/cron_job/
 # Test
 coverage.out
 
-# Memory (runtime data dir at repo root; anchored so it does not match the
-# pkg/memory source package or any nested dir named "memory")
+# Memory
 /memory/
+
+# Config
 /config
