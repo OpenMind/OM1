@@ -22,6 +22,7 @@ import (
 const (
 	DefaultMinScore          = 0.5
 	DefaultValidDurationDays = 60
+	DefaultEmbedderBaseURL   = knowledgebase.DefaultBaseURL
 )
 
 // MemoryIndex is an in-memory HNSW index for memory chunks.
@@ -46,6 +47,11 @@ func NewMemoryIndex(embedder knowledgebase.Embedder, log *zap.Logger) *MemoryInd
 		embedder: embedder,
 		log:      log,
 	}
+}
+
+// NewIndexFromURL creates a new index backed by an HTTP embedder at embedderURL
+func NewIndexFromURL(embedderURL string, log *zap.Logger) *MemoryIndex {
+	return NewMemoryIndex(knowledgebase.NewHTTPEmbedder(embedderURL), log)
 }
 
 // Size returns the number of indexed chunks.

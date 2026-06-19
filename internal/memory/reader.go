@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/openmind/om1/internal/knowledgebase"
 )
 
 const defaultContextMaxChars = 1000
@@ -33,12 +31,11 @@ func NewReader(memoryRoot string, embedderBaseURL string, minScore float64, log 
 	if minScore <= 0 {
 		minScore = DefaultMinScore
 	}
-	embedder := knowledgebase.NewHTTPEmbedder(embedderBaseURL)
 	return &Reader{
 		MemoryRoot: memoryRoot,
 		dailyDir:   filepath.Join(memoryRoot, "daily"),
 		usersDir:   filepath.Join(memoryRoot, "users"),
-		index:      NewMemoryIndex(embedder, log),
+		index:      NewIndexFromURL(embedderBaseURL, log),
 		minScore:   minScore,
 		log:        log,
 	}
