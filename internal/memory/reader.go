@@ -63,6 +63,12 @@ func (r *Reader) Index() *MemoryIndex {
 	return r.index
 }
 
+// SetIndex replaces the current index with a new one.
+func (r *Reader) SetIndex(idx *MemoryIndex) {
+	r.index = idx
+	r.indexReady = true
+}
+
 // IndexReady reports whether the index has been initialized.
 func (r *Reader) IndexReady() bool {
 	return r.indexReady
