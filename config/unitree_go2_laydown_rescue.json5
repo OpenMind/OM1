@@ -42,9 +42,9 @@
         base_url: "${FALLEN_BASE_URL:-http://127.0.0.1:6793}",
         path: "/who",
         poll_period_ms: 100,
-        clear_streak: 2,
+        clear_streak: 15,
         min_hold_seconds: 5,
-        lock_width_frac: 0.5,
+        lock_width_frac: 0.6,
         debug_dir: "${FALLEN_DEBUG_DIR:-fallen_debug}",
         debug_period_ms: 100,
       },
@@ -94,7 +94,7 @@
         // Move commands. Re-center, step forward, then lock on (hold) once the
         // person's bbox fills lock_width_frac of the frame width.
         geometry_driven: true,
-        lock_width_frac: 0.5,
+        lock_width_frac: 0.6,
         center_tolerance: 0.33,
       },
     },
