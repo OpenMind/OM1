@@ -75,7 +75,8 @@ type RescueConnector struct {
 
 	rng *rand.Rand
 
-	goalDistance float64
+	goalDistance     float64
+	recenterDistance float64
 
 	mu       sync.Mutex
 	active   bool
@@ -107,14 +108,18 @@ func NewRescueConnector(cfg map[string]any) (actions.Connector, error) {
 	aiRespTopic := util.StringFrom(cfg["ai_response_topic"], defaultAIRespTopic)
 
 	c := &RescueConnector{
-		log:           log,
-		odom:          go2.OdomZenoh(),
-		paths:         providers.NewPathsProvider(),
-		mode:          util.StringFrom(cfg["mode"], ""),
-		gentleTurns:   util.BoolFrom(cfg["gentle_turns"], false),
-		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
-		goalDistance:  mppiGoalDistanceM,
-		minActiveHold: 3 * time.Second,
+		log:              log,
+		odom:             go2.OdomZenoh(),
+		paths:            providers.NewPathsProvider(),
+		mode:             util.StringFrom(cfg["mode"], ""),
+		gentleTurns:      util.BoolFrom(cfg["gentle_turns"], false),
+		rng:              rand.New(rand.NewSource(time.Now().UnixNano())),
+		goalDistance:     mppiGoalDistanceM,
+		recenterDistance: rescueRecenterDistanceM,
+		minActiveHold:    3 * time.Second,
+	}
+	if d, ok := cfg["recenter_distance"].(float64); ok && d > 0 {
+		c.recenterDistance = d
 	}
 	if d, ok := cfg["goal_distance"].(float64); ok && d > 0 {
 		c.goalDistance = d
@@ -165,6 +170,7 @@ func NewRescueConnector(cfg map[string]any) (actions.Connector, error) {
 		zap.String("goal_topic", goalTopic),
 		zap.String("status_topic", statusTopic),
 		zap.Float64("goal_distance", c.goalDistance),
+		zap.Float64("recenter_distance", c.recenterDistance),
 		zap.Bool("geometry_driven", c.geometryDriven),
 		zap.Float64("lock_width_frac", c.lockWidthFrac),
 		zap.Float64("center_tolerance", c.centerTol),
@@ -321,8 +327,8 @@ func (c *RescueConnector) issueRotation(options []uint32, label string) {
 		c.log.Info("already centered - holding")
 		return
 	}
-	bx := rescueRecenterDistanceM * math.Cos(angleRad)
-	by := rescueRecenterDistanceM * math.Sin(angleRad)
+	bx := c.recenterDistance * math.Cos(angleRad)
+	by := c.recenterDistance * math.Sin(angleRad)
 	if err := c.publishGoal(bx, by, angleRad); err != nil {
 		return
 	}

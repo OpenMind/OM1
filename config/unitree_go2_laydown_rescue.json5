@@ -82,7 +82,12 @@
       connector: "mppi",
       config: {
         gentle_turns: true,
-        goal_distance: 0.6,
+        // Step sizes for the bbox approach. Smaller = more cautious, incremental
+        // progress (each move is gated one-per-frame and waits for "reached").
+        // goal_distance is the forward "advance" step; recenter_distance is the
+        // short arc used to swing the person back toward center.
+        goal_distance: 0.3,
+        recenter_distance: 0.2,
         min_active_hold_seconds: 0,
         // During an alert, approach the downed person directly from the bbox
         // geometry published by FallenPersonTracker instead of waiting on LLM
