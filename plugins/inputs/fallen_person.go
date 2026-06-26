@@ -37,6 +37,12 @@ const (
 	// fallenDefaultDebugPeriod throttles debug dumps when debug_dir is set, so a fast
 	// poll loop does not flood the disk with frames.
 	fallenDefaultDebugPeriod = time.Second
+
+	// fallenDefaultArrivedRelease is how long "no person" must persist continuously,
+	// once the robot has locked on (arrived), before the emergency is released. This
+	// keeps the dog committed to a downed person through detector dropouts instead of
+	// abandoning them on a brief flicker.
+	fallenDefaultArrivedRelease = 20 * time.Second
 )
 
 type fallenPersonConfig struct {
@@ -48,6 +54,10 @@ type fallenPersonConfig struct {
 	MinHoldSeconds float64 `json:"min_hold_seconds"`
 	LockWidthFrac  float64 `json:"lock_width_frac"`
 
+	// ArrivedReleaseSeconds is how long "no person" must persist continuously after
+	// the robot has locked on before it leaves the emergency (sticky lock). 0 → default.
+	ArrivedReleaseSeconds float64 `json:"arrived_release_seconds"`
+
 	// DebugDir, when set, enables dumping each polled frame (decoded from frame_b64)
 	// and its analysis to that directory. DebugPeriodMS throttles the dump rate.
 	DebugDir      string `json:"debug_dir"`
@@ -55,26 +65,28 @@ type fallenPersonConfig struct {
 }
 
 type fallenPersonTracker struct {
-	log         *zap.Logger
-	provider    *providers.FallenPersonProvider
-	pollPeriod  time.Duration
-	clearStreak int
-	minHold     time.Duration
-	lockWidth   float64
+	log            *zap.Logger
+	provider       *providers.FallenPersonProvider
+	pollPeriod     time.Duration
+	clearStreak    int
+	minHold        time.Duration
+	lockWidth      float64
+	arrivedRelease time.Duration
 
 	debugDir    string
 	debugPeriod time.Duration
 	lastDebugAt time.Time
 
-	mu         sync.Mutex
-	latest     inputs.Message
-	hasLatest  bool
-	alerted    bool
-	alertedAt  time.Time
-	clearCount int
-	lastAlert  string
-	stopped    bool
-	cancel     context.CancelFunc
+	mu             sync.Mutex
+	latest         inputs.Message
+	hasLatest      bool
+	alerted        bool
+	alertedAt      time.Time
+	clearCount     int
+	clearStartedAt time.Time
+	lastAlert      string
+	stopped        bool
+	cancel         context.CancelFunc
 }
 
 // NewFallenPersonTracker builds the HTTP bbox-based downed-person input.
@@ -100,6 +112,10 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 	if lockWidth <= 0 {
 		lockWidth = providers.DefaultLockWidthFrac
 	}
+	arrivedRelease := fallenDefaultArrivedRelease
+	if cfg.ArrivedReleaseSeconds > 0 {
+		arrivedRelease = time.Duration(cfg.ArrivedReleaseSeconds * float64(time.Second))
+	}
 
 	debugPeriod := fallenDefaultDebugPeriod
 	if cfg.DebugPeriodMS > 0 {
@@ -119,6 +135,7 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 		zap.Int("clear_streak", clearStreak),
 		zap.Float64("min_hold_seconds", minHoldSeconds),
 		zap.Float64("lock_width_frac", lockWidth),
+		zap.Duration("arrived_release", arrivedRelease),
 		zap.String("debug_dir", cfg.DebugDir),
 	)
 
@@ -130,12 +147,13 @@ func NewFallenPersonTracker(configMap map[string]any) (inputs.Sensor, error) {
 			Timeout:     time.Duration(cfg.TimeoutMS) * time.Millisecond,
 			CacheFrames: clearStreak,
 		}),
-		pollPeriod:  pollPeriod,
-		clearStreak: clearStreak,
-		minHold:     time.Duration(minHoldSeconds * float64(time.Second)),
-		lockWidth:   lockWidth,
-		debugDir:    cfg.DebugDir,
-		debugPeriod: debugPeriod,
+		pollPeriod:     pollPeriod,
+		clearStreak:    clearStreak,
+		minHold:        time.Duration(minHoldSeconds * float64(time.Second)),
+		lockWidth:      lockWidth,
+		arrivedRelease: arrivedRelease,
+		debugDir:       cfg.DebugDir,
+		debugPeriod:    debugPeriod,
 	}, nil
 }
 
@@ -212,6 +230,7 @@ func (s *fallenPersonTracker) classify(snap providers.FallenSnapshot) string {
 		}
 		s.alerted = true
 		s.clearCount = 0
+		s.clearStartedAt = time.Time{} // a fresh detection restarts the absence timer
 		s.lastAlert = s.alertText(snap)
 		tts.Priority.Store(true)
 		providers.SetPersonDownAlert(true)
@@ -219,23 +238,38 @@ func (s *fallenPersonTracker) classify(snap providers.FallenSnapshot) string {
 	}
 
 	if s.alerted {
+		now := time.Now()
 		s.clearCount++
+		if s.clearStartedAt.IsZero() {
+			s.clearStartedAt = now
+		}
 		held := time.Since(s.alertedAt)
+		absence := now.Sub(s.clearStartedAt)
 
 		streakMet := s.clearCount >= s.clearStreak
 		holdMet := s.minHold <= 0 || held >= s.minHold
-		if !streakMet || !holdMet {
+		released := streakMet && holdMet
+		// Sticky lock: once arrived, stay committed to the person until "no person"
+		// has persisted continuously for arrivedRelease, ignoring brief dropouts.
+		if providers.PersonDownArrived() {
+			released = released && absence >= s.arrivedRelease
+		}
+		if !released {
 			return s.lastAlert
 		}
 
 		s.alerted = false
 		s.clearCount = 0
+		s.clearStartedAt = time.Time{}
 		tts.Priority.Store(false)
 		providers.SetPersonDownAlert(false)
 		providers.SetPersonDownArrived(false)
 		providers.SetFallenTarget(providers.FallenTarget{})
-		tts.RequestInterrupt()
-		s.log.Info("alert cleared", zap.Int("clear_streak", s.clearStreak), zap.Duration("held", held))
+		s.log.Info("alert cleared",
+			zap.Int("clear_streak", s.clearStreak),
+			zap.Duration("held", held),
+			zap.Duration("absence", absence),
+		)
 	}
 
 	return fallenNoPersonText

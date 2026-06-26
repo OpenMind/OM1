@@ -42,8 +42,13 @@
         base_url: "${FALLEN_BASE_URL:-http://127.0.0.1:6793}",
         path: "/who",
         poll_period_ms: 100,
-        clear_streak: 15,
-        min_hold_seconds: 5,
+        // Debounce: the detector is flaky, so hold the alert through brief dropouts.
+        clear_streak: 20,
+        min_hold_seconds: 8,
+        // Sticky lock: once arrived, stay committed to the person until "no person"
+        // has persisted continuously this long, so a detection flicker doesn't make
+        // the dog abandon them and resume patrol.
+        arrived_release_seconds: 20,
         lock_width_frac: 0.6,
         debug_dir: "${FALLEN_DEBUG_DIR:-fallen_debug}",
         debug_period_ms: 100,
@@ -86,8 +91,8 @@
         // progress (each move is gated one-per-frame and waits for "reached").
         // goal_distance is the forward "advance" step; recenter_distance is the
         // short arc used to swing the person back toward center.
-        goal_distance: 0.3,
-        recenter_distance: 0.2,
+        goal_distance: 0.5,
+        recenter_distance: 0.3,
         min_active_hold_seconds: 0,
         // During an alert, approach the downed person directly from the bbox
         // geometry published by FallenPersonTracker instead of waiting on LLM
