@@ -84,22 +84,27 @@ func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string
 	return m.reader.FormatContext(results, 0, uuid)
 }
 
-// RecordInteraction writes the user message to the daily log and hot-updates the index.
-func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, uuid, name string) {
+// RecordInteraction writes the user message and robot reply to the daily log and hot-updates the index.
+func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, robotReply, uuid, name string) {
 	if m.writer == nil {
 		return
 	}
-	m.writer.AppendInteraction(voiceInput, uuid, name)
+	m.writer.AppendInteraction(voiceInput, robotReply, uuid, name)
 	if m.reader.IndexReady() {
-		m.writer.AppendToIndex(ctx, m.reader.Index(), voiceInput, uuid)
+		m.writer.AppendToIndex(ctx, m.reader.Index(), voiceInput, robotReply, uuid)
 	}
 }
 
-// MaybeSummarize triggers background summarization.
+// MaybeSummarize triggers background summarization
 func (m *Manager) Summarize(ctx context.Context) {
 	if m.summarizer != nil && m.summarizer.CheckEligibility() {
 		go func() {
 			m.summarizer.Run(ctx)
+			if err := m.reader.RebuildIndex(ctx); err != nil {
+				m.log.Warn("index rebuild failed, keeping old index", zap.Error(err))
+				return
+			}
+			m.log.Info("index rebuilt after summarization", zap.Int("chunks", m.reader.Index().Size()))
 			if err := m.reader.Index().SaveToDisk(m.indexDir); err != nil {
 				m.log.Warn("failed to persist index", zap.Error(err))
 			}

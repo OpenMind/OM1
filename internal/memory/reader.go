@@ -68,6 +68,17 @@ func (r *Reader) IndexReady() bool {
 	return r.indexReady
 }
 
+// RebuildIndex rebuilds the index from daily files. On failure the old index is kept.
+func (r *Reader) RebuildIndex(ctx context.Context) error {
+	newIdx := NewMemoryIndex(r.index.embedder, r.log)
+	if err := BuildIndex(ctx, newIdx, r.dailyDir, DefaultValidDurationDays); err != nil {
+		return err
+	}
+	r.index = newIdx
+	r.indexReady = true
+	return nil
+}
+
 // SearchDaily searches daily logs using hybrid retrieval (embedding + BM25).
 func (r *Reader) SearchDaily(ctx context.Context, queryText string, topK int, userID string) ([]MemoryEntry, error) {
 	if strings.TrimSpace(queryText) == "" {

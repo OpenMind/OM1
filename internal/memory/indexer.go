@@ -22,6 +22,7 @@ import (
 const (
 	DefaultMinScore          = 0.5
 	DefaultValidDurationDays = 60
+	maxMergeSections         = 3
 )
 
 // MemoryIndex is an in-memory HNSW index for memory chunks.
@@ -407,7 +408,14 @@ func (idx *MemoryIndex) PruneHashes(validHashes map[string]struct{}) int {
 	return pruned
 }
 
-// ParseDailyFile parses a daily markdown file into MemoryEntry chunks.
+
+type rawSection struct {
+	timestamp string
+	userID    string
+	lines     []string
+}
+
+// ParseDailyFile parses a daily markdown file into MemoryEntry chunks and merge if from same user up to maxMergeSections.
 func ParseDailyFile(path string) ([]MemoryEntry, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -418,50 +426,88 @@ func ParseDailyFile(path string) ([]MemoryEntry, error) {
 	dateStem := strings.TrimSuffix(base, filepath.Ext(base))
 	datePrefix := "[Date: " + dateStem + "]"
 
-	userTagRe := regexp.MustCompile(`^\[User: (.+)\]$`)
+	sections := parseSections(string(content))
+	if len(sections) == 0 {
+		return nil, nil
+	}
 
 	var chunks []MemoryEntry
-	var currentChunk strings.Builder
-	var currentUserID string
+	i := 0
+	for i < len(sections) {
+		userID := sections[i].userID
+		start := i
+		for i < len(sections) && sections[i].userID == userID && (i-start) < maxMergeSections {
+			i++
+		}
+		merged := sections[start:i]
 
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "## ") && currentChunk.Len() > 0 {
-			text := strings.TrimSpace(currentChunk.String())
-			if text != "" {
-				meta := map[string]string{"source": base}
-				if currentUserID != "" {
-					meta["user_id"] = currentUserID
-				}
-				chunks = append(chunks, MemoryEntry{
-					Text:     datePrefix + "\n" + text,
-					Metadata: meta,
-				})
+		var sb strings.Builder
+		sb.WriteString(datePrefix)
+		sb.WriteString("\n[User: ")
+		sb.WriteString(userID)
+		sb.WriteString("]\n")
+		for _, sec := range merged {
+			for _, line := range sec.lines {
+				fmt.Fprintf(&sb, "[%s] %s\n", sec.timestamp, convertLine(line))
 			}
-			currentChunk.Reset()
-			currentUserID = ""
 		}
-
-		if m := userTagRe.FindStringSubmatch(line); m != nil {
-			currentUserID = strings.ToLower(strings.TrimSpace(m[1]))
+		text := strings.TrimSpace(sb.String())
+		if text != "" {
+			meta := map[string]string{"source": base}
+			if userID != "" {
+				meta["user_id"] = userID
+			}
+			chunks = append(chunks, MemoryEntry{Text: text, Metadata: meta})
 		}
-		currentChunk.WriteString(line)
-		currentChunk.WriteByte('\n')
 	}
-
-	// Flush last chunk.
-	if text := strings.TrimSpace(currentChunk.String()); text != "" {
-		meta := map[string]string{"source": base}
-		if currentUserID != "" {
-			meta["user_id"] = currentUserID
-		}
-		chunks = append(chunks, MemoryEntry{
-			Text:     datePrefix + "\n" + text,
-			Metadata: meta,
-		})
-	}
-
 	return chunks, nil
+}
+
+// parseSections splits daily file content into rawSection structs.
+func parseSections(content string) []rawSection {
+	headerRe := regexp.MustCompile(`^## (\d{2}:\d{2}:\d{2})`)
+	userTagRe := regexp.MustCompile(`^\[User: (.+)\]$`)
+
+	var sections []rawSection
+	var cur *rawSection
+
+	for _, line := range strings.Split(content, "\n") {
+		if m := headerRe.FindStringSubmatch(line); m != nil {
+			if cur != nil && len(cur.lines) > 0 {
+				sections = append(sections, *cur)
+			}
+			cur = &rawSection{timestamp: m[1]}
+			continue
+		}
+		if cur == nil {
+			continue
+		}
+		if m := userTagRe.FindStringSubmatch(line); m != nil {
+			cur.userID = strings.ToLower(strings.TrimSpace(m[1]))
+			continue
+		}
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			cur.lines = append(cur.lines, trimmed)
+		}
+	}
+	if cur != nil && len(cur.lines) > 0 {
+		sections = append(sections, *cur)
+	}
+	return sections
+}
+
+func convertLine(line string) string {
+	if after, ok := strings.CutPrefix(line, "- **User**: "); ok {
+		return "User: " + after
+	}
+	if after, ok := strings.CutPrefix(line, "- **Robot**: "); ok {
+		return "Robot: " + after
+	}
+	if after, ok := strings.CutPrefix(line, "- "); ok {
+		return after
+	}
+	return line
 }
 
 // BuildIndex populates the given MemoryIndex from recent daily markdown files.

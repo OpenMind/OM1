@@ -43,14 +43,14 @@ func TestParseDailyFile(t *testing.T) {
 
 	chunks, err := ParseDailyFile(path)
 	require.NoError(t, err)
-	require.Len(t, chunks, 2)
+	require.Len(t, chunks, 2, "different users should produce separate chunks")
 
 	require.Contains(t, chunks[0].Text, "[Date: 2026-06-03]")
-	require.Contains(t, chunks[0].Text, "Hello, how are you?")
+	require.Contains(t, chunks[0].Text, "[14:18:28] User: Hello, how are you?")
 	require.Equal(t, "alice", chunks[0].Metadata["user_id"])
 	require.Equal(t, "2026-06-03.md", chunks[0].Metadata["source"])
 
-	require.Contains(t, chunks[1].Text, "What is your name?")
+	require.Contains(t, chunks[1].Text, "[14:19:00] User: What is your name?")
 	require.Equal(t, "bob", chunks[1].Metadata["user_id"])
 }
 
@@ -77,6 +77,68 @@ func TestParseDailyFile_SingleChunk(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, chunks, 1)
 	require.Equal(t, "dave", chunks[0].Metadata["user_id"])
+}
+
+func TestParseDailyFile_SameUserMerge(t *testing.T) {
+	dir := t.TempDir()
+	content := `
+## 14:00:00
+[User: alice]
+- **User**: First message
+
+## 14:01:00
+[User: alice]
+- **User**: Second message
+
+## 14:02:00
+[User: bob]
+- **User**: Bob here
+
+## 14:03:00
+[User: alice]
+- **User**: Alice again
+`
+	path := filepath.Join(dir, "2026-06-05.md")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+
+	chunks, err := ParseDailyFile(path)
+	require.NoError(t, err)
+	require.Len(t, chunks, 3, "alice(2) + bob(1) + alice(1) = 3 chunks")
+
+	require.Contains(t, chunks[0].Text, "[14:00:00] User: First message")
+	require.Contains(t, chunks[0].Text, "[14:01:00] User: Second message")
+	require.Equal(t, "alice", chunks[0].Metadata["user_id"])
+
+	require.Equal(t, "bob", chunks[1].Metadata["user_id"])
+
+	require.Contains(t, chunks[2].Text, "[14:03:00] User: Alice again")
+	require.Equal(t, "alice", chunks[2].Metadata["user_id"])
+}
+
+func TestParseDailyFile_WithRobotReply(t *testing.T) {
+	dir := t.TempDir()
+	content := `
+## 14:00:00
+[User: alice]
+- **User**: Hello
+- **Robot**: Hi there!
+
+## 14:01:00
+[User: alice]
+- **User**: What's your name?
+- **Robot**: I'm OM1!
+`
+	path := filepath.Join(dir, "2026-06-06.md")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+
+	chunks, err := ParseDailyFile(path)
+	require.NoError(t, err)
+	require.Len(t, chunks, 1, "same user alice → merged into 1 chunk")
+
+	require.Contains(t, chunks[0].Text, "[14:00:00] User: Hello")
+	require.Contains(t, chunks[0].Text, "[14:00:00] Robot: Hi there!")
+	require.Contains(t, chunks[0].Text, "[14:01:00] User: What's your name?")
+	require.Contains(t, chunks[0].Text, "[14:01:00] Robot: I'm OM1!")
 }
 
 func TestMemoryIndex_AddChunkAndSearch(t *testing.T) {
