@@ -8,15 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 const testUUID = "abc123def456abc123def456abc123ff"
-
-func testLogger() *zap.Logger {
-	l, _ := zap.NewDevelopment()
-	return l
-}
 
 func TestWriter_AppendInteraction(t *testing.T) {
 	dir := t.TempDir()

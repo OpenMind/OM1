@@ -170,8 +170,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 
 	var memoryManager memory.MemoryManager
 	if rt.systemConfig.Memory != nil && rt.systemConfig.Memory.Enabled {
-		cloudConn := rt.systemConfig.Memory.CloudConnection == nil || *rt.systemConfig.Memory.CloudConnection
-		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, cloudConn, rt.log)
+		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.systemConfig.Memory.CloudConnection, rt.log)
 	}
 
 	state := &modeState{
