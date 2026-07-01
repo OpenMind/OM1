@@ -8,9 +8,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const testUUID = "abc123def456abc123def456abc123ff"
+
+func testLogger() *zap.Logger {
+	l, _ := zap.NewDevelopment()
+	return l
+}
 
 func TestWriter_AppendInteraction(t *testing.T) {
 	dir := t.TempDir()
@@ -19,8 +25,8 @@ func TestWriter_AppendInteraction(t *testing.T) {
 	w, err := NewWriter(dir, log)
 	require.NoError(t, err)
 
-	w.AppendInteraction("Hello robot", testUUID, "alice")
-	w.AppendInteraction("What is your name?", testUUID, "alice")
+	w.AppendInteraction("Hello robot", "", testUUID, "alice")
+	w.AppendInteraction("What is your name?", "", testUUID, "alice")
 
 	dailyPath := w.dailyPath()
 	content, err := os.ReadFile(dailyPath)
@@ -35,8 +41,8 @@ func TestWriter_AppendInteraction_EmptyMessage(t *testing.T) {
 	w, err := NewWriter(dir, testLogger())
 	require.NoError(t, err)
 
-	w.AppendInteraction("", testUUID, "alice")
-	w.AppendInteraction("   ", testUUID, "alice")
+	w.AppendInteraction("", "", testUUID, "alice")
+	w.AppendInteraction("   ", "", testUUID, "alice")
 
 	dailyPath := w.dailyPath()
 	_, err = os.Stat(dailyPath)
@@ -48,7 +54,7 @@ func TestWriter_AppendInteraction_UnknownUser(t *testing.T) {
 	w, err := NewWriter(dir, testLogger())
 	require.NoError(t, err)
 
-	w.AppendInteraction("Hello", "", "")
+	w.AppendInteraction("Hello", "", "", "")
 
 	content, err := os.ReadFile(w.dailyPath())
 	require.NoError(t, err)
@@ -60,7 +66,7 @@ func TestWriter_EnsureUserDir(t *testing.T) {
 	w, err := NewWriter(dir, testLogger())
 	require.NoError(t, err)
 
-	w.AppendInteraction("Hi", testUUID, "bob")
+	w.AppendInteraction("Hi", "", testUUID, "bob")
 
 	// Profile should be created with UUID.
 	profilePath := filepath.Join(dir, "users", testUUID, "profile.json")
@@ -88,8 +94,8 @@ func TestWriter_UpdateUserProfile_VisitCount(t *testing.T) {
 	require.NoError(t, err)
 
 	// Multiple interactions in same session = 1 visit.
-	w.AppendInteraction("Hi", testUUID, "carol")
-	w.AppendInteraction("Bye", testUUID, "carol")
+	w.AppendInteraction("Hi", "", testUUID, "carol")
+	w.AppendInteraction("Bye", "", testUUID, "carol")
 
 	profilePath := filepath.Join(dir, "users", testUUID, "profile.json")
 	raw, err := os.ReadFile(profilePath)
@@ -106,8 +112,8 @@ func TestWriter_MultipleNames(t *testing.T) {
 	w, err := NewWriter(dir, testLogger())
 	require.NoError(t, err)
 
-	w.AppendInteraction("Hi", testUUID, "anon_73d0a4")
-	w.AppendInteraction("Hi again", testUUID, "sean")
+	w.AppendInteraction("Hi", "", testUUID, "anon_73d0a4")
+	w.AppendInteraction("Hi again", "", testUUID, "sean")
 
 	profilePath := filepath.Join(dir, "users", testUUID, "profile.json")
 	raw, err := os.ReadFile(profilePath)

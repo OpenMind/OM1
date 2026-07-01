@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,8 +54,8 @@ func NewWriter(memoryRoot string, log *zap.Logger) (*Writer, error) {
 	}, nil
 }
 
-// AppendInteraction writes a user message to today's daily log.
-func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
+// AppendInteraction writes a user message and robot reply to today's daily log.
+func (w *Writer) AppendInteraction(userMsg, robotReply, uuid, name string) {
 	if strings.TrimSpace(userMsg) == "" {
 		return
 	}
@@ -74,7 +73,11 @@ func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
 		tag = uuid
 	}
 
-	entry := fmt.Sprintf("\n## %s\n[User: %s]\n- **User**: %s\n", ts, tag, strings.TrimSpace(userMsg))
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "\n## %s\n[User: %s]\n- **User**: %s\n", ts, tag, strings.TrimSpace(userMsg))
+	if reply := strings.TrimSpace(robotReply); reply != "" {
+		fmt.Fprintf(&sb, "- **Robot**: %s\n", reply)
+	}
 
 	f, err := os.OpenFile(dailyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -83,33 +86,8 @@ func (w *Writer) AppendInteraction(userMsg, uuid, name string) {
 	}
 	defer func() { _ = f.Close() }()
 
-	if _, err := f.WriteString(entry); err != nil {
+	if _, err := f.WriteString(sb.String()); err != nil {
 		w.log.Error("failed to write interaction", zap.Error(err))
-	}
-}
-
-// AppendToIndex embeds and inserts a new user message into the given index.
-func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, uuid string) {
-	if strings.TrimSpace(userMsg) == "" || idx == nil {
-		return
-	}
-
-	dateStr := time.Now().Format("2006-01-02")
-	ts := time.Now().Format("15:04:05")
-
-	tag := "unknown"
-	if uuid != "" {
-		tag = uuid
-	}
-	userTag := fmt.Sprintf("[User: %s]\n", tag)
-
-	text := fmt.Sprintf("[Date: %s]\n## %s\n%s- **User**: %s",
-		dateStr, ts, userTag, strings.TrimSpace(userMsg))
-
-	meta := map[string]string{"source": dateStr + ".md", "user_id": uuid}
-
-	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta}); err != nil {
-		w.log.Warn("write-through index failed", zap.Error(err))
 	}
 }
 
