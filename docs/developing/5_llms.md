@@ -164,6 +164,24 @@ The system supports on-device inference using the Qwen3-30B local LLM. This enab
 make run CONFIG=ollama
 ```
 
+### Requesty
+
+[Requesty](https://requesty.ai) provides an OpenAI-compatible router for multiple model providers. OM1 supports Requesty through the `Requesty` plugin. Unlike the other providers, Requesty is **not** proxied through OpenMind — it connects directly to `https://router.requesty.ai/v1`. Supply your own `REQUESTY_API_KEY`.
+
+**Configuration:**
+```json5
+  "cortex_llm": {
+    "type": "Requesty",     // The class name of the LLM plugin you wish to use
+    "config": {
+      "model": "anthropic/claude-sonnet-4-5",   // Optional: defaults to anthropic/claude-sonnet-4-5
+      "base_url": "https://router.requesty.ai/v1", // Optional: Requesty connects directly (not via the OpenMind proxy)
+      "api_key": "<REQUESTY_API_KEY>",           // Required: your Requesty API key
+      "agent_name": "Iris",                      // Optional: Name of the agent
+      "history_length": 10                       // The number of input->action cycles to provide as historical context
+    }
+  }
+```
+
 ### Agent Architecture
 
 The system employs four primary agents that work together:
@@ -220,6 +238,11 @@ var NearAISupportedModels = []string{"qwen3-30b-a3b-instruct-2507", "qwen2.5-vl-
 
 ```go
 var OpenRouterSupportedModels = []string{"meta-llama/llama-3.1-70b-instruct", "meta-llama/llama-3.3-70b-instruct", "anthropic/claude-sonnet-4.5", "anthropic/claude-opus-4.1"}
+```
+
+```go
+// Requesty connects directly to https://router.requesty.ai/v1 (not via the OpenMind proxy)
+var RequestySupportedModels = []string{"anthropic/claude-sonnet-4-5", "openai/gpt-4o-mini", "google/gemini-2.5-flash", "deepseek/deepseek-chat", "x-ai/grok-4-fast"}
 ```
 
 ```go

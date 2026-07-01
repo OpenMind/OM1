@@ -26,7 +26,7 @@ Whether you're just getting started with OM1 or looking to optimize an existing 
 | Easy to add new data inputs              | Seamlessly integrate new data without major changes to the existing architecture. |
 | Easy to support new hardware             | Via plugins for API endpoints and specific robot hardware.                      |
 | Supports Standard Middleware             | `ROS2`, `Zenoh`, and `CycloneDDS`                                               |
-| Preconfigured endpoints                  | Text-to-Speech, OpenAI's `gpt-4o`, DeepSeek, Gemini, Openrouter, Near AI, Ollama (local), and multiple VLMs. |
+| Preconfigured endpoints                  | Text-to-Speech, OpenAI's `gpt-4o`, DeepSeek, Gemini, Openrouter, Requesty, Near AI, Ollama (local), and multiple VLMs. |
 | Simulators                               | Gazebo, Isaac Sim (Coming Soon)
 
 To get started with OM1, head over to [Installation Guide](1_get-started.md).
