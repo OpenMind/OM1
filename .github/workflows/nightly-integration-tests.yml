@@ -1,0 +1,85 @@
+name: Run Nightly Integration Tests
+
+env:
+  OM1_API_KEY: ${{ secrets.OM1_API_KEY }}
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  nightly-integration-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PortAudio
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Cache zenoh-c
+        uses: actions/cache@v4
+        with:
+          path: .zenoh-c
+          key: ${{ runner.os }}-zenoh-c-1.9.0
+          restore-keys: |
+            ${{ runner.os }}-zenoh-c-
+
+      - name: Download zenoh-c
+        run: make download-zenohc
+
+      - name: Run integration tests
+        id: tests
+        run: |
+          export LD_LIBRARY_PATH="$(pwd)/.zenoh-c/lib"
+          export CGO_CFLAGS="-I$(pwd)/.zenoh-c/include"
+          export CGO_LDFLAGS="-L$(pwd)/.zenoh-c/lib -lzenohc -Wl,-rpath,$(pwd)/.zenoh-c/lib"
+          set -o pipefail
+          go test -tags=integration -race -v ./... 2>&1 | tee test-output.log
+
+      - name: Extract test summary
+        if: ${{ !cancelled() }}
+        id: summary
+        run: |
+          total=$(grep -cE '^(=== RUN|--- (PASS|FAIL))' test-output.log || true)
+          failures=$(grep -cE '^--- FAIL' test-output.log || true)
+          echo "total=${total}" >> "$GITHUB_OUTPUT"
+          echo "failures=${failures}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack on failure
+        if: failure() && github.event_name == 'schedule' && github.event.pull_request.head.repo.fork != true
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"❌ @channel *Integration Tests Failed*\n\
+              *Repository:* \`${{ github.repository }}\`\n\
+              *Branch:* \`${{ github.ref_name }}\`\n\
+              *Total:* ${{ steps.summary.outputs.total }}  •  *Failures:* ${{ steps.summary.outputs.failures }}\n\
+              🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>\"
+            }" \
+            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on success
+        if: success() && github.event_name == 'schedule' && github.event.pull_request.head.repo.fork != true
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"✅ *All Integration Tests Passed*\n\
+              *Total:* ${{ steps.summary.outputs.total }}\n\
+              🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>\"
+            }" \
+            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}

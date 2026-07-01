@@ -1,0 +1,175 @@
+name: "OM1 Release Workflow"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-amd64:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      metadata: ${{ steps.meta.outputs.json }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker system prune -af
+          sudo apt-get clean
+          df -h
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: public.ecr.aws/b8k9c8n5/openmind/om1
+          tags: |
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push AMD64 image by tag
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-arm64:
+    runs-on: ubuntu-22.04-arm
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      metadata: ${{ steps.meta.outputs.json }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker system prune -af
+          sudo apt-get clean
+          df -h
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: public.ecr.aws/b8k9c8n5/openmind/om1
+          tags: |
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push ARM64 image by tag
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  create-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      deployments: write
+    needs: [ build-amd64, build-arm64 ]
+    environment:
+      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
+      url: https://gallery.ecr.aws/b8k9c8n5/openmind/om1
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Create manifest list and push
+        run: |
+          if [[ -z "${{ needs.build-amd64.outputs.image-digest }}" ]]; then
+            echo "Error: AMD64 digest is empty"
+            exit 1
+          fi
+
+          if [[ -z "${{ needs.build-arm64.outputs.image-digest }}" ]]; then
+            echo "Error: ARM64 digest is empty"
+            exit 1
+          fi
+
+          # Get the metadata from amd64 build to extract tags
+          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+
+          # Create manifest for each tag
+          for tag in $tags; do
+            echo "Creating manifest for: $tag"
+
+            docker buildx imagetools create \
+              --tag $tag \
+              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-amd64.outputs.image-digest }} \
+              public.ecr.aws/b8k9c8n5/openmind/om1@${{ needs.build-arm64.outputs.image-digest }}
+          done

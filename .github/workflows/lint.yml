@@ -1,0 +1,53 @@
+name: Run Lint
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PortAudio
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Cache zenoh-c
+        uses: actions/cache@v4
+        with:
+          path: .zenoh-c
+          key: ${{ runner.os }}-zenoh-c-1.9.0
+          restore-keys: |
+            ${{ runner.os }}-zenoh-c-
+
+      - name: Download zenoh-c
+        run: make download-zenohc
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l $(find . -name '*.go' -not -path './.zenoh-c/*'))
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            echo "Run 'make fmt' to fix."
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: make vet
+
+      - name: Run golangci-lint
+        run: make lint
