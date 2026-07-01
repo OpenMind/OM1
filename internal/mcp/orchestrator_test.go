@@ -149,6 +149,32 @@ func TestOrchestratorResolveExecutesIntermediateOM1Actions(t *testing.T) {
 	require.Equal(t, "move", executed[0][0].Name)
 }
 
+func TestOrchestratorResolveDoesNotReexecuteOM1OnRecallFailure(t *testing.T) {
+	client := newFakeClient("mcp_weather_get")
+	client.responses["mcp_weather_get"] = "sunny"
+
+	o := NewOrchestrator(client, zap.NewNop())
+
+	var executed [][]llm.ToolCall
+	execOM1 := func(_ context.Context, calls []llm.ToolCall) {
+		executed = append(executed, calls)
+	}
+	// The recall call fails after the first round's actions have been dispatched.
+	callLLM := func(_ context.Context, _ string) (*llm.Response, error) {
+		return nil, fmt.Errorf("llm unavailable")
+	}
+
+	initial := []llm.ToolCall{
+		{Name: "mcp_weather_get", Arguments: map[string]any{"city": "SF"}},
+		{Name: "move", Arguments: map[string]any{"dir": "left"}},
+	}
+	final := o.Resolve(context.Background(), "orig", initial, callLLM, execOM1)
+
+	require.Len(t, executed, 1, "intermediate OM1 actions dispatched once")
+	require.Equal(t, "move", executed[0][0].Name)
+	require.Empty(t, final, "already-dispatched OM1 actions must not be returned again on the error path")
+}
+
 func TestOrchestratorResolveNoMCPActions(t *testing.T) {
 	client := newFakeClient("mcp_weather_get")
 	o := NewOrchestrator(client, zap.NewNop())

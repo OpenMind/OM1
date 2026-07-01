@@ -118,6 +118,7 @@ func (o *Orchestrator) Resolve(
 
 		if om1 := o.extractOM1Actions(current); len(om1) > 0 && execOM1 != nil {
 			execOM1(ctx, om1)
+			current = o.stripOM1(current)
 		}
 
 		o.log.Info("MCP round",
@@ -160,6 +161,17 @@ func (o *Orchestrator) extractOM1Actions(calls []llm.ToolCall) []llm.ToolCall {
 		}
 	}
 	return om1
+}
+
+// stripOM1 removes non-MCP tool calls from calls, returning only MCP tool calls.
+func (o *Orchestrator) stripOM1(calls []llm.ToolCall) []llm.ToolCall {
+	var kept []llm.ToolCall
+	for _, call := range calls {
+		if o.client.IsMCPTool(call.Name) {
+			kept = append(kept, call)
+		}
+	}
+	return kept
 }
 
 // executeActions runs multiple MCP tool calls concurrently, respecting maxConcurrency.
