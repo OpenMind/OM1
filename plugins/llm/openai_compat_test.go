@@ -72,6 +72,18 @@ func TestConfigOverridesDefaults(t *testing.T) {
 	require.Equal(t, "https://example.com/v1", c.config.BaseURL)
 }
 
+func TestConfigOverridesToolChoiceAndExtraParams(t *testing.T) {
+	instance, err := llm.Load("XAILLM", map[string]any{
+		"api_key":      "k",
+		"tool_choice":  "required",
+		"extra_params": map[string]any{"temperature": 0.8},
+	})
+	require.NoError(t, err)
+	c := instance.(*openAICompatLLM)
+	require.Equal(t, "required", c.toolChoice)
+	require.Equal(t, 0.8, c.extraBody["temperature"])
+}
+
 func newTestCompat(t *testing.T, baseURL, toolChoice string) *openAICompatLLM {
 	t.Helper()
 	c, err := newOpenAICompat("TestLLM", map[string]any{

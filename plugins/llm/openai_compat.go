@@ -15,11 +15,13 @@ import (
 )
 
 type compatConfig struct {
-	APIKey     string `json:"api_key"`
-	Model      string `json:"model"`
-	BaseURL    string `json:"base_url"`
-	AgentName  string `json:"agent_name"`
-	HistoryLen int    `json:"history_length"`
+	APIKey     string         `json:"api_key"`
+	Model      string         `json:"model"`
+	BaseURL    string         `json:"base_url"`
+	AgentName  string         `json:"agent_name"`
+	HistoryLen int            `json:"history_length"`
+	ToolChoice string         `json:"tool_choice"`
+	ExtraBody  map[string]any `json:"extra_params"`
 }
 
 type openAICompatLLM struct {
@@ -44,7 +46,10 @@ func newOpenAICompat(provider string, configMap map[string]any, defaultModel, de
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = defaultBaseURL
 	}
-	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice}, nil
+	if cfg.ToolChoice != "" {
+		toolChoice = cfg.ToolChoice
+	}
+	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice, extraBody: cfg.ExtraBody}, nil
 }
 
 func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas }
