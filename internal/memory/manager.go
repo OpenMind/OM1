@@ -60,6 +60,10 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 
 // SearchAndFormat searches memory and returns a formatted context string.
 func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
+	if uuid == "" {
+		return ""
+	}
+
 	result, err := m.retriever.Search(ctx, query, uuid, 3, DefaultMinScore)
 	if err != nil {
 		m.log.Warn("memory search failed", zap.Error(err))
@@ -81,11 +85,13 @@ func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, robotReply,
 		m.writer.AppendInteraction(voiceInput, robotReply, uuid, name)
 	}
 
-	if uuid != "" {
-		names := m.readLocalNames(uuid, name)
-		counts := m.readLocalCounts(uuid)
-		go m.uploader.PostUserProfile(context.Background(), uuid, names, counts.interactions, counts.visits)
+	if uuid == "" {
+		return
 	}
+
+	names := m.readLocalNames(uuid, name)
+	counts := m.readLocalCounts(uuid)
+	go m.uploader.PostUserProfile(context.Background(), uuid, names, counts.interactions, counts.visits)
 
 	if uuid != m.pendingUUID && len(m.pendingRounds) > 0 {
 		m.uploadPendingChunk()
