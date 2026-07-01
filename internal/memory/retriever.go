@@ -16,7 +16,7 @@ import (
 	"github.com/openmind/om1/internal/knowledgebase"
 )
 
-const searchTimeout = 500 * time.Millisecond
+const searchTimeout = 2 * time.Second
 
 // Retriever searches memory via cloud API with local embedding.
 type Retriever struct {
