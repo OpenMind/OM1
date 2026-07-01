@@ -28,6 +28,7 @@ OpenMind supports the following LLM providers:
 | X.AI | `xai` | Grok models from X.AI |
 | NEAR.AI | `nearai` | Qwen and other NEAR.AI hosted models |
 | OpenRouter | `openrouter` | Multi-provider access including Anthropic Claude, Meta Llama |
+| Requesty | `requesty` | Multi-provider access via Requesty's router (connects directly to `https://router.requesty.ai/v1`, not via the OpenMind proxy) |
 
 ## Supported Models
 
@@ -85,6 +86,18 @@ meta-llama/llama-3.1-70b-instruct
 meta-llama/llama-3.3-70b-instruct
 anthropic/claude-sonnet-4.5
 anthropic/claude-opus-4.1
+```
+
+### Requesty Models
+
+Requesty connects directly to `https://router.requesty.ai/v1` (not via the OpenMind proxy). Supply your own `REQUESTY_API_KEY`.
+
+```
+anthropic/claude-sonnet-4-5
+openai/gpt-4o-mini
+google/gemini-2.5-flash
+deepseek/deepseek-chat
+x-ai/grok-4-fast
 ```
 
 > **Note:** Model names are validated using prefix matching. For example, "gpt-4o" will match "gpt-4o", "gpt-4o-2024-08-06", etc.
