@@ -18,6 +18,7 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/knowledgebase"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/mcp"
 	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
@@ -33,6 +34,7 @@ type modeState struct {
 	promptFuser        *fuser.Fuser
 	cortexLLM          *llm.Orchestrator
 	actionOrchestrator *actions.Orchestrator
+	mcpOrchestrator    *mcp.Orchestrator         // nil when mode has no MCP servers
 	bgOrchestrator     *backgrounds.Orchestrator // nil when mode has no backgrounds
 	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
@@ -142,7 +144,7 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		return fmt.Errorf("mode %q not found in config", modeName)
 	}
 
-	modeConfig := NewModeSetup(modeCfg, rt.systemConfig)
+	modeConfig := NewModeSetup(modeCfg, rt.systemConfig, rt.log)
 
 	if err := modeConfig.loadComponents(); err != nil {
 		return err
@@ -173,9 +175,16 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.log)
 	}
 
+	var mcpDescriber fuser.MCPDescriber
+	var mcpOrchestrator *mcp.Orchestrator
+	if modeConfig.mcpClient != nil {
+		mcpDescriber = modeConfig.mcpClient
+		mcpOrchestrator = mcp.NewOrchestrator(modeConfig.mcpClient, rt.log)
+	}
+
 	state := &modeState{
 		runtimeConfig: runtimeConfig,
-		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, memoryManager, rt.log),
+		promptFuser:   fuser.NewFuser(runtimeConfig, modeConfig.agentActions, knowledgeBase, memoryManager, mcpDescriber, rt.log),
 		cortexLLM: llm.NewOrchestrator(
 			modeConfig.cortexLLM,
 			modeCfg.CortexLLM.Config,
@@ -187,10 +196,11 @@ func (rt *Runtime) initializeMode(modeName string) error {
 			runtimeConfig.ActionDeps,
 			rt.log,
 		),
-		bgOrchestrator: backgrounds.NewOrchestrator(modeConfig.agentBackgrounds, rt.log),
-		sensors:        modeConfig.sensors,
-		modeHooks:      hooks.NewHooks(modeConfig.cfg.LifecycleHooks, memoryManager, rt.log),
-		memory:         memoryManager,
+		mcpOrchestrator: mcpOrchestrator,
+		bgOrchestrator:  backgrounds.NewOrchestrator(modeConfig.agentBackgrounds, rt.log),
+		sensors:         modeConfig.sensors,
+		modeHooks:       hooks.NewHooks(modeConfig.cfg.LifecycleHooks, memoryManager, rt.log),
+		memory:          memoryManager,
 	}
 
 	rt.mu.Lock()
@@ -229,6 +239,12 @@ func (rt *Runtime) startOrchestrators(ctx context.Context) {
 	modeCtx, cancel := context.WithCancel(ctx)
 	current.cancelCtx = cancel
 
+	if current.mcpOrchestrator != nil {
+		if err := current.mcpOrchestrator.Start(modeCtx, current.cortexLLM); err != nil {
+			rt.log.Warn("MCP orchestrator start failed", zap.Error(err))
+		}
+	}
+
 	current.inputOrchestrator = inputs.NewOrchestrator(current.sensors, rt.log)
 	current.inputDone = current.inputOrchestrator.Start(modeCtx)
 
@@ -266,6 +282,12 @@ func (rt *Runtime) stopOrchestrators() {
 	}
 
 	current.cancelCtx()
+
+	if current.mcpOrchestrator != nil {
+		if err := current.mcpOrchestrator.Stop(); err != nil {
+			rt.log.Warn("MCP orchestrator stop failed", zap.Error(err))
+		}
+	}
 
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer stopCancel()
@@ -481,21 +503,23 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 
 	rt.tracer.Gauge(prompt, traceOutput(response))
 
-	if len(response.ToolCalls) > 0 {
-		calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(response.ToolCalls))
-		if err != nil {
-			rt.log.Warn("parse action calls failed", zap.Error(err))
-		} else {
-			for _, res := range current.actionOrchestrator.Submit(ctx, calls) {
-				if res.Err != nil {
-					rt.log.Warn("action failed",
-						zap.String("action", res.ActionName),
-						zap.Error(res.Err),
-					)
-				}
-			}
-		}
+	toolCalls := response.ToolCalls
+
+	if current.mcpOrchestrator != nil {
+		toolCalls = current.mcpOrchestrator.Resolve(
+			ctx,
+			prompt,
+			toolCalls,
+			func(ctx context.Context, recallPrompt string) (*llm.Response, error) {
+				return current.cortexLLM.Call(ctx, recallPrompt, nil)
+			},
+			func(ctx context.Context, calls []llm.ToolCall) {
+				rt.executeActions(ctx, current, calls)
+			},
+		)
 	}
+
+	rt.executeActions(ctx, current, toolCalls)
 
 	if current.memory != nil {
 		voice := rt.ioProvider.GetInput("Voice")
@@ -508,6 +532,28 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	}
 
 	rt.ioProvider.RecordTick(tickStart)
+}
+
+// executeActions executes the given tool calls using the current mode's action orchestrator, logging any errors.
+func (rt *Runtime) executeActions(ctx context.Context, current *modeState, toolCalls []llm.ToolCall) {
+	if len(toolCalls) == 0 {
+		return
+	}
+
+	calls, err := current.actionOrchestrator.ParseCalls(toolCallsToMaps(toolCalls))
+	if err != nil {
+		rt.log.Warn("parse action calls failed", zap.Error(err))
+		return
+	}
+
+	for _, res := range current.actionOrchestrator.Submit(ctx, calls) {
+		if res.Err != nil {
+			rt.log.Warn("action failed",
+				zap.String("action", res.ActionName),
+				zap.Error(res.Err),
+			)
+		}
+	}
 }
 
 // watchConfig polls the config file and logs a warning when it changes.
