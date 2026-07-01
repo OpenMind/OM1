@@ -76,6 +76,8 @@ func (m *LocalManager) SearchAndFormat(ctx context.Context, query string, uuid s
 		return ""
 	}
 
+	results = m.reader.Index().EnrichContext(results)
+
 	for _, r := range results {
 		m.signals.Record(r.Text, r.Score, query)
 	}
