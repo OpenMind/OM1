@@ -124,7 +124,7 @@ func (u *Uploader) TriggerSummarize(ctx context.Context) {
 }
 
 // PostSignals uploads recall signals from search results to the cloud.
-func (u *Uploader) PostSignals(ctx context.Context, chunks []MemoryEntry, userID string) {
+func (u *Uploader) PostSignals(ctx context.Context, chunks []MemoryEntry, userID, queryHash string) {
 	if len(chunks) == 0 {
 		return
 	}
@@ -152,7 +152,7 @@ func (u *Uploader) PostSignals(ctx context.Context, chunks []MemoryEntry, userID
 			ChunkHash:    hash,
 			RecallCount:  1,
 			TotalScore:   c.Score,
-			QueryHashes:  []string{},
+			QueryHashes:  []string{queryHash},
 			RecallDays:   []string{dayStr},
 			LastRecalled: nowStr,
 			FirstSeen:    nowStr,

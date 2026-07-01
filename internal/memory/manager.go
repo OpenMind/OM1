@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -67,7 +68,8 @@ func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string
 
 	// Upload recall signals
 	if len(result.Chunks) > 0 {
-		go m.uploader.PostSignals(context.Background(), result.Chunks, uuid)
+		queryHash := fmt.Sprintf("%x", sha256.Sum256([]byte(query)))[:16]
+		go m.uploader.PostSignals(context.Background(), result.Chunks, uuid, queryHash)
 	}
 
 	return m.formatContext(result, uuid, 1000)
