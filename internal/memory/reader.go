@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/openmind/om1/internal/knowledgebase"
 )
 
 const defaultContextMaxChars = 1000
@@ -33,12 +31,11 @@ func NewReader(memoryRoot string, embedderBaseURL string, minScore float64, log 
 	if minScore <= 0 {
 		minScore = DefaultMinScore
 	}
-	embedder := knowledgebase.NewHTTPEmbedder(embedderBaseURL)
 	return &Reader{
 		MemoryRoot: memoryRoot,
 		dailyDir:   filepath.Join(memoryRoot, "daily"),
 		usersDir:   filepath.Join(memoryRoot, "users"),
-		index:      NewMemoryIndex(embedder, log),
+		index:      NewIndexFromURL(embedderBaseURL, log),
 		minScore:   minScore,
 		log:        log,
 	}
@@ -61,6 +58,12 @@ func (r *Reader) EnsureIndex(ctx context.Context) error {
 // Index returns the underlying MemoryIndex (used by Writer for hot updates).
 func (r *Reader) Index() *MemoryIndex {
 	return r.index
+}
+
+// SetIndex replaces the current index with a new one.
+func (r *Reader) SetIndex(idx *MemoryIndex) {
+	r.index = idx
+	r.indexReady = true
 }
 
 // IndexReady reports whether the index has been initialized.
