@@ -37,7 +37,7 @@ type modeState struct {
 	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
-	memory             *memory.Manager
+	memory             memory.MemoryManager
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -168,9 +168,9 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		}
 	}
 
-	var memoryManager *memory.Manager
+	var memoryManager memory.MemoryManager
 	if rt.systemConfig.Memory != nil && rt.systemConfig.Memory.Enabled {
-		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.log)
+		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.systemConfig.Memory.CloudConnection, rt.log)
 	}
 
 	state := &modeState{
@@ -502,9 +502,9 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		if voice != nil && voice.Input != "" && voice.Tick == rt.ioProvider.TickCounter() {
 			uuid, _ := rt.ioProvider.GetDynamicVar("current_user_id")
 			name, _ := rt.ioProvider.GetDynamicVar("current_user_name")
-			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), uuid, name)
+			current.memory.RecordInteraction(ctx, strings.TrimSpace(voice.Input), response.SpeakText(), uuid, name)
+			current.memory.Summarize(ctx)
 		}
-		current.memory.Summarize(ctx)
 	}
 
 	rt.ioProvider.RecordTick(tickStart)

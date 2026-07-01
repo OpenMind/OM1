@@ -64,11 +64,6 @@ type Summarizer struct {
 	running bool
 }
 
-// NewSummarizerForRoot creates a Summarizer with its own signal store rooted at memoryRoot.
-func NewSummarizerForRoot(memoryRoot, apiKey string, log *zap.Logger) *Summarizer {
-	return NewSummarizer(memoryRoot, apiKey, NewSignalStore(memoryRoot), log)
-}
-
 // NewSummarizer creates a Summarizer.
 func NewSummarizer(memoryRoot, apiKey string, signals *SignalStore, log *zap.Logger) *Summarizer {
 	return &Summarizer{

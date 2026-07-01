@@ -33,5 +33,5 @@ func NewReader(memoryRoot, embedderURL string, minScore float64, log *zap.Logger
 }
 
 func NewSummarizer(memoryRoot, apiKey string, log *zap.Logger) *Summarizer {
-	return mem.NewSummarizerForRoot(memoryRoot, apiKey, log)
+	return mem.NewSummarizer(memoryRoot, apiKey, mem.NewSignalStore(memoryRoot), log)
 }

@@ -25,14 +25,14 @@ const (
 
 // Runner manages and executes lifecycle hooks based on their type and configuration.
 type Runner struct {
-	memory *memory.Manager
+	memory memory.MemoryManager
 	hooks  []config.HookSpec
 	log    *zap.Logger
 }
 
 // NewHooks creates a new Runner instance with the provided hooks, memory
 // manager, and logger.
-func NewHooks(hooks []config.HookSpec, memory *memory.Manager, log *zap.Logger) *Runner {
+func NewHooks(hooks []config.HookSpec, memory memory.MemoryManager, log *zap.Logger) *Runner {
 	return &Runner{hooks: hooks, memory: memory, log: log}
 }
 

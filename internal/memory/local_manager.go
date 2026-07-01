@@ -2,15 +2,14 @@ package memory
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// Manager bundles the memory Reader, Writer, and Summarizer.
-type Manager struct {
+// LocalManager bundles the local Reader, Writer, Summarizer, and SignalStore.
+type LocalManager struct {
 	reader     *Reader
 	writer     *Writer
 	summarizer *Summarizer
@@ -19,8 +18,8 @@ type Manager struct {
 	log        *zap.Logger
 }
 
-// NewManager creates a fully initialized Manager.
-func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
+// NewLocalManager creates a fully initialized local memory manager.
+func NewLocalManager(memoryRoot, apiKey string, log *zap.Logger) *LocalManager {
 	log = log.Named("memory")
 
 	reader := NewReader(memoryRoot, "", DefaultMinScore, log)
@@ -43,7 +42,7 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 		log.Warn("failed to persist index", zap.Error(err))
 	}
 
-	m := &Manager{reader: reader, signals: NewSignalStore(memoryRoot), indexDir: indexDir, log: log}
+	m := &LocalManager{reader: reader, signals: NewSignalStore(memoryRoot), indexDir: indexDir, log: log}
 
 	if pruned := m.signals.PruneStale(DefaultValidDurationDays); pruned > 0 {
 		log.Info("pruned stale signals", zap.Int("count", pruned))
@@ -65,12 +64,12 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 		}()
 	}
 
-	log.Info("long-term memory enabled", zap.String("root", memoryRoot))
+	log.Info("long-term memory enabled (local)", zap.String("root", memoryRoot))
 	return m
 }
 
-// SearchAndFormat searches memory by UUID and returns a formatted context string.
-func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
+// SearchAndFormat searches local memory and returns a formatted context string.
+func (m *LocalManager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
 	results, err := m.reader.SearchDaily(ctx, query, 3, uuid)
 	if err != nil {
 		m.log.Warn("memory search failed", zap.Error(err))
@@ -84,19 +83,19 @@ func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string
 	return m.reader.FormatContext(results, 0, uuid)
 }
 
-// RecordInteraction writes the user message to the daily log and hot-updates the index.
-func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, uuid, name string) {
+// RecordInteraction writes the message to the daily log and hot-updates the index.
+func (m *LocalManager) RecordInteraction(ctx context.Context, voiceInput, robotReply, uuid, name string) {
 	if m.writer == nil {
 		return
 	}
-	m.writer.AppendInteraction(voiceInput, uuid, name)
+	m.writer.AppendInteraction(voiceInput, robotReply, uuid, name)
 	if m.reader.IndexReady() {
 		m.writer.AppendToIndex(ctx, m.reader.Index(), voiceInput, uuid)
 	}
 }
 
-// MaybeSummarize triggers background summarization.
-func (m *Manager) Summarize(ctx context.Context) {
+// Summarize triggers background summarization.
+func (m *LocalManager) Summarize(ctx context.Context) {
 	if m.summarizer != nil && m.summarizer.CheckEligibility() {
 		go func() {
 			m.summarizer.Run(ctx)
@@ -105,16 +104,4 @@ func (m *Manager) Summarize(ctx context.Context) {
 			}
 		}()
 	}
-}
-
-// ResolveMemoryRoot locates the memory directory relative to cwd.
-func ResolveMemoryRoot() string {
-	if cwd, err := os.Getwd(); err == nil {
-		candidate := filepath.Join(cwd, "memory")
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			return candidate
-		}
-		return candidate
-	}
-	return "memory"
 }

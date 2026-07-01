@@ -17,7 +17,7 @@ type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
-	memory        *memory.Manager
+	memory        memory.MemoryManager
 	log           *zap.Logger
 }
 
@@ -27,7 +27,7 @@ type KnowledgeBase interface {
 }
 
 // NewFuser constructs a Fuser with the given runtime configuration, agent actions, knowledge base, and logger.
-func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory *memory.Manager, log *zap.Logger) *Fuser {
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory memory.MemoryManager, log *zap.Logger) *Fuser {
 	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, memory: memory, log: log}
 }
 
