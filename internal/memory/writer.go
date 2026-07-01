@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -88,6 +89,31 @@ func (w *Writer) AppendInteraction(userMsg, robotReply, uuid, name string) {
 
 	if _, err := f.WriteString(sb.String()); err != nil {
 		w.log.Error("failed to write interaction", zap.Error(err))
+	}
+}
+
+// AppendToIndex embeds and inserts a new user message into the given index.
+func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, uuid string) {
+	if strings.TrimSpace(userMsg) == "" || idx == nil {
+		return
+	}
+
+	dateStr := time.Now().Format("2006-01-02")
+	ts := time.Now().Format("15:04:05")
+
+	tag := "unknown"
+	if uuid != "" {
+		tag = uuid
+	}
+	userTag := fmt.Sprintf("[User: %s]\n", tag)
+
+	text := fmt.Sprintf("[Date: %s]\n## %s\n%s- **User**: %s",
+		dateStr, ts, userTag, strings.TrimSpace(userMsg))
+
+	meta := map[string]string{"source": dateStr + ".md", "user_id": uuid}
+
+	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta}); err != nil {
+		w.log.Warn("write-through index failed", zap.Error(err))
 	}
 }
 

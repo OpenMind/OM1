@@ -15,14 +15,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func newTestManager(t *testing.T) *Manager {
+func newTestCloudManager(t *testing.T) *CloudManager {
 	t.Helper()
 	log, _ := zap.NewDevelopment()
-	return &Manager{log: log.Named("memory")}
+	return &CloudManager{log: log.Named("memory")}
 }
 
 func TestFormatChunk(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	ts := time.Date(2026, 7, 1, 11, 30, 0, 0, time.UTC)
 	rounds := []pendingRound{
 		{userMsg: "Hello", robotReply: "Hi there!", timestamp: ts},
@@ -38,7 +38,7 @@ func TestFormatChunk(t *testing.T) {
 }
 
 func TestFormatChunk_EmptyReply(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	ts := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	rounds := []pendingRound{
 		{userMsg: "Hello", robotReply: "", timestamp: ts},
@@ -50,7 +50,7 @@ func TestFormatChunk_EmptyReply(t *testing.T) {
 }
 
 func TestFormatChunk_EmptyUUID(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	rounds := []pendingRound{
 		{userMsg: "Hi", robotReply: "", timestamp: time.Now()},
 	}
@@ -59,7 +59,7 @@ func TestFormatChunk_EmptyUUID(t *testing.T) {
 }
 
 func TestFormatContext_WithProfile(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	result := &SearchResult{
 		Profile: &ProfileData{
 			VisitCount: 3,
@@ -79,7 +79,7 @@ func TestFormatContext_WithProfile(t *testing.T) {
 }
 
 func TestFormatContext_MaxChars(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	result := &SearchResult{
 		Chunks: []MemoryEntry{
 			{Text: strings.Repeat("a", 100)},
@@ -93,7 +93,7 @@ func TestFormatContext_MaxChars(t *testing.T) {
 }
 
 func TestFormatContext_NoUser(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	result := &SearchResult{
 		Chunks: []MemoryEntry{{Text: "some data"}},
 	}
@@ -157,7 +157,7 @@ func TestSummarize_TickCounter(t *testing.T) {
 	defer srv.Close()
 
 	log, _ := zap.NewDevelopment()
-	m := &Manager{
+	m := &CloudManager{
 		uploader: &Uploader{
 			apiURL: srv.URL,
 			apiKey: "test",
@@ -192,7 +192,7 @@ func TestRecordInteraction_PendingBuffer(t *testing.T) {
 	defer srv.Close()
 
 	log, _ := zap.NewDevelopment()
-	m := &Manager{
+	m := &CloudManager{
 		uploader: &Uploader{
 			apiURL:   srv.URL,
 			apiKey:   "test",
@@ -220,7 +220,7 @@ func TestRecordInteraction_UserSwitch(t *testing.T) {
 	defer srv.Close()
 
 	log, _ := zap.NewDevelopment()
-	m := &Manager{
+	m := &CloudManager{
 		uploader: &Uploader{
 			apiURL:   srv.URL,
 			apiKey:   "test",
@@ -238,14 +238,14 @@ func TestRecordInteraction_UserSwitch(t *testing.T) {
 
 func TestRecordInteraction_EmptyUUID(t *testing.T) {
 	log, _ := zap.NewDevelopment()
-	m := &Manager{log: log}
+	m := &CloudManager{log: log}
 
 	m.RecordInteraction(context.Background(), "Hello", "Hi", "", "")
 	require.Empty(t, m.pendingRounds, "empty UUID should skip cloud upload")
 }
 
 func TestSearchAndFormat_EmptyUUID(t *testing.T) {
-	m := newTestManager(t)
+	m := newTestCloudManager(t)
 	result := m.SearchAndFormat(context.Background(), "hello", "")
 	require.Empty(t, result)
 }

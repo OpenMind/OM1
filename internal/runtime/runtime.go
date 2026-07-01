@@ -37,7 +37,7 @@ type modeState struct {
 	sensors            []inputs.Sensor           // stored here; InputOrchestrator created in startOrchestrators
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
-	memory             *memory.Manager
+	memory             memory.MemoryManager
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -168,9 +168,10 @@ func (rt *Runtime) initializeMode(modeName string) error {
 		}
 	}
 
-	var memoryManager *memory.Manager
+	var memoryManager memory.MemoryManager
 	if rt.systemConfig.Memory != nil && rt.systemConfig.Memory.Enabled {
-		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, rt.log)
+		cloudConn := rt.systemConfig.Memory.CloudConnection == nil || *rt.systemConfig.Memory.CloudConnection
+		memoryManager = memory.NewManager(memory.ResolveMemoryRoot(), rt.systemConfig.APIKey, cloudConn, rt.log)
 	}
 
 	state := &modeState{

@@ -14,8 +14,6 @@ import (
 )
 
 const (
-	DefaultMinScore               = 0.5
-	DefaultValidDurationDays      = 60
 	defaultAPIURL                 = "https://api.openmind.com/api/core"
 	maxUploadRound                = 1
 	summarizeTriggerIntervalTicks = 10
@@ -27,8 +25,8 @@ type pendingRound struct {
 	timestamp  time.Time
 }
 
-// Manager bundles the cloud Retriever, Uploader, and local Writer.
-type Manager struct {
+// CloudManager bundles the cloud Retriever, Uploader, and local Writer.
+type CloudManager struct {
 	retriever     *Retriever
 	uploader      *Uploader
 	writer        *Writer
@@ -38,8 +36,8 @@ type Manager struct {
 	pendingRounds []pendingRound
 }
 
-// NewManager creates a Manager backed by cloud APIs.
-func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
+// NewManager creates a CloudManager backed by cloud APIs.
+func NewCloudManager(memoryRoot, apiKey string, log *zap.Logger) *CloudManager {
 	log = log.Named("memory")
 
 	writer, err := NewWriter(memoryRoot, log)
@@ -47,7 +45,7 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 		log.Warn("memory writer init failed", zap.Error(err))
 	}
 
-	m := &Manager{
+	m := &CloudManager{
 		retriever: NewRetriever(defaultAPIURL, apiKey, "", log),
 		uploader:  NewUploader(defaultAPIURL, apiKey, "", log),
 		writer:    writer,
@@ -59,7 +57,7 @@ func NewManager(memoryRoot, apiKey string, log *zap.Logger) *Manager {
 }
 
 // SearchAndFormat searches memory and returns a formatted context string.
-func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
+func (m *CloudManager) SearchAndFormat(ctx context.Context, query string, uuid string) string {
 	if uuid == "" {
 		return ""
 	}
@@ -80,7 +78,7 @@ func (m *Manager) SearchAndFormat(ctx context.Context, query string, uuid string
 }
 
 // RecordInteraction writes to local file and uploads to cloud.
-func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, robotReply, uuid, name string) {
+func (m *CloudManager) RecordInteraction(ctx context.Context, voiceInput, robotReply, uuid, name string) {
 	if m.writer != nil {
 		m.writer.AppendInteraction(voiceInput, robotReply, uuid, name)
 	}
@@ -108,7 +106,7 @@ func (m *Manager) RecordInteraction(ctx context.Context, voiceInput, robotReply,
 }
 
 // uploadPendingChunk merges buffered rounds into a single chunk and uploads it.
-func (m *Manager) uploadPendingChunk() {
+func (m *CloudManager) uploadPendingChunk() {
 	if len(m.pendingRounds) == 0 {
 		return
 	}
@@ -119,7 +117,7 @@ func (m *Manager) uploadPendingChunk() {
 	go m.uploader.PostDailyLog(context.Background(), chunk, uuid)
 }
 
-func (m *Manager) formatChunk(uuid string, rounds []pendingRound) string {
+func (m *CloudManager) formatChunk(uuid string, rounds []pendingRound) string {
 	dateStr := time.Now().Format("2006-01-02")
 	tag := "unknown"
 	if uuid != "" {
@@ -139,7 +137,7 @@ func (m *Manager) formatChunk(uuid string, rounds []pendingRound) string {
 }
 
 // Summarize triggers cloud summarization every N ASR ticks.
-func (m *Manager) Summarize(ctx context.Context) {
+func (m *CloudManager) Summarize(ctx context.Context) {
 	m.asrCount++
 	if m.asrCount >= summarizeTriggerIntervalTicks {
 		m.asrCount = 0
@@ -148,7 +146,7 @@ func (m *Manager) Summarize(ctx context.Context) {
 }
 
 // formatContext assembles prompt context from search results.
-func (m *Manager) formatContext(result *SearchResult, userID string, maxChars int) string {
+func (m *CloudManager) formatContext(result *SearchResult, userID string, maxChars int) string {
 	var parts []string
 	totalChars := 0
 
@@ -228,7 +226,7 @@ type profileCounts struct {
 	visits       int
 }
 
-func (m *Manager) readLocalNames(uuid, name string) []string {
+func (m *CloudManager) readLocalNames(uuid, name string) []string {
 	if m.writer == nil {
 		if name != "" {
 			return []string{name}
@@ -255,7 +253,7 @@ func (m *Manager) readLocalNames(uuid, name string) []string {
 	return data.Names
 }
 
-func (m *Manager) readLocalCounts(uuid string) profileCounts {
+func (m *CloudManager) readLocalCounts(uuid string) profileCounts {
 	if m.writer == nil {
 		return profileCounts{}
 	}
