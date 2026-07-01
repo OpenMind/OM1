@@ -393,4 +393,3 @@ func TestSaveAndLoadPreservesTimestamp(t *testing.T) {
 		require.Equal(t, ts, doc.Timestamp, "timestamp should survive save/load")
 	}
 }
-
