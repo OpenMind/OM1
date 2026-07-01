@@ -154,6 +154,26 @@ func TestOpenAICompatCallMergesExtraBody(t *testing.T) {
 	require.Equal(t, float64(10), cap.body["max_tokens"])
 }
 
+func TestOpenAICompatCallExtraBodyCannotOverrideCoreFields(t *testing.T) {
+	srv, cap := captureServer(t, http.StatusOK, `{"choices":[{"message":{"content":"ok"}}]}`)
+
+	c := newTestCompat(t, srv.URL, "required")
+	c.SetSchemas([]map[string]any{{"type": "function", "function": map[string]any{"name": "speak"}}})
+	c.extraBody = map[string]any{
+		"model":       "hacked-model",
+		"tool_choice": "none",
+		"messages":    "nonsense",
+		"temperature": 0.7,
+	}
+
+	_, err := c.Call(context.Background(), "hello", nil)
+	require.NoError(t, err)
+	require.Equal(t, "test-model", cap.body["model"], "core model must win")
+	require.Equal(t, "required", cap.body["tool_choice"], "dedicated tool_choice must win")
+	require.IsType(t, []any{}, cap.body["messages"], "messages must stay the built array")
+	require.Equal(t, 0.7, cap.body["temperature"], "non-reserved params still pass through")
+}
+
 func TestOpenAICompatCallErrorStatus(t *testing.T) {
 	srv, _ := captureServer(t, http.StatusInternalServerError, `{"error":"boom"}`)
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"time"
 
@@ -57,18 +58,15 @@ func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas 
 func (c *openAICompatLLM) SetSchemas(schemas []map[string]any) { c.schemas = schemas }
 
 func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
-	requestBody := map[string]any{
-		"model":    c.config.Model,
-		"messages": buildMessages(prompt, history),
-	}
+	requestBody := make(map[string]any, len(c.extraBody)+4)
+	maps.Copy(requestBody, c.extraBody)
+
+	requestBody["model"] = c.config.Model
+	requestBody["messages"] = buildMessages(prompt, history)
 
 	if len(c.schemas) > 0 {
 		requestBody["tools"] = c.schemas
 		requestBody["tool_choice"] = c.toolChoice
-	}
-
-	for k, v := range c.extraBody {
-		requestBody[k] = v
 	}
 
 	body, err := c.doRequest(ctx, requestBody)
