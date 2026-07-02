@@ -1,10 +1,10 @@
 {
   version: "v1.1.0",
   name: "memory recall basic",
-  description: "memory test",
-  hertz: 50,
-  wait_for_calls: 2,
-  timeout_ms: 8000,
+  description: "Seeds memory with 2 messages, then queries to verify correct retrieval",
+  hertz: 10,
+  wait_for_calls: 3,
+  timeout_ms: 30000,
 
   system_prompt_base: "You are a friendly robot with memory.",
 
@@ -19,7 +19,8 @@
       config: {
         messages: [
           "I love playing basketball on weekends",
-          "Do you remember what sport I like?",
+          "The Lakers are my favorite NBA team",
+          "What sport do I play?",
         ],
         voice_key: "Voice",
         triggers_tick: true,
@@ -35,18 +36,8 @@
     type: "scripted_llm",
     config: {
       rules: [
-        {
-          when_contains: "I love playing basketball on weekends",
-          tool_calls: [
-            { name: "speak", arguments: { sentence: "I remember you like basketball!" } },
-          ],
-        },
-        {
-          when_contains: "",
-          tool_calls: [
-            { name: "speak", arguments: { sentence: "That sounds fun!" } },
-          ],
-        },
+        { when_contains_all: ["What sport do I play", "basketball"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: basketball" } }] },
+        { when_contains: "", tool_calls: [{ name: "speak", arguments: { sentence: "acknowledged" } }] },
       ],
     },
   },
@@ -57,7 +48,7 @@
 
   expected: {
     action_calls: [
-      { action: "speak", arg_contains: { sentence: "remember" } },
+      { action: "speak", arg_contains: { sentence: "recall: basketball" } },
     ],
   },
 }

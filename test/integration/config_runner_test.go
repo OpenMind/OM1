@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/providers"
 )
 
 type testCase struct {
@@ -53,7 +54,11 @@ func TestIntegrationFromConfig(t *testing.T) {
 }
 
 func runCaseFile(t *testing.T, path string) {
-	t.Cleanup(func() { os.RemoveAll("memory") })
+	t.Cleanup(func() {
+		os.RemoveAll("memory")
+		providers.IO().ResetTickCounter()
+		providers.IO().RemoveInput("Voice")
+	})
 
 	abs, err := filepath.Abs(path)
 	require.NoError(t, err)
