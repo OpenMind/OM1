@@ -543,7 +543,7 @@ func ParseDailyFile(path string) ([]MemoryEntry, error) {
 		}
 
 		if m := timeHeaderRe.FindStringSubmatch(line); m != nil {
-			if t, err := time.Parse("2006-01-02 15:04:05", dateStem+" "+m[1]); err == nil {
+			if t, err := time.ParseInLocation("2006-01-02 15:04:05", dateStem+" "+m[1], time.Local); err == nil {
 				currentTS = t
 			}
 		}
