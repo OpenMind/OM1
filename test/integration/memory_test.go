@@ -22,36 +22,26 @@ import (
 	"github.com/openmind/om1/internal/memory"
 )
 
-// embedURL returns the embedding server URL from env or default.
 func embedURL() string {
 	if u := os.Getenv("EMBED_URL"); u != "" {
 		return u
 	}
 	return "http://localhost:8100"
 }
-
-// --- Local Memory E2E ---
-
-// TestLocalMemory_FullPipeline exercises the complete local memory lifecycle:
-// Writer → ParseDailyFile → BuildIndex (real embedding) → HybridSearch → EnrichContext → Save/Load
 func TestLocalMemory_FullPipeline(t *testing.T) {
 	root := t.TempDir()
 	log := zap.NewNop()
 	uuid := "test_user_local"
-
-	// 1. Write interactions via Writer (the real entry point).
 	w, err := memory.NewWriter(root, log)
 	require.NoError(t, err)
 
 	w.AppendInteraction("What is the weather in Tokyo?", "It's 25°C and sunny.", uuid, "Alice")
-	time.Sleep(100 * time.Millisecond) // ensure distinct timestamps
+	time.Sleep(100 * time.Millisecond)
 	w.AppendInteraction("How about Osaka?", "Osaka is 27°C.", uuid, "Alice")
 	time.Sleep(100 * time.Millisecond)
 	w.AppendInteraction("Thanks, I'll pack light.", "Have a great trip!", uuid, "Alice")
 	time.Sleep(100 * time.Millisecond)
 	w.AppendInteraction("Hey, what's your name?", "I'm Spot!", "other_user", "Bob")
-
-	// 2. Verify daily file was written correctly.
 	today := time.Now().Format("2006-01-02")
 	dailyDir := filepath.Join(root, "daily")
 	dailyPath := filepath.Join(dailyDir, today+".md")
@@ -60,8 +50,6 @@ func TestLocalMemory_FullPipeline(t *testing.T) {
 	require.Contains(t, string(content), "weather in Tokyo")
 	require.Contains(t, string(content), "Osaka")
 	require.Contains(t, string(content), uuid)
-
-	// 3. Verify user profile was created.
 	profilePath := filepath.Join(root, "users", uuid, "profile.json")
 	profileRaw, err := os.ReadFile(profilePath)
 	require.NoError(t, err)
@@ -69,33 +57,23 @@ func TestLocalMemory_FullPipeline(t *testing.T) {
 	require.NoError(t, json.Unmarshal(profileRaw, &profile))
 	names, _ := profile["names"].([]any)
 	require.Contains(t, names, "Alice")
-
-	// 4. Parse daily file into chunks.
 	chunks, err := memory.ParseDailyFile(dailyPath)
 	require.NoError(t, err)
 	require.Len(t, chunks, 4)
 	for _, c := range chunks {
 		require.False(t, c.Timestamp.IsZero(), "each chunk should have a timestamp")
 	}
-
-	// 5. Build index with REAL embeddings.
 	idx := memory.NewIndexFromURL(embedURL(), log)
 	require.NoError(t, memory.BuildIndex(context.Background(), idx, dailyDir, 60))
 	require.Equal(t, 4, idx.Size())
-
-	// 6. Hybrid search — semantic + BM25.
 	results, err := idx.HybridSearch(context.Background(), "weather forecast", 3, 0, uuid)
 	require.NoError(t, err)
 	require.NotEmpty(t, results, "should find weather-related chunks")
-
-	// 7. Verify semantic relevance: top result should be weather-related, not "what's your name".
 	topText := results[0].Text
 	require.True(t,
 		strings.Contains(topText, "weather") || strings.Contains(topText, "Tokyo") || strings.Contains(topText, "Osaka"),
 		"top result should be semantically related to weather, got: %s", topText,
 	)
-
-	// 8. EnrichContext merges adjacent chunks from same user.
 	enriched := idx.EnrichContext(results)
 	require.NotEmpty(t, enriched)
 	aliceCount := 0
@@ -109,8 +87,6 @@ func TestLocalMemory_FullPipeline(t *testing.T) {
 	require.Contains(t, enriched[0].Text, "Osaka")
 	require.Contains(t, enriched[0].Text, "pack light")
 	require.NotContains(t, enriched[0].Text, "what's your name")
-
-	// 9. Persist index and reload — verify round-trip.
 	indexDir := filepath.Join(root, "index")
 	require.NoError(t, idx.SaveToDisk(indexDir))
 
@@ -123,8 +99,6 @@ func TestLocalMemory_FullPipeline(t *testing.T) {
 	enriched2 := idx2.EnrichContext(results2)
 	require.NotEmpty(t, enriched2)
 	require.Contains(t, enriched2[0].Text, "Tokyo")
-
-	// 10. Hot update — Writer.AppendToIndex adds new chunk to live index.
 	w.AppendToIndex(context.Background(), idx, "I also want to visit Kyoto", uuid)
 	require.Equal(t, 5, idx.Size())
 	results3, err := idx.HybridSearch(context.Background(), "Kyoto travel", 3, 0, uuid)
@@ -140,11 +114,7 @@ func TestLocalMemory_FullPipeline(t *testing.T) {
 	require.True(t, found, "hot-updated Kyoto chunk should be searchable")
 }
 
-// --- Cloud Memory E2E ---
-
-// mockCloudAPI is an in-memory mock of the openmind-api memory endpoints.
-// It stores daily logs with embeddings, profiles, and signals, and supports
-// cosine-similarity search — enough to validate the full CloudManager pipeline.
+// mockCloudAPI mocks openmind-api memory endpoints in-memory with cosine search.
 type mockCloudAPI struct {
 	mu       sync.Mutex
 	logs     []cloudLogEntry
@@ -250,8 +220,6 @@ func (m *mockCloudAPI) handler() http.Handler {
 		if len(results) > req.TopK {
 			results = results[:req.TopK]
 		}
-
-		// Build profile from stored profiles.
 		var profile *struct {
 			Names      []string `json:"names"`
 			VisitCount int      `json:"visit_count"`
@@ -310,11 +278,8 @@ func cosineSim(a, b []float32) float64 {
 	}
 	return dot / denom
 }
-
-// TestCloudMemory_FullPipeline exercises the complete cloud memory lifecycle:
-// CloudManager.RecordInteraction → upload to mock cloud API → CloudManager.SearchAndFormat
 func TestCloudMemory_FullPipeline(t *testing.T) {
-	// 1. Start mock cloud API.
+
 	mock := &mockCloudAPI{}
 	srv := httptest.NewServer(mock.handler())
 	defer srv.Close()
@@ -322,15 +287,11 @@ func TestCloudMemory_FullPipeline(t *testing.T) {
 	root := t.TempDir()
 	log := zap.NewNop()
 	uuid := "test_user_cloud"
-
-	// 2. Create Retriever/Uploader pointing at mock API + real embedding server.
 	retriever := memory.NewRetriever(srv.URL, "test-key", embedURL(), log)
 	uploader := memory.NewUploader(srv.URL, "test-key", embedURL(), log)
 
 	writer, err := memory.NewWriter(root, log)
 	require.NoError(t, err)
-
-	// 3. Simulate interactions — upload to cloud.
 	interactions := []struct {
 		userMsg    string
 		robotReply string
@@ -341,31 +302,24 @@ func TestCloudMemory_FullPipeline(t *testing.T) {
 	}
 
 	for _, inter := range interactions {
-		// Write locally.
-		writer.AppendInteraction(inter.userMsg, inter.robotReply, uuid, "TestUser")
 
-		// Embed and upload to cloud (mimics CloudManager.RecordInteraction).
+		writer.AppendInteraction(inter.userMsg, inter.robotReply, uuid, "TestUser")
 		chunk := formatCloudChunk(uuid, inter.userMsg, inter.robotReply)
 		uploader.PostDailyLog(context.Background(), chunk, uuid)
-		time.Sleep(50 * time.Millisecond) // ensure sequential uploads
+		time.Sleep(50 * time.Millisecond)
 	}
 	uploader.PostUserProfile(context.Background(), uuid, []string{"TestUser"}, len(interactions), 1)
 
-	// Wait for async uploads to complete.
-	time.Sleep(500 * time.Millisecond)
-
-	// 4. Verify cloud received the data.
+	time.Sleep(500 * time.Millisecond) // wait for async uploads
 	mock.mu.Lock()
 	require.GreaterOrEqual(t, len(mock.logs), 3, "cloud should have received 3 daily logs")
 	require.GreaterOrEqual(t, len(mock.profiles), 1, "cloud should have received profile")
-	// Verify embeddings were included.
+
 	for _, l := range mock.logs {
 		require.NotEmpty(t, l.Embedding, "each log should have an embedding vector")
 		require.Equal(t, 384, len(l.Embedding), "embedding should be 384-dim (e5-small-v2)")
 	}
 	mock.mu.Unlock()
-
-	// 5. Search via retriever — semantic search against cloud.
 	result, err := retriever.Search(context.Background(), "basketball sports", uuid, 3, 0.0)
 	require.NoError(t, err)
 	require.NotEmpty(t, result.Chunks, "should find basketball-related chunks")
@@ -375,12 +329,8 @@ func TestCloudMemory_FullPipeline(t *testing.T) {
 		strings.Contains(topChunk, "basketball") || strings.Contains(topChunk, "Lakers"),
 		"top result should be basketball-related, got: %s", topChunk,
 	)
-
-	// 6. Verify profile was returned.
 	require.NotNil(t, result.Profile, "search should return user profile")
 	require.Contains(t, result.Profile.Names, "TestUser")
-
-	// 7. Search for unrelated topic — should return restaurant, not basketball.
 	result2, err := retriever.Search(context.Background(), "Italian food dining", uuid, 3, 0.0)
 	require.NoError(t, err)
 	require.NotEmpty(t, result2.Chunks)
@@ -389,8 +339,6 @@ func TestCloudMemory_FullPipeline(t *testing.T) {
 		strings.Contains(topChunk2, "Italian") || strings.Contains(topChunk2, "restaurant") || strings.Contains(topChunk2, "Luigi"),
 		"top result should be restaurant-related, got: %s", topChunk2,
 	)
-
-	// 8. Post signals (mimics CloudManager.SearchAndFormat signal recording).
 	uploader.PostSignals(context.Background(), result.Chunks, uuid, "testhash")
 	time.Sleep(200 * time.Millisecond)
 
@@ -398,8 +346,6 @@ func TestCloudMemory_FullPipeline(t *testing.T) {
 	require.NotEmpty(t, mock.signals, "cloud should have received recall signals")
 	mock.mu.Unlock()
 }
-
-// formatCloudChunk mimics CloudManager.formatChunk for a single round.
 func formatCloudChunk(uuid, userMsg, robotReply string) string {
 	dateStr := time.Now().Format("2006-01-02")
 	ts := time.Now().Format("15:04:05")
