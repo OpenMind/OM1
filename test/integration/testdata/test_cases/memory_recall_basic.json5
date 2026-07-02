@@ -36,14 +36,12 @@
     config: {
       rules: [
         {
-          // When memory is injected, the prompt contains "MEMORY:"
-          when_contains: "MEMORY:",
+          when_contains: "I love playing basketball on weekends",
           tool_calls: [
             { name: "speak", arguments: { sentence: "I remember you like basketball!" } },
           ],
         },
         {
-          // Fallback for the first tick (no memory yet)
           when_contains: "",
           tool_calls: [
             { name: "speak", arguments: { sentence: "That sounds fun!" } },
