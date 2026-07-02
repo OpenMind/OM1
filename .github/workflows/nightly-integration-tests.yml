@@ -2,6 +2,7 @@ name: Run Nightly Integration Tests
 
 env:
   OM1_API_KEY: ${{ secrets.OM1_API_KEY }}
+  EMBED_URL: http://localhost:8100
 
 on:
   schedule:
@@ -42,6 +43,27 @@ jobs:
       - name: Download zenoh-c
         run: make download-zenohc
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fastembed
+          key: fastembed-bge-small-en-v1.5
+
+      - name: Start embedding server
+        run: |
+          pip install fastembed fastapi uvicorn
+          python .github/scripts/embed_server.py &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8100/health && exit 0
+            sleep 2
+          done
+          echo "embedding server did not start" && exit 1
+
       - name: Run integration tests
         id: tests
         run: |
@@ -50,6 +72,7 @@ jobs:
           export CGO_LDFLAGS="-L$(pwd)/.zenoh-c/lib -lzenohc -Wl,-rpath,$(pwd)/.zenoh-c/lib"
           set -o pipefail
           go test -tags=integration -race -v ./... 2>&1 | tee test-output.log
+          go test -tags=integration -race -count=9 ./test/integration/... -run "TestIntegrationFromConfig/memory_recall_basic" -timeout 120s
 
       - name: Extract test summary
         if: ${{ !cancelled() }}
