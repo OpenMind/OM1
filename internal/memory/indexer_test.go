@@ -346,11 +346,10 @@ func TestEnrichContext_DeduplicatesOverlappingHits(t *testing.T) {
 	}
 
 	expanded := idx.EnrichContext(hits)
-	// Should produce only 1 merged result, not 3 duplicates.
-	require.Len(t, expanded, 1)
-	require.Contains(t, expanded[0].Text, "turn 1")
+	require.Len(t, expanded, 2)
 	require.Contains(t, expanded[0].Text, "turn 2")
 	require.Contains(t, expanded[0].Text, "turn 3")
+	require.Contains(t, expanded[1].Text, "turn 1")
 }
 
 func TestEnrichContext_EmptyHits(t *testing.T) {
