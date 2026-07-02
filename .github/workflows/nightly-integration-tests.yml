@@ -72,6 +72,7 @@ jobs:
           export CGO_LDFLAGS="-L$(pwd)/.zenoh-c/lib -lzenohc -Wl,-rpath,$(pwd)/.zenoh-c/lib"
           set -o pipefail
           go test -tags=integration -race -v ./... 2>&1 | tee test-output.log
+          go test -tags=integration -race -count=9 ./test/integration/... -run "TestIntegrationFromConfig/memory_recall_basic" -timeout 120s
 
       - name: Extract test summary
         if: ${{ !cancelled() }}
