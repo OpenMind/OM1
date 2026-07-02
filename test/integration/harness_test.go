@@ -120,6 +120,8 @@ type mockSensor struct {
 	messages       []string
 	triggers       bool
 	publishContext map[string]any
+	voiceKey       string
+	dynamicVars    map[string]string
 }
 
 func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
@@ -140,6 +142,18 @@ func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
 		s.messages = append(s.messages, m)
 	}
 
+	if vk, ok := cfg["voice_key"].(string); ok {
+		s.voiceKey = vk
+	}
+	if dv, ok := cfg["dynamic_vars"].(map[string]any); ok {
+		s.dynamicVars = make(map[string]string)
+		for k, v := range dv {
+			if vs, ok := v.(string); ok {
+				s.dynamicVars[k] = vs
+			}
+		}
+	}
+
 	if buf, ok := cfg["buffer"].(string); ok && buf != "" {
 		s.buffer = buf
 	} else {
@@ -155,10 +169,19 @@ func (s *mockSensor) Listen(ctx context.Context) (<-chan any, error) {
 		if len(s.publishContext) > 0 {
 			providers.ModeContext().Publish(s.publishContext)
 		}
+		for k, v := range s.dynamicVars {
+			providers.IO().SetDynamicVar(k, v)
+		}
 
-		for _, m := range s.messages {
+		for i, m := range s.messages {
+			if s.voiceKey != "" {
+				providers.IO().AddInput(s.voiceKey, m, time.Now())
+			}
 			select {
 			case ch <- m:
+				if i < len(s.messages)-1 {
+					time.Sleep(50 * time.Millisecond)
+				}
 			case <-ctx.Done():
 				return
 			}

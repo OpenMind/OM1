@@ -53,6 +53,8 @@ func TestIntegrationFromConfig(t *testing.T) {
 }
 
 func runCaseFile(t *testing.T, path string) {
+	t.Cleanup(func() { os.RemoveAll("memory") })
+
 	abs, err := filepath.Abs(path)
 	require.NoError(t, err)
 
