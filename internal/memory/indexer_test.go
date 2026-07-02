@@ -222,8 +222,8 @@ func TestParseDailyFile_PopulatesTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, chunks, 2)
 
-	expected1, _ := time.Parse("2006-01-02 15:04:05", "2026-06-03 14:18:28")
-	expected2, _ := time.Parse("2006-01-02 15:04:05", "2026-06-03 14:19:00")
+	expected1, _ := time.ParseInLocation("2006-01-02 15:04:05", "2026-06-03 14:18:28", time.Local)
+	expected2, _ := time.ParseInLocation("2006-01-02 15:04:05", "2026-06-03 14:19:00", time.Local)
 	require.Equal(t, expected1, chunks[0].Timestamp)
 	require.Equal(t, expected2, chunks[1].Timestamp)
 }
