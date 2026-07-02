@@ -1,9 +1,9 @@
 {
   version: "v1.1.0",
   name: "memory recall basic",
-  description: "Seeds memory with 2 messages, then queries to verify correct retrieval",
+  description: "Seeds 5 topics, queries each to verify correct memory retrieval",
   hertz: 10,
-  wait_for_calls: 3,
+  wait_for_calls: 10,
   timeout_ms: 30000,
 
   system_prompt_base: "You are a friendly robot with memory.",
@@ -18,9 +18,16 @@
       type: "mock_input",
       config: {
         messages: [
-          "I love playing basketball on weekends",
-          "The Lakers are my favorite NBA team",
-          "What sport do I play?",
+          "I love basketball",
+          "My favorite food is sushi",
+          "I have a golden retriever",
+          "I want to visit Tokyo",
+          "I code in Python",
+          "QUERY_SPORT: What sport do I enjoy playing?",
+          "QUERY_FOOD: What is my favorite thing to eat?",
+          "QUERY_PET: What kind of pet do I have?",
+          "QUERY_TRAVEL: Which city do I want to travel to?",
+          "QUERY_CODE: What do I code in?",
         ],
         voice_key: "Voice",
         triggers_tick: true,
@@ -36,7 +43,11 @@
     type: "scripted_llm",
     config: {
       rules: [
-        { when_contains_all: ["What sport do I play", "basketball"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: basketball" } }] },
+        { when_contains_all: ["QUERY_CODE", "Python"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: python" } }] },
+        { when_contains_all: ["QUERY_TRAVEL", "Tokyo"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: tokyo" } }] },
+        { when_contains_all: ["QUERY_PET", "golden retriever"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: golden retriever" } }] },
+        { when_contains_all: ["QUERY_FOOD", "sushi"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: sushi" } }] },
+        { when_contains_all: ["QUERY_SPORT", "basketball"], tool_calls: [{ name: "speak", arguments: { sentence: "recall: basketball" } }] },
         { when_contains: "", tool_calls: [{ name: "speak", arguments: { sentence: "acknowledged" } }] },
       ],
     },
@@ -49,6 +60,10 @@
   expected: {
     action_calls: [
       { action: "speak", arg_contains: { sentence: "recall: basketball" } },
+      { action: "speak", arg_contains: { sentence: "recall: sushi" } },
+      { action: "speak", arg_contains: { sentence: "recall: golden retriever" } },
+      { action: "speak", arg_contains: { sentence: "recall: tokyo" } },
+      { action: "speak", arg_contains: { sentence: "recall: python" } },
     ],
   },
 }

@@ -283,8 +283,25 @@ func (idx *MemoryIndex) EnrichContext(hits []MemoryEntry) []MemoryEntry {
 			}
 		}
 
+		hitIdx := 0
+		for i, n := range neighbors {
+			if n.text == hit.Text {
+				hitIdx = i
+				break
+			}
+		}
+		start := hitIdx
+		if start > 0 {
+			start = hitIdx - 1
+		}
+		end := hitIdx
+		if end < len(neighbors)-1 {
+			end = hitIdx + 1
+		}
+		picked := neighbors[start : end+1]
+
 		var parts []string
-		for _, n := range neighbors {
+		for _, n := range picked {
 			seen[n.text] = struct{}{}
 			parts = append(parts, n.text)
 		}
