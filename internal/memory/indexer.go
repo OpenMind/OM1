@@ -244,6 +244,7 @@ func (idx *MemoryIndex) EnrichContext(hits []MemoryEntry) []MemoryEntry {
 
 		uid := hit.Metadata["user_id"]
 		if uid == "" || hit.Timestamp.IsZero() {
+			seen[hit.Text] = struct{}{}
 			expanded = append(expanded, hit)
 			continue
 		}
@@ -271,6 +272,7 @@ func (idx *MemoryIndex) EnrichContext(hits []MemoryEntry) []MemoryEntry {
 		}
 
 		if len(neighbors) <= 1 {
+			seen[hit.Text] = struct{}{}
 			expanded = append(expanded, hit)
 			continue
 		}
@@ -279,9 +281,6 @@ func (idx *MemoryIndex) EnrichContext(hits []MemoryEntry) []MemoryEntry {
 			for j := i; j > 0 && neighbors[j].ts.Before(neighbors[j-1].ts); j-- {
 				neighbors[j], neighbors[j-1] = neighbors[j-1], neighbors[j]
 			}
-		}
-		if len(neighbors) > 3 {
-			neighbors = neighbors[:3]
 		}
 
 		var parts []string
