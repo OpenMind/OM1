@@ -114,7 +114,7 @@ func TestTraceOutput(t *testing.T) {
 }
 
 func TestLoadComponentsRequiresLLM(t *testing.T) {
-	m := NewModeSetup(config.ModeConfig{Name: "greeting"}, &config.SystemConfig{})
+	m := NewModeSetup(config.ModeConfig{Name: "greeting"}, &config.SystemConfig{}, nil)
 	err := m.loadComponents()
 	require.Error(t, err, "a mode with no LLM configured fails to load")
 	require.Contains(t, err.Error(), "no LLM configured")
@@ -129,7 +129,7 @@ func TestLoadComponentsLoadsLLMAndMeta(t *testing.T) {
 
 	m := NewModeSetup(
 		config.ModeConfig{Name: "greeting", CortexLLM: config.PluginSpec{Type: "RuntimeFakeLLM"}},
-		&config.SystemConfig{APIKey: "secret"},
+		&config.SystemConfig{APIKey: "secret"}, nil,
 	)
 	require.NoError(t, m.loadComponents())
 	require.NotNil(t, m.cortexLLM)
@@ -151,7 +151,7 @@ func TestLoadComponentsLoadsAgentBackgrounds(t *testing.T) {
 			CortexLLM:        config.PluginSpec{Type: "AgentBgLLM"},
 			AgentBackgrounds: []config.PluginSpec{{Type: "AgentFakeBG"}},
 		},
-		&config.SystemConfig{APIKey: "k"},
+		&config.SystemConfig{APIKey: "k"}, nil,
 	)
 
 	require.NoError(t, m.loadComponents())

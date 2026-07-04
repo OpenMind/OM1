@@ -1,0 +1,70 @@
+{
+  // End-to-end MCP through the full runtime, driven entirely by config.
+  //
+  // The scripted cortex LLM has no matching rule for the base prompt except the
+  // catch-all, so round 1 emits an MCP tool call (mcp_weather_get_weather). The
+  // runtime resolves it against a REAL MCP server (started by TestMain and
+  // exposed via ${OM1_TEST_MCP_URL}) and feeds the tool result back as a recall
+  // prompt. Only the real server's response contains "sunny", so the first rule
+  // fires on round 2 and emits the final `speak` action. If the MCP round-trip
+  // failed, "sunny" would never appear, no speak would fire, and this case would
+  // time out — so the assertion genuinely proves the MCP call succeeded.
+  version: "v1.1.0",
+  name: "mcp weather tool resolves through the runtime",
+  description: "cortex requests an MCP tool -> real MCP server -> recall prompt -> speak action",
+  hertz: 50,
+  wait_for_calls: 1,
+  timeout_ms: 5000,
+
+  system_prompt_base: "You are a weather assistant. Use tools to answer.",
+
+  agent_inputs: [
+    {
+      type: "mock_input",
+      config: {
+        text: "what is the weather in Berlin",
+        triggers_tick: true,
+      },
+    },
+  ],
+
+  cortex_llm: {
+    type: "scripted_llm",
+    config: {
+      rules: [
+        // Round 2: the recall prompt carries the real tool result ("... sunny ...").
+        {
+          when_contains: "sunny",
+          tool_calls: [
+            { name: "speak", arguments: { sentence: "The weather is sunny" } },
+          ],
+        },
+        // Round 1: catch-all on the base prompt requests the MCP tool.
+        {
+          when_contains: "",
+          tool_calls: [
+            { name: "mcp_weather_get_weather", arguments: { city: "Berlin" } },
+          ],
+        },
+      ],
+    },
+  },
+
+  agent_actions: [
+    { name: "speak", llm_label: "speak", connector: "recording" },
+  ],
+
+  mcp_servers: [
+    {
+      name: "weather",
+      transport: "http",
+      url: "${OM1_TEST_MCP_URL}",
+    },
+  ],
+
+  expected: {
+    action_calls: [
+      { action: "speak", arg_contains: { sentence: "sunny" } },
+    ],
+  },
+}
