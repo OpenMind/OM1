@@ -112,7 +112,8 @@ type KBSpec struct {
 
 // MemorySpec describes the optional long-term memory system.
 type MemorySpec struct {
-	Enabled bool `json:"enabled"`
+	Enabled         bool `json:"enabled"`
+	CloudConnection bool `json:"cloud_connection"`
 }
 
 // RuntimeConfig is the resolved, instantiated state for the active mode.

@@ -11,11 +11,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/openmind/om1/internal/knowledgebase"
 )
 
-const defaultContextMaxChars = 1000
+const defaultContextMaxChars = 2000
 
 // Reader searches and reads long-term memory files.
 type Reader struct {
@@ -33,12 +31,11 @@ func NewReader(memoryRoot string, embedderBaseURL string, minScore float64, log 
 	if minScore <= 0 {
 		minScore = DefaultMinScore
 	}
-	embedder := knowledgebase.NewHTTPEmbedder(embedderBaseURL)
 	return &Reader{
 		MemoryRoot: memoryRoot,
 		dailyDir:   filepath.Join(memoryRoot, "daily"),
 		usersDir:   filepath.Join(memoryRoot, "users"),
-		index:      NewMemoryIndex(embedder, log),
+		index:      NewIndexFromURL(embedderBaseURL, log),
 		minScore:   minScore,
 		log:        log,
 	}
@@ -61,6 +58,12 @@ func (r *Reader) EnsureIndex(ctx context.Context) error {
 // Index returns the underlying MemoryIndex (used by Writer for hot updates).
 func (r *Reader) Index() *MemoryIndex {
 	return r.index
+}
+
+// SetIndex replaces the current index with a new one.
+func (r *Reader) SetIndex(idx *MemoryIndex) {
+	r.index = idx
+	r.indexReady = true
 }
 
 // IndexReady reports whether the index has been initialized.
@@ -118,11 +121,12 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 		if totalChars >= maxChars {
 			break
 		}
-		if totalChars+len(doc.Text) > maxChars {
-			break
+		text := doc.Text
+		if totalChars+len(text) > maxChars {
+			text = text[:maxChars-totalChars]
 		}
-		parts = append(parts, doc.Text)
-		totalChars += len(doc.Text)
+		parts = append(parts, text)
+		totalChars += len(text)
 	}
 
 	return r.normalizeUserTags(strings.Join(parts, "\n\n"))

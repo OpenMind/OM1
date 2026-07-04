@@ -22,6 +22,7 @@ import (
 const (
 	DefaultMinScore          = 0.5
 	DefaultValidDurationDays = 60
+	DefaultEmbedderBaseURL   = knowledgebase.DefaultBaseURL
 )
 
 // MemoryIndex is an in-memory HNSW index for memory chunks.
@@ -46,6 +47,11 @@ func NewMemoryIndex(embedder knowledgebase.Embedder, log *zap.Logger) *MemoryInd
 		embedder: embedder,
 		log:      log,
 	}
+}
+
+// NewIndexFromURL creates a new index backed by an HTTP embedder at embedderURL
+func NewIndexFromURL(embedderURL string, log *zap.Logger) *MemoryIndex {
+	return NewMemoryIndex(knowledgebase.NewHTTPEmbedder(embedderURL), log)
 }
 
 // Size returns the number of indexed chunks.
@@ -216,6 +222,98 @@ func (idx *MemoryIndex) HybridSearch(ctx context.Context, query string, topK int
 	return docs, nil
 }
 
+const contextWindowSecs = 30
+
+// EnrichContext enriches each search hit by merging neighboring chunks.
+func (idx *MemoryIndex) EnrichContext(hits []MemoryEntry) []MemoryEntry {
+	if len(hits) == 0 {
+		return nil
+	}
+
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	window := time.Duration(contextWindowSecs) * time.Second
+	seen := make(map[string]struct{})
+	var expanded []MemoryEntry
+
+	for _, hit := range hits {
+		if _, dup := seen[hit.Text]; dup {
+			continue
+		}
+
+		uid := hit.Metadata["user_id"]
+		if uid == "" || hit.Timestamp.IsZero() {
+			seen[hit.Text] = struct{}{}
+			expanded = append(expanded, hit)
+			continue
+		}
+
+		type neighbor struct {
+			text string
+			ts   time.Time
+		}
+		var neighbors []neighbor
+		for _, doc := range idx.docs {
+			if doc.Metadata["user_id"] != uid {
+				continue
+			}
+			if doc.Timestamp.IsZero() {
+				continue
+			}
+			diff := doc.Timestamp.Sub(hit.Timestamp)
+			if diff < -window || diff > window {
+				continue
+			}
+			if _, dup := seen[doc.Text]; dup {
+				continue
+			}
+			neighbors = append(neighbors, neighbor{text: doc.Text, ts: doc.Timestamp})
+		}
+
+		if len(neighbors) <= 1 {
+			seen[hit.Text] = struct{}{}
+			expanded = append(expanded, hit)
+			continue
+		}
+
+		for i := 1; i < len(neighbors); i++ {
+			for j := i; j > 0 && neighbors[j].ts.Before(neighbors[j-1].ts); j-- {
+				neighbors[j], neighbors[j-1] = neighbors[j-1], neighbors[j]
+			}
+		}
+
+		hitIdx := 0
+		for i, n := range neighbors {
+			if n.text == hit.Text {
+				hitIdx = i
+				break
+			}
+		}
+		start := hitIdx
+		if start > 0 {
+			start = hitIdx - 1
+		}
+		end := hitIdx
+		if end < len(neighbors)-1 {
+			end = hitIdx + 1
+		}
+		picked := neighbors[start : end+1]
+
+		var parts []string
+		for _, n := range picked {
+			seen[n.text] = struct{}{}
+			parts = append(parts, n.text)
+		}
+
+		merged := hit
+		merged.Text = strings.Join(parts, "\n")
+		expanded = append(expanded, merged)
+	}
+
+	return expanded
+}
+
 // LoadChunksBatch loads multiple chunks into the index in one batch on startup.
 func (idx *MemoryIndex) LoadChunksBatch(ctx context.Context, chunks []MemoryEntry) (int, error) {
 	idx.mu.RLock()
@@ -292,10 +390,11 @@ func (idx *MemoryIndex) AddChunk(ctx context.Context, chunk MemoryEntry) (bool, 
 }
 
 type persistedEntry struct {
-	ID       int               `json:"id"`
-	Hash     string            `json:"hash"`
-	Text     string            `json:"text"`
-	Metadata map[string]string `json:"metadata"`
+	ID        int               `json:"id"`
+	Hash      string            `json:"hash"`
+	Text      string            `json:"text"`
+	Metadata  map[string]string `json:"metadata"`
+	Timestamp string            `json:"timestamp,omitempty"`
 }
 
 type persistedIndex struct {
@@ -334,8 +433,12 @@ func (idx *MemoryIndex) SaveToDisk(dir string) error {
 	}
 	entries := make([]persistedEntry, 0, len(idx.docs))
 	for id, doc := range idx.docs {
+		var tsStr string
+		if !doc.Timestamp.IsZero() {
+			tsStr = doc.Timestamp.Format(time.RFC3339)
+		}
 		entries = append(entries, persistedEntry{
-			ID: id, Hash: idToHash[id], Text: doc.Text, Metadata: doc.Metadata,
+			ID: id, Hash: idToHash[id], Text: doc.Text, Metadata: doc.Metadata, Timestamp: tsStr,
 		})
 	}
 	data, err := json.Marshal(persistedIndex{NextID: idx.nextID, Entries: entries})
@@ -382,6 +485,11 @@ func (idx *MemoryIndex) LoadFromDisk(dir string) error {
 	idx.nextID = meta.NextID
 	for _, e := range meta.Entries {
 		doc := MemoryEntry{Text: e.Text, Metadata: e.Metadata}
+		if e.Timestamp != "" {
+			if t, err := time.Parse(time.RFC3339, e.Timestamp); err == nil {
+				doc.Timestamp = t
+			}
+		}
 		idx.docs[e.ID] = doc
 		idx.hashes[e.Hash] = e.ID
 		idx.bm25.Add(e.Hash, doc)
@@ -419,29 +527,42 @@ func ParseDailyFile(path string) ([]MemoryEntry, error) {
 	datePrefix := "[Date: " + dateStem + "]"
 
 	userTagRe := regexp.MustCompile(`^\[User: (.+)\]$`)
+	timeHeaderRe := regexp.MustCompile(`^## (\d{2}:\d{2}:\d{2})`)
 
 	var chunks []MemoryEntry
 	var currentChunk strings.Builder
 	var currentUserID string
+	var currentTS time.Time
+
+	flushChunk := func() {
+		text := strings.TrimSpace(currentChunk.String())
+		if text != "" {
+			meta := map[string]string{"source": base}
+			if currentUserID != "" {
+				meta["user_id"] = currentUserID
+			}
+			chunks = append(chunks, MemoryEntry{
+				Text:      datePrefix + "\n" + text,
+				Metadata:  meta,
+				Timestamp: currentTS,
+			})
+		}
+		currentChunk.Reset()
+		currentUserID = ""
+		currentTS = time.Time{}
+	}
 
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		if strings.HasPrefix(line, "## ") && currentChunk.Len() > 0 {
-			text := strings.TrimSpace(currentChunk.String())
-			if text != "" {
-				meta := map[string]string{"source": base}
-				if currentUserID != "" {
-					meta["user_id"] = currentUserID
-				}
-				chunks = append(chunks, MemoryEntry{
-					Text:     datePrefix + "\n" + text,
-					Metadata: meta,
-				})
-			}
-			currentChunk.Reset()
-			currentUserID = ""
+			flushChunk()
 		}
 
+		if m := timeHeaderRe.FindStringSubmatch(line); m != nil {
+			if t, err := time.ParseInLocation("2006-01-02 15:04:05", dateStem+" "+m[1], time.Local); err == nil {
+				currentTS = t
+			}
+		}
 		if m := userTagRe.FindStringSubmatch(line); m != nil {
 			currentUserID = strings.ToLower(strings.TrimSpace(m[1]))
 		}
@@ -449,18 +570,7 @@ func ParseDailyFile(path string) ([]MemoryEntry, error) {
 		currentChunk.WriteByte('\n')
 	}
 
-	// Flush last chunk.
-	if text := strings.TrimSpace(currentChunk.String()); text != "" {
-		meta := map[string]string{"source": base}
-		if currentUserID != "" {
-			meta["user_id"] = currentUserID
-		}
-		chunks = append(chunks, MemoryEntry{
-			Text:     datePrefix + "\n" + text,
-			Metadata: meta,
-		})
-	}
-
+	flushChunk()
 	return chunks, nil
 }
 

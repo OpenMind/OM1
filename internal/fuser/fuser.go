@@ -17,7 +17,7 @@ type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
-	memory        *memory.Manager
+	memory        memory.MemoryManager
 	mcp           MCPDescriber
 	log           *zap.Logger
 }
@@ -32,8 +32,8 @@ type MCPDescriber interface {
 	ToolDescriptions() string
 }
 
-// NewFuser constructs a Fuser with the given runtime configuration, agent actions, knowledge base, MCP describer, and logger. knowledgeBase, memory, and mcp may be nil.
-func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory *memory.Manager, mcp MCPDescriber, log *zap.Logger) *Fuser {
+// NewFuser creates a new Fuser with the given runtime configuration, agent actions, knowledge base, memory manager, MCP describer, and logger.
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory memory.MemoryManager, mcp MCPDescriber, log *zap.Logger) *Fuser {
 	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, memory: memory, mcp: mcp, log: log}
 }
 

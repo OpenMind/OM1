@@ -61,3 +61,15 @@ type UnknownPluginError struct{ Name string }
 
 // Error returns a descriptive error message indicating that the specified LLM plugin was not found.
 func (e *UnknownPluginError) Error() string { return "llm plugin not found: " + e.Name }
+
+// SpeakText returns the text from the speak action.
+func (r *Response) SpeakText() string {
+	for _, tc := range r.ToolCalls {
+		if tc.Name == "speak" {
+			if text, ok := tc.Arguments["action"].(string); ok {
+				return text
+			}
+		}
+	}
+	return r.TextContent
+}
