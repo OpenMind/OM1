@@ -62,7 +62,6 @@ Uses fused data to make decisions through one or more AI models. A typical multi
 - Cognition ("Core") LLM (Cloud): Cloud-based LLM for complex reasoning, long-term planning, and high-level cognitive tasks, leveraging more computational resources. Expected token response time - 2 s.
 - Mentor/Coach LLM (Cloud): Cloud-based LLM for 3rd person view critique of the robot-human interaction. Generates full critique every 30 seconds and provides it to the Core LLM.
 
-These LLMs are constrained by natural language rules provided in the configuration files, or, downloaded from immutable public ledgers (blockchains) such as Ethereum. Storing robot constitutions/guardrails on immutable public ledgers facilitates transparency, traceability, decentralized coordination, and logging for accountability.
 
 Feedback Loop:
 
