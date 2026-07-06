@@ -1,0 +1,164 @@
+name: Docs Sync
+
+# Nightly documentation drift check. Reviews the last 24h of code changes on
+# main against the docs/ folder and, ONLY if the docs are now out of date,
+# missing, or incomplete, opens a pull request with the fixes.
+#
+# Cost controls:
+#   1. Runs once a night, not on every push.
+#   2. A deterministic pre-gate (no LLM) skips the Claude step entirely unless
+#      the diff contains doc-relevant signals. Trivial/refactor-only days cost $0.
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: false
+
+jobs:
+  docs-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute 24h range
+        id: range
+        run: |
+          set -euo pipefail
+          AFTER="$(git rev-parse HEAD)"
+          # Last commit OLDER than 24h; everything after it is the review window.
+          BEFORE="$(git rev-list -1 --before='24 hours ago' HEAD || true)"
+          # Repo younger than 24h, or no earlier commit: fall back to the first commit.
+          if [ -z "$BEFORE" ]; then
+            BEFORE="$(git rev-list --max-parents=0 HEAD | tail -n1)"
+          fi
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "after=$AFTER"   >> "$GITHUB_OUTPUT"
+          echo "Review window: $BEFORE..$AFTER"
+
+      - name: Pre-gate (skip Claude on doc-irrelevant changes)
+        id: gate
+        run: |
+          set -euo pipefail
+          BEFORE='${{ steps.range.outputs.before }}'
+          AFTER='${{ steps.range.outputs.after }}'
+
+          # Files changed in-scope during the window (Go source, plugins, knowledge base).
+          FILES="$(git diff --name-only "$BEFORE" "$AFTER" -- \
+            'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' \
+            'knowledge_base/**' 'plugins/**' || true)"
+
+          if [ -z "$FILES" ]; then
+            echo "No in-scope changes in the last 24h — skipping."
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Changes under plugins/ or knowledge_base/ are always user-facing.
+          if echo "$FILES" | grep -qE '^(plugins|knowledge_base)/'; then
+            echo "Plugin/knowledge-base change detected — review needed."
+            echo "needs_review=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For Go changes, only pay for a review when the diff touches something a
+          # reader of the docs would see: exported symbols, CLI flags/commands, or
+          # config wiring. Pure internal refactors and test-only edits are skipped.
+          DIFF="$(git diff "$BEFORE" "$AFTER" -- 'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' || true)"
+          SIGNAL="$(printf '%s\n' "$DIFF" | grep -E \
+            '^[+-]\s*(func|type|var|const)\s+[A-Z]|flag\.|pflag|cobra|\.Flags\(\)|viper|mapstructure|os\.Getenv' \
+            || true)"
+
+          if [ -n "$SIGNAL" ]; then
+            echo "Doc-relevant Go signal detected — review needed."
+            echo "needs_review=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only internal/refactor/test changes — skipping."
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Docs sync review
+        if: steps.gate.outputs.needs_review == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_commit_signing: 'false'
+          claude_args: >-
+            --model claude-sonnet-5
+            --max-turns 25
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+          prompt: |
+            You are the documentation reviewer for this repository (a Go project,
+            github.com/OpenMind/OM1). Documentation lives in the `docs/` folder and is
+            published via GitBook. The table of contents is `docs/SUMMARY.md`; page
+            redirects live in `docs/.gitbook.yaml`.
+
+            AUDIENCE: OM1 is open source. The docs serve external developers who *build
+            with* OM1 — not just maintainers. Judge every doc through their eyes: someone
+            who does not know the internals and is trying to install, configure, extend
+            (plugins/actions/backgrounds/inputs/llm), or integrate OM1. Docs must be
+            accurate AND genuinely useful to that reader.
+
+            This is a nightly sweep of the last 24 hours of changes on `main`.
+
+            ## Step 1 — Understand what changed
+            Run:
+              git diff --stat ${{ steps.range.outputs.before }} ${{ steps.range.outputs.after }}
+              git diff ${{ steps.range.outputs.before }} ${{ steps.range.outputs.after }} -- 'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' 'knowledge_base/**' 'plugins/**'
+            Focus only on changes a reader of the docs would care about: new/changed/
+            removed exported behavior, CLI commands, flags, config keys, plugins (actions,
+            backgrounds, inputs, llm), knowledge base content, and public APIs. Ignore pure
+            refactors, internal-only changes, and test-only edits.
+
+            ## Step 2 — Assess the docs in `docs/`
+            For the meaningful changes, determine whether the docs are:
+              (a) now INACCURATE — describe behavior/flags/config that changed;
+              (b) MISSING — a new user-facing capability has no documentation at all;
+              (c) INCOMPLETE — documented but the change adds something undocumented;
+              (d) NOT USEFUL to an external developer — technically correct but hard to act
+                  on: no usage example or code snippet for a new capability, no "how do I
+                  use this" for a new plugin/action/input/config, undefined jargon, a broken
+                  or now-wrong link, or a step a newcomer building with OM1 could not follow.
+            Read the relevant existing docs before concluding anything is missing — the
+            content may already exist elsewhere. Do not invent behavior; only document what
+            the code actually does.
+
+            Criterion (d) applies to EXISTING docs too: when reviewing an area the window's
+            changes touch, flag and fix pre-existing gaps in the docs covering that area and
+            its directly related pages — not only gaps this change introduced. Keep each run
+            focused on the subsystem(s) the changes touch (e.g. a plugins change → the
+            plugins/actions/inputs docs); do NOT attempt a full-repo documentation audit in
+            a single run.
+
+            ## Step 3 — Act
+            IF AND ONLY IF you find concrete, needed changes:
+              1. Create a new branch: `docs/auto-sync-${{ steps.range.outputs.after }}` (fall
+                 back to a "-2", "-3" suffix if it already exists).
+              2. Make the edits under `docs/`. When you add a NEW page, register it in
+                 `docs/SUMMARY.md` (and add a redirect in `docs/.gitbook.yaml` if the
+                 surrounding entries have them) so it is actually published. Match the tone,
+                 heading style, and formatting of the existing docs.
+              3. Commit with a clear message, push the branch, and open a PR against `main`
+                 using `gh pr create`. The PR body must:
+                    - link the triggering commit range,
+                    - list each doc file changed and why (which code change drove it),
+                    - be scoped to documentation ONLY (never touch source code).
+                 Title it: "docs: nightly sync with recent changes to main".
+
+            IF the docs are already aligned and nothing is genuinely needed:
+              Do NOT create a branch, do NOT open a PR, do NOT commit anything. Print a short
+              line explaining that the docs are up to date, and stop. An empty result is a
+              valid and expected outcome — do not manufacture busywork changes.
+
+            Keep edits minimal and high-signal. Never modify code, tests, or CI. Never push
+            to `main` directly.
