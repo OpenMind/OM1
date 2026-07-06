@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -240,4 +241,37 @@ func TestLoadIgnoresUnknownMode(t *testing.T) {
 	m.statePath = statePath
 	m.load()
 	require.Equal(t, "idle", m.CurrentMode(), "a saved mode not present in config is ignored")
+}
+
+// TestTransitionConcurrentWithCurrentMode exercises Transition and CurrentMode
+// from separate goroutines. Run with `go test -race`. Without the lock in
+// Transition, the race detector flags the unguarded read of m.state.CurrentMode.
+// With the fix (RLock/RUnlock around the read), the detector stays silent.
+func TestTransitionConcurrentWithCurrentMode(t *testing.T) {
+	m := newTestManager(t, twoModeConfig())
+
+	const iterations = 500
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			_ = m.CurrentMode()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			target := "active"
+			if i%2 == 0 {
+				target = "idle"
+			}
+			m.Transition(target, "test", nil, nil)
+		}
+	}()
+
+	wg.Wait()
 }
