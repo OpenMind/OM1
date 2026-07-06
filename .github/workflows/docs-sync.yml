@@ -1,16 +1,15 @@
 name: Docs Sync
 
-# Nightly documentation drift check. Reviews the last 24h of code changes on
-# main against the docs/ folder and, ONLY if the docs are now out of date,
-# missing, or incomplete, opens a pull request with the fixes.
-#
-# Cost controls:
-#   1. Runs once a night, not on every push.
-#   2. A deterministic pre-gate (no LLM) skips the Claude step entirely unless
-#      the diff contains doc-relevant signals. Trivial/refactor-only days cost $0.
 on:
-  schedule:
-    - cron: '0 5 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'plugins/**'
   workflow_dispatch:
 
 concurrency:
@@ -30,42 +29,45 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compute 24h range
+      - name: Compute pushed range
         id: range
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           AFTER="$(git rev-parse HEAD)"
-          # Last commit OLDER than 24h; everything after it is the review window.
-          BEFORE="$(git rev-list -1 --before='24 hours ago' HEAD || true)"
-          # Repo younger than 24h, or no earlier commit: fall back to the first commit.
-          if [ -z "$BEFORE" ]; then
-            BEFORE="$(git rev-list --max-parents=0 HEAD | tail -n1)"
+          # The push event's "before" SHA is the range start.
+          BEFORE="$EVENT_BEFORE"
+          # First push / force-push (all-zero SHA), missing commit, or manual
+          # dispatch (empty): fall back to the previous commit.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -n1)"
           fi
           echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
           echo "after=$AFTER"   >> "$GITHUB_OUTPUT"
-          echo "Review window: $BEFORE..$AFTER"
+          echo "Review range: $BEFORE..$AFTER"
 
-      - name: Pre-gate (skip Claude on doc-irrelevant changes)
+      - name: Pre-gate (skip the LLM on doc-irrelevant changes)
         id: gate
         run: |
           set -euo pipefail
           BEFORE='${{ steps.range.outputs.before }}'
           AFTER='${{ steps.range.outputs.after }}'
 
-          # Files changed in-scope during the window (Go source, plugins, knowledge base).
+          # Files changed in-scope in this push (Go source, plugins).
           FILES="$(git diff --name-only "$BEFORE" "$AFTER" -- \
-            'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' \
-            'knowledge_base/**' 'plugins/**' || true)"
+            'cmd/*.go' 'internal/*.go' 'pkg/*.go' 'go.mod' \
+            'plugins/**' || true)"
 
           if [ -z "$FILES" ]; then
-            echo "No in-scope changes in the last 24h — skipping."
+            echo "No in-scope changes in this push — skipping."
             echo "needs_review=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Changes under plugins/ or knowledge_base/ are always user-facing.
-          if echo "$FILES" | grep -qE '^(plugins|knowledge_base)/'; then
-            echo "Plugin/knowledge-base change detected — review needed."
+          # Changes under plugins/ are always user-facing.
+          if echo "$FILES" | grep -qE '^plugins/'; then
+            echo "Plugin change detected — review needed."
             echo "needs_review=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -73,7 +75,7 @@ jobs:
           # For Go changes, only pay for a review when the diff touches something a
           # reader of the docs would see: exported symbols, CLI flags/commands, or
           # config wiring. Pure internal refactors and test-only edits are skipped.
-          DIFF="$(git diff "$BEFORE" "$AFTER" -- 'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' || true)"
+          DIFF="$(git diff "$BEFORE" "$AFTER" -- 'cmd/*.go' 'internal/*.go' 'pkg/*.go' 'go.mod' || true)"
           SIGNAL="$(printf '%s\n' "$DIFF" | grep -E \
             '^[+-]\s*(func|type|var|const)\s+[A-Z]|flag\.|pflag|cobra|\.Flags\(\)|viper|mapstructure|os\.Getenv' \
             || true)"
@@ -86,79 +88,135 @@ jobs:
             echo "needs_review=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Docs sync review
+      - name: Set up Node
         if: steps.gate.outputs.needs_review == 'true'
-        uses: anthropics/claude-code-action@v1
+        uses: actions/setup-node@v4
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          use_commit_signing: 'false'
-          claude_args: >-
-            --model claude-sonnet-5
-            --max-turns 25
-            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
-          prompt: |
-            You are the documentation reviewer for this repository (a Go project,
-            github.com/OpenMind/OM1). Documentation lives in the `docs/` folder and is
-            published via GitBook. The table of contents is `docs/SUMMARY.md`; page
-            redirects live in `docs/.gitbook.yaml`.
+          node-version: '20'
 
-            AUDIENCE: OM1 is open source. The docs serve external developers who *build
-            with* OM1 — not just maintainers. Judge every doc through their eyes: someone
-            who does not know the internals and is trying to install, configure, extend
-            (plugins/actions/backgrounds/inputs/llm), or integrate OM1. Docs must be
-            accurate AND genuinely useful to that reader.
+      - name: Docs audit + edit (Gemini CLI)
+        if: steps.gate.outputs.needs_review == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BEFORE: ${{ steps.range.outputs.before }}
+          AFTER: ${{ steps.range.outputs.after }}
+        run: |
+          set -euo pipefail
+          npm install -g @google/gemini-cli
 
-            This is a nightly sweep of the last 24 hours of changes on `main`.
+          # Working files live outside docs/ so they are never committed.
+          mkdir -p .docs-sync
+          git diff "$BEFORE" "$AFTER" -- \
+            'cmd/*.go' 'internal/*.go' 'pkg/*.go' 'go.mod' \
+            'plugins/**' > .docs-sync/code-changes.diff
+          echo "Diff size: $(wc -l < .docs-sync/code-changes.diff) lines"
 
-            ## Step 1 — Understand what changed
-            Run:
-              git diff --stat ${{ steps.range.outputs.before }} ${{ steps.range.outputs.after }}
-              git diff ${{ steps.range.outputs.before }} ${{ steps.range.outputs.after }} -- 'cmd/**/*.go' 'internal/**/*.go' 'pkg/**/*.go' 'go.mod' 'knowledge_base/**' 'plugins/**'
-            Focus only on changes a reader of the docs would care about: new/changed/
-            removed exported behavior, CLI commands, flags, config keys, plugins (actions,
-            backgrounds, inputs, llm), knowledge base content, and public APIs. Ignore pure
-            refactors, internal-only changes, and test-only edits.
+          # --approval-mode=yolo so it can read/edit files headlessly.
+          # It has NO reason to touch git: we hand it the diff and do the git work ourselves.
+          gemini \
+            --model gemini-2.5-pro \
+            --approval-mode=yolo \
+            --prompt "$(cat <<'PROMPT'
+          You are the documentation reviewer for this repository (a Go project,
+          github.com/OpenMind/OM1). Documentation lives in the `docs/` folder and is
+          published via GitBook. The table of contents is `docs/SUMMARY.md`; page
+          redirects live in `docs/.gitbook.yaml`.
 
-            ## Step 2 — Assess the docs in `docs/`
-            For the meaningful changes, determine whether the docs are:
-              (a) now INACCURATE — describe behavior/flags/config that changed;
-              (b) MISSING — a new user-facing capability has no documentation at all;
-              (c) INCOMPLETE — documented but the change adds something undocumented;
-              (d) NOT USEFUL to an external developer — technically correct but hard to act
-                  on: no usage example or code snippet for a new capability, no "how do I
-                  use this" for a new plugin/action/input/config, undefined jargon, a broken
-                  or now-wrong link, or a step a newcomer building with OM1 could not follow.
-            Read the relevant existing docs before concluding anything is missing — the
-            content may already exist elsewhere. Do not invent behavior; only document what
-            the code actually does.
+          AUDIENCE: OM1 is open source. The docs serve external developers who *build
+          with* OM1 — not just maintainers. Judge every doc through their eyes: someone
+          who does not know the internals and is trying to install, configure, extend
+          (plugins/actions/backgrounds/inputs/llm), or integrate OM1. Docs must be
+          accurate AND genuinely useful to that reader.
 
-            Criterion (d) applies to EXISTING docs too: when reviewing an area the window's
-            changes touch, flag and fix pre-existing gaps in the docs covering that area and
-            its directly related pages — not only gaps this change introduced. Keep each run
-            focused on the subsystem(s) the changes touch (e.g. a plugins change → the
-            plugins/actions/inputs docs); do NOT attempt a full-repo documentation audit in
-            a single run.
+          These are the changes just merged/pushed to `main`. The full in-scope code
+          diff for this push has been saved to the file
+          `.docs-sync/code-changes.diff` in the repo root — read that file to see what
+          changed. Do NOT run any git commands.
 
-            ## Step 3 — Act
-            IF AND ONLY IF you find concrete, needed changes:
-              1. Create a new branch: `docs/auto-sync-${{ steps.range.outputs.after }}` (fall
-                 back to a "-2", "-3" suffix if it already exists).
-              2. Make the edits under `docs/`. When you add a NEW page, register it in
-                 `docs/SUMMARY.md` (and add a redirect in `docs/.gitbook.yaml` if the
-                 surrounding entries have them) so it is actually published. Match the tone,
-                 heading style, and formatting of the existing docs.
-              3. Commit with a clear message, push the branch, and open a PR against `main`
-                 using `gh pr create`. The PR body must:
-                    - link the triggering commit range,
-                    - list each doc file changed and why (which code change drove it),
-                    - be scoped to documentation ONLY (never touch source code).
-                 Title it: "docs: nightly sync with recent changes to main".
+          ## Step 1 — Understand what changed
+          Read `.docs-sync/code-changes.diff`. Focus only on changes a reader of the docs
+          would care about: new/changed/removed exported behavior, CLI commands, flags,
+          config keys, plugins (actions, backgrounds, inputs, llm), and public APIs. Ignore
+          pure refactors, internal-only changes, and test-only edits.
 
-            IF the docs are already aligned and nothing is genuinely needed:
-              Do NOT create a branch, do NOT open a PR, do NOT commit anything. Print a short
-              line explaining that the docs are up to date, and stop. An empty result is a
-              valid and expected outcome — do not manufacture busywork changes.
+          ## Step 2 — Assess the docs in `docs/`
+          For the meaningful changes, determine whether the docs are:
+            (a) now INACCURATE — describe behavior/flags/config that changed;
+            (b) MISSING — a new user-facing capability has no documentation at all;
+            (c) INCOMPLETE — documented but the change adds something undocumented;
+            (d) NOT USEFUL to an external developer — technically correct but hard to act
+                on: no usage example or code snippet for a new capability, no "how do I use
+                this" for a new plugin/action/input/config, undefined jargon, a broken or
+                now-wrong link, or a step a newcomer building with OM1 could not follow.
+          Read the relevant existing docs before concluding anything is missing — the
+          content may already exist elsewhere. Do not invent behavior; only document what
+          the code actually does.
 
-            Keep edits minimal and high-signal. Never modify code, tests, or CI. Never push
-            to `main` directly.
+          Criterion (d) applies to EXISTING docs too: when reviewing an area this push's
+          changes touch, flag and fix pre-existing gaps in the docs covering that area and
+          its directly related pages — not only gaps this change introduced. Keep each run
+          focused on the subsystem(s) the changes touch (e.g. a plugins change → the
+          plugins/actions/inputs docs); do NOT attempt a full-repo documentation audit.
+
+          ## Step 3 — Act (EDIT FILES ONLY — no git)
+          IF AND ONLY IF you find concrete, needed changes:
+            1. Edit the files under `docs/` directly. When you add a NEW page, register it
+               in `docs/SUMMARY.md` (and add a redirect in `docs/.gitbook.yaml` if the
+               surrounding entries have them) so it is actually published. Match the tone,
+               heading style, and formatting of the existing docs.
+            2. Write a concise PR description to the file `.docs-sync/pr-body.md` that:
+               - notes this is an automated docs sync for a merge to main,
+               - lists each doc file changed and why (which code change drove it).
+          Keep edits minimal and high-signal. Only touch files under `docs/`. Never modify
+          code, tests, or CI, and never run git.
+
+          IF the docs are already aligned and nothing is genuinely needed:
+          Change nothing and do not create `.docs-sync/pr-body.md`. An empty result is a
+          valid, expected outcome — do not manufacture busywork changes.
+          PROMPT
+          )"
+
+      - name: Open PR if docs changed
+        if: steps.gate.outputs.needs_review == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AFTER: ${{ steps.range.outputs.after }}
+          BEFORE: ${{ steps.range.outputs.before }}
+        run: |
+          set -euo pipefail
+
+          # Only docs/ changes count. If Gemini changed nothing there, no PR.
+          if [ -z "$(git status --porcelain -- docs/)" ]; then
+            echo "Docs already aligned — no changes, no PR."
+            exit 0
+          fi
+
+          BRANCH="docs/auto-sync-${AFTER:0:12}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          # Commit ONLY docs/ — never the working files or any stray edits.
+          git add docs/
+          git commit -m "docs: sync with recent changes to main"
+          git push --set-upstream origin "$BRANCH"
+
+          # PR body: Gemini's summary if present, else a generic one.
+          BODY_FILE=".docs-sync/pr-body.md"
+          if [ ! -s "$BODY_FILE" ]; then
+            BODY_FILE="$(mktemp)"
+            printf 'Automated documentation sync for changes in `%s..%s`.\n' \
+              "$BEFORE" "$AFTER" > "$BODY_FILE"
+          fi
+          {
+            echo
+            echo "---"
+            echo "Triggering range: \`${BEFORE}..${AFTER}\`"
+            echo "_Docs-only, generated by the Docs Sync workflow. Review before merging._"
+          } >> "$BODY_FILE"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "docs: sync with recent changes to main" \
+            --body-file "$BODY_FILE"
