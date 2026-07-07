@@ -247,16 +247,23 @@ func TestLoadIgnoresUnknownMode(t *testing.T) {
 // from separate goroutines. Run with `go test -race`. Without the lock in
 // Transition, the race detector flags the unguarded read of m.state.CurrentMode.
 // With the fix (RLock/RUnlock around the read), the detector stays silent.
+//
+// A start gate (closed channel) ensures both goroutines enter their tight
+// loops at the same instant. Without it, the Go scheduler can run one
+// goroutine through all of its iterations before the other is even
+// dispatched, which would let this test pass on buggy code.
 func TestTransitionConcurrentWithCurrentMode(t *testing.T) {
 	m := newTestManager(t, twoModeConfig())
 
 	const iterations = 500
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
+		<-start
 		for i := 0; i < iterations; i++ {
 			_ = m.CurrentMode()
 		}
@@ -264,6 +271,7 @@ func TestTransitionConcurrentWithCurrentMode(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
+		<-start
 		for i := 0; i < iterations; i++ {
 			target := "active"
 			if i%2 == 0 {
@@ -273,5 +281,6 @@ func TestTransitionConcurrentWithCurrentMode(t *testing.T) {
 		}
 	}()
 
+	close(start)
 	wg.Wait()
 }
