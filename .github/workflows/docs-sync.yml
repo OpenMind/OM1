@@ -3,7 +3,6 @@ name: Docs Sync
 on:
   push:
     branches:
-      - main
       - auto-docs-update
     paths:
       - 'cmd/**.go'
