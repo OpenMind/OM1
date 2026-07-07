@@ -1,12 +1,16 @@
 package memory
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // MemoryEntry holds a single memory chunk with metadata and relevance score.
 type MemoryEntry struct {
-	Text     string
-	Metadata map[string]string
-	Score    float64
+	Text      string
+	Metadata  map[string]string
+	Score     float64
+	Timestamp time.Time
 }
 
 // MemoryManager is the unified interface for both local and cloud memory.

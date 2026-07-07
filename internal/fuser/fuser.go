@@ -12,12 +12,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Fuser is responsible for fusing various prompt components (system persona, sensory inputs, knowledge base context, available actions, examples) into a single prompt string to be sent to the LLM.
+// Fuser is responsible for fusing various prompt components (system persona, sensory inputs, knowledge base context, available actions, MCP tools, examples) into a single prompt string to be sent to the LLM.
 type Fuser struct {
 	runtimeConfig *config.RuntimeConfig
 	agentActions  []*actions.AgentAction
 	knowledgeBase KnowledgeBase
 	memory        memory.MemoryManager
+	mcp           MCPDescriber
 	log           *zap.Logger
 }
 
@@ -26,9 +27,14 @@ type KnowledgeBase interface {
 	Query(ctx context.Context, question string, topK int) ([]string, error)
 }
 
-// NewFuser constructs a Fuser with the given runtime configuration, agent actions, knowledge base, and logger.
-func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory memory.MemoryManager, log *zap.Logger) *Fuser {
-	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, memory: memory, log: log}
+// MCPDescriber supplies a prompt block describing the available MCP tools.
+type MCPDescriber interface {
+	ToolDescriptions() string
+}
+
+// NewFuser creates a new Fuser with the given runtime configuration, agent actions, knowledge base, memory manager, MCP describer, and logger.
+func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.AgentAction, knowledgeBase KnowledgeBase, memory memory.MemoryManager, mcp MCPDescriber, log *zap.Logger) *Fuser {
+	return &Fuser{runtimeConfig: runtimeConfig, agentActions: agentActions, knowledgeBase: knowledgeBase, memory: memory, mcp: mcp, log: log}
 }
 
 // Fuse combines the prompt components into a single string to be sent to the LLM.
@@ -109,6 +115,14 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 			builder.WriteString("\n")
 		}
 		builder.WriteString("\n")
+	}
+
+	// 4b. MCP tool descriptions.
+	if f.mcp != nil {
+		if descriptions := f.mcp.ToolDescriptions(); descriptions != "" {
+			builder.WriteString(descriptions)
+			builder.WriteString("\n\n")
+		}
 	}
 
 	// 5. Examples.

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -209,4 +210,185 @@ func TestHybridSearch_EmptyQuery(t *testing.T) {
 	results, err := idx.Search(context.Background(), "", 5, 0, "")
 	require.NoError(t, err)
 	require.Nil(t, results)
+}
+
+func TestParseDailyFile_PopulatesTimestamp(t *testing.T) {
+	dir := t.TempDir()
+	content := "## 14:18:28\n[User: alice]\n- **User**: Hello\n\n## 14:19:00\n[User: bob]\n- **User**: Hi\n"
+	path := filepath.Join(dir, "2026-06-03.md")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+
+	chunks, err := ParseDailyFile(path)
+	require.NoError(t, err)
+	require.Len(t, chunks, 2)
+
+	expected1, _ := time.ParseInLocation("2006-01-02 15:04:05", "2026-06-03 14:18:28", time.Local)
+	expected2, _ := time.ParseInLocation("2006-01-02 15:04:05", "2026-06-03 14:19:00", time.Local)
+	require.Equal(t, expected1, chunks[0].Timestamp)
+	require.Equal(t, expected2, chunks[1].Timestamp)
+}
+
+func TestEnrichContext_MergesNeighbors(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	now := time.Now()
+
+	// Add 3 chunks for same user, 10s apart (all within 30s window).
+	for i, text := range []string{"turn 1", "turn 2", "turn 3"} {
+		idx.mu.Lock()
+		id := idx.nextID
+		idx.nextID++
+		entry := MemoryEntry{
+			Text:      text,
+			Metadata:  map[string]string{"user_id": "alice"},
+			Timestamp: now.Add(time.Duration(i*10) * time.Second),
+		}
+		idx.docs[id] = entry
+		idx.hashes[hashText(text)] = id
+		idx.mu.Unlock()
+	}
+
+	// Search hit on middle chunk.
+	hits := []MemoryEntry{{
+		Text:      "turn 2",
+		Metadata:  map[string]string{"user_id": "alice"},
+		Timestamp: now.Add(10 * time.Second),
+		Score:     0.9,
+	}}
+
+	expanded := idx.EnrichContext(hits)
+	require.Len(t, expanded, 1)
+	require.Contains(t, expanded[0].Text, "turn 1")
+	require.Contains(t, expanded[0].Text, "turn 2")
+	require.Contains(t, expanded[0].Text, "turn 3")
+	require.Equal(t, 0.9, expanded[0].Score, "score preserved")
+}
+
+func TestEnrichContext_NoMergeForDistantChunks(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	now := time.Now()
+
+	// Two chunks 5 minutes apart.
+	for i, text := range []string{"early", "late"} {
+		idx.mu.Lock()
+		id := idx.nextID
+		idx.nextID++
+		idx.docs[id] = MemoryEntry{
+			Text:      text,
+			Metadata:  map[string]string{"user_id": "alice"},
+			Timestamp: now.Add(time.Duration(i*5) * time.Minute),
+		}
+		idx.hashes[hashText(text)] = id
+		idx.mu.Unlock()
+	}
+
+	hits := []MemoryEntry{{
+		Text:      "early",
+		Metadata:  map[string]string{"user_id": "alice"},
+		Timestamp: now,
+	}}
+
+	expanded := idx.EnrichContext(hits)
+	require.Len(t, expanded, 1)
+	require.Equal(t, "early", expanded[0].Text, "should not merge distant chunk")
+}
+
+func TestEnrichContext_DifferentUsers(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	now := time.Now()
+
+	// Two chunks 5s apart but different users.
+	for i, uid := range []string{"alice", "bob"} {
+		idx.mu.Lock()
+		id := idx.nextID
+		idx.nextID++
+		idx.docs[id] = MemoryEntry{
+			Text:      "msg from " + uid,
+			Metadata:  map[string]string{"user_id": uid},
+			Timestamp: now.Add(time.Duration(i*5) * time.Second),
+		}
+		idx.hashes[hashText("msg from "+uid)] = id
+		idx.mu.Unlock()
+	}
+
+	hits := []MemoryEntry{{
+		Text:      "msg from alice",
+		Metadata:  map[string]string{"user_id": "alice"},
+		Timestamp: now,
+	}}
+
+	expanded := idx.EnrichContext(hits)
+	require.Len(t, expanded, 1)
+	require.Equal(t, "msg from alice", expanded[0].Text, "should not merge different user's chunk")
+}
+func TestEnrichContext_DeduplicatesOverlappingHits(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	now := time.Now()
+
+	// 3 chunks from same user, 10s apart — all within 30s window.
+	for i, text := range []string{"turn 1", "turn 2", "turn 3"} {
+		idx.mu.Lock()
+		id := idx.nextID
+		idx.nextID++
+		idx.docs[id] = MemoryEntry{
+			Text:      text,
+			Metadata:  map[string]string{"user_id": "alice"},
+			Timestamp: now.Add(time.Duration(i*10) * time.Second),
+		}
+		idx.hashes[hashText(text)] = id
+		idx.mu.Unlock()
+	}
+
+	// All 3 are returned as separate search hits.
+	hits := []MemoryEntry{
+		{Text: "turn 3", Metadata: map[string]string{"user_id": "alice"}, Timestamp: now.Add(20 * time.Second), Score: 0.9},
+		{Text: "turn 2", Metadata: map[string]string{"user_id": "alice"}, Timestamp: now.Add(10 * time.Second), Score: 0.8},
+		{Text: "turn 1", Metadata: map[string]string{"user_id": "alice"}, Timestamp: now, Score: 0.7},
+	}
+
+	expanded := idx.EnrichContext(hits)
+	require.Len(t, expanded, 2)
+	require.Contains(t, expanded[0].Text, "turn 2")
+	require.Contains(t, expanded[0].Text, "turn 3")
+	require.Contains(t, expanded[1].Text, "turn 1")
+}
+
+func TestEnrichContext_EmptyHits(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	require.Nil(t, idx.EnrichContext(nil))
+}
+
+func TestEnrichContext_NoTimestamp(t *testing.T) {
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+
+	hits := []MemoryEntry{{
+		Text:     "no ts",
+		Metadata: map[string]string{"user_id": "alice"},
+	}}
+
+	expanded := idx.EnrichContext(hits)
+	require.Len(t, expanded, 1)
+	require.Equal(t, "no ts", expanded[0].Text, "should return as-is when no timestamp")
+}
+
+func TestSaveAndLoadPreservesTimestamp(t *testing.T) {
+	dir := t.TempDir()
+	idx := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+
+	ts := time.Date(2026, 7, 1, 14, 30, 0, 0, time.UTC)
+	_, err := idx.AddChunk(context.Background(), MemoryEntry{
+		Text:      "timestamped entry",
+		Metadata:  map[string]string{"user_id": "test"},
+		Timestamp: ts,
+	})
+	require.NoError(t, err)
+	require.NoError(t, idx.SaveToDisk(dir))
+
+	idx2 := NewMemoryIndex(&mockEmbedder{dim: 32}, testLogger())
+	require.NoError(t, idx2.LoadFromDisk(dir))
+	require.Equal(t, 1, idx2.Size())
+
+	// Find the entry and verify timestamp.
+	for _, doc := range idx2.docs {
+		require.Equal(t, ts, doc.Timestamp, "timestamp should survive save/load")
+	}
 }

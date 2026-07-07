@@ -92,10 +92,13 @@ type HookSpec struct {
 
 // MCPSpec describes one MCP server.
 type MCPSpec struct {
-	Name    string            `json:"name"`
-	Command string            `json:"command"`
-	Args    []string          `json:"args"`
-	Env     map[string]string `json:"env"`
+	Name      string            `json:"name"`
+	Transport string            `json:"transport"`
+	Command   string            `json:"command"`
+	Args      []string          `json:"args"`
+	Env       map[string]string `json:"env"`
+	URL       string            `json:"url"`
+	Headers   map[string]string `json:"headers"`
 }
 
 // KBSpec describes the optional knowledge base (RAG).

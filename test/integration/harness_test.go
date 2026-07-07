@@ -116,10 +116,14 @@ func sinkFor(id string) *sink {
 }
 
 type mockSensor struct {
+	mu             sync.Mutex
 	buffer         string
 	messages       []string
+	currentMsg     string
 	triggers       bool
 	publishContext map[string]any
+	voiceKey       string
+	dynamicVars    map[string]string
 }
 
 func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
@@ -140,6 +144,18 @@ func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
 		s.messages = append(s.messages, m)
 	}
 
+	if vk, ok := cfg["voice_key"].(string); ok {
+		s.voiceKey = vk
+	}
+	if dv, ok := cfg["dynamic_vars"].(map[string]any); ok {
+		s.dynamicVars = make(map[string]string)
+		for k, v := range dv {
+			if vs, ok := v.(string); ok {
+				s.dynamicVars[k] = vs
+			}
+		}
+	}
+
 	if buf, ok := cfg["buffer"].(string); ok && buf != "" {
 		s.buffer = buf
 	} else {
@@ -155,10 +171,19 @@ func (s *mockSensor) Listen(ctx context.Context) (<-chan any, error) {
 		if len(s.publishContext) > 0 {
 			providers.ModeContext().Publish(s.publishContext)
 		}
+		for k, v := range s.dynamicVars {
+			providers.IO().SetDynamicVar(k, v)
+		}
 
-		for _, m := range s.messages {
+		for i, m := range s.messages {
+			s.mu.Lock()
+			s.currentMsg = m
+			s.mu.Unlock()
 			select {
 			case ch <- m:
+				if i < len(s.messages)-1 {
+					time.Sleep(100 * time.Millisecond)
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -175,13 +200,36 @@ func (s *mockSensor) RawToText(_ context.Context, raw any) (*inputs.Message, err
 	return inputs.NewMessage(text), nil
 }
 
-func (s *mockSensor) FormattedLatestBuffer() string { return s.buffer }
-func (s *mockSensor) Stop()                         {}
-func (s *mockSensor) TriggersTick() bool            { return s.triggers }
+func (s *mockSensor) FormattedLatestBuffer() string {
+	s.mu.Lock()
+	msg := s.currentMsg
+	s.currentMsg = ""
+	s.mu.Unlock()
+	if s.voiceKey != "" && msg != "" {
+		providers.IO().AddInput(s.voiceKey, msg, time.Now())
+		return msg
+	}
+	return s.buffer
+}
+func (s *mockSensor) Stop()              {}
+func (s *mockSensor) TriggersTick() bool { return s.triggers }
 
 type llmRule struct {
-	whenContains string
-	toolCalls    []llm.ToolCall
+	whenContains    string
+	whenContainsAll []string
+	toolCalls       []llm.ToolCall
+}
+
+func (r *llmRule) matches(prompt string) bool {
+	if len(r.whenContainsAll) > 0 {
+		for _, s := range r.whenContainsAll {
+			if !strings.Contains(prompt, s) {
+				return false
+			}
+		}
+		return true
+	}
+	return r.whenContains == "" || strings.Contains(prompt, r.whenContains)
 }
 
 type scriptedLLM struct {
@@ -199,6 +247,7 @@ func newScriptedLLM(cfg map[string]any) (llm.LLM, error) {
 
 		r := llmRule{}
 		r.whenContains, _ = rule["when_contains"].(string)
+		r.whenContainsAll = asStringSlice(rule["when_contains_all"])
 		for _, rawCall := range asSlice(rule["tool_calls"]) {
 			call, ok := rawCall.(map[string]any)
 			if !ok {
@@ -222,12 +271,10 @@ func newScriptedLLM(cfg map[string]any) (llm.LLM, error) {
 
 func (m *scriptedLLM) Call(_ context.Context, prompt string, _ []llm.Message) (*llm.Response, error) {
 	for _, r := range m.rules {
-		if r.whenContains == "" || strings.Contains(prompt, r.whenContains) {
+		if r.matches(prompt) {
 			return &llm.Response{ToolCalls: r.toolCalls}, nil
 		}
-
 	}
-
 	return &llm.Response{}, nil
 }
 
