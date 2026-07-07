@@ -1,0 +1,196 @@
+name: Docs Sync
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'cmd/**.go'
+      - 'internal/**.go'
+      - 'pkg/**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'plugins/**'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: false
+
+jobs:
+  docs-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute pushed range
+        id: range
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          AFTER="$(git rev-parse HEAD)"
+          BEFORE="$EVENT_BEFORE"
+          # Fall back to previous commit on first push / force-push / manual dispatch.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -n1)"
+          fi
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "after=$AFTER"   >> "$GITHUB_OUTPUT"
+          echo "Review range: $BEFORE..$AFTER"
+
+      - name: Pre-gate (skip the LLM on doc-irrelevant changes)
+        id: gate
+        run: |
+          set -euo pipefail
+          BEFORE='${{ steps.range.outputs.before }}'
+          AFTER='${{ steps.range.outputs.after }}'
+
+          FILES="$(git diff --name-only "$BEFORE" "$AFTER" \
+            | grep -E '^(cmd|internal|pkg)/.*\.go$|^go\.(mod|sum)$|^plugins/' || true)"
+
+          if [ -z "$FILES" ]; then
+            echo "No in-scope changes in this push — skipping."
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Plugin and dependency-manifest changes are always potentially doc-relevant.
+          if echo "$FILES" | grep -qE '^plugins/|^go\.(mod|sum)$'; then
+            echo "Plugin or dependency change detected — review needed."
+            echo "needs_review=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Go-only changes: review only if an added/removed line touches something a
+          # docs reader sees (exported symbols, flags, config). Match +/- lines only.
+          CHANGED_LINES="$(git diff "$BEFORE" "$AFTER" -- cmd internal pkg \
+            | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) ' || true)"
+          SIGNAL="$(printf '%s\n' "$CHANGED_LINES" | grep -E \
+            '(func|type|var|const)[[:space:]]+[A-Z]|flag\.|pflag|cobra|\.Flags\(\)|viper|mapstructure|os\.Getenv' \
+            || true)"
+
+          if [ -n "$SIGNAL" ]; then
+            echo "Doc-relevant Go signal detected — review needed."
+            echo "needs_review=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only internal/refactor/test changes — skipping."
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node
+        if: steps.gate.outputs.needs_review == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Docs audit + edit (Gemini CLI)
+        if: steps.gate.outputs.needs_review == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Trust the CI workspace so the CLI can edit files headlessly.
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          BEFORE: ${{ steps.range.outputs.before }}
+          AFTER: ${{ steps.range.outputs.after }}
+        run: |
+          set -euo pipefail
+          npm install -g @google/gemini-cli@0.49.0
+
+          mkdir -p .docs-sync
+          git diff "$BEFORE" "$AFTER" -- \
+            cmd internal pkg go.mod go.sum plugins \
+            > .docs-sync/code-changes.diff
+          echo "Diff size: $(wc -l < .docs-sync/code-changes.diff) lines"
+
+          gemini \
+            --model gemini-2.5-pro \
+            --approval-mode=yolo \
+            --prompt "$(cat <<'PROMPT'
+          You are the documentation reviewer for this repository (a Go project,
+          github.com/OpenMind/OM1). Documentation lives in the `docs/` folder and is
+          published via GitBook. The table of contents is `docs/SUMMARY.md`; page
+          redirects live in `docs/.gitbook.yaml`.
+
+          AUDIENCE: OM1 is open source. The docs serve external developers who *build
+          with* OM1 — not just maintainers. Judge every doc through their eyes: someone
+          who does not know the internals and is trying to install, configure, extend
+          (plugins/actions/backgrounds/inputs/llm), or integrate OM1. Docs must be
+          accurate AND genuinely useful to that reader.
+
+          These are the changes just merged/pushed to `main`. The full in-scope code
+          diff for this push has been saved to the file
+          `.docs-sync/code-changes.diff` in the repo root — read that file to see what
+          changed. Do NOT run any git commands.
+
+          ## Step 1 — Understand what changed
+          Read `.docs-sync/code-changes.diff`. Focus only on changes a reader of the docs
+          would care about: new/changed/removed exported behavior, CLI commands, flags,
+          config keys, plugins (actions, backgrounds, inputs, llm), and public APIs. Ignore
+          pure refactors, internal-only changes, and test-only edits.
+
+          ## Step 2 — Assess the docs in `docs/`
+          For the meaningful changes, determine whether the docs are:
+            (a) now INACCURATE — describe behavior/flags/config that changed;
+            (b) MISSING — a new user-facing capability has no documentation at all;
+            (c) INCOMPLETE — documented but the change adds something undocumented;
+            (d) NOT USEFUL to an external developer — technically correct but hard to act
+                on: no usage example or code snippet for a new capability, no "how do I use
+                this" for a new plugin/action/input/config, undefined jargon, a broken or
+                now-wrong link, or a step a newcomer building with OM1 could not follow.
+          Read the relevant existing docs before concluding anything is missing — the
+          content may already exist elsewhere. Do not invent behavior; only document what
+          the code actually does.
+
+          Criterion (d) applies to EXISTING docs too: when reviewing an area this push's
+          changes touch, flag and fix pre-existing gaps in the docs covering that area and
+          its directly related pages — not only gaps this change introduced. Keep each run
+          focused on the subsystem(s) the changes touch (e.g. a plugins change → the
+          plugins/actions/inputs docs); do NOT attempt a full-repo documentation audit.
+
+          ## Step 3 — Act (EDIT FILES ONLY — no git)
+          IF AND ONLY IF you find concrete, needed changes:
+            1. Edit the files under `docs/` directly. When you add a NEW page, register it
+               in `docs/SUMMARY.md` (and add a redirect in `docs/.gitbook.yaml` if the
+               surrounding entries have them) so it is actually published. Match the tone,
+               heading style, and formatting of the existing docs.
+            2. Write a concise PR description to the file `.docs-sync/pr-body.md` that:
+               - notes this is an automated docs sync for a merge to main,
+               - lists each doc file changed and why (which code change drove it).
+          Keep edits minimal and high-signal. Only touch files under `docs/`. Never modify
+          code, tests, or CI, and never run git.
+
+          IF the docs are already aligned and nothing is genuinely needed:
+          Change nothing and do not create `.docs-sync/pr-body.md`. An empty result is a
+          valid, expected outcome — do not manufacture busywork changes.
+          PROMPT
+          )"
+
+      - name: Prepare PR body
+        if: steps.gate.outputs.needs_review == 'true'
+        env:
+          BEFORE: ${{ steps.range.outputs.before }}
+          AFTER: ${{ steps.range.outputs.after }}
+        run: |
+          set -euo pipefail
+          BODY=.docs-sync/pr-body.md
+          [ -s "$BODY" ] || printf 'Automated documentation sync for `%s..%s`.\n' "$BEFORE" "$AFTER" > "$BODY"
+          printf '\n---\n_Docs-only, generated by the Docs Sync workflow. Review before merging._\n' >> "$BODY"
+
+      - name: Create Pull Request
+        if: steps.gate.outputs.needs_review == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: docs/auto-sync-${{ steps.range.outputs.after }}
+          add-paths: docs/**
+          commit-message: "docs: sync with recent changes to main"
+          title: "docs: sync with recent changes to main"
+          body-path: .docs-sync/pr-body.md
+          delete-branch: true
