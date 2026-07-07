@@ -94,6 +94,8 @@ jobs:
         if: steps.gate.outputs.needs_review == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Trust the CI workspace so the CLI can edit files headlessly.
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           BEFORE: ${{ steps.range.outputs.before }}
           AFTER: ${{ steps.range.outputs.after }}
         run: |
