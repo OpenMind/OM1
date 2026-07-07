@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultContextMaxChars = 1000
+const defaultContextMaxChars = 2000
 
 // Reader searches and reads long-term memory files.
 type Reader struct {
@@ -121,11 +121,12 @@ func (r *Reader) FormatContext(searchResults []MemoryEntry, maxChars int, userID
 		if totalChars >= maxChars {
 			break
 		}
-		if totalChars+len(doc.Text) > maxChars {
-			break
+		text := doc.Text
+		if totalChars+len(text) > maxChars {
+			text = text[:maxChars-totalChars]
 		}
-		parts = append(parts, doc.Text)
-		totalChars += len(doc.Text)
+		parts = append(parts, text)
+		totalChars += len(text)
 	}
 
 	return r.normalizeUserTags(strings.Join(parts, "\n\n"))

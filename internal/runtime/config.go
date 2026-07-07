@@ -8,22 +8,31 @@ import (
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/llm"
+	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/mcp"
+
+	"go.uber.org/zap"
 )
 
 // modeSetup encapsulates the loaded components.
 type modeSetup struct {
 	cfg config.ModeConfig
 	sys *config.SystemConfig
+	log *zap.Logger
 
 	sensors          []inputs.Sensor
 	cortexLLM        llm.LLM
 	agentActions     []*actions.AgentAction
 	agentBackgrounds []backgrounds.Background
+	mcpClient        *mcp.ClientManager
 }
 
 // NewModeSetup creates a new modeSetup for the given ModeConfig and SystemConfig.
-func NewModeSetup(cfg config.ModeConfig, sys *config.SystemConfig) *modeSetup {
-	return &modeSetup{cfg: cfg, sys: sys}
+func NewModeSetup(cfg config.ModeConfig, sys *config.SystemConfig, log *zap.Logger) *modeSetup {
+	if log == nil {
+		log = logger.Get()
+	}
+	return &modeSetup{cfg: cfg, sys: sys, log: log}
 }
 
 // loadComponents initializes all components for the mode based on its configuration.
@@ -88,6 +97,15 @@ func (m *modeSetup) loadComponents() error {
 	// Load lifecycle hooks
 	for i := range m.cfg.LifecycleHooks {
 		m.cfg.LifecycleHooks[i].HandlerConfig = addMeta(m.cfg.LifecycleHooks[i].HandlerConfig, meta)
+	}
+
+	// Load MCP clients
+	mcpServers := m.cfg.MCPServers
+	if len(mcpServers) == 0 {
+		mcpServers = m.sys.MCPServers
+	}
+	if len(mcpServers) > 0 {
+		m.mcpClient = mcp.NewClientManager(mcpServers, m.log)
 	}
 
 	return nil

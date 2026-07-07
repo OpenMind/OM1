@@ -98,8 +98,9 @@ func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, u
 		return
 	}
 
-	dateStr := time.Now().Format("2006-01-02")
-	ts := time.Now().Format("15:04:05")
+	now := time.Now()
+	dateStr := now.Format("2006-01-02")
+	ts := now.Format("15:04:05")
 
 	tag := "unknown"
 	if uuid != "" {
@@ -112,7 +113,7 @@ func (w *Writer) AppendToIndex(ctx context.Context, idx *MemoryIndex, userMsg, u
 
 	meta := map[string]string{"source": dateStr + ".md", "user_id": uuid}
 
-	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta}); err != nil {
+	if _, err := idx.AddChunk(ctx, MemoryEntry{Text: text, Metadata: meta, Timestamp: now}); err != nil {
 		w.log.Warn("write-through index failed", zap.Error(err))
 	}
 }
