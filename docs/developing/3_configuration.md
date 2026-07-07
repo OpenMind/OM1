@@ -194,7 +194,7 @@ Example configuration for the agent_inputs section:
 ```json5
   agent_inputs: [
     {
-      type: "GovernanceEthereum"
+      type: "GoogleASRInput"
     },
     {
       type: "VLM_COCO_Local",
@@ -214,7 +214,6 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 * TurtleBot4Batt
 * UnitreeG1Basic
 * UnitreeGo2Lowstate
-* GovernanceEthereum
 * more being added continuously...
 
 You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). The `agent_inputs` config section is specific to each input type. For example, the `VLM_COCO_Local` input accepts a `camera_index` parameter.

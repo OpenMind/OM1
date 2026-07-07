@@ -107,8 +107,6 @@
 ## Good to know concepts <a href="#robotics" id="robotics"></a>
 
 * [Asimov Governance](robotics/asimov_governance.md)
-* [Coinbase Hackathon](robotics/coinbase_hackathon.md)
-* [Coinbase X402](robotics/coinbase-x402.md)
 * [CRSF Long Range Control](robotics/crsf_long_range_control.md)
 * [GPS Compass](robotics/gps_compass.md)
 * [Mac](robotics/mac.md)
