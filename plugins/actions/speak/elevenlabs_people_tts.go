@@ -25,7 +25,7 @@ const facePresenceIOKey = "FacePresence"
 var closestPersonRe = regexp.MustCompile(`Closest:\s*(\w+)`)
 
 // ElevenLabsPeopleConnector is an extension of ElevenLabsConnector
-// that selects the voice based on the closest person in view
+// that selects the voice based on the closest person in view.
 type ElevenLabsPeopleConnector struct {
 	*ElevenLabsConnector
 
