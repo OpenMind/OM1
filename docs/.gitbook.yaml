@@ -40,8 +40,6 @@ redirects:
   full-autonomy-guidelines/lifecycle: full_autonomy_guidelines/lifecycle.md
   full-autonomy-guidelines/ota-setup: full_autonomy_guidelines/ota_setup.md
   robotics/asimov-governance: robotics/asimov_governance.md
-  robotics/coinbase-hackathon: robotics/coinbase_hackathon.md
-  robotics/coinbase-x402: robotics/coinbase-x402.md
   robotics/crsf-long-range-control: robotics/crsf_long_range_control.md
   robotics/gps-compass: robotics/gps_compass.md
   robotics/motion-planning-lidarA1M8: robotics/motion_planning_lidarA1M8.md
