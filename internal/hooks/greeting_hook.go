@@ -229,9 +229,7 @@ func (r *Runner) greetingEndHook(_ context.Context, cfg, vars map[string]any) er
 	return nil
 }
 
-// endMessage selects the farewell message for the given conversation progress,
-// honoring the configurable handler_config keys and falling back to the
-// built-in defaults, then applies template variables such as {robot_name}.
+// endMessage selects the farewell message for the given conversation progress.
 func endMessage(cfg, vars map[string]any, turnCount, maxTurnCount int) string {
 	var message string
 	switch {
