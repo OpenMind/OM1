@@ -219,20 +219,31 @@ func (r *Runner) greetingEndHook(_ context.Context, cfg, vars map[string]any) er
 	}
 
 	state := providers.Greeting()
+	turnCount, maxTurnCount := state.TurnCount(), state.MaxTurnCount()
+	if turnCount >= maxTurnCount {
+		r.log.Info("greeting conversation ended due to maximum turn count")
+	}
+
+	provider.AddText(endMessage(cfg, vars, turnCount, maxTurnCount))
+
+	return nil
+}
+
+// endMessage selects the farewell message for the given conversation progress,
+// honoring the configurable handler_config keys and falling back to the
+// built-in defaults, then applies template variables such as {robot_name}.
+func endMessage(cfg, vars map[string]any, turnCount, maxTurnCount int) string {
 	var message string
 	switch {
-	case state.TurnCount() >= state.MaxTurnCount():
-		r.log.Info("greeting conversation ended due to maximum turn count")
+	case turnCount >= maxTurnCount:
 		message = stringValDefault(cfg, "end_message_max_turns", defaultEndMessageMaxTurns)
-	case state.TurnCount() > 0:
+	case turnCount > 0:
 		message = stringValDefault(cfg, "end_message_active", defaultEndMessageActive)
 	default:
 		message = stringValDefault(cfg, "end_message_no_turns", defaultEndMessageNoTurns)
 	}
 
-	provider.AddText(formatTemplate(message, vars))
-
-	return nil
+	return formatTemplate(message, vars)
 }
 
 // greetingTTSProvider resolves the TTS provider for a greeting hook.
