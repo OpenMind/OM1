@@ -21,6 +21,12 @@ func init() {
 
 const defaultGreetingLLMType = "GeminiLLM"
 
+const (
+	defaultEndMessageMaxTurns = "Thank you for chatting with me today. I hope you enjoy the rest of your day."
+	defaultEndMessageActive   = "It was nice talking with you! If you have any more questions, come chat with me again!"
+	defaultEndMessageNoTurns  = "It was great meeting you! If you want to chat later, just come back and say hi!"
+)
+
 const defaultGreetingPrompt = "You are {robot_name}, a friendly robot greeting whoever is in front of you. " +
 	"The current time is {current_time}. " +
 	"Generate a single warm, natural spoken greeting of one or two short sentences. " +
@@ -205,7 +211,7 @@ func staticGreeting(snapshot providers.PresenceSnapshot, snapErr error, robotNam
 
 // greetingEndHook handles the end of a greeting conversation, announcing a
 // farewell whose wording depends on how far the conversation progressed.
-func (r *Runner) greetingEndHook(_ context.Context, cfg, _ map[string]any) error {
+func (r *Runner) greetingEndHook(_ context.Context, cfg, vars map[string]any) error {
 	provider, err := r.greetingTTSProvider(cfg)
 	if err != nil {
 		r.log.Error("greeting_end_hook: error", zap.Error(err))
@@ -213,15 +219,18 @@ func (r *Runner) greetingEndHook(_ context.Context, cfg, _ map[string]any) error
 	}
 
 	state := providers.Greeting()
+	var message string
 	switch {
 	case state.TurnCount() >= state.MaxTurnCount():
 		r.log.Info("greeting conversation ended due to maximum turn count")
-		provider.AddText("Thank you for chatting with me today. I hope you enjoy the rest of your day.")
+		message = stringValDefault(cfg, "end_message_max_turns", defaultEndMessageMaxTurns)
 	case state.TurnCount() > 0:
-		provider.AddText("It was nice talking with you! If you have any more questions, come chat with me again!")
+		message = stringValDefault(cfg, "end_message_active", defaultEndMessageActive)
 	default:
-		provider.AddText("It was great meeting you! If you want to chat later, just come back and say hi!")
+		message = stringValDefault(cfg, "end_message_no_turns", defaultEndMessageNoTurns)
 	}
+
+	provider.AddText(formatTemplate(message, vars))
 
 	return nil
 }
