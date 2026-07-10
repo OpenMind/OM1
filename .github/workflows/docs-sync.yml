@@ -188,7 +188,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
-          branch: docs/auto-sync-${{ steps.range.outputs.after }}
+          branch: docs-sync/auto-${{ steps.range.outputs.after }}
           add-paths: docs/**
           commit-message: "docs: sync with recent changes to main"
           title: "docs: sync with recent changes to main"
