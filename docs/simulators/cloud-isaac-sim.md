@@ -105,6 +105,8 @@ Before building autonomy, confirm everything is working as expected. From the po
 
 Drive the robot around to verify that it's connected and responding correctly. This is also a good way to familiarize yourself with the environment before creating autonomous behaviors.
 
+> **Tip**: You can also drive the robot with an **Xbox controller**. Pair the controller to your computer over Bluetooth and use it to teleoperate the robot in the simulator.
+
 <!-- SCREENSHOT: teleoperation view — live camera feed + manual drive controls -->
 
 ### Step 3: Build a Map with SLAM
