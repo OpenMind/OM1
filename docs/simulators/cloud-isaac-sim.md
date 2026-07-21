@@ -33,7 +33,7 @@ Everything in this part runs from the browser. You'll launch a simulated robot, 
 
 1. Log in to the [OpenMind Portal](https://portal.openmind.com)
 2. Navigate to **Cloud Simulator** from the sidebar
-3. Select the robot model and choose the environment you'd like to work in, then launch the simulator
+3. Select the instance type, robot model and choose the environment you'd like to work in, then launch the simulator
 
 #### Instance Types
 
@@ -51,10 +51,12 @@ Choose based on your simulation workload:
 - Unitree Go2
 - Unitree G1
 - LimX Tron
+- Deep Robotics M20 Pro
 
 #### Available Environments
 
 - Warehouse
+- Warehouse Lite
 - Apartment
 
 #### Launch Time
