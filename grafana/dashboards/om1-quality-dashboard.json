@@ -128,8 +128,8 @@
     {
       "id": 4,
       "type": "piechart",
-      "title": "Spoken Language Breakdown (This Run)",
-      "description": "Live-scored turns this run, grouped by detected language",
+      "title": "Spoken Language Breakdown (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by detected language",
       "gridPos": { "h": 10, "w": 8, "x": 0, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
@@ -152,7 +152,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (language) (om1_quality_live_language_count)",
+          "expr": "sum by (language) (increase(om1_quality_live_language_count[1h]))",
           "legendFormat": "{{language}}",
           "instant": true,
           "range": false
@@ -163,8 +163,8 @@
     {
       "id": 5,
       "type": "piechart",
-      "title": "Input Classification (This Run)",
-      "description": "Live-scored turns this run, grouped by label (positive/marginal/negative/not_addressed)",
+      "title": "Input Classification (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by label (positive/marginal/negative/not_addressed)",
       "gridPos": { "h": 10, "w": 8, "x": 8, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
@@ -200,7 +200,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (label) (om1_quality_live_input_classification_count)",
+          "expr": "sum by (label) (increase(om1_quality_live_input_classification_count[1h]))",
           "legendFormat": "{{label}}",
           "instant": true,
           "range": false
@@ -211,8 +211,8 @@
     {
       "id": 6,
       "type": "piechart",
-      "title": "Prompt/Response Match Score (This Run)",
-      "description": "Live-scored turns this run, grouped by coherence (coherent/marginal/incoherent)",
+      "title": "Prompt/Response Match Score (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by coherence (coherent/marginal/incoherent)",
       "gridPos": { "h": 10, "w": 8, "x": 16, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
@@ -248,7 +248,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (coherence) (om1_quality_live_coherence_count)",
+          "expr": "sum by (coherence) (increase(om1_quality_live_coherence_count[1h]))",
           "legendFormat": "{{coherence}}",
           "instant": true,
           "range": false
