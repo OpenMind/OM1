@@ -4,6 +4,7 @@ build/
 # Claude Code
 CLAUDE.md
 .claude/
+LOCAL_CHANGES.md
 
 # Mac specific lint
 .DS_Store

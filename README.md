@@ -257,3 +257,77 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 ## License
 
 This project is licensed under the terms of the [MIT License](./LICENSE).
+
+## Quality Scoring Dashboard (Quality Critic)
+
+Beyond the latency dashboard above, OM1 can be paired with a companion
+analysis pipeline that scores conversation quality **live, as the agent
+runs** — a Grafana dashboard showing the most recent turn's prompt/response
+coherence (the "Active Score"), plus a breakdown of spoken language, input
+classification (positive/marginal/negative/not_addressed), and coherence,
+all scoped to the current run.
+
+The scoring logic lives in a separate repo, not in OM1 itself.
+
+> [!NOTE]
+> This calls OpenAI (`gpt-5.4-nano`) once per conversation turn to classify
+> it, so it requires your own `OPENAI_API_KEY` and incurs (small) OpenAI API
+> usage costs on top of your OMCU usage.
+
+### 1. Clone the analysis pipeline and install its dependencies
+
+```bash
+git clone https://github.com/OpenMind/dataAnalysis.git
+cd dataAnalysis
+pip3 install langdetect openai pydantic prometheus_client
+```
+
+### 2. Enable tracing in your OM1 config
+
+The scorer reads OM1's own trace log, so add this to the top level of
+whichever `config/*.json5` you're running (e.g. `config/conversation.json5`):
+
+```json5
+use_tracer: true,
+```
+
+### 3. Start Grafana + Prometheus (if not already running)
+
+```bash
+cd /path/to/OM1
+docker-compose up -d grafana prometheus
+```
+
+Navigate to <http://localhost:3000> (admin/admin) and open the **OM1
+Quality Scores** dashboard.
+
+### 4. Start the live quality scorer
+
+```bash
+export OPENAI_API_KEY="sk-..."
+cd /path/to/dataAnalysis/scripts
+python3 live_quality_scorer.py --traces-dir /path/to/OM1/traces --daemon
+```
+
+`--traces-dir` should point at the `traces/` folder inside your OM1
+checkout (created automatically once `use_tracer: true` is set and OM1 has
+run at least once). Drop `--daemon` to run it in the foreground and watch
+its output directly instead.
+
+### 5. Run OM1 as usual
+
+```bash
+CONFIG=conversation make run
+```
+
+Talk to the agent and watch the dashboard update live.
+
+> [!NOTE]
+> Restart the live scorer whenever you restart `om1` so its counts reflect
+> the current run
+
+To stop it:
+
+```bash
+kill $(cat /path/to/dataAnalysis/.live_quality_scorer.pid)
+```
