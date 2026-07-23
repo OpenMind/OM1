@@ -8,8 +8,13 @@ import (
 	"time"
 
 	"github.com/openmind/om1/internal/logger"
+	zenohsession "github.com/openmind/om1/internal/zenoh"
 	"go.uber.org/zap"
 )
+
+// tracerEventTopic is the Zenoh topic each trace record is published to,
+// live, alongside the JSONL file write.
+const tracerEventTopic = "om/tracer/event"
 
 // traceRecord is one JSONL line written by the Tracer.
 type traceRecord struct {
@@ -27,6 +32,9 @@ type Tracer struct {
 	currentDate string
 	file        *os.File
 	generation  int
+
+	zenohOnce sync.Once
+	publisher zenohsession.Publisher // nil if Zenoh is unavailable; publishing is then skipped
 }
 
 var (
@@ -103,6 +111,37 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	if err := t.writeLocked(line); err != nil {
 		logger.Get().Warn("tracer: failed to write record", zap.Error(err))
 	}
+
+	if pub := t.zenohPublisherLocked(); pub != nil {
+		if err := pub.Put(line); err != nil {
+			logger.Get().Warn("tracer: failed to publish record", zap.Error(err))
+		}
+	}
+}
+
+// zenohPublisherLocked lazily opens a Zenoh session and declares the tracer's
+// publisher on first use, caching the result (including failure, as a nil
+// publisher) for the Tracer's lifetime. Must be called with t.mu held.
+// Mirrors AvatarProvider's lazy-open, warn-and-disable pattern (avatar.go) --
+// a missing Zenoh router degrades to file-only tracing rather than an error.
+func (t *Tracer) zenohPublisherLocked() zenohsession.Publisher {
+	t.zenohOnce.Do(func() {
+		sess, err := zenohsession.Open()
+		if err != nil {
+			logger.Get().Warn("tracer: zenoh unavailable, live trace publishing disabled", zap.Error(err))
+			return
+		}
+
+		pub, err := sess.DeclarePublisher(tracerEventTopic)
+		if err != nil {
+			sess.Close()
+			logger.Get().Warn("tracer: failed to declare publisher, live trace publishing disabled", zap.Error(err))
+			return
+		}
+
+		t.publisher = pub
+	})
+	return t.publisher
 }
 
 // Stop closes the current file handle.
