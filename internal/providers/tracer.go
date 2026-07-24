@@ -8,16 +8,12 @@ import (
 	"time"
 
 	"github.com/openmind/om1/internal/logger"
-	zenohsession "github.com/openmind/om1/internal/zenoh"
 	"go.uber.org/zap"
 )
 
-// tracerEventTopic is the Zenoh topic each trace record is published to,
-// live, alongside the JSONL file write.
-const tracerEventTopic = "om/tracer/event"
-
-// traceRecord is one JSONL line written by the Tracer.
-type traceRecord struct {
+// TraceRecord is one LLM interaction, written as a JSONL line and optionally
+// handed to any in-process subscriber (see Tracer.Subscribe).
+type TraceRecord struct {
 	Timestamp  string           `json:"ts"`
 	Generation int              `json:"generation"`
 	LLMInput   string           `json:"llm_input"`
@@ -33,8 +29,7 @@ type Tracer struct {
 	file        *os.File
 	generation  int
 
-	zenohOnce sync.Once
-	publisher zenohsession.Publisher // nil if Zenoh is unavailable; publishing is then skipped
+	subscribers []chan<- TraceRecord // appended once at startup via Subscribe(), never removed
 }
 
 var (
@@ -53,19 +48,11 @@ func TracerProvider() *Tracer {
 // Enable turns tracing on and ensures the output directory exists.
 func (t *Tracer) Enable() {
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.enabled = true
 	if err := os.MkdirAll(t.outputDir, 0o755); err != nil {
 		logger.Get().Warn("tracer: failed to create output dir", zap.Error(err))
 	}
-	t.mu.Unlock()
-
-	// Run async: Enable() is called from initializeMode, which onModeTransition
-	// (runtime.go) runs on the single serialized mode-transition goroutine. If the
-	// first tracer-enabled mode is entered via a transition rather than at startup,
-	// a synchronous zenoh open here would still block every future mode transition
-	// behind it. Firing it in a goroutine means Enable()/initializeMode always
-	// return immediately; Gauge() just skips publishing until t.publisher is set.
-	go t.zenohOnce.Do(t.initZenohPublisher)
 }
 
 // Disable turns tracing off and closes any open file handle.
@@ -90,6 +77,20 @@ func (t *Tracer) SetGeneration(generation int) {
 	t.generation = generation
 }
 
+// Subscribe registers an in-process listener for every future TraceRecord and
+// returns the channel it will be delivered on. Intended to be called once at
+// startup (e.g. by internal/qualityscorer) before any tracing happens -- there
+// is no Unsubscribe, since subscribers are expected to live for the process's
+// lifetime. The channel is buffered; a subscriber that falls behind has
+// records dropped for it rather than blocking Gauge() (see Gauge's comment).
+func (t *Tracer) Subscribe() <-chan TraceRecord {
+	ch := make(chan TraceRecord, 32)
+	t.mu.Lock()
+	t.subscribers = append(t.subscribers, ch)
+	t.mu.Unlock()
+	return ch
+}
+
 // Gauge records an LLM interaction with the given input prompt and output.
 func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	t.mu.Lock()
@@ -103,7 +104,7 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 		llmOutput = []map[string]any{}
 	}
 
-	rec := traceRecord{
+	rec := TraceRecord{
 		Timestamp:  time.Now().UTC().Format(time.RFC3339Nano),
 		Generation: t.generation,
 		LLMInput:   llmInput,
@@ -121,50 +122,22 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 		logger.Get().Warn("tracer: failed to write record", zap.Error(err))
 	}
 
-	pub := t.publisher
+	subs := t.subscribers
 	t.mu.Unlock()
 
-	// Put() runs a live Zenoh send and must not happen under t.mu: SetGeneration()
-	// takes the same lock and is called on every mode transition (runCortexLoop),
-	// which are themselves processed strictly sequentially (handleModeTransitions).
-	// A publish that stalls -- degraded session, no draining subscriber, backpressure
-	// -- must not be able to freeze every future mode transition the way the initial
-	// session-open used to.
-	if pub != nil {
-		if err := pub.Put(line); err != nil {
-			logger.Get().Warn("tracer: failed to publish record", zap.Error(err))
+	// Deliver to subscribers outside t.mu: SetGeneration() takes the same lock
+	// and is called on every mode transition (runCortexLoop), and transitions
+	// are processed strictly sequentially (handleModeTransitions). A subscriber
+	// that's fallen behind must never be able to freeze every future mode
+	// transition -- this is the same reasoning that previously moved this
+	// tracer's (now-removed) Zenoh publish outside the lock, twice.
+	for _, ch := range subs {
+		select {
+		case ch <- rec:
+		default:
+			logger.Get().Warn("tracer: subscriber channel full, dropping trace record")
 		}
 	}
-}
-
-// initZenohPublisher opens a Zenoh session and declares the tracer's publisher,
-// caching the result (including failure, leaving t.publisher nil) for the
-// Tracer's lifetime. Called once from Enable(), guarded by t.zenohOnce.
-//
-// Deliberately does NOT hold t.mu while opening the session: zenohsession.Open()
-// can block for a while (client connect + discovery fallback, zenoh_backend.go),
-// and t.mu is also taken by SetGeneration(), which runtime.runCortexLoop calls on
-// every mode transition. Holding t.mu here previously meant a slow/unreachable
-// Zenoh router stalled not just trace publishing but every future mode
-// transition, since mode transitions are handled strictly sequentially. A
-// missing Zenoh router degrades to file-only tracing rather than an error.
-func (t *Tracer) initZenohPublisher() {
-	sess, err := zenohsession.Open()
-	if err != nil {
-		logger.Get().Warn("tracer: zenoh unavailable, live trace publishing disabled", zap.Error(err))
-		return
-	}
-
-	pub, err := sess.DeclarePublisher(tracerEventTopic)
-	if err != nil {
-		sess.Close()
-		logger.Get().Warn("tracer: failed to declare publisher, live trace publishing disabled", zap.Error(err))
-		return
-	}
-
-	t.mu.Lock()
-	t.publisher = pub
-	t.mu.Unlock()
 }
 
 // Stop closes the current file handle.
