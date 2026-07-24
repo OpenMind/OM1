@@ -72,6 +72,8 @@ func StartServer(ctx context.Context, log *zap.Logger, tracer *providers.Tracer,
 	prometheus.MustRegister(collector)
 
 	records := tracer.Subscribe()
+	log.Info("qualityscorer: started, scoring live trace records",
+		zap.String("model", resolved.Model), zap.String("base_url", resolved.BaseURL))
 
 	done := make(chan struct{})
 	go func() {
@@ -146,6 +148,20 @@ func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, collector *liveC
 	}); err != nil {
 		log.Warn("qualityscorer: failed to write classification log", zap.Error(err))
 	}
+
+	log.Info("qualityscorer: scored turn",
+		zap.String("input_classification", label),
+		zap.String("coherence", coherence),
+		zap.String("language", language),
+		zap.String("prompt", truncate(prompt, 60)),
+	)
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
 
 func appendJSONL(path string, rec logRecord) error {
