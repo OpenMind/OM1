@@ -53,11 +53,19 @@ func TracerProvider() *Tracer {
 // Enable turns tracing on and ensures the output directory exists.
 func (t *Tracer) Enable() {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 	t.enabled = true
 	if err := os.MkdirAll(t.outputDir, 0o755); err != nil {
 		logger.Get().Warn("tracer: failed to create output dir", zap.Error(err))
 	}
+	t.mu.Unlock()
+
+	// Run async: Enable() is called from initializeMode, which onModeTransition
+	// (runtime.go) runs on the single serialized mode-transition goroutine. If the
+	// first tracer-enabled mode is entered via a transition rather than at startup,
+	// a synchronous zenoh open here would still block every future mode transition
+	// behind it. Firing it in a goroutine means Enable()/initializeMode always
+	// return immediately; Gauge() just skips publishing until t.publisher is set.
+	go t.zenohOnce.Do(t.initZenohPublisher)
 }
 
 // Disable turns tracing off and closes any open file handle.
@@ -112,36 +120,41 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 		logger.Get().Warn("tracer: failed to write record", zap.Error(err))
 	}
 
-	if pub := t.zenohPublisherLocked(); pub != nil {
-		if err := pub.Put(line); err != nil {
+	if t.publisher != nil {
+		if err := t.publisher.Put(line); err != nil {
 			logger.Get().Warn("tracer: failed to publish record", zap.Error(err))
 		}
 	}
 }
 
-// zenohPublisherLocked lazily opens a Zenoh session and declares the tracer's
-// publisher on first use, caching the result (including failure, as a nil
-// publisher) for the Tracer's lifetime. Must be called with t.mu held.
-// Mirrors AvatarProvider's lazy-open, warn-and-disable pattern (avatar.go) --
-// a missing Zenoh router degrades to file-only tracing rather than an error.
-func (t *Tracer) zenohPublisherLocked() zenohsession.Publisher {
-	t.zenohOnce.Do(func() {
-		sess, err := zenohsession.Open()
-		if err != nil {
-			logger.Get().Warn("tracer: zenoh unavailable, live trace publishing disabled", zap.Error(err))
-			return
-		}
+// initZenohPublisher opens a Zenoh session and declares the tracer's publisher,
+// caching the result (including failure, leaving t.publisher nil) for the
+// Tracer's lifetime. Called once from Enable(), guarded by t.zenohOnce.
+//
+// Deliberately does NOT hold t.mu while opening the session: zenohsession.Open()
+// can block for a while (client connect + discovery fallback, zenoh_backend.go),
+// and t.mu is also taken by SetGeneration(), which runtime.runCortexLoop calls on
+// every mode transition. Holding t.mu here previously meant a slow/unreachable
+// Zenoh router stalled not just trace publishing but every future mode
+// transition, since mode transitions are handled strictly sequentially. A
+// missing Zenoh router degrades to file-only tracing rather than an error.
+func (t *Tracer) initZenohPublisher() {
+	sess, err := zenohsession.Open()
+	if err != nil {
+		logger.Get().Warn("tracer: zenoh unavailable, live trace publishing disabled", zap.Error(err))
+		return
+	}
 
-		pub, err := sess.DeclarePublisher(tracerEventTopic)
-		if err != nil {
-			sess.Close()
-			logger.Get().Warn("tracer: failed to declare publisher, live trace publishing disabled", zap.Error(err))
-			return
-		}
+	pub, err := sess.DeclarePublisher(tracerEventTopic)
+	if err != nil {
+		sess.Close()
+		logger.Get().Warn("tracer: failed to declare publisher, live trace publishing disabled", zap.Error(err))
+		return
+	}
 
-		t.publisher = pub
-	})
-	return t.publisher
+	t.mu.Lock()
+	t.publisher = pub
+	t.mu.Unlock()
 }
 
 // Stop closes the current file handle.
