@@ -286,6 +286,11 @@ func (c *asrCommon) connect() error { return c.stream.connect() }
 // sendChunk forwards a PCM chunk to the single stream's websocket.
 func (c *asrCommon) sendChunk(pcm []byte) { c.stream.sendChunk(pcm) }
 
+// sendChunkAt forwards a PCM chunk with its capture time to the single stream.
+func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
+	c.stream.sendChunkAt(pcm, capture)
+}
+
 // statsLoop logs the single stream's send statistics until ctx is cancelled.
 func (c *asrCommon) statsLoop(ctx context.Context) { c.stream.statsLoop(ctx) }
 

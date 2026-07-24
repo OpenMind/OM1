@@ -13,6 +13,14 @@ services:
       - OM_API_KEY=${OM_API_KEY}
       - OM1_COMMAND=${OM1_COMMAND:-unitree_g1_conversation}
       - OM1_SKIP_INTERNET_CHECK=${OM1_SKIP_INTERNET_CHECK:-false}
+      # ASR/VLM source selection. Defaults = legacy (local mic + mediamtx video).
+      # For the GStreamer video-processor (synced A+V at :8555/live) set:
+      #   ASR_INPUT_PLUGIN=GoogleASRRTSPInput
+      #   ASR_RTSP_URL=rtsp://localhost:8555/live
+      #   VLM_RTSP_URL=rtsp://localhost:8555/live
+      - ASR_INPUT_PLUGIN=${ASR_INPUT_PLUGIN:-GoogleASRInput}
+      - ASR_RTSP_URL=${ASR_RTSP_URL:-rtsp://localhost:8555/live}
+      - VLM_RTSP_URL=${VLM_RTSP_URL:-rtsp://localhost:8554/top_camera_raw}
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie

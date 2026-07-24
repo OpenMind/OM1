@@ -115,7 +115,7 @@ func TestPackageAudio(t *testing.T) {
 	s.languageCode = "zh"
 
 	pcm := []byte{0x01, 0x02, 0x03, 0x04}
-	packet, err := s.packageAudio(pcm)
+	packet, err := s.packageAudio(pcm, 1234567)
 	require.NoError(t, err)
 	require.Greater(t, len(packet), 4+len(pcm))
 
@@ -127,6 +127,8 @@ func TestPackageAudio(t *testing.T) {
 	require.EqualValues(t, 16000, header["rate"])
 	require.Equal(t, "zh", header["language_code"])
 	require.Contains(t, header, "timestamp")
+	require.EqualValues(t, 1234567, header["timestamp"],
+		"packageAudio must stamp the provided capture time")
 	require.NotContains(t, header, "alternative_language_codes",
 		"ElevenLabs sends no alternative language codes; omitempty must drop the field")
 

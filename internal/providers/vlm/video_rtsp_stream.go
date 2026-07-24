@@ -124,6 +124,11 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return false
 		}
+		// Capture-receive time. JPEG-over-image2pipe carries no per-frame RTP
+		// PTS, so true capture-time preservation for video requires a
+		// PTS-preserving transport (the GStreamer consumer, or ffmpeg timestamp
+		// passthrough into a container). Tracked as a follow-up; the audio path
+		// (google_asr*) already stamps capture time at ingest.
 		v.send(Frame{Timestamp: time.Now(), JPEG: frame})
 		return true
 	})

@@ -80,16 +80,28 @@ You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "GoogleASRInput",
+          // Defaults preserve legacy behavior (local PortAudio mic). To consume
+          // the synchronized A+V stream from the GStreamer video-processor, set
+          // ASR_INPUT_PLUGIN=GoogleASRRTSPInput and
+          // ASR_RTSP_URL=rtsp://localhost:8555/live. GoogleASRInput ignores the
+          // extra rtsp_url key, so the default is harmless.
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
             enable_tts_interrupt: true,
             rate: 16000,
             chunk: 1600,
+            rtsp_url: "${ASR_RTSP_URL:-rtsp://localhost:8555/live}",
           },
         },
         {
+          // Default RTSP source unchanged (legacy mediamtx mountpoint). For the
+          // GStreamer path set VLM_RTSP_URL=rtsp://localhost:8555/live (same
+          // muxed session; the video track is selected).
           type: "VLMGeminiRTSP",
+          config: {
+            rtsp_url: "${VLM_RTSP_URL:-rtsp://localhost:8554/top_camera_raw}",
+          },
         }
       ],
       cortex_llm: {

@@ -87,12 +87,16 @@ func (s *transcriberStream) closeWS() {
 }
 
 // packageAudio prepends the JSON audio header (length-prefixed) to a PCM chunk.
-func (s *transcriberStream) packageAudio(pcm []byte) ([]byte, error) {
+// captureMs is the capture time (Unix ms) of this chunk, stamped at ingest so
+// the timestamp reflects when the audio was captured rather than when it was
+// packaged/sent. This lets downstream consumers align audio with video-derived
+// features on a common timeline.
+func (s *transcriberStream) packageAudio(pcm []byte, captureMs int64) ([]byte, error) {
 	meta := AudioMetadata{
 		Rate:                     s.rate,
 		LanguageCode:             s.languageCode,
 		AlternativeLanguageCodes: s.altCodes,
-		Timestamp:                time.Now().UnixMilli(),
+		Timestamp:                captureMs,
 	}
 
 	headerBytes, err := json.Marshal(meta)
@@ -108,9 +112,16 @@ func (s *transcriberStream) packageAudio(pcm []byte) ([]byte, error) {
 	return packet, nil
 }
 
-// sendChunk packages and sends a PCM chunk over the websocket, updating statistics.
+// sendChunk packages and sends a PCM chunk, stamping the capture time as now.
+// Callers that know the true acoustic capture instant should use sendChunkAt.
 func (s *transcriberStream) sendChunk(pcm []byte) {
-	packet, err := s.packageAudio(pcm)
+	s.sendChunkAt(pcm, time.Now())
+}
+
+// sendChunkAt packages and sends a PCM chunk captured at the given time,
+// updating statistics.
+func (s *transcriberStream) sendChunkAt(pcm []byte, capture time.Time) {
+	packet, err := s.packageAudio(pcm, capture.UnixMilli())
 	if err != nil {
 		s.log.Warn("package error", zap.Error(err))
 		return

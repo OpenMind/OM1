@@ -273,11 +273,18 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAll fans one PCM chunk out to every provider stream. Each stream packages
-// the audio with its own header, so the shared chunk is only read, never mutated.
+// sendToAll fans one PCM chunk out to every provider stream, stamping capture
+// time as now. Callers with the true capture instant should use sendToAllAt.
 func (s *ParallelASRSensor) sendToAll(pcm []byte) {
+	s.sendToAllAt(pcm, time.Now())
+}
+
+// sendToAllAt fans one PCM chunk (captured at the given time) out to every
+// provider stream. Each stream packages the audio with its own header, so the
+// shared chunk is only read, never mutated.
+func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
 	for _, st := range s.streams {
-		st.sendChunk(pcm)
+		st.sendChunkAt(pcm, capture)
 	}
 }
 
@@ -388,6 +395,8 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		// Stamp capture time right after the buffer is read.
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -398,7 +407,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendToAll(pcm)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }
 
@@ -469,6 +478,8 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
+		// Stamp capture time when the chunk is read from the stream.
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -476,6 +487,6 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		s.sendToAll(pcm)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }

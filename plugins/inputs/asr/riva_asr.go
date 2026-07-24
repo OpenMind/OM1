@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gordonklaus/portaudio"
 	"go.uber.org/zap"
@@ -231,6 +232,8 @@ func (s *RivaASRSensor) captureLoop(ctx context.Context, stream *portaudio.Strea
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		// Stamp capture time right after the buffer is read.
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -241,7 +244,7 @@ func (s *RivaASRSensor) captureLoop(ctx context.Context, stream *portaudio.Strea
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }
 
