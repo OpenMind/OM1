@@ -11,6 +11,10 @@
   api_key: "${OM_API_KEY:-openmind_free}",
   system_governance: "",
   use_tracer: true,
+  quality_scorer: {
+    enabled: true,
+    api_key: "${OPENAI_API_KEY:-}",
+  },
   cortex_llm: {
     type: "GeminiLLM",
     config: {
