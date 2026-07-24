@@ -27,6 +27,8 @@ type SystemConfig struct {
 
 	UseTracer bool `json:"use_tracer"`
 
+	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
+
 	DefaultMode       string                `json:"default_mode"`
 	AllowManualSwitch bool                  `json:"allow_manual_switching"`
 	ModeMemoryEnabled bool                  `json:"mode_memory_enabled"`
@@ -108,6 +110,17 @@ type KBSpec struct {
 	BaseURL  string  `json:"base_url"`
 	TopK     int     `json:"top_k"`
 	MinScore float64 `json:"min_score"`
+}
+
+// QualityScorerConfig describes the optional live conversation-quality scorer
+// (language/sentiment/coherence), scraped as Prometheus metrics. Depends on
+// UseTracer being enabled on the same config -- it subscribes to the Tracer's
+// trace records, so without tracing on it never receives anything.
+type QualityScorerConfig struct {
+	Enabled bool   `json:"enabled"`
+	Model   string `json:"model"`
+	BaseURL string `json:"base_url"`
+	APIKey  string `json:"api_key"`
 }
 
 // MemorySpec describes the optional long-term memory system.

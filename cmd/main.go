@@ -15,6 +15,8 @@ import (
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/metrics"
+	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/qualityscorer"
 	"github.com/openmind/om1/internal/runtime"
 
 	_ "github.com/openmind/om1/plugins/actions"
@@ -56,6 +58,14 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+
+	if cfg.QualityScorer != nil && cfg.QualityScorer.Enabled {
+		if !cfg.UseTracer {
+			log.Warn("quality_scorer.enabled is true but use_tracer is false -- it will never receive any trace records")
+		}
+		stopScorer := qualityscorer.StartServer(ctx, log, providers.TracerProvider(), *cfg.QualityScorer)
+		defer stopScorer()
+	}
 
 	rt := runtime.New(cfg, log, runtime.Options{
 		HotReload:     *hotReload,

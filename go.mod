@@ -3,6 +3,7 @@ module github.com/openmind/om1
 go 1.25.0
 
 require (
+	github.com/abadojack/whatlanggo v1.0.1
 	github.com/coder/hnsw v0.6.1
 	github.com/eclipse-zenoh/zenoh-go v1.9.0
 	github.com/google/uuid v1.6.0
@@ -13,6 +14,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
+	golang.org/x/text v0.37.0
 )
 
 require (
@@ -39,7 +41,6 @@ require (
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
