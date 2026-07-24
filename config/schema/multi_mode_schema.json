@@ -34,6 +34,16 @@
                 "knowledge_base_root": {"type": "string", "description": "Root directory path for knowledge bases."}
             }
         },
+        "quality_scorer": {
+            "type": "object",
+            "description": "Optional live conversation-quality scorer (language/sentiment/coherence), scraped as Prometheus metrics. Depends on use_tracer being enabled.",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "model": {"type": "string"},
+                "base_url": {"type": "string"},
+                "api_key": {"type": "string"}
+            }
+        },
         "cortex_llm": {
             "$ref": "#/definitions/cortex_llm"
         },
