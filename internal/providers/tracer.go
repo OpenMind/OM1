@@ -93,9 +93,9 @@ func (t *Tracer) SetGeneration(generation int) {
 // Gauge records an LLM interaction with the given input prompt and output.
 func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 
 	if !t.enabled {
+		t.mu.Unlock()
 		return
 	}
 
@@ -112,6 +112,7 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 
 	line, err := json.Marshal(rec)
 	if err != nil {
+		t.mu.Unlock()
 		logger.Get().Warn("tracer: failed to marshal record", zap.Error(err))
 		return
 	}
@@ -120,8 +121,17 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 		logger.Get().Warn("tracer: failed to write record", zap.Error(err))
 	}
 
-	if t.publisher != nil {
-		if err := t.publisher.Put(line); err != nil {
+	pub := t.publisher
+	t.mu.Unlock()
+
+	// Put() runs a live Zenoh send and must not happen under t.mu: SetGeneration()
+	// takes the same lock and is called on every mode transition (runCortexLoop),
+	// which are themselves processed strictly sequentially (handleModeTransitions).
+	// A publish that stalls -- degraded session, no draining subscriber, backpressure
+	// -- must not be able to freeze every future mode transition the way the initial
+	// session-open used to.
+	if pub != nil {
+		if err := pub.Put(line); err != nil {
 			logger.Get().Warn("tracer: failed to publish record", zap.Error(err))
 		}
 	}
