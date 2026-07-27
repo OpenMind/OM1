@@ -23,9 +23,6 @@
     },
     {
       type: "VLMGemini",
-      config: {
-        fps: 30,
-      },
     }
   ],
   cortex_llm: {
