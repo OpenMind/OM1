@@ -260,38 +260,43 @@ This project is licensed under the terms of the [MIT License](./LICENSE).
 
 ## Quality Scoring Dashboard (Quality Critic)
 
-Beyond the latency dashboard above, OM1 can be paired with a companion
-analysis pipeline that scores conversation quality **live, as the agent
-runs** — a Grafana dashboard showing the most recent turn's prompt/response
-coherence (the "Active Score"), plus a breakdown of spoken language, input
-classification (positive/marginal/negative/not_addressed), and coherence,
-all scoped to the current run.
+Beyond the latency dashboard above, OM1 can score conversation quality
+**live, as the agent runs** — a Grafana dashboard showing the most recent
+turn's prompt/response coherence (the "Active Score"), plus a breakdown of
+spoken language, input classification
+(positive/marginal/negative/not_addressed), and coherence, all scoped to the
+current run.
 
-The scoring logic lives in a separate repo, not in OM1 itself.
+This scoring runs **in-process, inside OM1 itself** (`internal/qualityscorer`)
+— it subscribes directly to the same tracer that already records every LLM
+turn, so there's nothing separate to clone, install, or run alongside OM1.
 
 > [!NOTE]
-> This calls OpenAI (`gpt-5.4-nano`) once per conversation turn to classify
-> it, so it requires your own `OPENAI_API_KEY` and incurs (small) OpenAI API
-> usage costs on top of your OMCU usage.
+> This calls OpenAI (`gpt-5.4-nano` by default) once or twice per
+> conversation turn to classify it, so it requires your own
+> `OPENAI_API_KEY` and incurs (small) OpenAI API usage costs on top of your
+> OMCU usage.
 
-### 1. Clone the analysis pipeline and install its dependencies
+### 1. Enable tracing and the quality scorer in your OM1 config
 
-```bash
-git clone https://github.com/OpenMind/dataAnalysis.git
-cd dataAnalysis
-pip3 install langdetect openai pydantic prometheus_client
-```
-
-### 2. Enable tracing in your OM1 config
-
-The scorer reads OM1's own trace log, so add this to the top level of
-whichever `config/*.json5` you're running (e.g. `config/conversation.json5`):
+Add this to the top level of whichever `config/*.json5` you're running (e.g.
+`config/conversation.json5`):
 
 ```json5
 use_tracer: true,
+quality_scorer: {
+  enabled: true,
+  api_key: "${OPENAI_API_KEY:-}",
+},
 ```
 
-### 3. Start Grafana + Prometheus (if not already running)
+`quality_scorer` depends on `use_tracer` being on in the same config — OM1
+logs a startup warning if you enable one without the other, since the
+scorer would otherwise never receive any trace records. `model` and
+`base_url` are also optional overrides on `quality_scorer` if you don't want
+the defaults (`gpt-5.4-nano` against `https://api.openai.com/v1`).
+
+### 2. Start Grafana + Prometheus (if not already running)
 
 ```bash
 cd /path/to/OM1
@@ -301,33 +306,18 @@ docker-compose up -d grafana prometheus
 Navigate to <http://localhost:3000> (admin/admin) and open the **OM1
 Quality Scores** dashboard.
 
-### 4. Start the live quality scorer
+### 3. Run OM1 as usual
 
 ```bash
 export OPENAI_API_KEY="sk-..."
-cd /path/to/dataAnalysis/scripts
-python3 live_quality_scorer.py --traces-dir /path/to/OM1/traces --daemon
-```
-
-`--traces-dir` should point at the `traces/` folder inside your OM1
-checkout (created automatically once `use_tracer: true` is set and OM1 has
-run at least once). Drop `--daemon` to run it in the foreground and watch
-its output directly instead.
-
-### 5. Run OM1 as usual
-
-```bash
 CONFIG=conversation make run
 ```
 
-Talk to the agent and watch the dashboard update live.
+Talk to the agent and watch the dashboard update live — the scorer starts
+and stops with OM1 itself, so there's no separate process to start, restart,
+or kill.
 
-> [!NOTE]
-> Restart the live scorer whenever you restart `om1` so its counts reflect
-> the current run
-
-To stop it:
-
-```bash
-kill $(cat /path/to/dataAnalysis/.live_quality_scorer.pid)
-```
+Quality metrics are served on OM1's own metrics endpoint
+(`localhost:9090/metrics`, the same one the latency dashboard above already
+scrapes), and a JSONL classification log is written to
+`data/live_quality_log.jsonl` for offline auditing.
