@@ -117,7 +117,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "om1_quality_live_turns_scored_total",
+          "expr": "om1_quality_live_turns_scored",
           "legendFormat": "turns",
           "instant": true,
           "range": false

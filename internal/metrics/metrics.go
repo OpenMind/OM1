@@ -164,6 +164,43 @@ var (
 	}, httpTimingLabels)
 )
 
+// Quality scorer metrics
+var (
+	QualityLiveLanguageCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_language_count",
+		Help: "Per-run count of scored turns by detected spoken language",
+	}, []string{"language"})
+
+	QualityLiveInputClassificationCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_input_classification_count",
+		Help: "Per-run count of user inputs by classification label (positive/marginal/negative/not_addressed)",
+	}, []string{"label"})
+
+	QualityLiveCoherenceCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_coherence_count",
+		Help: "Per-run count of prompt/response pairs by coherence label (coherent/marginal/incoherent)",
+	}, []string{"coherence"})
+
+	QualityLiveTurnsScored = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "om1_quality_live_turns_scored",
+		Help: "Per-run count of turns that produced a coherence score",
+	})
+
+	QualityLiveActiveScore = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_quality_live_active_score",
+		Help: "Most recent turn's coherence score: coherent=1, marginal=0.5, incoherent=0",
+	})
+)
+
+// qualityCoherenceScore maps a coherence label to the numeric score
+// om1_quality_live_active_score reports, mirroring live_quality_scorer.py's
+// COHERENCE_SCORE.
+var qualityCoherenceScore = map[string]float64{
+	"incoherent": 0.0,
+	"marginal":   0.5,
+	"coherent":   1.0,
+}
+
 func init() {
 	prometheus.MustRegister(
 		LLMLatency, LLMLatencyLast,
@@ -180,7 +217,51 @@ func init() {
 		HTTPUpstreamTotal, HTTPUpstreamTotalLast,
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
 		HTTPProxyTotal, HTTPProxyTotalLast,
+		QualityLiveLanguageCount,
+		QualityLiveInputClassificationCount,
+		QualityLiveCoherenceCount,
+		QualityLiveTurnsScored,
+		QualityLiveActiveScore,
 	)
+}
+
+// InitQualityLabels pre-registers every known input-classification and
+// coherence label at zero. Without this, a label's very first real increment
+// is invisible to increase()/rate() over short windows (e.g. Grafana's
+// "15m buckets" panels): Prometheus doesn't expose a CounterVec label
+// combination at all until it's first touched, so that first increment has
+// no preceding zero sample to diff against, and increase() over a narrow
+// window can report 0 despite the real change. Touching each known label at
+// startup gives Prometheus a genuine 0 sample before any real event, so the
+// first real occurrence is a normal 0->1 transition like any other.
+//
+// language isn't covered here since detectLang/langName can return any of
+// dozens of codes, not a small fixed set -- and it's never used in a
+// short-window panel on the quality dashboard anyway.
+func InitQualityLabels() {
+	for _, label := range []string{"positive", "marginal", "negative", "not_addressed"} {
+		QualityLiveInputClassificationCount.WithLabelValues(label).Add(0)
+	}
+	for _, coherence := range []string{"coherent", "marginal", "incoherent"} {
+		QualityLiveCoherenceCount.WithLabelValues(coherence).Add(0)
+	}
+}
+
+// RecordQualityTurn records the live quality-scorer's classification of one
+// conversation turn. language and coherence may be "" (undetectable /
+// no robot response that turn, respectively); classification is always set.
+func RecordQualityTurn(language, classification, coherence string) {
+	if language != "" {
+		QualityLiveLanguageCount.WithLabelValues(language).Inc()
+	}
+	if classification != "" {
+		QualityLiveInputClassificationCount.WithLabelValues(classification).Inc()
+	}
+	if coherence != "" {
+		QualityLiveCoherenceCount.WithLabelValues(coherence).Inc()
+		QualityLiveTurnsScored.Inc()
+		QualityLiveActiveScore.Set(qualityCoherenceScore[coherence])
+	}
 }
 
 // RecordHTTPTiming records HTTP timing metrics for a request with the given attributes and timing values in milliseconds.
