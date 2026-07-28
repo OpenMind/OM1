@@ -11,8 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TraceRecord is one LLM interaction, written as a JSONL line and optionally
-// handed to any in-process subscriber (see Tracer.Subscribe).
+// TraceRecord is one LLM interaction, written as a JSONL line and handed to any subscriber.
 type TraceRecord struct {
 	Timestamp  string           `json:"ts"`
 	Generation int              `json:"generation"`
@@ -77,12 +76,7 @@ func (t *Tracer) SetGeneration(generation int) {
 	t.generation = generation
 }
 
-// Subscribe registers an in-process listener for every future TraceRecord and
-// returns the channel it will be delivered on. Intended to be called once at
-// startup (e.g. by internal/qualityscorer) before any tracing happens -- there
-// is no Unsubscribe, since subscribers are expected to live for the process's
-// lifetime. The channel is buffered; a subscriber that falls behind has
-// records dropped for it rather than blocking Gauge() (see Gauge's comment).
+// Subscribe returns a channel receiving every future TraceRecord; buffered and non-blocking, no Unsubscribe.
 func (t *Tracer) Subscribe() <-chan TraceRecord {
 	ch := make(chan TraceRecord, 32)
 	t.mu.Lock()
@@ -125,12 +119,7 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	subs := t.subscribers
 	t.mu.Unlock()
 
-	// Deliver to subscribers outside t.mu: SetGeneration() takes the same lock
-	// and is called on every mode transition (runCortexLoop), and transitions
-	// are processed strictly sequentially (handleModeTransitions). A subscriber
-	// that's fallen behind must never be able to freeze every future mode
-	// transition -- this is the same reasoning that previously moved this
-	// tracer's (now-removed) Zenoh publish outside the lock, twice.
+	// Outside t.mu and non-blocking so a stuck subscriber can't stall SetGeneration's mode transitions.
 	for _, ch := range subs {
 		select {
 		case ch <- rec:

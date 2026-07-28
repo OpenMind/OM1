@@ -1,11 +1,4 @@
-// Package qualityscorer scores conversation quality (spoken language, input
-// sentiment, prompt/response coherence) live as OM1 runs, and serves the
-// results as Prometheus metrics for the Grafana "OM1 Quality Scores"
-// dashboard. It replaces dataAnalysis's scripts/live_quality_scorer.py: where
-// that ran as a separate process fed over a Zenoh topic, this subscribes
-// directly to internal/providers.Tracer's in-process channel (see
-// Tracer.Subscribe), so there is no serialization, no broker, and no second
-// process to run.
+// Package qualityscorer scores conversation quality live as OM1 runs
 package qualityscorer
 
 import (
@@ -24,11 +17,7 @@ import (
 )
 
 const (
-	// defaultModel and defaultBaseURL match plugins/llm/gemini.go's
-	// defaults -- like every other LLM plugin in this repo, Gemini is
-	// reached through OpenMind's own gateway (which does the Gemini-format
-	// translation server-side), not Google's API directly, so requests stay
-	// OpenAI-shaped and classify.go needs no changes.
+	// defaultModel and defaultBaseURL match plugins/llm/gemini.go's defaults (Gemini via OpenMind's own gateway).
 	defaultModel   = "gemini-3.1-flash-lite"
 	defaultBaseURL = "https://api.openmind.com/api/core/gemini"
 	defaultLogPath = "data/live_quality_log.jsonl"
@@ -37,16 +26,14 @@ const (
 	minCharsForLanguage = 8
 )
 
-// Config configures the quality scorer. Populated from
-// config.QualityScorerConfig by StartServer's caller.
+// Config configures the quality scorer, populated from config.QualityScorerConfig.
 type Config struct {
 	Model   string
 	BaseURL string
 	APIKey  string
 }
 
-// logRecord is one JSONL line, matching live_quality_scorer.py's classification
-// log record shape exactly.
+// logRecord is one JSONL line, matching live_quality_scorer.py's classification log record shape.
 type logRecord struct {
 	ScoredAt            string `json:"scored_at"`
 	TraceTS             string `json:"trace_ts"`
@@ -57,11 +44,7 @@ type logRecord struct {
 	Coherence           string `json:"coherence,omitempty"`
 }
 
-// Start subscribes to tracer's trace records and starts one goroutine
-// scoring them as they arrive, until ctx is done. This starts no server of
-// its own -- metrics are recorded via internal/metrics.RecordQualityTurn onto
-// prometheus.DefaultRegisterer, the same registry internal/metrics' existing
-// :9090 server already exposes at /metrics.
+// Start subscribes to tracer's trace records and scores them as they arrive, until ctx is done.
 func Start(ctx context.Context, log *zap.Logger, tracer *providers.Tracer, cfg config.QualityScorerConfig) func() {
 	resolved := Config{
 		Model:   firstNonEmpty(cfg.Model, defaultModel),

@@ -192,9 +192,7 @@ var (
 	})
 )
 
-// qualityCoherenceScore maps a coherence label to the numeric score
-// om1_quality_live_active_score reports, mirroring live_quality_scorer.py's
-// COHERENCE_SCORE.
+// qualityCoherenceScore maps a coherence label to the om1_quality_live_active_score value, mirroring COHERENCE_SCORE.
 var qualityCoherenceScore = map[string]float64{
 	"incoherent": 0.0,
 	"marginal":   0.5,
@@ -225,19 +223,7 @@ func init() {
 	)
 }
 
-// InitQualityLabels pre-registers every known input-classification and
-// coherence label at zero. Without this, a label's very first real increment
-// is invisible to increase()/rate() over short windows (e.g. Grafana's
-// "15m buckets" panels): Prometheus doesn't expose a CounterVec label
-// combination at all until it's first touched, so that first increment has
-// no preceding zero sample to diff against, and increase() over a narrow
-// window can report 0 despite the real change. Touching each known label at
-// startup gives Prometheus a genuine 0 sample before any real event, so the
-// first real occurrence is a normal 0->1 transition like any other.
-//
-// language isn't covered here since detectLang/langName can return any of
-// dozens of codes, not a small fixed set -- and it's never used in a
-// short-window panel on the quality dashboard anyway.
+// InitQualityLabels pre-registers known classification/coherence labels at zero, so their first real increment isn't invisible to increase() over short windows.
 func InitQualityLabels() {
 	for _, label := range []string{"positive", "marginal", "negative", "not_addressed"} {
 		QualityLiveInputClassificationCount.WithLabelValues(label).Add(0)
@@ -247,9 +233,7 @@ func InitQualityLabels() {
 	}
 }
 
-// RecordQualityTurn records the live quality-scorer's classification of one
-// conversation turn. language and coherence may be "" (undetectable /
-// no robot response that turn, respectively); classification is always set.
+// RecordQualityTurn records the live quality-scorer's classification of one conversation turn.
 func RecordQualityTurn(language, classification, coherence string) {
 	if language != "" {
 		QualityLiveLanguageCount.WithLabelValues(language).Inc()

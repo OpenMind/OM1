@@ -110,29 +110,21 @@ type KBSpec struct {
 	MinScore float64 `json:"min_score"`
 }
 
-// TracerConfig enables OM1's LLM interaction tracer, which writes
-// traces/<date>.jsonl and feeds any in-process subscriber (see
-// internal/providers.Tracer.Subscribe).
+// TracerConfig enables OM1's LLM interaction tracer (writes traces/<date>.jsonl, feeds any in-process subscriber).
 type TracerConfig struct {
 	Enabled bool `json:"enabled"`
 
-	// QualityScorer is nested here, not a sibling config, since it depends
-	// entirely on tracing being on -- it subscribes to the Tracer's trace
-	// records, so without tracing on it never receives anything.
+	// QualityScorer is nested here since it depends entirely on tracing being on.
 	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
 }
 
-// QualityScorerConfig describes the optional live conversation-quality scorer
-// (language/sentiment/coherence), scraped as Prometheus metrics.
+// QualityScorerConfig describes the optional live conversation-quality scorer, scraped as Prometheus metrics.
 type QualityScorerConfig struct {
 	Enabled bool   `json:"enabled"`
 	Model   string `json:"model"`
 	BaseURL string `json:"base_url"`
 
-	// APIKey overrides the top-level system api_key for this scorer
-	// specifically. Leave unset to use the system api_key (cmd/main.go
-	// applies that fallback, mirroring how every LLM plugin inherits it via
-	// buildSystemMeta/addMeta in internal/runtime/config.go).
+	// APIKey overrides the top-level system api_key; falls back to it if unset (see cmd/main.go).
 	APIKey string `json:"api_key"`
 }
 
