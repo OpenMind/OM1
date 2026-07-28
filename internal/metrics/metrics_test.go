@@ -40,3 +40,39 @@ func TestRecordKBQueryError(t *testing.T) {
 	require.Equal(t, before+1, testutil.ToFloat64(KBQueries.WithLabelValues("error")),
 		"a failed query increments the error counter")
 }
+
+func TestInitQualityLabels(t *testing.T) {
+	InitQualityLabels()
+
+	require.Equal(t, 0.0, testutil.ToFloat64(QualityLiveInputClassificationCount.WithLabelValues("negative")),
+		"pre-registered at zero -- gives increase() a real prior sample before the label's first real occurrence")
+	require.Equal(t, 0.0, testutil.ToFloat64(QualityLiveCoherenceCount.WithLabelValues("marginal")))
+
+	QualityLiveCoherenceCount.WithLabelValues("marginal").Inc()
+	InitQualityLabels()
+	require.Equal(t, 1.0, testutil.ToFloat64(QualityLiveCoherenceCount.WithLabelValues("marginal")),
+		"calling InitQualityLabels again must not reset an already-incremented label")
+}
+
+func TestRecordQualityTurn(t *testing.T) {
+	beforeLang := testutil.ToFloat64(QualityLiveLanguageCount.WithLabelValues("English"))
+	beforeLabel := testutil.ToFloat64(QualityLiveInputClassificationCount.WithLabelValues("positive"))
+	beforeCoherence := testutil.ToFloat64(QualityLiveCoherenceCount.WithLabelValues("coherent"))
+	beforeTurns := testutil.ToFloat64(QualityLiveTurnsScored)
+
+	RecordQualityTurn("English", "positive", "coherent")
+
+	require.Equal(t, beforeLang+1, testutil.ToFloat64(QualityLiveLanguageCount.WithLabelValues("English")))
+	require.Equal(t, beforeLabel+1, testutil.ToFloat64(QualityLiveInputClassificationCount.WithLabelValues("positive")))
+	require.Equal(t, beforeCoherence+1, testutil.ToFloat64(QualityLiveCoherenceCount.WithLabelValues("coherent")))
+	require.Equal(t, beforeTurns+1, testutil.ToFloat64(QualityLiveTurnsScored),
+		"a coherence label was present, so turns_scored increments")
+	require.InDelta(t, 1.0, testutil.ToFloat64(QualityLiveActiveScore), 1e-9, "coherent maps to score 1.0")
+}
+
+func TestRecordQualityTurnNoResponse(t *testing.T) {
+	beforeTurns := testutil.ToFloat64(QualityLiveTurnsScored)
+	RecordQualityTurn("English", "not_addressed", "")
+	require.Equal(t, beforeTurns, testutil.ToFloat64(QualityLiveTurnsScored),
+		"no coherence label (no robot response that turn), so turns_scored does not increment")
+}
