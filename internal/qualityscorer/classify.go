@@ -11,15 +11,6 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
-// Prompts below are ported verbatim from dataAnalysis's classify_user_inputs.py
-// and classify_prompt_response_coherence.py, so classification behavior matches
-// the Python original exactly. Each trace record is classified one at a time
-// here (the Python version batches multiple utterances per call; this service
-// scores turns as they happen, so batching doesn't apply), using a
-// single-object JSON-schema response instead of Python's index-tagged batch
-// schema -- the prompt text itself, including its "classify every utterance
-// you are given" framing, is unchanged.
-
 const ruleNotAddressed = `- "not_addressed": the utterance is not actually directed at the robot -- ambient background chatter, a visitor talking to someone else nearby, or a stray remark the robot merely overheard. It doesn't call for any reply at all. Judge this from the content alone (is this the kind of thing someone would say to the robot, or just something said near it), not from anything else. Examples:
   "I can smell it."
   "You guys assigned my internet"
@@ -97,10 +88,7 @@ This is incoherent both because it's a generic template reply that ignores the (
 
 The key distinction between "marginal" and "incoherent": marginal means the robot understood the request but chose to redirect away from it; incoherent means the robot's reply doesn't track what was actually said at all. These are raw speech-to-text transcripts, so prompts are often fragmentary, repetitive, or contain filler words ("um", "okay", "yeah") -- judge the substance of the exchange, not the grammar. Classify every pair you are given; do not skip any.`
 
-// classifyInput scores a single utterance's tone, mirroring
-// classify_user_inputs.py's classify_batch (called there with a one-item
-// list, same as here). allowNotAddressed must be true iff the turn got no
-// robot response.
+// classifyInput scores a single utterance's tone, mirroring classify_user_inputs.py's classify_batch.
 func classifyInput(ctx context.Context, cfg Config, prompt string, allowNotAddressed bool) (string, error) {
 	labels := []string{"positive", "marginal", "negative"}
 	if allowNotAddressed {
@@ -110,10 +98,7 @@ func classifyInput(ctx context.Context, cfg Config, prompt string, allowNotAddre
 	return callStructuredLabel(ctx, cfg, buildInputSystemPrompt(allowNotAddressed), userMessage, labels, false)
 }
 
-// classifyCoherence scores a single prompt/response pair's coherence,
-// mirroring classify_prompt_response_coherence.py's classify_batch. Only
-// called when response is non-empty, matching the Python original (blank
-// responses are never sent to the model).
+// classifyCoherence scores a prompt/response pair's coherence, mirroring classify_prompt_response_coherence.py's classify_batch.
 func classifyCoherence(ctx context.Context, cfg Config, prompt, response string) (string, error) {
 	userMessage := fmt.Sprintf("Classify each of these 1 prompt/response pairs:\n\n0. prompt: %q\n   response: %q", prompt, response)
 	labels := []string{"coherent", "marginal", "incoherent"}

@@ -130,12 +130,7 @@ func TestInitLanguageLabels(t *testing.T) {
 		"calling initLanguageLabels again must not reset an already-incremented language")
 }
 
-// TestEndToEnd wires a real Tracer through Start against a fake OpenAI
-// endpoint, calls Gauge() the way runtime.go does on every LLM turn, and
-// confirms a scored metric shows up on the registry -- exercising the exact
-// seam Gauge() -> channel -> scoreOne -> classify -> Prometheus that this
-// whole package exists to provide, without needing a real API key or a live
-// OM1 conversation.
+// TestEndToEnd exercises Gauge() -> channel -> scoreOne -> classify -> Prometheus against a fake OpenAI-compatible endpoint.
 func TestEndToEnd(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -65,9 +65,7 @@ func main() {
 		}
 		qsCfg := *cfg.UseTracer.QualityScorer
 		if qsCfg.APIKey == "" {
-			// Same fallback every other plugin gets via buildSystemMeta/addMeta
-			// (internal/runtime/config.go) -- quality_scorer isn't threaded
-			// through that path, so it's applied explicitly here instead.
+			// Same fallback every LLM plugin gets via buildSystemMeta/addMeta (internal/runtime/config.go).
 			qsCfg.APIKey = cfg.APIKey
 		}
 		stopScorer := qualityscorer.Start(ctx, log, providers.TracerProvider(), qsCfg)

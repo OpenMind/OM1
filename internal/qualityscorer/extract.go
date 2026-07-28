@@ -5,17 +5,10 @@ import (
 	"strings"
 )
 
-// voiceRe extracts the ASR transcript embedded in OM1's constructed LLM
-// prompt via a literal `Voice: "..."` (or `Voice: '...'`) marker. Ported from
-// dataAnalysis's extract_prompt_response_pairs.py VOICE_RE
-// (r'Voice:\s*(["\'])(.*?)\1', re.S); Go's RE2 has no backreferences, so the
-// two quote styles are two alternatives instead of one backreferenced group
-// -- semantically equivalent for this pattern.
+// voiceRe matches OM1's `Voice: "..."` marker; two quote alternatives since Go's RE2 has no backreferences.
 var voiceRe = regexp.MustCompile(`(?s)Voice:\s*(?:"([^"]*)"|'([^']*)')`)
 
-// extractPrompt returns the ASR transcript embedded in llmInput, or "" if no
-// Voice: marker is present. Only the first match is used, matching the
-// Python original (only the latest heard utterance, not full chat history).
+// extractPrompt returns the first Voice: marker's contents from llmInput, or "" if none.
 func extractPrompt(llmInput string) string {
 	loc := voiceRe.FindStringSubmatchIndex(llmInput)
 	if loc == nil {
@@ -30,14 +23,7 @@ func extractPrompt(llmInput string) string {
 	return ""
 }
 
-// extractResponse returns (responseText, responseType) from a trace record's
-// LLMOutput action list, ported from extract_prompt_response_pairs.py's
-// extract_response. Observed action types: {"type": "greeting_conversation",
-// "value": {"response": "..."}} and {"type": "speak", "value": {"action":
-// "..."}} carry spoken replies; other types (robot_action, emotion,
-// face_memory, ...) carry no spoken text and are skipped. An empty response
-// is the correct, intentional signal that the robot said nothing that turn --
-// not a parse failure.
+// extractResponse returns the spoken reply from an LLMOutput action list; empty means the robot said nothing that turn.
 func extractResponse(llmOutput []map[string]any) (response string, responseType string) {
 	for _, item := range llmOutput {
 		value, ok := item["value"].(map[string]any)
