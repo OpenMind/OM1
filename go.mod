@@ -13,6 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
+	github.com/yalue/onnxruntime_go v1.31.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/text v0.37.0
 )

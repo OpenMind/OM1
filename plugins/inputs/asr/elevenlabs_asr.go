@@ -52,6 +52,8 @@ type ElevenLabsASRConfig struct {
 	MicDeviceIndex     int    `json:"microphone_device_id"` // -1 = default
 	Language           string `json:"language"`             // default "auto"
 	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
+
+	vadLatencyConfig
 }
 
 // elevenlabsASRParams carries the vendor inputs needed to build an ElevenLabs asrCommon.
@@ -62,6 +64,8 @@ type elevenlabsASRParams struct {
 	rate               int
 	language           string
 	enableTTSInterrupt bool
+
+	vadLatencyConfig
 }
 
 // ElevenLabsASRSensor streams local microphone audio to ElevenLabs ASR via the shared asrCommon.
@@ -96,6 +100,7 @@ func NewElevenLabsASR(configMap map[string]any) (inputs.Sensor, error) {
 		rate:               cfg.Rate,
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
+		vadLatencyConfig:   cfg.vadLatencyConfig,
 	})
 	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
@@ -146,6 +151,7 @@ func (s *ElevenLabsASRSensor) Stop() {
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
@@ -288,6 +294,7 @@ func resolveElevenLabsASRConfig(p elevenlabsASRParams) asrCommonConfig {
 		LanguageCode:       languageCode,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       elevenlabsParseMessage,
+		vadLatencyConfig:   p.vadLatencyConfig,
 	}
 }
 

@@ -34,6 +34,8 @@ type GoogleASRRTSPConfig struct {
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
+
+	vadLatencyConfig
 }
 
 // GoogleASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
@@ -73,6 +75,7 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		language:             cfg.Language,
 		alternativeLanguages: cfg.AlternativeLanguages,
 		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
+		vadLatencyConfig:     cfg.vadLatencyConfig,
 	})
 	core.log.Info("rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
@@ -120,6 +123,7 @@ func (s *GoogleASRRTSPSensor) Stop() {
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }

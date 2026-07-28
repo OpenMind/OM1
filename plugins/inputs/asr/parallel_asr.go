@@ -53,6 +53,8 @@ type ParallelASRConfig struct {
 	DedupWindowMS      int                         `json:"dedup_window_ms"`      // first-wins suppression window (default 3000)
 	EnableTTSInterrupt bool                        `json:"enable_tts_interrupt"`
 	Providers          []ParallelASRProviderConfig `json:"providers"`
+
+	vadLatencyConfig
 }
 
 // ParallelASRSensor captures audio from source, fans the PCM out, and forwards the first
@@ -114,7 +116,7 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt),
+		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
 	}
@@ -216,6 +218,7 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 
 	metrics.ASRParallelTranscripts.WithLabelValues(provider, "won").Inc()
 	s.log.Info("winner", zap.String("winner", provider), zap.String("text", text))
+	s.vad.recordTranscript(provider, text)
 	s.pushTranscript(text)
 }
 
@@ -273,9 +276,11 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAll fans one PCM chunk out to every provider stream. Each stream packages
-// the audio with its own header, so the shared chunk is only read, never mutated.
+// sendToAll feeds the local VAD tracker (if enabled) and fans one PCM chunk
+// out to every provider stream. Each stream packages the audio with its own
+// header, so the shared chunk is only read, never mutated.
 func (s *ParallelASRSensor) sendToAll(pcm []byte) {
+	s.feedVAD(pcm)
 	for _, st := range s.streams {
 		st.sendChunk(pcm)
 	}
@@ -298,6 +303,7 @@ func (s *ParallelASRSensor) Stop() {
 		providers.PortAudio.Release()
 	}
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
