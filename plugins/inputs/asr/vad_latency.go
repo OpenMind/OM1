@@ -59,6 +59,7 @@ type vadLatencyTracker struct {
 
 	mu         sync.Mutex
 	pendingEnd time.Time // most recent unmatched speech_end, zero if none
+	lastStart  time.Time // most recent speech_start, zero if none yet -- for logging utterance duration
 }
 
 // newVADLatencyTracker builds a tracker from cfg, or returns nil if disabled
@@ -95,13 +96,14 @@ func newVADLatencyTracker(cfg vadLatencyConfig, rate int, log *zap.Logger) *vadL
 	}
 }
 
-// feedAudio runs the VAD over one PCM chunk, recording any detected
-// end-of-speech timestamp for later pairing with a transcript. A new
-// speech_end always replaces any earlier unmatched one: VAD events and
-// accepted transcripts aren't reliably 1:1 (short blips, ambient noise, or
-// pauses can trigger a speech_end that never gets a transcript -- e.g.
-// acceptASRTranscript rejects anything under 3 words), so only the most
-// recent event is ever a plausible match for the *next* transcript.
+// feedAudio runs the VAD over one PCM chunk, logging every detected
+// speech_start/speech_end boundary and recording end-of-speech timestamps
+// for later pairing with a transcript. A new speech_end always replaces any
+// earlier unmatched one: VAD events and accepted transcripts aren't reliably
+// 1:1 (short blips, ambient noise, or pauses can trigger a speech_end that
+// never gets a transcript -- e.g. acceptASRTranscript rejects anything under
+// 3 words), so only the most recent event is ever a plausible match for the
+// *next* transcript.
 func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	if t == nil {
 		return
@@ -112,11 +114,18 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	defer t.mu.Unlock()
 
 	for _, ev := range t.segmenter.Feed(pcm, now) {
-		if ev.Type != vad.EventSpeechEnd {
-			continue
+		switch ev.Type {
+		case vad.EventSpeechStart:
+			t.lastStart = ev.At
+			t.log.Info("vad: speech started", zap.Time("at", ev.At))
+		case vad.EventSpeechEnd:
+			t.pendingEnd = ev.At
+			fields := []zap.Field{zap.Time("at", ev.At)}
+			if !t.lastStart.IsZero() {
+				fields = append(fields, zap.Duration("utterance_duration", ev.At.Sub(t.lastStart)))
+			}
+			t.log.Info("vad: speech ended", fields...)
 		}
-		t.pendingEnd = ev.At
-		t.log.Debug("vad detected end of speech", zap.Time("at", ev.At))
 	}
 }
 
