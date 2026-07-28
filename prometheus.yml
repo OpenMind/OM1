@@ -5,12 +5,3 @@ scrape_configs:
   - job_name: 'om1'
     static_configs:
       - targets: ['host.docker.internal:9090']
-
-  - job_name: 'om1_quality_historical'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['host.docker.internal:9200']
-
-  # Live quality-scorer metrics (om1_quality_live_*) are now served by OM1's
-  # own :9090 process (internal/qualityscorer), scraped by the 'om1' job
-  # above -- no separate job/port needed.
