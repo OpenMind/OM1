@@ -275,18 +275,18 @@ func (s *ParallelASRSensor) connectStreams() {
 
 // sendToAll fans one PCM chunk out to every provider stream, stamping capture
 // time as now. Callers with the true capture instant should use sendToAllAt.
-func (s *ParallelASRSensor) sendToAll(pcm []byte) {
-	s.sendToAllAt(pcm, time.Now())
-}
+// func (s *ParallelASRSensor) sendToAll(pcm []byte) {
+// 	s.sendToAllAt(pcm, time.Now())
+// }
 
 // sendToAllAt fans one PCM chunk (captured at the given time) out to every
 // provider stream. Each stream packages the audio with its own header, so the
 // shared chunk is only read, never mutated.
-func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
-	for _, st := range s.streams {
-		st.sendChunkAt(pcm, capture)
-	}
-}
+// func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
+// 	for _, st := range s.streams {
+// 		st.sendChunkAt(pcm, capture)
+// 	}
+// }
 
 // Stop signals capture to stop, waits for it to finish, and cleans up resources.
 func (s *ParallelASRSensor) Stop() {
@@ -396,7 +396,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			s.log.Warn("read error", zap.Error(err))
 		}
 		// Stamp capture time right after the buffer is read.
-		tCapture := time.Now()
+		//tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -407,7 +407,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendToAllAt(pcm, tCapture)
+		// s.sendToAllAt(pcm, tCapture)
 	}
 }
 
@@ -479,7 +479,7 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 			return fmt.Errorf("read pcm: %w", err)
 		}
 		// Stamp capture time when the chunk is read from the stream.
-		tCapture := time.Now()
+		//tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -487,6 +487,6 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		s.sendToAllAt(pcm, tCapture)
+		// s.sendToAllAt(pcm, tCapture)
 	}
 }
