@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultRTSPURL     = "rtsp://localhost:8554/live"
+	defaultRTSPURL     = "rtsp://localhost:8556/raw"
 	defaultRTSPWidth   = 480
 	defaultRTSPHeight  = 640
 	rtspReconnectDelay = 2 * time.Second
@@ -124,11 +124,14 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return false
 		}
-		// Capture-receive time. JPEG-over-image2pipe carries no per-frame RTP
-		// PTS, so true capture-time preservation for video requires a
-		// PTS-preserving transport (the GStreamer consumer, or ffmpeg timestamp
-		// passthrough into a container). Tracked as a follow-up; the audio path
-		// (google_asr*) already stamps capture time at ingest.
+		// Receive-time stamp (by design). This is when OM1 got the decoded
+		// frame, not the original capture instant — JPEG-over-image2pipe carries
+		// no per-frame RTP PTS. That's fine here: OM1 fuses VLM output as coarse
+		// "recent context", so sub-second pipeline jitter doesn't matter. Any
+		// timing-critical, frame-accurate A/V work lives in the video-processor
+		// (capture-stamped at the source). If OM1 ever needs true capture time,
+		// switch this consumer to an RTSP client that exposes RTP/RTCP timing
+		// (e.g. gortsplib) rather than the ffmpeg->JPEG pipe.
 		v.send(Frame{Timestamp: time.Now(), JPEG: frame})
 		return true
 	})
