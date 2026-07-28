@@ -59,11 +59,18 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	if cfg.QualityScorer != nil && cfg.QualityScorer.Enabled {
-		if !cfg.UseTracer {
-			log.Warn("quality_scorer.enabled is true but use_tracer is false -- it will never receive any trace records")
+	if cfg.UseTracer != nil && cfg.UseTracer.QualityScorer != nil && cfg.UseTracer.QualityScorer.Enabled {
+		if !cfg.UseTracer.Enabled {
+			log.Warn("use_tracer.quality_scorer.enabled is true but use_tracer.enabled is false -- it will never receive any trace records")
 		}
-		stopScorer := qualityscorer.StartServer(ctx, log, providers.TracerProvider(), *cfg.QualityScorer)
+		qsCfg := *cfg.UseTracer.QualityScorer
+		if qsCfg.APIKey == "" {
+			// Same fallback every other plugin gets via buildSystemMeta/addMeta
+			// (internal/runtime/config.go) -- quality_scorer isn't threaded
+			// through that path, so it's applied explicitly here instead.
+			qsCfg.APIKey = cfg.APIKey
+		}
+		stopScorer := qualityscorer.Start(ctx, log, providers.TracerProvider(), qsCfg)
 		defer stopScorer()
 	}
 

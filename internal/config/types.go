@@ -25,9 +25,7 @@ type SystemConfig struct {
 
 	UseSim bool `json:"use_sim"`
 
-	UseTracer bool `json:"use_tracer"`
-
-	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
+	UseTracer *TracerConfig `json:"use_tracer"`
 
 	DefaultMode       string                `json:"default_mode"`
 	AllowManualSwitch bool                  `json:"allow_manual_switching"`
@@ -112,15 +110,30 @@ type KBSpec struct {
 	MinScore float64 `json:"min_score"`
 }
 
+// TracerConfig enables OM1's LLM interaction tracer, which writes
+// traces/<date>.jsonl and feeds any in-process subscriber (see
+// internal/providers.Tracer.Subscribe).
+type TracerConfig struct {
+	Enabled bool `json:"enabled"`
+
+	// QualityScorer is nested here, not a sibling config, since it depends
+	// entirely on tracing being on -- it subscribes to the Tracer's trace
+	// records, so without tracing on it never receives anything.
+	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
+}
+
 // QualityScorerConfig describes the optional live conversation-quality scorer
-// (language/sentiment/coherence), scraped as Prometheus metrics. Depends on
-// UseTracer being enabled on the same config -- it subscribes to the Tracer's
-// trace records, so without tracing on it never receives anything.
+// (language/sentiment/coherence), scraped as Prometheus metrics.
 type QualityScorerConfig struct {
 	Enabled bool   `json:"enabled"`
 	Model   string `json:"model"`
 	BaseURL string `json:"base_url"`
-	APIKey  string `json:"api_key"`
+
+	// APIKey overrides the top-level system api_key for this scorer
+	// specifically. Leave unset to use the system api_key (cmd/main.go
+	// applies that fallback, mirroring how every LLM plugin inherits it via
+	// buildSystemMeta/addMeta in internal/runtime/config.go).
+	APIKey string `json:"api_key"`
 }
 
 // MemorySpec describes the optional long-term memory system.

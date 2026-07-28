@@ -88,7 +88,7 @@ func TestCollectSchemas(t *testing.T) {
 
 func TestToRuntimeConfig(t *testing.T) {
 	m := &modeSetup{
-		sys: &config.SystemConfig{Version: "v1", Name: "robot", SystemGovernance: "rules", UseTracer: true},
+		sys: &config.SystemConfig{Version: "v1", Name: "robot", SystemGovernance: "rules", UseTracer: &config.TracerConfig{Enabled: true}},
 		cfg: config.ModeConfig{SystemPromptBase: "mode prompt", ActionExecMode: "sequential"},
 	}
 	rc := m.toRuntimeConfig()

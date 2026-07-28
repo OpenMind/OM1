@@ -6,6 +6,8 @@ import (
 
 	"github.com/abadojack/whatlanggo"
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/openmind/om1/internal/metrics"
 )
 
 // Best-effort language detection for short, often fragmentary trace text
@@ -71,6 +73,25 @@ var langNames = map[string]string{
 	"af": "Afrikaans", "ta": "Tamil", "ne": "Nepali", "sw": "Swahili",
 	"tl": "Tagalog", "cy": "Welsh", "ca": "Catalan", "sq": "Albanian",
 	"sl": "Slovenian", "lt": "Lithuanian",
+}
+
+// initLanguageLabels pre-registers every named language in langNames at zero
+// on om1_quality_live_language_count, for the same reason StartServer calls
+// metrics.InitQualityLabels() for classification/coherence: a label's very
+// first real occurrence is otherwise invisible to increase()/rate() over
+// short windows, since there's no prior sample for it to diff against (see
+// metrics.InitQualityLabels's doc comment for the full explanation).
+//
+// This only covers the named subset, not every code detectLang could ever
+// return -- an unmapped code (langName's raw-passthrough case) still hits
+// that cold-start blind spot once, the first time it's ever seen, same as
+// before this fix. That's an acceptable residual gap: this whole subsystem
+// is already best-effort, and langNames covers every language anyone is
+// realistically going to speak to the robot.
+func initLanguageLabels() {
+	for _, name := range langNames {
+		metrics.QualityLiveLanguageCount.WithLabelValues(name).Add(0)
+	}
 }
 
 func isASCII(s string) bool {
