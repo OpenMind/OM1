@@ -109,6 +109,39 @@ func TestLoadFullConfig(t *testing.T) {
 	require.Contains(t, sc.Modes, "tester", "Load runs normalize")
 }
 
+func TestLoadUseTracerBothForms(t *testing.T) {
+	dir := t.TempDir()
+
+	boolPath := filepath.Join(dir, "bool.json5")
+	require.NoError(t, os.WriteFile(boolPath, []byte(`{
+		version: "v1.1.0",
+		name: "tester",
+		use_tracer: true,
+	}`), 0o600))
+	sc, err := Load(boolPath)
+	require.NoError(t, err)
+	require.NotNil(t, sc.UseTracer)
+	require.True(t, sc.UseTracer.Enabled)
+	require.Nil(t, sc.UseTracer.QualityScorer)
+
+	objPath := filepath.Join(dir, "obj.json5")
+	require.NoError(t, os.WriteFile(objPath, []byte(`{
+		version: "v1.1.0",
+		name: "tester",
+		use_tracer: {
+			enabled: true,
+			quality_scorer: { enabled: true, model: "gemini-3.1-flash-lite" },
+		},
+	}`), 0o600))
+	sc, err = Load(objPath)
+	require.NoError(t, err)
+	require.NotNil(t, sc.UseTracer)
+	require.True(t, sc.UseTracer.Enabled)
+	require.NotNil(t, sc.UseTracer.QualityScorer)
+	require.True(t, sc.UseTracer.QualityScorer.Enabled)
+	require.Equal(t, "gemini-3.1-flash-lite", sc.UseTracer.QualityScorer.Model)
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load("/no/such/file.json5")
 	require.Error(t, err)
