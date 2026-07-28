@@ -39,27 +39,9 @@ func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 	}
 }
 
-func TestVADLatencyTrackerRecordTranscriptPairsFIFOAndWritesJSONL(t *testing.T) {
-	dir := t.TempDir()
-	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")
-
-	tr := &vadLatencyTracker{
-		log:        zap.NewNop(),
-		outputPath: outPath,
-	}
-
-	t0 := time.Now().Add(-2 * time.Second)
-	t1 := t0.Add(500 * time.Millisecond)
-	tr.pending = []time.Time{t0, t1}
-
-	tr.recordTranscript("google", "first utterance")
-	tr.recordTranscript("elevenlabs", "second utterance")
-
-	if len(tr.pending) != 0 {
-		t.Fatalf("expected pending queue drained, got %d remaining", len(tr.pending))
-	}
-
-	f, err := os.Open(outPath)
+func readVADLatencyRecords(t *testing.T, path string) []vadLatencyRecord {
+	t.Helper()
+	f, err := os.Open(path)
 	if err != nil {
 		t.Fatalf("open output: %v", err)
 	}
@@ -74,24 +56,83 @@ func TestVADLatencyTrackerRecordTranscriptPairsFIFOAndWritesJSONL(t *testing.T) 
 		}
 		recs = append(recs, rec)
 	}
-	if len(recs) != 2 {
-		t.Fatalf("expected 2 records, got %d", len(recs))
+	return recs
+}
+
+func TestVADLatencyTrackerRecordTranscriptPairsAndWritesJSONL(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")
+
+	tr := &vadLatencyTracker{
+		log:        zap.NewNop(),
+		outputPath: outPath,
 	}
 
+	vadEnd := time.Now().Add(-2 * time.Second)
+	tr.pendingEnd = vadEnd
+	tr.recordTranscript("google", "first utterance")
+
+	if !tr.pendingEnd.IsZero() {
+		t.Fatalf("expected pendingEnd cleared after being consumed, got %v", tr.pendingEnd)
+	}
+
+	recs := readVADLatencyRecords(t, outPath)
+	if len(recs) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(recs))
+	}
 	if recs[0].Provider != "google" || recs[0].Transcript != "first utterance" {
-		t.Errorf("unexpected first record: %+v", recs[0])
+		t.Errorf("unexpected record: %+v", recs[0])
 	}
 	if recs[0].LatencyMS < 1900 || recs[0].LatencyMS > 2200 {
-		t.Errorf("expected first latency near 2000ms, got %v", recs[0].LatencyMS)
+		t.Errorf("expected latency near 2000ms, got %v", recs[0].LatencyMS)
 	}
-	if recs[1].Provider != "elevenlabs" || recs[1].Transcript != "second utterance" {
-		t.Errorf("unexpected second record: %+v", recs[1])
+}
+
+// TestVADLatencyTrackerDiscardsStaleUnmatchedEvent covers the bug where a
+// VAD speech_end that never got a matching transcript (e.g. a short blip
+// acceptASRTranscript rejected) would sit in a FIFO queue and later pair
+// with a much later, unrelated transcript, producing a nonsensical latency.
+// A newer speech_end must fully replace the stale one, not queue behind it.
+func TestVADLatencyTrackerDiscardsStaleUnmatchedEvent(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")
+
+	tr := &vadLatencyTracker{
+		log:        zap.NewNop(),
+		outputPath: outPath,
 	}
-	if recs[1].LatencyMS <= recs[0].LatencyMS-2100 || recs[1].LatencyMS >= recs[0].LatencyMS {
-		// second utterance's VAD-end (t1) is later than the first's (t0), and
-		// both transcripts are recorded at roughly "now", so its latency
-		// must be smaller than the first's by roughly 500ms.
-		t.Errorf("expected second latency to be ~500ms less than first: first=%v second=%v", recs[0].LatencyMS, recs[1].LatencyMS)
+
+	// Simulates what feedAudio does on each new speech_end: unconditionally
+	// overwrite pendingEnd, exactly as if a stale event were followed by a
+	// real one before any transcript consumed the stale one.
+	tr.pendingEnd = time.Now().Add(-58 * time.Second) // e.g. a noise blip ASR never transcribed
+	tr.pendingEnd = time.Now().Add(-3 * time.Second)  // the real end-of-speech
+
+	tr.recordTranscript("google", "what are you doing this afternoon")
+
+	recs := readVADLatencyRecords(t, outPath)
+	if len(recs) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(recs))
+	}
+	if recs[0].LatencyMS < 2900 || recs[0].LatencyMS > 3200 {
+		t.Errorf("expected latency near 3000ms (paired with the recent event, not the 58s-old stale one), got %v", recs[0].LatencyMS)
+	}
+}
+
+func TestVADLatencyTrackerDiscardsImplausiblyOldPairing(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")
+
+	tr := &vadLatencyTracker{
+		log:        zap.NewNop(),
+		outputPath: outPath,
+	}
+
+	tr.pendingEnd = time.Now().Add(-maxSanePendingAge - time.Second)
+	tr.recordTranscript("google", "should be discarded as implausible")
+
+	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
+		t.Fatalf("expected no output file for an implausibly old pairing, stat err=%v", err)
 	}
 }
 

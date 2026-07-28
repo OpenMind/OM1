@@ -16,6 +16,13 @@ import (
 const (
 	defaultVADModelPath        = "models/silero_vad_v5.onnx"
 	defaultVADLatencyOutputDir = "data/vad_asr_latency.jsonl"
+
+	// maxSanePendingAge bounds how long a VAD speech_end event stays eligible
+	// to be paired with a transcript. Guards against a stale event (e.g. a
+	// noise blip whose "transcript" never arrived because it was too short
+	// to be accepted) silently pairing with a much later, unrelated
+	// transcript and producing a nonsensical latency.
+	maxSanePendingAge = 20 * time.Second
 )
 
 // vadLatencyConfig is embedded in every ASR sensor config to optionally
@@ -50,8 +57,8 @@ type vadLatencyTracker struct {
 	segmenter  *vad.Segmenter
 	outputPath string
 
-	mu      sync.Mutex
-	pending []time.Time // FIFO of unmatched speech_end timestamps
+	mu         sync.Mutex
+	pendingEnd time.Time // most recent unmatched speech_end, zero if none
 }
 
 // newVADLatencyTracker builds a tracker from cfg, or returns nil if disabled
@@ -89,7 +96,12 @@ func newVADLatencyTracker(cfg vadLatencyConfig, rate int, log *zap.Logger) *vadL
 }
 
 // feedAudio runs the VAD over one PCM chunk, recording any detected
-// end-of-speech timestamp for later pairing with a transcript.
+// end-of-speech timestamp for later pairing with a transcript. A new
+// speech_end always replaces any earlier unmatched one: VAD events and
+// accepted transcripts aren't reliably 1:1 (short blips, ambient noise, or
+// pauses can trigger a speech_end that never gets a transcript -- e.g.
+// acceptASRTranscript rejects anything under 3 words), so only the most
+// recent event is ever a plausible match for the *next* transcript.
 func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	if t == nil {
 		return
@@ -103,15 +115,16 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 		if ev.Type != vad.EventSpeechEnd {
 			continue
 		}
-		t.pending = append(t.pending, ev.At)
+		t.pendingEnd = ev.At
 		t.log.Debug("vad detected end of speech", zap.Time("at", ev.At))
 	}
 }
 
-// recordTranscript pairs an accepted transcript with the oldest unmatched
-// VAD end-of-speech event and appends the resulting latency to the output
-// file. Transcripts with no pending VAD event (e.g. arriving before the
-// feature was enabled) are ignored.
+// recordTranscript pairs an accepted transcript with the most recent
+// unmatched VAD end-of-speech event and appends the resulting latency to the
+// output file. Transcripts with no pending VAD event (e.g. arriving before
+// the feature was enabled) are ignored, as are pairings old enough to be
+// obviously stale rather than a real ASR latency.
 func (t *vadLatencyTracker) recordTranscript(provider, text string) {
 	if t == nil {
 		return
@@ -119,15 +132,24 @@ func (t *vadLatencyTracker) recordTranscript(provider, text string) {
 	now := time.Now()
 
 	t.mu.Lock()
-	if len(t.pending) == 0 {
-		t.mu.Unlock()
-		return
-	}
-	vadEnd := t.pending[0]
-	t.pending = t.pending[1:]
+	vadEnd := t.pendingEnd
+	t.pendingEnd = time.Time{}
 	t.mu.Unlock()
 
+	if vadEnd.IsZero() {
+		return
+	}
+
 	latency := now.Sub(vadEnd)
+	if latency < 0 || latency > maxSanePendingAge {
+		t.log.Warn("discarding implausible vad-asr latency pairing",
+			zap.Duration("latency", latency),
+			zap.String("provider", provider),
+			zap.String("transcript", truncateForLog(text, 60)),
+		)
+		return
+	}
+
 	rec := vadLatencyRecord{
 		UtteranceEndedAt: vadEnd.Format(time.RFC3339Nano),
 		TranscriptAt:     now.Format(time.RFC3339Nano),
