@@ -13,6 +13,7 @@
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
     * [Inputs](developing/4_inputs.md)
+    * [Video Processor Integration](developing/video_processor_integration.md)
     * [LLMs](developing/5_llms.md)
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
