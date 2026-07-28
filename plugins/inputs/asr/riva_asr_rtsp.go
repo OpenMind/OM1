@@ -46,7 +46,7 @@ func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.RTSPURL == "" {
-		cfg.RTSPURL = "rtsp://localhost:8554/audio"
+		cfg.RTSPURL = "rtsp://localhost:8555/live"
 	}
 	if cfg.Rate == 0 {
 		cfg.Rate = 16000

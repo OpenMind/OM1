@@ -49,7 +49,7 @@ func NewElevenLabsASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		return nil, fmt.Errorf("ElevenLabsASRRTSPInput: api_key required")
 	}
 	if cfg.RTSPURL == "" {
-		cfg.RTSPURL = "rtsp://localhost:8554/audio"
+		cfg.RTSPURL = "rtsp://localhost:8555/live"
 	}
 	if cfg.Rate == 0 {
 		cfg.Rate = 16000

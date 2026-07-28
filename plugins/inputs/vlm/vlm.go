@@ -25,7 +25,9 @@ const (
 	vlmDescriptor  = "Vision"
 	vlmMaxMessages = 10
 	defaultFPS     = 10
-	defaultRTSPURL = "rtsp://localhost:8554/top_camera_raw"
+	// The GStreamer video-processor's raw (pre-CV, no overlays/blur) camera view
+	// — the clean scene for VLM description. Muxed A+V /live is on :8555.
+	defaultRTSPURL = "rtsp://localhost:8556/raw"
 )
 
 type providerDefaults struct {

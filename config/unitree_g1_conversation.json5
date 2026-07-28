@@ -95,12 +95,13 @@ You should prioritize safe, comfortable, and positive human interaction.",
           },
         },
         {
-          // Default RTSP source unchanged (legacy mediamtx mountpoint). For the
-          // GStreamer path set VLM_RTSP_URL=rtsp://localhost:8555/live (same
-          // muxed session; the video track is selected).
+          // VLM consumes the video-processor's RAW (pre-CV, no overlays/blur)
+          // camera view directly — the clean scene gives the best descriptions.
+          // Override with VLM_RTSP_URL (e.g. rtsp://localhost:8555/live for the
+          // processed/blurred view).
           type: "VLMGeminiRTSP",
           config: {
-            rtsp_url: "${VLM_RTSP_URL:-rtsp://localhost:8554/top_camera_raw}",
+            rtsp_url: "${VLM_RTSP_URL:-rtsp://localhost:8556/raw}",
           },
         }
       ],
