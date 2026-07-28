@@ -16,16 +16,21 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
 const (
-	defaultModel   = "gpt-5.4-nano"
-	defaultBaseURL = "https://api.openai.com/v1"
+	// defaultModel and defaultBaseURL match plugins/llm/gemini.go's
+	// defaults -- like every other LLM plugin in this repo, Gemini is
+	// reached through OpenMind's own gateway (which does the Gemini-format
+	// translation server-side), not Google's API directly, so requests stay
+	// OpenAI-shaped and classify.go needs no changes.
+	defaultModel   = "gemini-3.1-flash-lite"
+	defaultBaseURL = "https://api.openmind.com/api/core/gemini"
 	defaultLogPath = "data/live_quality_log.jsonl"
 
 	// minCharsForLanguage matches live_quality_scorer.py's MIN_CHARS_FOR_LANGUAGE.
@@ -52,12 +57,12 @@ type logRecord struct {
 	Coherence           string `json:"coherence,omitempty"`
 }
 
-// StartServer subscribes to tracer's trace records and starts one goroutine
-// scoring them as they arrive, until ctx is done. Metrics are registered on
-// prometheus.DefaultRegisterer -- the same registry internal/metrics'
-// existing :9090 server already exposes at /metrics, so no new HTTP server
-// or port is needed here.
-func StartServer(ctx context.Context, log *zap.Logger, tracer *providers.Tracer, cfg config.QualityScorerConfig) func() {
+// Start subscribes to tracer's trace records and starts one goroutine
+// scoring them as they arrive, until ctx is done. This starts no server of
+// its own -- metrics are recorded via internal/metrics.RecordQualityTurn onto
+// prometheus.DefaultRegisterer, the same registry internal/metrics' existing
+// :9090 server already exposes at /metrics.
+func Start(ctx context.Context, log *zap.Logger, tracer *providers.Tracer, cfg config.QualityScorerConfig) func() {
 	resolved := Config{
 		Model:   firstNonEmpty(cfg.Model, defaultModel),
 		BaseURL: firstNonEmpty(cfg.BaseURL, defaultBaseURL),
@@ -68,8 +73,8 @@ func StartServer(ctx context.Context, log *zap.Logger, tracer *providers.Tracer,
 		return func() {}
 	}
 
-	collector := newLiveCollector()
-	prometheus.MustRegister(collector)
+	metrics.InitQualityLabels()
+	initLanguageLabels()
 
 	records := tracer.Subscribe()
 	log.Info("qualityscorer: started, scoring live trace records",
@@ -86,18 +91,17 @@ func StartServer(ctx context.Context, log *zap.Logger, tracer *providers.Tracer,
 				if !ok {
 					return
 				}
-				scoreOne(ctx, log, resolved, collector, rec)
+				scoreOne(ctx, log, resolved, rec)
 			}
 		}
 	}()
 
 	return func() {
 		<-done
-		prometheus.Unregister(collector)
 	}
 }
 
-func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, collector *liveCollector, rec providers.TraceRecord) {
+func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, rec providers.TraceRecord) {
 	prompt := extractPrompt(rec.LLMInput)
 	if prompt == "" {
 		return
@@ -130,12 +134,7 @@ func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, collector *liveC
 	}
 
 	scoredAt := time.Now().UTC()
-	collector.record(scoreEvent{
-		at:             scoredAt,
-		language:       language,
-		classification: label,
-		coherence:      coherence,
-	})
+	metrics.RecordQualityTurn(language, label, coherence)
 
 	if err := appendJSONL(defaultLogPath, logRecord{
 		ScoredAt:            scoredAt.Format(time.RFC3339Nano),

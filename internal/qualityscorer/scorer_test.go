@@ -12,10 +12,12 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -116,74 +118,19 @@ func TestLangName(t *testing.T) {
 	}
 }
 
-func TestLiveCollectorMetrics(t *testing.T) {
-	c := newLiveCollector()
-	now := time.Now()
-	c.record(scoreEvent{at: now, language: "English", classification: "positive", coherence: "coherent"})
-	c.record(scoreEvent{at: now, language: "English", classification: "negative", coherence: ""})
-	c.record(scoreEvent{at: now.Add(-2 * time.Hour), language: "Spanish", classification: "positive", coherence: "marginal"})
+func TestInitLanguageLabels(t *testing.T) {
+	initLanguageLabels()
 
-	reg := prometheus.NewRegistry()
-	if err := reg.Register(c); err != nil {
-		t.Fatalf("register: %v", err)
-	}
-	families, err := reg.Gather()
-	if err != nil {
-		t.Fatalf("gather: %v", err)
-	}
+	require.Equal(t, 0.0, testutil.ToFloat64(metrics.QualityLiveLanguageCount.WithLabelValues("Spanish")),
+		"pre-registered at zero -- gives increase() a real prior sample before the language's first real occurrence")
 
-	byName := map[string]*dto.MetricFamily{}
-	for _, f := range families {
-		byName[f.GetName()] = f
-	}
-
-	langFamily, ok := byName["om1_quality_live_language_count"]
-	if !ok {
-		t.Fatal("missing om1_quality_live_language_count")
-	}
-	var englishAllTime float64
-	for _, m := range langFamily.GetMetric() {
-		for _, l := range m.GetLabel() {
-			if l.GetName() == "language" && l.GetValue() == "English" {
-				englishAllTime = m.GetGauge().GetValue()
-			}
-		}
-	}
-	if englishAllTime != 2 {
-		t.Errorf("English all-time count = %v, want 2", englishAllTime)
-	}
-
-	// The 2-hour-old Spanish event must not appear in the trailing-1h metric.
-	recentFamily, ok := byName["om1_quality_live_language_count_last_1h"]
-	if !ok {
-		t.Fatal("missing om1_quality_live_language_count_last_1h")
-	}
-	for _, m := range recentFamily.GetMetric() {
-		for _, l := range m.GetLabel() {
-			if l.GetName() == "language" && l.GetValue() == "Spanish" {
-				t.Errorf("Spanish (2h old) should be pruned from the last-1h window, got %v", m.GetGauge().GetValue())
-			}
-		}
-	}
-
-	turnsFamily, ok := byName["om1_quality_live_turns_scored"]
-	if !ok {
-		t.Fatal("missing om1_quality_live_turns_scored")
-	}
-	if got := turnsFamily.GetMetric()[0].GetCounter().GetValue(); got != 2 {
-		t.Errorf("turns_scored = %v, want 2 (only records with a coherence label count)", got)
-	}
-
-	activeFamily, ok := byName["om1_quality_live_active_score"]
-	if !ok {
-		t.Fatal("missing om1_quality_live_active_score")
-	}
-	if got := activeFamily.GetMetric()[0].GetGauge().GetValue(); got != 0.5 {
-		t.Errorf("active_score = %v, want 0.5 (last recorded coherence label was marginal)", got)
-	}
+	metrics.QualityLiveLanguageCount.WithLabelValues("Spanish").Inc()
+	initLanguageLabels()
+	require.Equal(t, 1.0, testutil.ToFloat64(metrics.QualityLiveLanguageCount.WithLabelValues("Spanish")),
+		"calling initLanguageLabels again must not reset an already-incremented language")
 }
 
-// TestEndToEnd wires a real Tracer through StartServer against a fake OpenAI
+// TestEndToEnd wires a real Tracer through Start against a fake OpenAI
 // endpoint, calls Gauge() the way runtime.go does on every LLM turn, and
 // confirms a scored metric shows up on the registry -- exercising the exact
 // seam Gauge() -> channel -> scoreOne -> classify -> Prometheus that this
@@ -228,7 +175,7 @@ func TestEndToEnd(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	stop := StartServer(ctx, zap.NewNop(), tracer, config.QualityScorerConfig{
+	stop := Start(ctx, zap.NewNop(), tracer, config.QualityScorerConfig{
 		Enabled: true,
 		BaseURL: server.URL,
 		APIKey:  "test-key",

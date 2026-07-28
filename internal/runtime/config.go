@@ -123,7 +123,7 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 		KnowledgeBase:    m.sys.KnowledgeBase,
 		ActionExecMode:   m.cfg.ActionExecMode,
 		ActionDeps:       m.cfg.ActionDeps,
-		UseTracer:        m.sys.UseTracer,
+		UseTracer:        m.sys.UseTracer != nil && m.sys.UseTracer.Enabled,
 	}
 	if rc.Hertz == 0 {
 		rc.Hertz = 1.0
