@@ -9,9 +9,7 @@ import (
 	"github.com/openmind/om1/internal/tracer/qualityscore"
 )
 
-// startQualityScore starts scoring this tracer's records if enabled in cfg. It derives its own
-// cancellable context from ctx, so stopQualityScore can shut it down on its own -- independent of
-// whether the caller's ctx has been cancelled yet.
+// Start the quality scorer if enabled in cfg, using a context that can be cancelled on shutdown.
 func (t *Tracer) startQualityScore(ctx context.Context, cfg *config.QualityScorerConfig, systemAPIKey string, log *zap.Logger) {
 	if cfg == nil || !cfg.Enabled {
 		return

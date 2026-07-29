@@ -205,8 +205,6 @@ func TestEndToEnd(t *testing.T) {
 		}
 	}
 
-	// scoreOne records the metric before writing the classification log, so wait for the log
-	// write to land too rather than asserting on it immediately.
 	deadline = time.After(2 * time.Second)
 	var (
 		logBytes []byte
