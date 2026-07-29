@@ -9,7 +9,22 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/providers/tts"
 )
+
+// resetTTSState clears the package-level tts.Speaking/tts.Interrupt atomics
+// before and after a test, since checkInterrupt reads/writes real global
+// state shared across the test binary.
+func resetTTSState(t *testing.T) {
+	t.Helper()
+	tts.Speaking.Store(false)
+	tts.Interrupt.Store(false)
+	t.Cleanup(func() {
+		tts.Speaking.Store(false)
+		tts.Interrupt.Store(false)
+	})
+}
 
 func TestVADLatencyTrackerNilIsSafe(t *testing.T) {
 	var tr *vadLatencyTracker
@@ -19,7 +34,7 @@ func TestVADLatencyTrackerNilIsSafe(t *testing.T) {
 }
 
 func TestNewVADLatencyTrackerDisabledReturnsNil(t *testing.T) {
-	tr := newVADLatencyTracker(vadLatencyConfig{EnableVADLatency: false}, 16000, zap.NewNop())
+	tr := newVADLatencyTracker(vadLatencyConfig{EnableVADLatency: false}, false, 16000, zap.NewNop())
 	if tr != nil {
 		t.Fatalf("expected nil tracker when disabled, got %+v", tr)
 	}
@@ -33,7 +48,21 @@ func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 		EnableVADLatency: true,
 		VADModelPath:     "/nonexistent/model.onnx",
 		VADLibraryPath:   "/nonexistent/libonnxruntime.so",
-	}, 16000, zap.NewNop())
+	}, false, 16000, zap.NewNop())
+	if tr != nil {
+		t.Fatalf("expected nil tracker when the onnxruntime library is unavailable, got %+v", tr)
+	}
+}
+
+func TestNewVADLatencyTrackerInterruptOnlyAlsoAttemptsLoad(t *testing.T) {
+	// EnableVADLatency is off, but enableTTSInterrupt alone must still trigger
+	// a load attempt (and degrade gracefully, same as above) rather than
+	// short-circuiting to nil the way the fully-disabled case does.
+	tr := newVADLatencyTracker(vadLatencyConfig{
+		EnableVADLatency: false,
+		VADModelPath:     "/nonexistent/model.onnx",
+		VADLibraryPath:   "/nonexistent/libonnxruntime.so",
+	}, true, 16000, zap.NewNop())
 	if tr != nil {
 		t.Fatalf("expected nil tracker when the onnxruntime library is unavailable, got %+v", tr)
 	}
@@ -148,5 +177,118 @@ func TestVADLatencyTrackerRecordTranscriptNoPendingIsNoop(t *testing.T) {
 
 	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
 		t.Fatalf("expected no output file to be created, stat err=%v", err)
+	}
+}
+
+func TestCheckInterruptFiresAfterConfirmDelayWhileTTSSpeaking(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	now := time.Now()
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+		speechActive:          true,
+		candidateStart:        now.Add(-200 * time.Millisecond),
+	}
+
+	tr.checkInterrupt(now)
+
+	if !tr.confirmed {
+		t.Error("expected candidate to be marked confirmed")
+	}
+	if !tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to have fired")
+	}
+}
+
+func TestCheckInterruptIgnoresBlipShorterThanConfirmDelay(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	now := time.Now()
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+		speechActive:          true,
+		candidateStart:        now.Add(-50 * time.Millisecond), // shorter than the 150ms confirm delay
+	}
+
+	tr.checkInterrupt(now)
+
+	if tr.confirmed {
+		t.Error("expected a sub-confirm-delay blip to not be confirmed yet")
+	}
+	if tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to not have fired for a blip")
+	}
+}
+
+func TestCheckInterruptSkipsRequestWhenTTSNotSpeaking(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(false)
+
+	now := time.Now()
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+		speechActive:          true,
+		candidateStart:        now.Add(-200 * time.Millisecond),
+	}
+
+	tr.checkInterrupt(now)
+
+	if !tr.confirmed {
+		t.Error("expected candidate to be marked confirmed even with nothing to interrupt")
+	}
+	if tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to not fire when TTS isn't speaking")
+	}
+}
+
+func TestCheckInterruptNoopWhenInterruptDisabled(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	now := time.Now()
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		enableInterrupt:       false,
+		interruptConfirmDelay: 150 * time.Millisecond,
+		speechActive:          true,
+		candidateStart:        now.Add(-200 * time.Millisecond),
+	}
+
+	tr.checkInterrupt(now)
+
+	if tr.confirmed {
+		t.Error("expected no-op when interrupt tracking is disabled")
+	}
+	if tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to not fire when interrupt tracking is disabled")
+	}
+}
+
+func TestCheckInterruptDoesNotRefireOnceConfirmed(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	now := time.Now()
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+		speechActive:          true,
+		candidateStart:        now.Add(-200 * time.Millisecond),
+		confirmed:             true, // already handled by an earlier call
+	}
+
+	tr.checkInterrupt(now)
+
+	if tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to not fire again once already confirmed")
 	}
 }

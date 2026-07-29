@@ -15,7 +15,6 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
-	"github.com/openmind/om1/internal/providers/tts"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -72,8 +71,6 @@ type asrSensorCore struct {
 	name string
 	log  *zap.Logger
 
-	enableTTSInterrupt bool
-
 	// language and apiVersion label the om1_asr_latency_seconds metric that
 	// vad.recordTranscript emits. For a single-provider sensor these are
 	// fixed for the sensor's lifetime; ParallelASRSensor overrides them
@@ -103,13 +100,12 @@ func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig
 	log := logger.Get().Named(name)
 
 	a := &asrSensorCore{
-		name:               name,
-		log:                log,
-		enableTTSInterrupt: enableTTSInterrupt,
-		language:           language,
-		apiVersion:         apiVersion,
-		transcriptCh:       make(chan string, 32),
-		vad:                newVADLatencyTracker(vadCfg, rate, log),
+		name:         name,
+		log:          log,
+		language:     language,
+		apiVersion:   apiVersion,
+		transcriptCh: make(chan string, 32),
+		vad:          newVADLatencyTracker(vadCfg, enableTTSInterrupt, rate, log),
 	}
 
 	sess, err := zenohsession.Open()
@@ -140,11 +136,6 @@ func (a *asrSensorCore) pushTranscript(text string) {
 	}
 
 	a.log.Info("transcript accepted", zap.String("text", text))
-
-	if a.enableTTSInterrupt && tts.Speaking.Load() {
-		tts.RequestInterrupt()
-		a.log.Info("interrupting TTS due to detected speech")
-	}
 
 	select {
 	case a.transcriptCh <- text:

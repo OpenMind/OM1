@@ -11,12 +11,21 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/metrics"
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/vad"
 )
 
 const (
 	defaultVADModelPath        = "models/silero_vad_v5.onnx"
 	defaultVADLatencyOutputDir = "data/vad_asr_latency.jsonl"
+
+	// defaultVADInterruptConfirmDelay is how long VAD-detected speech must
+	// persist before it's treated as a real barge-in rather than a blip
+	// (cough, click, brief noise). The Silero segmenter emits speech_start
+	// on a single 32ms frame crossing the probability threshold with no
+	// built-in debounce, so this confirm window is the only thing standing
+	// between a blip and an unwanted TTS interrupt.
+	defaultVADInterruptConfirmDelay = 150 * time.Millisecond
 
 	// maxSanePendingAge bounds how long a VAD speech_end event stays eligible
 	// to be paired with a transcript. Guards against a stale event (e.g. a
@@ -27,14 +36,22 @@ const (
 )
 
 // vadLatencyConfig is embedded in every ASR sensor config to optionally
-// enable local Silero-VAD-vs-ASR latency measurement. It is opt-in: enabling
-// it requires the onnxruntime shared library and the VAD model file to be
-// present (see `make download-onnxruntime` and `make download-vad-model`).
+// enable local Silero-VAD-vs-ASR latency measurement and/or VAD-driven TTS
+// barge-in. Both require the onnxruntime shared library and the VAD model
+// file to be present (see `make download-onnxruntime` and `make
+// download-vad-model`); if either is missing, VAD support is disabled for
+// the sensor (logged, non-fatal) and it falls back to running without it.
 type vadLatencyConfig struct {
 	EnableVADLatency bool   `json:"enable_vad_latency"`
 	VADModelPath     string `json:"vad_model_path"`
 	VADLibraryPath   string `json:"vad_library_path"`
 	VADOutputPath    string `json:"vad_output_path"`
+
+	// VADInterruptConfirmMS is how long, in milliseconds, VAD-detected speech
+	// must persist before triggering tts.RequestInterrupt. Only relevant when
+	// the owning sensor has EnableTTSInterrupt set. Defaults to
+	// defaultVADInterruptConfirmDelay if <=0.
+	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
 }
 
 // vadLatencyRecord is one JSONL line pairing a locally-detected end-of-speech
@@ -48,26 +65,42 @@ type vadLatencyRecord struct {
 }
 
 // vadLatencyTracker runs a local Silero VAD alongside the ASR websocket
-// stream and pairs each detected end-of-speech with the next accepted
-// transcript, to measure how long the ASR vendor takes to return speech
-// after the person actually stopped talking. All methods are nil-receiver
-// safe so callers don't need to branch on whether the feature is enabled.
+// stream. It serves two independent, optionally-combined purposes:
+//   - latency measurement: pairs each detected end-of-speech with the next
+//     accepted transcript, to measure how long the ASR vendor takes to
+//     return speech after the person actually stopped talking (enableLatency).
+//   - TTS barge-in: fires tts.RequestInterrupt as soon as sustained speech is
+//     detected while TTS is playing, without waiting for a vendor transcript
+//     (enableInterrupt).
+//
+// All methods are nil-receiver safe so callers don't need to branch on
+// whether either feature is enabled.
 type vadLatencyTracker struct {
 	log        *zap.Logger
 	model      *vad.Model
 	segmenter  *vad.Segmenter
 	outputPath string
 
+	enableLatency         bool
+	enableInterrupt       bool
+	interruptConfirmDelay time.Duration
+
 	mu         sync.Mutex
 	pendingEnd time.Time // most recent unmatched speech_end, zero if none
 	lastStart  time.Time // most recent speech_start, zero if none yet -- for logging utterance duration
+
+	// interrupt confirm-delay state, guarded by mu; only used when enableInterrupt.
+	speechActive   bool
+	candidateStart time.Time // when the current speech_start was first seen, zero if none pending
+	confirmed      bool      // whether candidateStart has already triggered an interrupt
 }
 
-// newVADLatencyTracker builds a tracker from cfg, or returns nil if disabled
-// or if the VAD model/runtime can't be loaded. Load failures are logged and
-// non-fatal: ASR keeps working without latency measurement.
-func newVADLatencyTracker(cfg vadLatencyConfig, rate int, log *zap.Logger) *vadLatencyTracker {
-	if !cfg.EnableVADLatency {
+// newVADLatencyTracker builds a tracker from cfg, or returns nil if neither
+// latency measurement nor TTS interrupt is requested, or if the VAD
+// model/runtime can't be loaded. Load failures are logged and non-fatal: ASR
+// (and TTS interrupt, if requested) keeps working without VAD support.
+func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate int, log *zap.Logger) *vadLatencyTracker {
+	if !cfg.EnableVADLatency && !enableTTSInterrupt {
 		return nil
 	}
 
@@ -76,30 +109,47 @@ func newVADLatencyTracker(cfg vadLatencyConfig, rate int, log *zap.Logger) *vadL
 
 	model, err := vad.NewModel(modelPath, libPath)
 	if err != nil {
-		log.Warn("vad-asr latency disabled: failed to load Silero VAD model",
-			zap.String("model_path", modelPath), zap.Error(err))
+		fields := []zap.Field{zap.String("model_path", modelPath), zap.Error(err)}
+		if enableTTSInterrupt {
+			log.Error("vad-based tts interrupt disabled: failed to load Silero VAD model", fields...)
+		} else {
+			log.Warn("vad-asr latency disabled: failed to load Silero VAD model", fields...)
+		}
 		return nil
 	}
 
 	outputPath := firstNonEmptyStr(cfg.VADOutputPath, defaultVADLatencyOutputDir)
 
-	log.Info("vad-asr latency tracking enabled",
+	confirmDelay := defaultVADInterruptConfirmDelay
+	if cfg.VADInterruptConfirmMS > 0 {
+		confirmDelay = time.Duration(cfg.VADInterruptConfirmMS) * time.Millisecond
+	}
+
+	log.Info("vad tracking enabled",
 		zap.String("model_path", modelPath),
 		zap.String("output_path", outputPath),
 		zap.Int("source_rate", rate),
+		zap.Bool("latency_measurement", cfg.EnableVADLatency),
+		zap.Bool("tts_interrupt", enableTTSInterrupt),
+		zap.Duration("interrupt_confirm_delay", confirmDelay),
 	)
 
 	return &vadLatencyTracker{
-		log:        log,
-		model:      model,
-		segmenter:  vad.NewSegmenter(model, rate, vad.SegmenterConfig{}),
-		outputPath: outputPath,
+		log:                   log,
+		model:                 model,
+		segmenter:             vad.NewSegmenter(model, rate, vad.SegmenterConfig{}),
+		outputPath:            outputPath,
+		enableLatency:         cfg.EnableVADLatency,
+		enableInterrupt:       enableTTSInterrupt,
+		interruptConfirmDelay: confirmDelay,
 	}
 }
 
 // feedAudio runs the VAD over one PCM chunk, logging every detected
-// speech_start/speech_end boundary and recording end-of-speech timestamps
-// for later pairing with a transcript. A new speech_end always replaces any
+// speech_start/speech_end boundary, recording end-of-speech timestamps for
+// later pairing with a transcript (when latency measurement is enabled), and
+// triggering a TTS barge-in once speech has been sustained past the confirm
+// delay (when interrupt is enabled). A new speech_end always replaces any
 // earlier unmatched one: VAD events and accepted transcripts aren't reliably
 // 1:1 (short blips, ambient noise, or pauses can trigger a speech_end that
 // never gets a transcript -- e.g. acceptASRTranscript rejects anything under
@@ -119,14 +169,49 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 		case vad.EventSpeechStart:
 			t.lastStart = ev.At
 			t.log.Info("vad: speech started", zap.Time("at", ev.At))
+			if t.enableInterrupt {
+				t.speechActive = true
+				t.candidateStart = ev.At
+				t.confirmed = false
+			}
 		case vad.EventSpeechEnd:
-			t.pendingEnd = ev.At
+			if t.enableLatency {
+				t.pendingEnd = ev.At
+			}
 			fields := []zap.Field{zap.Time("at", ev.At)}
 			if !t.lastStart.IsZero() {
 				fields = append(fields, zap.Duration("utterance_duration", ev.At.Sub(t.lastStart)))
 			}
 			t.log.Info("vad: speech ended", fields...)
+			if t.enableInterrupt {
+				t.speechActive = false
+				t.candidateStart = time.Time{}
+				t.confirmed = false
+			}
 		}
+	}
+
+	t.checkInterrupt(now)
+}
+
+// checkInterrupt fires tts.RequestInterrupt once speechActive has persisted
+// past interruptConfirmDelay without an intervening speech_end, filtering
+// out sub-confirm-delay blips. Split out from feedAudio so the confirm-delay
+// decision can be unit tested without a live VAD segmenter. Callers must
+// hold t.mu.
+func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
+	if !t.enableInterrupt || !t.speechActive || t.confirmed {
+		return
+	}
+	if now.Sub(t.candidateStart) < t.interruptConfirmDelay {
+		return
+	}
+
+	t.confirmed = true
+	if tts.Speaking.Load() {
+		t.log.Info("vad: barge-in detected, interrupting TTS",
+			zap.Duration("confirm_delay", now.Sub(t.candidateStart)))
+		tts.RequestInterrupt()
 	}
 }
 
