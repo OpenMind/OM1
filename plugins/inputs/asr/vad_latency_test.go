@@ -14,7 +14,7 @@ import (
 func TestVADLatencyTrackerNilIsSafe(t *testing.T) {
 	var tr *vadLatencyTracker
 	tr.feedAudio([]byte{1, 2, 3, 4})
-	tr.recordTranscript("google", "hello there")
+	tr.recordTranscript("google", "english", "v2", "hello there")
 	tr.close()
 }
 
@@ -70,7 +70,7 @@ func TestVADLatencyTrackerRecordTranscriptPairsAndWritesJSONL(t *testing.T) {
 
 	vadEnd := time.Now().Add(-2 * time.Second)
 	tr.pendingEnd = vadEnd
-	tr.recordTranscript("google", "first utterance")
+	tr.recordTranscript("google", "english", "v2", "first utterance")
 
 	if !tr.pendingEnd.IsZero() {
 		t.Fatalf("expected pendingEnd cleared after being consumed, got %v", tr.pendingEnd)
@@ -108,7 +108,7 @@ func TestVADLatencyTrackerDiscardsStaleUnmatchedEvent(t *testing.T) {
 	tr.pendingEnd = time.Now().Add(-58 * time.Second) // e.g. a noise blip ASR never transcribed
 	tr.pendingEnd = time.Now().Add(-3 * time.Second)  // the real end-of-speech
 
-	tr.recordTranscript("google", "what are you doing this afternoon")
+	tr.recordTranscript("google", "english", "v2", "what are you doing this afternoon")
 
 	recs := readVADLatencyRecords(t, outPath)
 	if len(recs) != 1 {
@@ -129,7 +129,7 @@ func TestVADLatencyTrackerDiscardsImplausiblyOldPairing(t *testing.T) {
 	}
 
 	tr.pendingEnd = time.Now().Add(-maxSanePendingAge - time.Second)
-	tr.recordTranscript("google", "should be discarded as implausible")
+	tr.recordTranscript("google", "english", "v2", "should be discarded as implausible")
 
 	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
 		t.Fatalf("expected no output file for an implausibly old pairing, stat err=%v", err)
@@ -144,7 +144,7 @@ func TestVADLatencyTrackerRecordTranscriptNoPendingIsNoop(t *testing.T) {
 		log:        zap.NewNop(),
 		outputPath: outPath,
 	}
-	tr.recordTranscript("google", "unexpected transcript")
+	tr.recordTranscript("google", "english", "v2", "unexpected transcript")
 
 	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
 		t.Fatalf("expected no output file to be created, stat err=%v", err)

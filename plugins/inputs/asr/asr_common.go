@@ -74,6 +74,13 @@ type asrSensorCore struct {
 
 	enableTTSInterrupt bool
 
+	// language and apiVersion label the om1_asr_latency_seconds metric that
+	// vad.recordTranscript emits. For a single-provider sensor these are
+	// fixed for the sensor's lifetime; ParallelASRSensor overrides them
+	// per-call since it fans one core out across multiple providers.
+	language   string
+	apiVersion string
+
 	transcriptCh chan string
 
 	messages []string
@@ -89,14 +96,18 @@ type asrSensorCore struct {
 }
 
 // newSensorCore builds the sensor core, initializing the zenoh publisher if
-// possible and the optional local VAD-latency tracker.
-func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig, rate int) *asrSensorCore {
+// possible and the optional local VAD-latency tracker. language/apiVersion
+// label the VAD-based ASRLatency metric; pass "" for sensors (like
+// ParallelASRSensor) that supply per-call labels instead.
+func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig, rate int, language, apiVersion string) *asrSensorCore {
 	log := logger.Get().Named(name)
 
 	a := &asrSensorCore{
 		name:               name,
 		log:                log,
 		enableTTSInterrupt: enableTTSInterrupt,
+		language:           language,
+		apiVersion:         apiVersion,
 		transcriptCh:       make(chan string, 32),
 		vad:                newVADLatencyTracker(vadCfg, rate, log),
 	}
@@ -146,7 +157,7 @@ func (a *asrSensorCore) pushTranscript(text string) {
 // it records the VAD-vs-ASR latency for this transcript (if tracking is
 // enabled) and forwards every accepted transcript.
 func (a *asrSensorCore) deliver(provider string, text string) {
-	a.vad.recordTranscript(provider, text)
+	a.vad.recordTranscript(provider, a.language, a.apiVersion, text)
 	a.pushTranscript(text)
 }
 
@@ -284,7 +295,7 @@ func (a *asrSensorCore) closeZenoh() {
 // newASRCommon constructs an asrCommon from a vendor-resolved config, building the
 // sensor core (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
-	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate)
+	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, cfg.Language, cfg.APIVersion)
 	agg.log.Info("initializing",
 		zap.String("provider", cfg.Provider),
 		zap.String("language", cfg.Language),

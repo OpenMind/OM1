@@ -13,7 +13,6 @@ import (
 
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
-	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/providers/tts"
 )
@@ -315,16 +314,14 @@ func elevenlabsParseMessage(s *transcriberStream, msg ASRMessage) string {
 	}
 
 	// A committed message ends the segment, so reset the timer even when the transcript is dropped.
-	speechStarted := s.speechStarted
-	speechStartTime := s.speechStartTime
+	// ASRLatency is now measured against the locally-detected VAD end-of-speech
+	// (see vadLatencyTracker.recordTranscript) rather than this vendor-reported
+	// speech start, so no metric is observed here.
 	s.speechStarted = false
 
 	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {
 		return ""
 	}
 
-	if speechStarted {
-		s.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(speechStartTime))
-	}
 	return msg.ASRReply
 }

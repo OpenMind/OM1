@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/metrics"
 	"github.com/openmind/om1/internal/vad"
 )
 
@@ -130,11 +131,13 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 }
 
 // recordTranscript pairs an accepted transcript with the most recent
-// unmatched VAD end-of-speech event and appends the resulting latency to the
-// output file. Transcripts with no pending VAD event (e.g. arriving before
-// the feature was enabled) are ignored, as are pairings old enough to be
-// obviously stale rather than a real ASR latency.
-func (t *vadLatencyTracker) recordTranscript(provider, text string) {
+// unmatched VAD end-of-speech event, appends the resulting latency to the
+// output file, and feeds it into the om1_asr_latency_seconds Prometheus
+// metric (labeled with language/apiVersion as reported by the caller).
+// Transcripts with no pending VAD event (e.g. arriving before the feature
+// was enabled) are ignored, as are pairings old enough to be obviously stale
+// rather than a real ASR latency.
+func (t *vadLatencyTracker) recordTranscript(provider, language, apiVersion, text string) {
 	if t == nil {
 		return
 	}
@@ -171,6 +174,9 @@ func (t *vadLatencyTracker) recordTranscript(provider, text string) {
 		t.log.Warn("failed to write vad-asr latency record", zap.Error(err))
 		return
 	}
+
+	metrics.ASRLatency.WithLabelValues(provider, language, apiVersion).Observe(latency.Seconds())
+	metrics.ASRLatencyLast.WithLabelValues(provider, language, apiVersion).Set(latency.Seconds())
 
 	t.log.Info("vad-asr latency",
 		zap.Duration("latency", latency),

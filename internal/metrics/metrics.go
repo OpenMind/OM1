@@ -50,9 +50,14 @@ var (
 
 // ASR metrics.
 var (
+	// ASRLatency is fed by the local Silero-VAD-based end-of-speech detector
+	// (plugins/inputs/asr/vad_latency.go), not by vendor-reported speech
+	// timing. It only emits samples for sensors that enable VAD latency
+	// tracking (enable_vad_latency: true) with the onnxruntime lib/model
+	// available; otherwise this metric stays empty.
 	ASRLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "om1_asr_latency_seconds",
-		Help: "Latency from speech activity start to final transcript in seconds",
+		Help: "Latency from locally-detected (VAD) end-of-speech to final transcript in seconds. Requires enable_vad_latency.",
 	}, []string{"model", "language", "api_version"})
 
 	ASRSpeechDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -67,7 +72,7 @@ var (
 
 	ASRLatencyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "om1_asr_latency_last_seconds",
-		Help: "Most recent latency from speech activity start to final transcript in seconds",
+		Help: "Most recent latency from locally-detected (VAD) end-of-speech to final transcript in seconds. Requires enable_vad_latency.",
 	}, []string{"model", "language", "api_version"})
 
 	ASRSpeechDurationLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{

@@ -116,7 +116,9 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate),
+		// language/apiVersion are per-provider here, so deliver looks them
+		// up per-call via streamLabels instead of using fixed core fields.
+		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, "", ""),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
 	}
@@ -218,8 +220,22 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 
 	metrics.ASRParallelTranscripts.WithLabelValues(provider, "won").Inc()
 	s.log.Info("winner", zap.String("winner", provider), zap.String("text", text))
-	s.vad.recordTranscript(provider, text)
+	language, apiVersion := s.streamLabels(provider)
+	s.vad.recordTranscript(provider, language, apiVersion, text)
 	s.pushTranscript(text)
+}
+
+// streamLabels returns the language/apiVersion of the first configured
+// stream for provider, so the shared VAD tracker can label the
+// om1_asr_latency_seconds metric correctly even though one tracker is
+// shared across every provider in a parallel sensor.
+func (s *ParallelASRSensor) streamLabels(provider string) (language, apiVersion string) {
+	for _, st := range s.streams {
+		if st.provider == provider {
+			return st.language, st.apiVersion
+		}
+	}
+	return "", ""
 }
 
 // Listen starts the sensor: it connects every provider stream, begins capture from
