@@ -121,7 +121,12 @@ You should prioritize safe, comfortable, and positive human interaction.",
           connector: "zenoh",
         },
       ],
-      agent_backgrounds: [],
+      agent_backgrounds: [
+        {
+          type: "UnitreeWirelessController",
+          config: { greeting: { robot_name: "${ROBOT_NAME:-Iris}" } },
+        },
+      ],
       lifecycle_hooks: [],
     },
   },

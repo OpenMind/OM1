@@ -30,3 +30,20 @@ func SetSuppressed(suppressed bool) {
 		Interrupt.Store(false)
 	}
 }
+
+// BargeIn lifts any mute and cuts off whatever is currently being said, so the
+// caller's next utterance starts immediately instead of queueing behind it.
+//
+// The ordering is deliberate. Unmuting clears the interrupt flag (see
+// SetSuppressed), so the mute must be lifted before the interrupt is raised, or
+// the barge-in is silently swallowed. Equally, the interrupt is only armed while
+// the player is busy: a sticky flag with no utterance to consume it would be
+// eaten by whatever spoke next.
+func BargeIn() {
+	Suppressed.Store(false)
+	Interrupt.Store(false)
+
+	if Busy() {
+		RequestInterrupt()
+	}
+}

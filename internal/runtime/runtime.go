@@ -207,6 +207,10 @@ func (rt *Runtime) initializeMode(modeName string) error {
 	rt.current = state
 	rt.mu.Unlock()
 
+	// Publish this mode's hook Runner so manual triggers (e.g. a controller
+	// button) can invoke function hooks with the mode's memory manager.
+	hooks.SetDefaultRunner(state.modeHooks)
+
 	rt.log.Info("mode initialised", zap.String("mode", modeName))
 	return nil
 }

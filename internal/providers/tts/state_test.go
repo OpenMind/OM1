@@ -64,3 +64,48 @@ func TestSetSuppressedUnmuteClearsStaleInterrupt(t *testing.T) {
 	require.False(t, Suppressed.Load(), "TTS is unmuted")
 	require.False(t, Interrupt.Load(), "unmuting clears the stale interrupt so the next utterance plays")
 }
+
+
+func TestBargeInInterruptsWhileSpeaking(t *testing.T) {
+	resetTTSState(t)
+	Speaking.Store(true)
+	before := generation.Load()
+
+	BargeIn()
+	require.True(t, Interrupt.Load(), "the in-flight utterance is interrupted")
+	require.False(t, Suppressed.Load(), "the mute is lifted so the new utterance can play")
+	require.Greater(t, generation.Load(), before, "the generation bump drops anything still queued")
+}
+
+func TestBargeInWhileMutedStillInterrupts(t *testing.T) {
+	resetTTSState(t)
+	Suppressed.Store(true)
+	Speaking.Store(true)
+
+	// The ordering trap: unmuting clears Interrupt, so lifting the mute after
+	// raising the interrupt would swallow the barge-in and leave the caller's
+	// new utterance queued behind the one it was meant to replace.
+	BargeIn()
+	require.False(t, Suppressed.Load())
+	require.True(t, Interrupt.Load(),
+		"the interrupt must survive the unmute, or the barge-in never happens")
+}
+
+func TestBargeInWhileIdleDoesNotArmInterrupt(t *testing.T) {
+	resetTTSState(t)
+	Suppressed.Store(true)
+	Interrupt.Store(true)
+
+	BargeIn()
+	require.False(t, Suppressed.Load(), "the mute is still lifted")
+	require.False(t, Interrupt.Load(),
+		"no stale interrupt is left to swallow the utterance about to be queued")
+}
+
+func TestBargeInWhileQueued(t *testing.T) {
+	resetTTSState(t)
+	pending.Store(1)
+
+	BargeIn()
+	require.True(t, Interrupt.Load(), "queued-but-unplayed speech still counts as busy")
+}

@@ -1,6 +1,10 @@
 package hooks
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"sync"
+)
 
 // HookFunc is the signature of a "function"-type lifecycle hook. It receives the
 // Runner (for the logger and shared helpers), the execution context, the hook's
@@ -28,4 +32,40 @@ func RegisterHook(module, function string, fn HookFunc) {
 func lookupHook(module, function string) (HookFunc, bool) {
 	fn, ok := hookRegistry[module+"."+function]
 	return fn, ok
+}
+
+// defaultRunner is the Runner used by Invoke for callers outside the
+// lifecycle-hook flow, such as a background task reacting to a controller
+// button. The runtime publishes the active mode's Runner here so those callers
+// inherit its memory manager and logger.
+var (
+	defaultRunnerMu sync.RWMutex
+	defaultRunner   *Runner
+)
+
+// SetDefaultRunner publishes the Runner that Invoke should use.
+func SetDefaultRunner(r *Runner) {
+	defaultRunnerMu.Lock()
+	defaultRunner = r
+	defaultRunnerMu.Unlock()
+}
+
+// Invoke runs a registered function hook directly, outside the lifecycle flow,
+// letting a manual trigger reuse a hook that is otherwise reachable only from a
+// mode transition.
+func Invoke(ctx context.Context, module, function string, cfg, vars map[string]any) error {
+	defaultRunnerMu.RLock()
+	r := defaultRunner
+	defaultRunnerMu.RUnlock()
+
+	if r == nil {
+		return fmt.Errorf("hooks: no default runner registered for %s.%s", module, function)
+	}
+
+	handler, ok := lookupHook(module, function)
+	if !ok {
+		return fmt.Errorf("hooks: unknown function hook %s.%s", module, function)
+	}
+
+	return handler(r, ctx, cfg, vars)
 }
