@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	// defaultModel and defaultBaseURL match plugins/llm/gemini.go's defaults (Gemini via OpenMind's own gateway).
 	defaultModel   = "gemini-3.1-flash-lite"
 	defaultBaseURL = "https://api.openmind.com/api/core/gemini"
 	defaultLogDir  = "traces"
@@ -24,12 +23,6 @@ const (
 	minCharsForLanguage = 8
 )
 
-// logPathForNow returns today's quality-log path, rotating daily like the tracer's own trace files.
-func logPathForNow() string {
-	return filepath.Join(defaultLogDir, "quality_"+time.Now().UTC().Format("2006-01-02")+".jsonl")
-}
-
-// Config configures the quality scorer, populated from config.QualityScorerConfig.
 type Config struct {
 	Model   string
 	BaseURL string
@@ -77,6 +70,10 @@ func Start(ctx context.Context, cfg config.QualityScorerConfig, records <-chan t
 			}
 		}
 	}()
+}
+
+func logPathForNow() string {
+	return filepath.Join(defaultLogDir, "quality_"+time.Now().UTC().Format("2006-01-02")+".jsonl")
 }
 
 func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, rec tracetype.TraceRecord) {
