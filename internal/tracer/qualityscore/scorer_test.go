@@ -130,7 +130,6 @@ func TestInitLanguageLabels(t *testing.T) {
 		"calling initLanguageLabels again must not reset an already-incremented language")
 }
 
-// TestEndToEnd exercises Gauge() -> channel -> scoreOne -> classify -> Prometheus against a fake OpenAI-compatible endpoint.
 func TestEndToEnd(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
