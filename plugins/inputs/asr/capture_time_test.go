@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/ws"
 )
 
@@ -70,6 +71,54 @@ func TestASRCommonSendChunkAtDelegates(t *testing.T) {
 	defer s.stats.mu.RUnlock()
 	require.Equal(t, uint64(1), s.stats.TotalChunksSent,
 		"asrCommon.sendChunkAt must forward to the underlying stream")
+}
+
+func TestForwardChunkSendsWhenNotSpeaking(t *testing.T) {
+	s := newSendableStream(t)
+	c := &asrCommon{asrSensorCore: newTestSensorCore(), stream: s}
+	// Ensure TTS is not "speaking" for this case.
+	tts.Speaking.Store(false)
+
+	sent := c.forwardChunk([]byte{0x01, 0x02, 0x03, 0x04}, time.UnixMilli(1_700_000_000_000))
+
+	require.True(t, sent, "chunk must be forwarded when TTS is silent")
+	s.stats.mu.RLock()
+	defer s.stats.mu.RUnlock()
+	require.Equal(t, uint64(1), s.stats.TotalChunksSent)
+}
+
+func TestForwardChunkDropsWhileSpeakingWithoutInterrupt(t *testing.T) {
+	s := newSendableStream(t)
+	core := newTestSensorCore()
+	core.enableTTSInterrupt = false
+	c := &asrCommon{asrSensorCore: core, stream: s}
+
+	tts.Speaking.Store(true)
+	defer tts.Speaking.Store(false)
+
+	sent := c.forwardChunk([]byte{0x01, 0x02}, time.Now())
+
+	require.False(t, sent, "chunk must be dropped while TTS speaks and interrupt is disabled")
+	s.stats.mu.RLock()
+	defer s.stats.mu.RUnlock()
+	require.Zero(t, s.stats.TotalChunksSent)
+}
+
+func TestForwardChunkSendsWhileSpeakingWithInterrupt(t *testing.T) {
+	s := newSendableStream(t)
+	core := newTestSensorCore()
+	core.enableTTSInterrupt = true
+	c := &asrCommon{asrSensorCore: core, stream: s}
+
+	tts.Speaking.Store(true)
+	defer tts.Speaking.Store(false)
+
+	sent := c.forwardChunk([]byte{0x01, 0x02}, time.Now())
+
+	require.True(t, sent, "interrupt-enabled sensors keep streaming during TTS")
+	s.stats.mu.RLock()
+	defer s.stats.mu.RUnlock()
+	require.Equal(t, uint64(1), s.stats.TotalChunksSent)
 }
 
 // TestASRRTSPDefaultURLs pins the RTSP audio source defaults to the

@@ -291,6 +291,20 @@ func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
 	c.stream.sendChunkAt(pcm, capture)
 }
 
+// forwardChunk copies a freshly-read PCM chunk and sends it stamped at its
+// capture time. The chunk is dropped (and false returned) when TTS is currently
+// speaking and interruption is disabled. The copy is required because callers
+// reuse their read buffer for the next chunk.
+func (c *asrCommon) forwardChunk(buf []byte, capture time.Time) bool {
+	if tts.Speaking.Load() && !c.enableTTSInterrupt {
+		return false
+	}
+	pcm := make([]byte, len(buf))
+	copy(pcm, buf)
+	c.sendChunkAt(pcm, capture)
+	return true
+}
+
 // statsLoop logs the single stream's send statistics until ctx is cancelled.
 func (c *asrCommon) statsLoop(ctx context.Context) { c.stream.statsLoop(ctx) }
 

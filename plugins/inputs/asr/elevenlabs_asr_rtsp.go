@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
-	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -183,15 +182,7 @@ func (s *ElevenLabsASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
-		// Stamp capture time when the chunk is read from the stream.
-		tCapture := time.Now()
-
-		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
-			continue
-		}
-
-		pcm := make([]byte, chunkBytes)
-		copy(pcm, buf)
-		s.sendChunkAt(pcm, tCapture)
+		// Stamp capture time at read (see asrCommon.forwardChunk).
+		s.forwardChunk(buf, time.Now())
 	}
 }
