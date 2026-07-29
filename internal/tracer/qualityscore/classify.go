@@ -1,4 +1,4 @@
-package qualityscorer
+package qualityscore
 
 import (
 	"bytes"
@@ -88,7 +88,6 @@ This is incoherent both because it's a generic template reply that ignores the (
 
 The key distinction between "marginal" and "incoherent": marginal means the robot understood the request but chose to redirect away from it; incoherent means the robot's reply doesn't track what was actually said at all. These are raw speech-to-text transcripts, so prompts are often fragmentary, repetitive, or contain filler words ("um", "okay", "yeah") -- judge the substance of the exchange, not the grammar. Classify every pair you are given; do not skip any.`
 
-// classifyInput scores a single utterance's tone, mirroring classify_user_inputs.py's classify_batch.
 func classifyInput(ctx context.Context, cfg Config, prompt string, allowNotAddressed bool) (string, error) {
 	labels := []string{"positive", "marginal", "negative"}
 	if allowNotAddressed {
@@ -98,7 +97,6 @@ func classifyInput(ctx context.Context, cfg Config, prompt string, allowNotAddre
 	return callStructuredLabel(ctx, cfg, buildInputSystemPrompt(allowNotAddressed), userMessage, labels, false)
 }
 
-// classifyCoherence scores a prompt/response pair's coherence, mirroring classify_prompt_response_coherence.py's classify_batch.
 func classifyCoherence(ctx context.Context, cfg Config, prompt, response string) (string, error) {
 	userMessage := fmt.Sprintf("Classify each of these 1 prompt/response pairs:\n\n0. prompt: %q\n   response: %q", prompt, response)
 	labels := []string{"coherent", "marginal", "incoherent"}

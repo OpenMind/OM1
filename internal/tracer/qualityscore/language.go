@@ -1,4 +1,4 @@
-package qualityscorer
+package qualityscore
 
 import (
 	"regexp"
@@ -10,8 +10,6 @@ import (
 	"github.com/openmind/om1/internal/metrics"
 )
 
-// Best-effort language detection, approximating dataAnalysis's lang_utils.py (no Go library matches langdetect exactly).
-
 var (
 	hangulRe = regexp.MustCompile(`[\x{AC00}-\x{D7A3}]`)
 	kanaRe   = regexp.MustCompile(`[\x{3040}-\x{30FF}]`)
@@ -20,7 +18,6 @@ var (
 	englishWordRe = regexp.MustCompile(`[a-zA-Z']+`)
 )
 
-// englishStopwords mirrors lang_utils.py's ENGLISH_STOPWORDS set verbatim.
 var englishStopwords = wordSet(`
 a an the is isn't are aren't am was were wasn't weren't be been being
 do does did don't doesn't didn't
@@ -47,7 +44,6 @@ func wordSet(list string) map[string]struct{} {
 	return m
 }
 
-// langNames maps common codes to human-readable names, mirroring lang_utils.py's LANG_NAMES.
 var langNames = map[string]string{
 	"en": "English", "es": "Spanish", "fr": "French", "de": "German",
 	"it": "Italian", "pt": "Portuguese", "nl": "Dutch", "ru": "Russian",
@@ -64,7 +60,6 @@ var langNames = map[string]string{
 	"sl": "Slovenian", "lt": "Lithuanian",
 }
 
-// initLanguageLabels pre-registers every named language at zero, same cold-start fix as metrics.InitQualityLabels.
 func initLanguageLabels() {
 	for _, name := range langNames {
 		metrics.QualityLiveLanguageCount.WithLabelValues(name).Add(0)
@@ -80,7 +75,6 @@ func isASCII(s string) bool {
 	return true
 }
 
-// looksEnglish mirrors lang_utils.py's looks_english: ASCII text containing a common English function word.
 func looksEnglish(text string) bool {
 	normalized := norm.NFKC.String(text)
 	if !isASCII(normalized) {
@@ -94,7 +88,6 @@ func looksEnglish(text string) bool {
 	return false
 }
 
-// cjkScriptOverride resolves Hangul/Kana/Han text deterministically before the n-gram detector runs.
 func cjkScriptOverride(text string) string {
 	if hangulRe.MatchString(text) {
 		return "ko"
@@ -108,7 +101,6 @@ func cjkScriptOverride(text string) string {
 	return ""
 }
 
-// detectLang mirrors lang_utils.py's detect_lang precedence, using whatlanggo instead of langdetect as the fallback.
 func detectLang(text string) string {
 	if lang := cjkScriptOverride(text); lang != "" {
 		return lang
@@ -123,7 +115,6 @@ func detectLang(text string) string {
 	return info.Lang.Iso6391()
 }
 
-// langName maps a detected code to a human-readable name; unmapped codes pass through as-is.
 func langName(code string) string {
 	if name, ok := langNames[code]; ok {
 		return name

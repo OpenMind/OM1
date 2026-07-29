@@ -1,5 +1,4 @@
-// Package qualityscorer scores conversation quality live as OM1 runs
-package qualityscorer
+package qualityscore
 
 import (
 	"context"
@@ -13,18 +12,22 @@ import (
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/metrics"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/tracer/tracetype"
 )
 
 const (
 	// defaultModel and defaultBaseURL match plugins/llm/gemini.go's defaults (Gemini via OpenMind's own gateway).
 	defaultModel   = "gemini-3.1-flash-lite"
 	defaultBaseURL = "https://api.openmind.com/api/core/gemini"
-	defaultLogPath = "data/live_quality_log.jsonl"
+	defaultLogDir  = "traces"
 
-	// minCharsForLanguage matches live_quality_scorer.py's MIN_CHARS_FOR_LANGUAGE.
 	minCharsForLanguage = 8
 )
+
+// logPathForNow returns today's quality-log path, rotating daily like the tracer's own trace files.
+func logPathForNow() string {
+	return filepath.Join(defaultLogDir, "quality_"+time.Now().UTC().Format("2006-01-02")+".jsonl")
+}
 
 // Config configures the quality scorer, populated from config.QualityScorerConfig.
 type Config struct {
@@ -33,7 +36,6 @@ type Config struct {
 	APIKey  string
 }
 
-// logRecord is one JSONL line, matching live_quality_scorer.py's classification log record shape.
 type logRecord struct {
 	ScoredAt            string `json:"scored_at"`
 	TraceTS             string `json:"trace_ts"`
@@ -44,8 +46,8 @@ type logRecord struct {
 	Coherence           string `json:"coherence,omitempty"`
 }
 
-// Start subscribes to tracer's trace records and scores them as they arrive, until ctx is done.
-func Start(ctx context.Context, cfg config.QualityScorerConfig, tracer *providers.Tracer, log *zap.Logger) func() {
+// Start begins scoring trace records from the provided channel, logging results to a JSONL file and recording metrics.
+func Start(ctx context.Context, cfg config.QualityScorerConfig, records <-chan tracetype.TraceRecord, log *zap.Logger) {
 	resolved := Config{
 		Model:   firstNonEmpty(cfg.Model, defaultModel),
 		BaseURL: firstNonEmpty(cfg.BaseURL, defaultBaseURL),
@@ -53,19 +55,16 @@ func Start(ctx context.Context, cfg config.QualityScorerConfig, tracer *provider
 	}
 	if resolved.APIKey == "" {
 		log.Warn("qualityscorer: no api_key configured, quality scoring disabled")
-		return func() {}
+		return
 	}
 
 	metrics.InitQualityLabels()
 	initLanguageLabels()
 
-	records := tracer.Subscribe()
 	log.Info("qualityscorer: started, scoring live trace records",
 		zap.String("model", resolved.Model), zap.String("base_url", resolved.BaseURL))
 
-	done := make(chan struct{})
 	go func() {
-		defer close(done)
 		for {
 			select {
 			case <-ctx.Done():
@@ -78,13 +77,9 @@ func Start(ctx context.Context, cfg config.QualityScorerConfig, tracer *provider
 			}
 		}
 	}()
-
-	return func() {
-		<-done
-	}
 }
 
-func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, rec providers.TraceRecord) {
+func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, rec tracetype.TraceRecord) {
 	prompt := extractPrompt(rec.LLMInput)
 	if prompt == "" {
 		return
@@ -119,7 +114,7 @@ func scoreOne(ctx context.Context, log *zap.Logger, cfg Config, rec providers.Tr
 	scoredAt := time.Now().UTC()
 	metrics.RecordQualityTurn(language, label, coherence)
 
-	if err := appendJSONL(defaultLogPath, logRecord{
+	if err := appendJSONL(logPathForNow(), logRecord{
 		ScoredAt:            scoredAt.Format(time.RFC3339Nano),
 		TraceTS:             rec.Timestamp,
 		Prompt:              prompt,

@@ -1,4 +1,4 @@
-package qualityscorer
+package qualityscore
 
 import (
 	"regexp"

@@ -21,7 +21,7 @@ import (
 	"github.com/openmind/om1/internal/mcp"
 	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
-	"github.com/openmind/om1/internal/qualityscorer"
+	"github.com/openmind/om1/internal/tracer"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -61,7 +61,7 @@ type Runtime struct {
 	log          *zap.Logger
 	manager      *ModeManager
 	ioProvider   *providers.IOProvider
-	tracer       *providers.Tracer
+	tracer       *tracer.Tracer
 
 	mu                        sync.Mutex
 	current                   *modeState
@@ -71,8 +71,7 @@ type Runtime struct {
 
 	modeTransitionCh chan string
 
-	globalBg          globalBackgroundState
-	qualityScorerStop func()
+	globalBg globalBackgroundState
 }
 
 func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runtime {
@@ -87,7 +86,7 @@ func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runt
 		log:              log,
 		manager:          NewModeManager(systemConfig, log),
 		ioProvider:       providers.IO(),
-		tracer:           providers.TracerProvider(),
+		tracer:           tracer.TracerProvider(),
 		modeTransitionCh: make(chan string, 1),
 	}
 }
@@ -130,15 +129,14 @@ func (rt *Runtime) Run(ctx context.Context) error {
 
 	rt.startOrchestrators(ctx)
 	rt.startGlobalBackgrounds(ctx)
-	rt.startQualityScorer(ctx)
+	rt.startTracer(ctx)
 
 	<-ctx.Done()
 
 	rt.stopOrchestrators()
 	rt.stopGlobalBackgrounds()
-	rt.stopQualityScorer()
 	rt.manager.Close()
-	rt.tracer.Stop()
+	rt.stopTracer()
 	return ctx.Err()
 }
 
@@ -155,10 +153,6 @@ func (rt *Runtime) initializeMode(modeName string) error {
 	}
 
 	runtimeConfig := modeConfig.toRuntimeConfig()
-
-	if runtimeConfig.UseTracer {
-		rt.tracer.Enable()
-	}
 
 	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
 
@@ -226,22 +220,9 @@ func (rt *Runtime) startGlobalBackgrounds(ctx context.Context) {
 	rt.globalBg.done = rt.globalBg.orchestrator.Start(globalCtx)
 }
 
-// startQualityScorer starts the quality scorer if enabled in the system config, using a context that can be cancelled on shutdown.
-func (rt *Runtime) startQualityScorer(ctx context.Context) {
-	qsCfg := rt.systemConfig.UseTracer
-	if qsCfg == nil || qsCfg.QualityScorer == nil || !qsCfg.QualityScorer.Enabled {
-		return
-	}
-	if !qsCfg.Enabled {
-		rt.log.Warn("use_tracer.quality_scorer.enabled is true but use_tracer.enabled is false -- quality scorer will not start")
-		return
-	}
-
-	cfg := *qsCfg.QualityScorer
-	if cfg.APIKey == "" {
-		cfg.APIKey = rt.systemConfig.APIKey
-	}
-	rt.qualityScorerStop = qualityscorer.Start(ctx, cfg, rt.tracer, rt.log)
+// startTracer starts the tracer's quality scorer if enabled in the system config, using a context that can be cancelled on shutdown.
+func (rt *Runtime) startTracer(ctx context.Context) {
+	rt.tracer.Start(ctx, rt.systemConfig.UseTracer, rt.systemConfig.APIKey, rt.log)
 }
 
 // startOrchestrators starts the orchestrators for the current mode in separate goroutines.
@@ -362,12 +343,9 @@ func (rt *Runtime) stopGlobalBackgrounds() {
 	}
 }
 
-// stopQualityScorer stops the quality scorer if it was started.
-func (rt *Runtime) stopQualityScorer() {
-	if rt.qualityScorerStop == nil {
-		return
-	}
-	rt.qualityScorerStop()
+// stopTracer stops the tracer's quality scorer (if started) and closes its trace file.
+func (rt *Runtime) stopTracer() {
+	rt.tracer.Stop()
 }
 
 // onModeTransition stops the current mode's orchestrators, initialises the new

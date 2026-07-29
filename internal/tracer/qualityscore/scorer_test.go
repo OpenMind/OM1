@@ -1,4 +1,4 @@
-package qualityscorer
+package qualityscore
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/metrics"
-	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/tracer/tracetype"
 )
 
 func TestExtractPrompt(t *testing.T) {
@@ -164,21 +164,24 @@ func TestEndToEnd(t *testing.T) {
 	}
 	defer func() { _ = os.Chdir(oldWd) }()
 
-	tracer := providers.TracerProvider()
-	tracer.Enable()
+	records := make(chan tracetype.TraceRecord, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	stop := Start(ctx, config.QualityScorerConfig{
+	Start(ctx, config.QualityScorerConfig{
 		Enabled: true,
 		BaseURL: server.URL,
 		APIKey:  "test-key",
-	}, tracer, zap.NewNop())
+	}, records, zap.NewNop())
 
-	tracer.Gauge(`context...\nVoice: "hello there robot"\nmore`, []map[string]any{
-		{"type": "speak", "value": map[string]any{"action": "hi! nice to meet you"}},
-	})
+	records <- tracetype.TraceRecord{
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		LLMInput:  `context...\nVoice: "hello there robot"\nmore`,
+		LLMOutput: []map[string]any{
+			{"type": "speak", "value": map[string]any{"action": "hi! nice to meet you"}},
+		},
+	}
 
 	deadline := time.After(2 * time.Second)
 	for {
@@ -202,18 +205,28 @@ func TestEndToEnd(t *testing.T) {
 		}
 	}
 
+	// scoreOne records the metric before writing the classification log, so wait for the log
+	// write to land too rather than asserting on it immediately.
+	deadline = time.After(2 * time.Second)
+	var (
+		logBytes []byte
+		err      error
+	)
+	for {
+		logBytes, err = os.ReadFile(filepath.Join(tmpDir, logPathForNow()))
+		if err == nil && strings.Contains(string(logBytes), "hello there robot") {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timed out waiting for classification log write, last read: %v, %s", err, logBytes)
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
 	cancel()
-	stop()
 
 	if callCount != 2 {
 		t.Errorf("expected 2 classification calls (input + coherence), got %d", callCount)
-	}
-
-	logBytes, err := os.ReadFile(filepath.Join(tmpDir, defaultLogPath))
-	if err != nil {
-		t.Fatalf("read classification log: %v", err)
-	}
-	if !strings.Contains(string(logBytes), "hello there robot") {
-		t.Errorf("classification log missing expected prompt, got: %s", logBytes)
 	}
 }
