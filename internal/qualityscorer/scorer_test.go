@@ -170,11 +170,11 @@ func TestEndToEnd(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	stop := Start(ctx, zap.NewNop(), tracer, config.QualityScorerConfig{
+	stop := Start(ctx, config.QualityScorerConfig{
 		Enabled: true,
 		BaseURL: server.URL,
 		APIKey:  "test-key",
-	})
+	}, tracer, zap.NewNop())
 
 	tracer.Gauge(`context...\nVoice: "hello there robot"\nmore`, []map[string]any{
 		{"type": "speak", "value": map[string]any{"action": "hi! nice to meet you"}},

@@ -45,7 +45,7 @@ type logRecord struct {
 }
 
 // Start subscribes to tracer's trace records and scores them as they arrive, until ctx is done.
-func Start(ctx context.Context, log *zap.Logger, tracer *providers.Tracer, cfg config.QualityScorerConfig) func() {
+func Start(ctx context.Context, cfg config.QualityScorerConfig, tracer *providers.Tracer, log *zap.Logger) func() {
 	resolved := Config{
 		Model:   firstNonEmpty(cfg.Model, defaultModel),
 		BaseURL: firstNonEmpty(cfg.BaseURL, defaultBaseURL),

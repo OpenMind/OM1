@@ -21,6 +21,7 @@ import (
 	"github.com/openmind/om1/internal/mcp"
 	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/qualityscorer"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -70,7 +71,8 @@ type Runtime struct {
 
 	modeTransitionCh chan string
 
-	globalBg globalBackgroundState
+	globalBg          globalBackgroundState
+	qualityScorerStop func()
 }
 
 func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runtime {
@@ -128,11 +130,13 @@ func (rt *Runtime) Run(ctx context.Context) error {
 
 	rt.startOrchestrators(ctx)
 	rt.startGlobalBackgrounds(ctx)
+	rt.startQualityScorer(ctx)
 
 	<-ctx.Done()
 
 	rt.stopOrchestrators()
 	rt.stopGlobalBackgrounds()
+	rt.stopQualityScorer()
 	rt.manager.Close()
 	rt.tracer.Stop()
 	return ctx.Err()
@@ -220,6 +224,24 @@ func (rt *Runtime) startGlobalBackgrounds(ctx context.Context) {
 	globalCtx, cancel := context.WithCancel(ctx)
 	rt.globalBg.cancel = cancel
 	rt.globalBg.done = rt.globalBg.orchestrator.Start(globalCtx)
+}
+
+// startQualityScorer starts the quality scorer if enabled in the system config, using a context that can be cancelled on shutdown.
+func (rt *Runtime) startQualityScorer(ctx context.Context) {
+	qsCfg := rt.systemConfig.UseTracer
+	if qsCfg == nil || qsCfg.QualityScorer == nil || !qsCfg.QualityScorer.Enabled {
+		return
+	}
+	if !qsCfg.Enabled {
+		rt.log.Warn("use_tracer.quality_scorer.enabled is true but use_tracer.enabled is false -- quality scorer will not start")
+		return
+	}
+
+	cfg := *qsCfg.QualityScorer
+	if cfg.APIKey == "" {
+		cfg.APIKey = rt.systemConfig.APIKey
+	}
+	rt.qualityScorerStop = qualityscorer.Start(ctx, cfg, rt.tracer, rt.log)
 }
 
 // startOrchestrators starts the orchestrators for the current mode in separate goroutines.
@@ -338,6 +360,14 @@ func (rt *Runtime) stopGlobalBackgrounds() {
 	case <-stopCtx.Done():
 		rt.log.Warn("global background shutdown timed out")
 	}
+}
+
+// stopQualityScorer stops the quality scorer if it was started.
+func (rt *Runtime) stopQualityScorer() {
+	if rt.qualityScorerStop == nil {
+		return
+	}
+	rt.qualityScorerStop()
 }
 
 // onModeTransition stops the current mode's orchestrators, initialises the new
