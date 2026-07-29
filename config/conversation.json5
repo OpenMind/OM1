@@ -22,6 +22,12 @@
     },
     {
       type: "VLMGemini",
+            camera_index: 0,
+            capture_fps: 30,
+            decode_fps: 5,
+            resolution_width: 1280,
+            resolution_height: 720,
+            jpeg_quality: 60,
     }
   ],
   cortex_llm: {
@@ -32,15 +38,22 @@
     },
   },
   agent_actions: [
-    {
-      name: "speak",
-      llm_label: "speak",
-      implementation: "passthrough",
-      connector: "elevenlabs_tts",
-      config: {
-        enable_tts_interrupt: false,
-      },
-    },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_people_tts",
+          config: {
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            voice_ids: {
+              boyuan: "mr9qrgzgp98Y3CKLQHa5",
+              jerin: "XOhISZ8S2JCoAAhPLE4t",
+              lifan: "RK1vBUdUjL4AGgQCaxpi",
+              wendy: "usX0EPrPwf8ZC4BJpllM",
+              shicai: "m2txcO7RSY7jbTbO0PS4",
+              jan: "rPwOfJSzVUxWlm2ZLSv9",
+            },
+          },
+        },
     {
       name: "emotion",
       llm_label: "emotion",
