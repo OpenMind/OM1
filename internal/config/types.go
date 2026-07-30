@@ -1,5 +1,10 @@
 package config
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // SystemConfig is the top-level, file-level configuration.
 type SystemConfig struct {
 	Version string `json:"version"`
@@ -25,7 +30,7 @@ type SystemConfig struct {
 
 	UseSim bool `json:"use_sim"`
 
-	UseTracer bool `json:"use_tracer"`
+	UseTracer *TracerConfig `json:"use_tracer"`
 
 	DefaultMode       string                `json:"default_mode"`
 	AllowManualSwitch bool                  `json:"allow_manual_switching"`
@@ -110,6 +115,41 @@ type KBSpec struct {
 	MinScore float64 `json:"min_score"`
 }
 
+// TracerConfig enables OM1's LLM interaction tracer (writes traces/<date>.jsonl, feeds any in-process subscriber).
+// Accepts either a plain bool (use_tracer: true, the pre-existing form) or an object with quality_scorer nested in it.
+type TracerConfig struct {
+	Enabled bool `json:"enabled"`
+
+	// QualityScorer is nested here since it depends entirely on tracing being on.
+	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
+}
+
+// UnmarshalJSON lets use_tracer be written as either a bool or an object -- see TracerConfig's doc comment.
+func (t *TracerConfig) UnmarshalJSON(data []byte) error {
+	var enabled bool
+	if err := json.Unmarshal(data, &enabled); err == nil {
+		t.Enabled = enabled
+		return nil
+	}
+	type alias TracerConfig // avoid recursing back into this method
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return fmt.Errorf("use_tracer must be a bool or an object: %w", err)
+	}
+	*t = TracerConfig(a)
+	return nil
+}
+
+// QualityScorerConfig describes the optional live conversation-quality scorer, scraped as Prometheus metrics.
+type QualityScorerConfig struct {
+	Enabled bool   `json:"enabled"`
+	Model   string `json:"model"`
+	BaseURL string `json:"base_url"`
+
+	// APIKey overrides the top-level system api_key; falls back to it if unset (see cmd/main.go).
+	APIKey string `json:"api_key"`
+}
+
 // MemorySpec describes the optional long-term memory system.
 type MemorySpec struct {
 	Enabled         bool `json:"enabled"`
@@ -128,5 +168,4 @@ type RuntimeConfig struct {
 	KnowledgeBase    *KBSpec
 	ActionExecMode   string
 	ActionDeps       map[string][]string
-	UseTracer        bool
 }
