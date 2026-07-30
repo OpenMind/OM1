@@ -1,11 +1,10 @@
-package qualityscorer
+package qualityscore
 
 import (
 	"regexp"
 	"strings"
 )
 
-// voiceRe matches OM1's `Voice: "..."` marker; two quote alternatives since Go's RE2 has no backreferences.
 var voiceRe = regexp.MustCompile(`(?s)Voice:\s*(?:"([^"]*)"|'([^']*)')`)
 
 // extractPrompt returns the first Voice: marker's contents from llmInput, or "" if none.

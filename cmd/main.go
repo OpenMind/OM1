@@ -15,8 +15,6 @@ import (
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/metrics"
-	"github.com/openmind/om1/internal/providers"
-	"github.com/openmind/om1/internal/qualityscorer"
 	"github.com/openmind/om1/internal/runtime"
 
 	_ "github.com/openmind/om1/plugins/actions"
@@ -58,19 +56,6 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
-
-	if cfg.UseTracer != nil && cfg.UseTracer.QualityScorer != nil && cfg.UseTracer.QualityScorer.Enabled {
-		if !cfg.UseTracer.Enabled {
-			log.Warn("use_tracer.quality_scorer.enabled is true but use_tracer.enabled is false -- it will never receive any trace records")
-		}
-		qsCfg := *cfg.UseTracer.QualityScorer
-		if qsCfg.APIKey == "" {
-			// Same fallback every LLM plugin gets via buildSystemMeta/addMeta (internal/runtime/config.go).
-			qsCfg.APIKey = cfg.APIKey
-		}
-		stopScorer := qualityscorer.Start(ctx, log, providers.TracerProvider(), qsCfg)
-		defer stopScorer()
-	}
 
 	rt := runtime.New(cfg, log, runtime.Options{
 		HotReload:     *hotReload,

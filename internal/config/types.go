@@ -168,5 +168,4 @@ type RuntimeConfig struct {
 	KnowledgeBase    *KBSpec
 	ActionExecMode   string
 	ActionDeps       map[string][]string
-	UseTracer        bool
 }

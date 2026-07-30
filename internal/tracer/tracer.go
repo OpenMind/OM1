@@ -1,23 +1,21 @@
-package providers
+package tracer
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/logger"
+	"github.com/openmind/om1/internal/tracer/tracetype"
 	"go.uber.org/zap"
 )
 
 // TraceRecord is one LLM interaction, written as a JSONL line and handed to any subscriber.
-type TraceRecord struct {
-	Timestamp  string           `json:"ts"`
-	Generation int              `json:"generation"`
-	LLMInput   string           `json:"llm_input"`
-	LLMOutput  []map[string]any `json:"llm_output"`
-}
+type TraceRecord = tracetype.TraceRecord
 
 // Tracer provides a simple mechanism to record LLM interactions.
 type Tracer struct {
@@ -28,7 +26,9 @@ type Tracer struct {
 	file        *os.File
 	generation  int
 
-	subscribers []chan<- TraceRecord // appended once at startup via Subscribe(), never removed
+	subscribers []chan<- TraceRecord
+
+	qualityScoreCancel context.CancelFunc
 }
 
 var (
@@ -42,6 +42,23 @@ func TracerProvider() *Tracer {
 		tracerInstance = &Tracer{outputDir: "traces"}
 	})
 	return tracerInstance
+}
+
+// Start starts the tracer and its quality scorer if enabled in cfg, using a context that can be cancelled on shutdown.
+func (t *Tracer) Start(ctx context.Context, cfg *config.TracerConfig, systemAPIKey string, log *zap.Logger) {
+	if cfg == nil {
+		return
+	}
+
+	if !cfg.Enabled {
+		if cfg.QualityScorer != nil && cfg.QualityScorer.Enabled {
+			log.Warn("tracer: quality_scorer.enabled is true but use_tracer.enabled is false -- quality scorer will not start")
+		}
+		return
+	}
+	t.Enable()
+
+	t.startQualityScore(ctx, cfg.QualityScorer, systemAPIKey, log)
 }
 
 // Enable turns tracing on and ensures the output directory exists.
@@ -119,7 +136,6 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	subs := t.subscribers
 	t.mu.Unlock()
 
-	// Outside t.mu and non-blocking so a stuck subscriber can't stall SetGeneration's mode transitions.
 	for _, ch := range subs {
 		select {
 		case ch <- rec:
@@ -129,8 +145,10 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	}
 }
 
-// Stop closes the current file handle.
+// Stop stops the tracer and its quality scorer, closing any open file handle.
 func (t *Tracer) Stop() {
+	t.stopQualityScore()
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.stopLocked()
@@ -151,7 +169,7 @@ func (t *Tracer) writeLocked(line []byte) error {
 
 	if now != t.currentDate {
 		t.stopLocked()
-		path := filepath.Join(t.outputDir, now+".jsonl")
+		path := filepath.Join(t.outputDir, "tracer_"+now+".jsonl")
 		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			return err

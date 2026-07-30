@@ -21,6 +21,7 @@ import (
 	"github.com/openmind/om1/internal/mcp"
 	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
+	"github.com/openmind/om1/internal/tracer"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -60,7 +61,7 @@ type Runtime struct {
 	log          *zap.Logger
 	manager      *ModeManager
 	ioProvider   *providers.IOProvider
-	tracer       *providers.Tracer
+	tracer       *tracer.Tracer
 
 	mu                        sync.Mutex
 	current                   *modeState
@@ -85,7 +86,7 @@ func New(systemConfig *config.SystemConfig, log *zap.Logger, opts Options) *Runt
 		log:              log,
 		manager:          NewModeManager(systemConfig, log),
 		ioProvider:       providers.IO(),
-		tracer:           providers.TracerProvider(),
+		tracer:           tracer.TracerProvider(),
 		modeTransitionCh: make(chan string, 1),
 	}
 }
@@ -128,13 +129,14 @@ func (rt *Runtime) Run(ctx context.Context) error {
 
 	rt.startOrchestrators(ctx)
 	rt.startGlobalBackgrounds(ctx)
+	rt.startTracer(ctx)
 
 	<-ctx.Done()
 
 	rt.stopOrchestrators()
 	rt.stopGlobalBackgrounds()
 	rt.manager.Close()
-	rt.tracer.Stop()
+	rt.stopTracer()
 	return ctx.Err()
 }
 
@@ -151,10 +153,6 @@ func (rt *Runtime) initializeMode(modeName string) error {
 	}
 
 	runtimeConfig := modeConfig.toRuntimeConfig()
-
-	if runtimeConfig.UseTracer {
-		rt.tracer.Enable()
-	}
 
 	rt.log.Info("initializing mode", zap.String("mode", modeCfg.DisplayName))
 
@@ -220,6 +218,11 @@ func (rt *Runtime) startGlobalBackgrounds(ctx context.Context) {
 	globalCtx, cancel := context.WithCancel(ctx)
 	rt.globalBg.cancel = cancel
 	rt.globalBg.done = rt.globalBg.orchestrator.Start(globalCtx)
+}
+
+// startTracer starts the tracer's quality scorer if enabled in the system config, using a context that can be cancelled on shutdown.
+func (rt *Runtime) startTracer(ctx context.Context) {
+	rt.tracer.Start(ctx, rt.systemConfig.UseTracer, rt.systemConfig.APIKey, rt.log)
 }
 
 // startOrchestrators starts the orchestrators for the current mode in separate goroutines.
@@ -338,6 +341,11 @@ func (rt *Runtime) stopGlobalBackgrounds() {
 	case <-stopCtx.Done():
 		rt.log.Warn("global background shutdown timed out")
 	}
+}
+
+// stopTracer stops the tracer's quality scorer (if started) and closes its trace file.
+func (rt *Runtime) stopTracer() {
+	rt.tracer.Stop()
 }
 
 // onModeTransition stops the current mode's orchestrators, initialises the new
