@@ -164,6 +164,41 @@ var (
 	}, httpTimingLabels)
 )
 
+// Quality scorer metrics
+var (
+	QualityLiveLanguageCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_language_count",
+		Help: "Per-run count of scored turns by detected spoken language",
+	}, []string{"language"})
+
+	QualityLiveInputClassificationCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_input_classification_count",
+		Help: "Per-run count of user inputs by classification label (positive/marginal/negative/not_addressed)",
+	}, []string{"label"})
+
+	QualityLiveCoherenceCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "om1_quality_live_coherence_count",
+		Help: "Per-run count of prompt/response pairs by coherence label (coherent/marginal/incoherent)",
+	}, []string{"coherence"})
+
+	QualityLiveTurnsScored = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "om1_quality_live_turns_scored",
+		Help: "Per-run count of turns that produced a coherence score",
+	})
+
+	QualityLiveActiveScore = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "om1_quality_live_active_score",
+		Help: "Most recent turn's coherence score: coherent=1, marginal=0.5, incoherent=0",
+	})
+)
+
+// qualityCoherenceScore maps a coherence label to the om1_quality_live_active_score value, mirroring COHERENCE_SCORE.
+var qualityCoherenceScore = map[string]float64{
+	"incoherent": 0.0,
+	"marginal":   0.5,
+	"coherent":   1.0,
+}
+
 func init() {
 	prometheus.MustRegister(
 		LLMLatency, LLMLatencyLast,
@@ -180,7 +215,37 @@ func init() {
 		HTTPUpstreamTotal, HTTPUpstreamTotalLast,
 		HTTPUpstreamTTFB, HTTPUpstreamTTFBLast,
 		HTTPProxyTotal, HTTPProxyTotalLast,
+		QualityLiveLanguageCount,
+		QualityLiveInputClassificationCount,
+		QualityLiveCoherenceCount,
+		QualityLiveTurnsScored,
+		QualityLiveActiveScore,
 	)
+}
+
+// InitQualityLabels pre-registers known classification/coherence labels at zero, so their first real increment isn't invisible to increase() over short windows.
+func InitQualityLabels() {
+	for _, label := range []string{"positive", "marginal", "negative", "not_addressed"} {
+		QualityLiveInputClassificationCount.WithLabelValues(label).Add(0)
+	}
+	for _, coherence := range []string{"coherent", "marginal", "incoherent"} {
+		QualityLiveCoherenceCount.WithLabelValues(coherence).Add(0)
+	}
+}
+
+// RecordQualityTurn records the live quality-scorer's classification of one conversation turn.
+func RecordQualityTurn(language, classification, coherence string) {
+	if language != "" {
+		QualityLiveLanguageCount.WithLabelValues(language).Inc()
+	}
+	if classification != "" {
+		QualityLiveInputClassificationCount.WithLabelValues(classification).Inc()
+	}
+	if coherence != "" {
+		QualityLiveCoherenceCount.WithLabelValues(coherence).Inc()
+		QualityLiveTurnsScored.Inc()
+		QualityLiveActiveScore.Set(qualityCoherenceScore[coherence])
+	}
 }
 
 // RecordHTTPTiming records HTTP timing metrics for a request with the given attributes and timing values in milliseconds.

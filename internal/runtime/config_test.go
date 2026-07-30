@@ -88,14 +88,13 @@ func TestCollectSchemas(t *testing.T) {
 
 func TestToRuntimeConfig(t *testing.T) {
 	m := &modeSetup{
-		sys: &config.SystemConfig{Version: "v1", Name: "robot", SystemGovernance: "rules", UseTracer: true},
+		sys: &config.SystemConfig{Version: "v1", Name: "robot", SystemGovernance: "rules"},
 		cfg: config.ModeConfig{SystemPromptBase: "mode prompt", ActionExecMode: "sequential"},
 	}
 	rc := m.toRuntimeConfig()
 	require.Equal(t, "v1", rc.Version)
 	require.Equal(t, "mode prompt", rc.SystemPromptBase)
 	require.Equal(t, "rules", rc.SystemGovernance)
-	require.True(t, rc.UseTracer)
 	require.Equal(t, 1.0, rc.Hertz, "zero hertz defaults to 1.0")
 }
 

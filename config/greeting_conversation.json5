@@ -10,6 +10,12 @@
   // Global settings
   api_key: "${OM_API_KEY:-openmind_free}",
   system_governance: "",
+  use_tracer: {
+    enabled: true,
+    quality_scorer: {
+      enabled: true,
+    },
+  },
   cortex_llm: {
     type: "GeminiLLM",
     config: {

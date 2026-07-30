@@ -1,0 +1,392 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations & Alerts",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "builtIn": 1,
+        "type": "dashboard",
+        "datasource": { "type": "datasource", "uid": "grafana" }
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["om1", "quality", "ai-pipeline", "live"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {
+    "hidden": false,
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+  },
+  "timezone": "browser",
+  "title": "OM1 Quality Scores",
+  "uid": "om1-quality-scores",
+  "weekStart": "",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Active Score",
+      "description": "Coherence of the most recent turn this run. Blank until the first turn is scored.",
+      "gridPos": { "h": 6, "w": 16, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "INCOHERENT", "color": "red", "index": 0 },
+                "0.5": { "text": "MARGINAL", "color": "yellow", "index": 1 },
+                "1": { "text": "COHERENT", "color": "green", "index": 2 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "om1_quality_live_active_score",
+          "legendFormat": "active score",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Turns Scored This Run",
+      "description": "Count of turns that produced a coherence score since this scorer started",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": 0 }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "om1_quality_live_turns_scored",
+          "legendFormat": "turns",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 4,
+      "type": "piechart",
+      "title": "Spoken Language Breakdown (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by detected language",
+      "gridPos": { "h": 10, "w": 8, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "sort": "desc",
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (language) (increase(om1_quality_live_language_count[1h]))",
+          "legendFormat": "{{language}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 5,
+      "type": "piechart",
+      "title": "Input Classification (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by label (positive/marginal/negative/not_addressed)",
+      "gridPos": { "h": 10, "w": 8, "x": 8, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "positive" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "marginal" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "negative" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "sort": "desc",
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (label) (increase(om1_quality_live_input_classification_count[1h]))",
+          "legendFormat": "{{label}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 6,
+      "type": "piechart",
+      "title": "Prompt/Response Match Score (Last Hour)",
+      "description": "Turns scored in the last hour, grouped by coherence (coherent/marginal/incoherent)",
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "coherent" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "marginal" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "incoherent" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "sort": "desc",
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (coherence) (increase(om1_quality_live_coherence_count[1h]))",
+          "legendFormat": "{{coherence}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Coherence Over Time (15m buckets)",
+      "description": "Turns scored per 15-minute bucket, grouped by coherence. Stacked incoherent (bottom) / marginal / coherent (top) so trends are easy to compare.",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "interval": "15m",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" },
+            "axisPlacement": "auto"
+          },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "coherent" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "marginal" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "incoherent" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_coherence_count{coherence=\"incoherent\"}[15m])",
+          "legendFormat": "incoherent"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_coherence_count{coherence=\"marginal\"}[15m])",
+          "legendFormat": "marginal"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_coherence_count{coherence=\"coherent\"}[15m])",
+          "legendFormat": "coherent"
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Input Classification Over Time (15m buckets)",
+      "description": "User inputs per 15-minute bucket, grouped by classification. Stacked negative (bottom) / marginal / positive (top) so trends are easy to compare.",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "interval": "15m",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" },
+            "axisPlacement": "auto"
+          },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "positive" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "marginal" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "negative" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_input_classification_count{label=\"negative\"}[15m])",
+          "legendFormat": "negative"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_input_classification_count{label=\"marginal\"}[15m])",
+          "legendFormat": "marginal"
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "increase(om1_quality_live_input_classification_count{label=\"positive\"}[15m])",
+          "legendFormat": "positive"
+        }
+      ],
+      "pluginVersion": "13.0.1+security-01"
+    }
+  ]
+}
