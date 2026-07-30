@@ -101,6 +101,10 @@ LimX Tron:
 
 ![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_tron.png)
 
+Deep Robotics M20 Pro:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_M20Pro.png)
+
 ### Step 2: Explore & Teleoperate
 
 Before building autonomy, confirm everything is working as expected. From the portal you have access to the **live camera feed**, **robot status**, and **manual teleoperation controls**.
@@ -109,32 +113,33 @@ Drive the robot around to verify that it's connected and responding correctly. T
 
 > **Tip**: You can also drive the robot with an **Xbox controller**. Pair the controller to your computer over Bluetooth and use it to teleoperate the robot in the simulator.
 
-<!-- SCREENSHOT: teleoperation view — live camera feed + manual drive controls -->
-
 ### Step 3: Build a Map with SLAM
 
-Next, give the robot an understanding of its surroundings. Start **SLAM**, which lets the robot build a map while it explores the environment.
+Next, give the robot an understanding of its surroundings. Open the **Map view** tab and start **SLAM**, which lets the robot build a map while it explores the environment.
 
-As the robot moves, it continuously observes its surroundings and constructs the map in real time. Once exploration is complete, you have a navigation-ready map that can be used for autonomous tasks like patrols and navigation.
+As the robot moves, it continuously observes its surroundings and constructs the map in real time. SLAM produces a live **3D point cloud** of the space, colored by height, that you can rotate and zoom to inspect:
 
-<!-- SCREENSHOT: SLAM map being generated in real time -->
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/3D_slam_map.png)
+
+The point cloud is also flattened into a **2D navigation map** — an occupancy grid showing walls and obstacles. This is the navigation-ready map used for autonomous tasks like patrols and navigation. Once **Navigation** mode is active, the map's **Set Goal** and **Localize** tools become available, and the robot's live position is shown on the map:
+
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/2D_slam_map.png)
 
 ### Step 4: Create an Autonomous Patrol
 
-Instead of manually driving the robot every time, create a **patrol route** by placing waypoints throughout the environment.
+Instead of manually driving the robot every time, open the **Route Planner** tab and create a **patrol route** by placing waypoints throughout the environment.
 
-1. Place several waypoints across the space, using smooth turns so the robot can navigate naturally.
-2. When you're happy with the path, **deploy** the patrol.
+1. Click **+ New Route** to start a fresh route.
+2. Toggle **Add Waypoints** and click points across the map to lay out the path. Use smooth turns so the robot can navigate naturally. **Undo Last** removes the most recent waypoint, and the node/edge count updates as you build. You can also **Import** or **Export** a route to reuse it later.
+3. When you're happy with the path, click **Deploy**.
 
 The robot then takes over and begins following the route autonomously, navigating between each waypoint while continuously localizing itself within the map.
 
-<!-- SCREENSHOT: patrol waypoints placed on the map -->
+![ ](../.gitbook/assets/cloud-isaac-sim-assets/patrol.png)
 
 ### Step 5: Monitor the Patrol
 
 While the robot carries out its patrol, monitor everything directly from the portal — the live camera stream, robot status, and patrol progress. This makes it easy to remotely verify that everything is operating as expected without being physically present.
-
-<!-- SCREENSHOT: monitoring view during an active patrol -->
 
 ### Step 6: Configure Automatic Charging
 
@@ -151,13 +156,9 @@ Once charged, it's ready to continue operating. This enables long-running deploy
 
 > **Note**: Automatic charging is currently supported on **Unitree Go2 only**.
 
-<!-- SCREENSHOT: battery threshold configuration + robot docking -->
-
 ### Step 7: Automatic Localization
 
 If the robot starts up again or loses localization, it can automatically determine its position on the existing map before continuing its mission. This removes another manual step from the deployment process and helps keep operations running smoothly.
-
-<!-- SCREENSHOT: robot re-localizing on the existing map -->
 
 ### Cleaning Up
 
