@@ -21,6 +21,7 @@
     * [ROS2-humble](developing/ros2-humble.md)
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+* [Monitoring and Metrics](developing/10_monitoring_and_metrics.md)
 
 ## MCP Integration <a href="#mcp" id="mcp"></a>
 

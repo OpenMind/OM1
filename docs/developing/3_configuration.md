@@ -152,6 +152,34 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 * **default_mode** The default mode for the robot to start in.
 * **allow_manual_switching** To decide if manual switching of mode is allowed or not.
 * **mode_memory_enabled** Whether mode memory is enabled.
+* **use_tracer** Enables the LLM interaction tracer, which writes all prompts and responses to `traces/tracer_<date>.jsonl`. Can be a simple boolean (`true`) or an object for advanced configuration.
+
+### Tracer Configuration
+
+When `use_tracer` is enabled, you can also configure the live quality scorer, which uses an LLM to classify conversations and reports its findings as Prometheus metrics.
+
+Example:
+```json5
+  use_tracer: {
+    enabled: true,
+    quality_scorer: {
+      enabled: true,
+      model: "gemini-3.1-flash-lite", // or any other compatible model
+      base_url: "https://api.openmind.com/api/core/gemini", // or other OpenAI-style endpoint
+      api_key: "${OM_API_KEY}" // Optional: defaults to the top-level api_key
+    },
+  },
+```
+
+*   `enabled`: (boolean) Master switch for the tracer. Must be `true` for the quality scorer to run.
+*   `quality_scorer`: (object) Configuration for the live quality scorer.
+    *   `enabled`: (boolean) Turns the quality scorer on or off.
+    *   `model`: (string) The LLM model to use for classification (e.g., `gemini-3.1-flash-lite`).
+    *   `base_url`: (string) The base URL of the LLM API endpoint. Defaults to OpenMind's Gemini endpoint.
+    *   `api_key`: (string) An optional, dedicated API key for the quality scorer. If omitted, it uses the global `api_key` from the main config.
+
+The quality scorer also writes its own detailed log to `traces/quality_<date>.jsonl`. For details on the metrics it produces, see the [Monitoring and Metrics](./10_monitoring_and_metrics.md) guide.
+
 
 ## version
 
