@@ -71,8 +71,6 @@ type asrSensorCore struct {
 	name string
 	log  *zap.Logger
 
-	// language/apiVersion label the om1_asr_latency_seconds metric; empty for
-	// ParallelASRSensor, which supplies them per-call instead (see streamLabels).
 	language   string
 	apiVersion string
 
@@ -141,22 +139,18 @@ func (a *asrSensorCore) pushTranscript(text string) {
 	}
 }
 
-// deliver is the default onTranscript handler for a single-provider stream:
-// it records the VAD-vs-ASR latency for this transcript (if tracking is
-// enabled) and forwards every accepted transcript.
+// records the VAD-vs-ASR latency and forwards every accepted transcript.
 func (a *asrSensorCore) deliver(provider string, text string) {
 	a.vad.recordTranscript(provider, a.language, a.apiVersion, text)
 	a.pushTranscript(text)
 }
 
 // feedVAD runs the optional local VAD-latency tracker over one PCM chunk.
-// A no-op when tracking is disabled.
 func (a *asrSensorCore) feedVAD(pcm []byte) {
 	a.vad.feedAudio(pcm)
 }
 
-// Poll returns the next accepted transcript, blocking until one is available or
-// ctx is cancelled.
+// Poll returns the next accepted transcript, blocking until one is available
 func (a *asrSensorCore) Poll(ctx context.Context) (any, error) {
 	select {
 	case text, ok := <-a.transcriptCh:

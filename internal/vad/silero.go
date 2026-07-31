@@ -14,21 +14,14 @@ import (
 // SampleRate is the sample rate Silero VAD v5 was trained and exported for.
 const SampleRate = 16000
 
-// FrameSamples is the fixed window size (32ms @ 16kHz) of *new* audio one
-// Infer call consumes.
+// FrameSamples is the fixed window size (32ms @ 16kHz) of new audio per call.
 const FrameSamples = 512
 
 const stateDim = 128
 
-// contextSize is the number of trailing samples from the previous frame that
-// Silero's own reference wrapper prepends to each new frame before running
-// inference (see OnnxWrapper.__call__ in the upstream silero-vad repo).
-// Without it the model's conv layers see a truncated receptive field on
-// every call and speech probabilities stay near zero regardless of content.
+// Number of trailing samples that Silero prepends to new frames
 const contextSize = 64
 
-// modelInputSamples is the total sample count actually fed to the ONNX
-// graph per call: contextSize carried over plus FrameSamples of new audio.
 const modelInputSamples = contextSize + FrameSamples
 
 var (
@@ -36,8 +29,7 @@ var (
 	envErr  error
 )
 
-// ensureEnvironment initializes the process-wide onnxruntime environment
-// exactly once, loading the shared library from libPath if given.
+// initializes the process-wide onnxruntime environment
 func ensureEnvironment(libPath string) error {
 	envOnce.Do(func() {
 		if libPath != "" {
@@ -48,9 +40,7 @@ func ensureEnvironment(libPath string) error {
 	return envErr
 }
 
-// Model wraps one loaded Silero VAD v5 ONNX session, its recurrent state,
-// and the trailing-sample context carried between calls. It is not safe for
-// concurrent use.
+// Model wraps one loaded Silero VAD v5 ONNX session
 type Model struct {
 	session *ort.DynamicAdvancedSession
 	state   *ort.Tensor[float32]
@@ -58,8 +48,7 @@ type Model struct {
 	context [contextSize]float32
 }
 
-// NewModel loads the Silero VAD v5 ONNX model at modelPath. libPath is the
-// onnxruntime shared library to dlopen; see ResolveLibraryPath.
+// loads the Silero VAD v5 ONNX model at modelPath
 func NewModel(modelPath, libPath string) (*Model, error) {
 	if err := ensureEnvironment(libPath); err != nil {
 		return nil, fmt.Errorf("vad: init onnxruntime environment: %w", err)
@@ -98,8 +87,7 @@ func (m *Model) Close() error {
 	return m.session.Destroy()
 }
 
-// Reset zeroes the recurrent state and trailing context, starting a fresh
-// utterance context.
+// Zeroes the recurrent state and trailing context
 func (m *Model) Reset() {
 	data := m.state.GetData()
 	for i := range data {
@@ -108,12 +96,7 @@ func (m *Model) Reset() {
 	m.context = [contextSize]float32{}
 }
 
-// Infer runs one inference step over exactly FrameSamples of *new* mono
-// audio, normalized to [-1, 1], returning the model's speech probability for
-// that frame. Internally, the trailing contextSize samples from the
-// previous call are prepended before running (matching Silero's own
-// reference wrapper), and the recurrent state carries forward to the next
-// call.
+// runs one inference step over FrameSamples of new mono audio
 func (m *Model) Infer(frame []float32) (float32, error) {
 	if len(frame) != FrameSamples {
 		return 0, fmt.Errorf("vad: frame must be %d samples, got %d", FrameSamples, len(frame))

@@ -20,53 +20,37 @@ const (
 	defaultVADLatencyOutputDir = "data/vad_asr_latency.jsonl"
 
 	// defaultVADInterruptConfirmDelay is how long VAD-detected speech must
-	// persist before it's treated as a real barge-in rather than a blip
-	// (cough, click, brief noise). The Silero segmenter emits speech_start
-	// on a single 32ms frame crossing the probability threshold with no
-	// built-in debounce, so this confirm window is the only thing standing
-	// between a blip and an unwanted TTS interrupt.
+	// persist before it's treated as a real barge-in
 	defaultVADInterruptConfirmDelay = 150 * time.Millisecond
 
 	// maxSanePendingAge bounds how long a VAD speech_end event stays eligible
-	// to be paired with a transcript. Guards against a stale event (e.g. a
-	// noise blip whose "transcript" never arrived because it was too short
-	// to be accepted) silently pairing with a much later, unrelated
-	// transcript and producing a nonsensical latency.
+	// to be paired with a transcript
 	maxSanePendingAge = 20 * time.Second
 )
 
 // vadLatencyConfig optionally enables local VAD-vs-ASR latency measurement
-// and/or VAD-driven TTS barge-in. Both require the onnxruntime library and
-// VAD model (`make download-onnxruntime`/`download-vad-model`); missing
-// either disables VAD support for the sensor non-fatally.
+// and/or VAD-driven TTS barge-in
 type vadLatencyConfig struct {
 	EnableVADLatency bool   `json:"enable_vad_latency"`
 	VADModelPath     string `json:"vad_model_path"`
 	VADLibraryPath   string `json:"vad_library_path"`
 	VADOutputPath    string `json:"vad_output_path"`
 
-	// VADInterruptConfirmMS is how long, in milliseconds, VAD-detected speech
-	// must persist before triggering tts.RequestInterrupt. Only relevant when
-	// the owning sensor has EnableTTSInterrupt set. Defaults to
-	// defaultVADInterruptConfirmDelay if <=0.
 	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
 }
 
 // vadLatencyRecord is one JSONL line pairing a locally-detected end-of-speech
 // moment with the ASR transcript that followed it.
 type vadLatencyRecord struct {
-	UtteranceEndedAt string  `json:"utterance_ended_at"` // VAD-detected end-of-speech, RFC3339Nano
-	TranscriptAt     string  `json:"transcript_at"`      // ASR transcript acceptance time, RFC3339Nano
+	UtteranceEndedAt string  `json:"utterance_ended_at"`
+	TranscriptAt     string  `json:"transcript_at"`
 	LatencyMS        float64 `json:"latency_ms"`
 	Provider         string  `json:"provider"`
 	Transcript       string  `json:"transcript"`
 }
 
-// vadLatencyTracker runs a local Silero VAD alongside the ASR stream for two
-// independent, optionally-combined purposes: latency measurement (pairs each
-// detected end-of-speech with the next accepted transcript) and TTS barge-in
-// (fires tts.RequestInterrupt once speech is sustained, without waiting for
-// a vendor transcript). All methods are nil-receiver safe.
+// vadLatencyTracker runs a local Silero VAD alongside the ASR stream for
+// latency measurement and TTS barge-in
 type vadLatencyTracker struct {
 	log        *zap.Logger
 	model      *vad.Model
@@ -78,19 +62,16 @@ type vadLatencyTracker struct {
 	interruptConfirmDelay time.Duration
 
 	mu         sync.Mutex
-	pendingEnd time.Time // most recent unmatched speech_end, zero if none
-	lastStart  time.Time // most recent speech_start, zero if none yet -- for logging utterance duration
+	pendingEnd time.Time
+	lastStart  time.Time
 
-	// interrupt confirm-delay state, guarded by mu; only used when enableInterrupt.
 	speechActive   bool
-	candidateStart time.Time // when the current speech_start was first seen, zero if none pending
-	confirmed      bool      // whether candidateStart has already triggered an interrupt
+	candidateStart time.Time
+	confirmed      bool
 }
 
 // newVADLatencyTracker builds a tracker from cfg, or returns nil if neither
-// latency measurement nor TTS interrupt is requested, or if the VAD
-// model/runtime can't be loaded. Load failures are logged and non-fatal: ASR
-// (and TTS interrupt, if requested) keeps working without VAD support.
+// latency measurement nor TTS interrupt is requested
 func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate int, log *zap.Logger) *vadLatencyTracker {
 	if !cfg.EnableVADLatency && !enableTTSInterrupt {
 		return nil
@@ -139,10 +120,7 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 
 // feedAudio runs the VAD over one PCM chunk: logs each speech boundary,
 // records end-of-speech for later transcript pairing, and triggers TTS
-// barge-in once speech clears the confirm delay. A new speech_end always
-// replaces any earlier unmatched one, since VAD events and transcripts
-// aren't reliably 1:1 (blips/noise can trigger a speech_end with no
-// transcript), so only the most recent is a plausible match.
+// barge-in once speech clears the confirm delay
 func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	if t == nil {
 		return
@@ -184,9 +162,7 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 
 // checkInterrupt fires tts.RequestInterrupt once speechActive has persisted
 // past interruptConfirmDelay without an intervening speech_end, filtering
-// out sub-confirm-delay blips. Split out from feedAudio so the confirm-delay
-// decision can be unit tested without a live VAD segmenter. Callers must
-// hold t.mu.
+// out sub-confirm-delay blips
 func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
 	if !t.enableInterrupt || !t.speechActive || t.confirmed {
 		return
@@ -205,8 +181,6 @@ func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
 
 // recordTranscript pairs an accepted transcript with the most recent
 // unmatched VAD end-of-speech event, then records the latency
-// (om1_asr_latency_seconds + JSONL). Drops transcripts with no pending
-// event or a pairing old enough to be implausible.
 func (t *vadLatencyTracker) recordTranscript(provider, language, apiVersion, text string) {
 	if t == nil {
 		return
@@ -255,7 +229,7 @@ func (t *vadLatencyTracker) recordTranscript(provider, language, apiVersion, tex
 	)
 }
 
-// close releases the underlying ONNX session, if one was loaded.
+// close releases the underlying ONNX session
 func (t *vadLatencyTracker) close() {
 	if t == nil {
 		return

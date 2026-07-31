@@ -50,8 +50,6 @@ var (
 
 // ASR metrics.
 var (
-	// ASRLatency is fed by the local Silero-VAD detector in
-	// plugins/inputs/asr/vad_latency.go, not vendor-reported speech timing.
 	ASRLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "om1_asr_latency_seconds",
 		Help: "Latency from locally-detected (VAD) end-of-speech to final transcript in seconds. Requires enable_vad_latency.",

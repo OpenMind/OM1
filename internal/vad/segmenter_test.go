@@ -19,7 +19,6 @@ func TestObserveEmitsSpeechStartThenSpeechEnd(t *testing.T) {
 		t.Fatalf("expected speech_start, got %+v ok=%v", ev, ok)
 	}
 
-	// Still speaking: no event.
 	if _, ok := s.observe(0.8, base.Add(32*time.Millisecond)); ok {
 		t.Fatalf("expected no event while still speaking")
 	}
@@ -29,12 +28,10 @@ func TestObserveEmitsSpeechStartThenSpeechEnd(t *testing.T) {
 		t.Fatalf("expected no event on first silent frame (hangover not elapsed)")
 	}
 
-	// Silence hasn't persisted long enough yet.
 	if _, ok := s.observe(0.1, silenceStart.Add(100*time.Millisecond)); ok {
 		t.Fatalf("expected no event before MinSilenceDuration elapses")
 	}
 
-	// Now past the hangover window.
 	confirmAt := silenceStart.Add(300 * time.Millisecond)
 	ev, ok := s.observe(0.1, confirmAt)
 	if !ok || ev.Type != EventSpeechEnd {
@@ -55,8 +52,6 @@ func TestObserveIgnoresBriefDips(t *testing.T) {
 	if _, ok := s.observe(0.9, base); !ok {
 		t.Fatalf("expected speech_start")
 	}
-	// A brief dip below threshold that recovers before the hangover elapses
-	// must not produce speech_end, and speech continues.
 	if _, ok := s.observe(0.1, base.Add(50*time.Millisecond)); ok {
 		t.Fatalf("brief dip should not emit an event yet")
 	}
@@ -88,7 +83,6 @@ func TestResampleSameRateIsPassthrough(t *testing.T) {
 }
 
 func TestResampleDownsamplesAndIsContinuousAcrossCalls(t *testing.T) {
-	// 48000 -> 16000 is an exact 3:1 ratio.
 	full := NewSegmenter(nil, 48000, SegmenterConfig{})
 	src := make([]int16, 300)
 	for i := range src {
@@ -98,7 +92,7 @@ func TestResampleDownsamplesAndIsContinuousAcrossCalls(t *testing.T) {
 
 	split := NewSegmenter(nil, 48000, SegmenterConfig{})
 	var piecewise []float32
-	for i := 0; i < len(src); i += 37 { // odd chunk size to stress the carry-over path
+	for i := 0; i < len(src); i += 37 {
 		end := i + 37
 		if end > len(src) {
 			end = len(src)
@@ -106,8 +100,6 @@ func TestResampleDownsamplesAndIsContinuousAcrossCalls(t *testing.T) {
 		piecewise = append(piecewise, split.resample(src[i:end])...)
 	}
 
-	// Chunking can shift exactly where the last fractional sample resolves by
-	// one output sample; the overlapping prefix must still match exactly.
 	if diff := len(allAtOnce) - len(piecewise); diff < -1 || diff > 1 {
 		t.Fatalf("length mismatch: all-at-once=%d piecewise=%d", len(allAtOnce), len(piecewise))
 	}

@@ -6,9 +6,6 @@ import (
 )
 
 // TestModelInferOnRealRuntime exercises the actual Silero VAD v5 ONNX model
-// via onnxruntime. It's skipped unless both the onnxruntime shared library
-// and the model file are available, since neither ships in the repo (see
-// `make download-onnxruntime` and `make download-vad-model`).
 func TestModelInferOnRealRuntime(t *testing.T) {
 	libPath := ResolveLibraryPath(os.Getenv("OM1_TEST_ONNXRUNTIME_LIB"))
 	if libPath == "" {

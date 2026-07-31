@@ -279,7 +279,7 @@ func TestCheckInterruptDoesNotRefireOnceConfirmed(t *testing.T) {
 		interruptConfirmDelay: 150 * time.Millisecond,
 		speechActive:          true,
 		candidateStart:        now.Add(-200 * time.Millisecond),
-		confirmed:             true, // already handled by an earlier call
+		confirmed:             true,
 	}
 
 	tr.checkInterrupt(now)

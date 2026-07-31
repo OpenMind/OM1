@@ -336,8 +336,6 @@ func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 		return ""
 	}
 
-	// Reset for the next utterance; latency itself is observed in
-	// vadLatencyTracker.recordTranscript, not here.
 	s.speechStarted = false
 	return msg.ASRReply
 }

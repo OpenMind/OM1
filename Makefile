@@ -35,10 +35,6 @@ endif
 
 ZENOH_URL=https://github.com/eclipse-zenoh/zenoh-c/releases/download/$(ZENOH_C_VERSION)/zenoh-c-$(ZENOH_C_VERSION)-$(ZENOH_PLATFORM)-standalone.zip
 
-# onnxruntime and the Silero VAD model are only needed for the optional
-# enable_vad_latency ASR feature. onnxruntime_go dlopens the shared library
-# at *runtime* (not link time), so unlike zenoh-c, neither download is a
-# prerequisite of build/test -- run them explicitly to use the feature.
 ONNXRUNTIME_VERSION=1.27.1
 ONNXRUNTIME_DIR=.onnxruntime
 ifeq ($(UNAME_S),Linux)
@@ -86,10 +82,10 @@ help:
 	@echo "  deps-update      - Update dependencies"
 	@echo "  install          - Install binary to GOPATH/bin"
 	@echo "  check            - Run fmt, vet, lint, and test"
-	@echo "  download-zenohc      - Download and extract zenohc library"
+	@echo "  download-zenohc  - Download and extract zenohc library"
 	@echo "  download-onnxruntime - Download onnxruntime (needed for enable_vad_latency)"
 	@echo "  download-vad-model   - Download the Silero VAD v5 model (needed for enable_vad_latency)"
-	@echo "  list-configs         - List available configuration files"
+	@echo "  list-configs     - List available configuration files"
 
 download-zenohc:
 	@echo "Downloading zenoh-c $(ZENOH_C_VERSION) for $(ZENOH_PLATFORM)..."

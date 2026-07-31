@@ -116,8 +116,6 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		// language/apiVersion are per-provider here, so deliver looks them
-		// up per-call via streamLabels instead of using fixed core fields.
 		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, "", ""),
 		cfg:           cfg,
 		dedupWindow:   dedupWindow,
@@ -225,9 +223,7 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 	s.pushTranscript(text)
 }
 
-// streamLabels returns provider's language/apiVersion, so the one shared
-// VAD tracker can label om1_asr_latency_seconds correctly despite covering
-// every provider in a parallel sensor.
+// streamLabels returns provider's language/apiVersion
 func (s *ParallelASRSensor) streamLabels(provider string) (language, apiVersion string) {
 	for _, st := range s.streams {
 		if st.provider == provider {

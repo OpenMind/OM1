@@ -7,7 +7,7 @@ import (
 
 // Event is a speech-boundary event detected by a Segmenter.
 type Event struct {
-	Type string // "speech_start" or "speech_end"
+	Type string //"speech_start" or "speech_end"
 	At   time.Time
 }
 
@@ -18,10 +18,7 @@ const (
 
 // SegmenterConfig tunes the speech/silence decision.
 type SegmenterConfig struct {
-	// Threshold is the speech-probability cutoff (default 0.5, Silero's own default).
-	Threshold float32
-	// MinSilenceDuration is how long the probability must stay below Threshold,
-	// after speech, before speech_end fires (default 300ms).
+	Threshold          float32
 	MinSilenceDuration time.Duration
 }
 
@@ -35,27 +32,23 @@ func (c SegmenterConfig) withDefaults() SegmenterConfig {
 	return c
 }
 
-// Segmenter turns a raw mono PCM stream at an arbitrary sample rate into
-// speech_start/speech_end events, resampling to 16kHz and running a Model
-// over consecutive 512-sample frames. It is not safe for concurrent use.
+// Segmenter turns a raw mono PCM stream into speech_start/speech_end events
 type Segmenter struct {
 	model   *Model
 	cfg     SegmenterConfig
 	srcRate int
 
-	srcBuf []int16 // unconsumed source-rate samples, used only when srcRate != SampleRate
-	srcPos float64 // fractional read position into srcBuf
+	srcBuf []int16
+	srcPos float64
 
-	frameBuf []float32 // resampled 16kHz samples awaiting a full frame
+	frameBuf []float32
 
 	inSpeech     bool
 	haveSilence  bool
 	silenceSince time.Time
 }
 
-// NewSegmenter builds a Segmenter reading PCM captured at srcRate and running
-// inference on model. model may be shared across Segmenters only if calls
-// are externally serialized; typically each stream owns its own Model.
+// NewSegmenter builds a Segmenter reading PCM
 func NewSegmenter(model *Model, srcRate int, cfg SegmenterConfig) *Segmenter {
 	return &Segmenter{
 		model:   model,
@@ -64,10 +57,7 @@ func NewSegmenter(model *Model, srcRate int, cfg SegmenterConfig) *Segmenter {
 	}
 }
 
-// Feed processes one chunk of little-endian int16 mono PCM. t is the
-// wall-clock time the whole chunk was captured/observed; all frames drained
-// from this chunk are timestamped with it, which is accurate to within one
-// chunk's duration -- adequate for measuring second-scale ASR latency.
+// Feed processes one chunk of little-endian int16 mono PCM.
 func (s *Segmenter) Feed(pcm []byte, t time.Time) []Event {
 	s.frameBuf = append(s.frameBuf, s.resample(bytesToInt16(pcm))...)
 
@@ -87,10 +77,7 @@ func (s *Segmenter) Feed(pcm []byte, t time.Time) []Event {
 	return events
 }
 
-// observe applies the threshold+hangover state machine to one frame's speech
-// probability, returning a boundary event if the frame completes one.
-// speech_end is timestamped at the moment silence actually began, not the
-// (later) moment it was confirmed -- that's the true stop-speaking instant.
+// apply the threshold+hangover state machine to one frame's speech probability
 func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
 	if prob >= s.cfg.Threshold {
 		s.haveSilence = false
@@ -120,8 +107,6 @@ func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
 }
 
 // resample converts new source-rate samples to 16kHz float32 in [-1, 1],
-// carrying fractional position and unconsumed tail samples across calls so
-// consecutive chunks resample continuously.
 func (s *Segmenter) resample(newSamples []int16) []float32 {
 	if s.srcRate == SampleRate {
 		out := make([]float32, len(newSamples))
@@ -147,10 +132,6 @@ func (s *Segmenter) resample(newSamples []int16) []float32 {
 		s.srcPos += ratio
 	}
 
-	// srcPos can overshoot the buffer (e.g. an exact integer ratio leaves no
-	// fractional part to anchor the next sample): cap the trim at the
-	// buffer's length, but keep the overshoot in srcPos so it carries over
-	// as a skip into the samples the next call appends.
 	trim := int(s.srcPos)
 	if trim <= 0 {
 		return out

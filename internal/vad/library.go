@@ -5,9 +5,6 @@ import (
 	"path/filepath"
 )
 
-// defaultLibraryCandidates are searched, in order, when no explicit shared
-// library path is configured. ".onnxruntime" matches the layout produced by
-// `make download-onnxruntime`.
 var defaultLibraryCandidates = []string{
 	".onnxruntime/lib/libonnxruntime.so",
 	".onnxruntime/lib/libonnxruntime.dylib",
@@ -15,10 +12,7 @@ var defaultLibraryCandidates = []string{
 	"/usr/lib/libonnxruntime.so",
 }
 
-// ResolveLibraryPath returns the onnxruntime shared library to dlopen:
-// explicit if non-empty, else $OM1_ONNXRUNTIME_LIB, else the first existing
-// default candidate, else "" (onnxruntime_go then falls back to searching
-// the system loader path for "onnxruntime.so").
+// ResolveLibraryPath returns the onnxruntime shared library to dlopen
 func ResolveLibraryPath(explicit string) string {
 	if explicit != "" {
 		return explicit
