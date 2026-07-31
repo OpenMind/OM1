@@ -35,12 +35,10 @@ const (
 	maxSanePendingAge = 20 * time.Second
 )
 
-// vadLatencyConfig is embedded in every ASR sensor config to optionally
-// enable local Silero-VAD-vs-ASR latency measurement and/or VAD-driven TTS
-// barge-in. Both require the onnxruntime shared library and the VAD model
-// file to be present (see `make download-onnxruntime` and `make
-// download-vad-model`); if either is missing, VAD support is disabled for
-// the sensor (logged, non-fatal) and it falls back to running without it.
+// vadLatencyConfig optionally enables local VAD-vs-ASR latency measurement
+// and/or VAD-driven TTS barge-in. Both require the onnxruntime library and
+// VAD model (`make download-onnxruntime`/`download-vad-model`); missing
+// either disables VAD support for the sensor non-fatally.
 type vadLatencyConfig struct {
 	EnableVADLatency bool   `json:"enable_vad_latency"`
 	VADModelPath     string `json:"vad_model_path"`
@@ -64,17 +62,11 @@ type vadLatencyRecord struct {
 	Transcript       string  `json:"transcript"`
 }
 
-// vadLatencyTracker runs a local Silero VAD alongside the ASR websocket
-// stream. It serves two independent, optionally-combined purposes:
-//   - latency measurement: pairs each detected end-of-speech with the next
-//     accepted transcript, to measure how long the ASR vendor takes to
-//     return speech after the person actually stopped talking (enableLatency).
-//   - TTS barge-in: fires tts.RequestInterrupt as soon as sustained speech is
-//     detected while TTS is playing, without waiting for a vendor transcript
-//     (enableInterrupt).
-//
-// All methods are nil-receiver safe so callers don't need to branch on
-// whether either feature is enabled.
+// vadLatencyTracker runs a local Silero VAD alongside the ASR stream for two
+// independent, optionally-combined purposes: latency measurement (pairs each
+// detected end-of-speech with the next accepted transcript) and TTS barge-in
+// (fires tts.RequestInterrupt once speech is sustained, without waiting for
+// a vendor transcript). All methods are nil-receiver safe.
 type vadLatencyTracker struct {
 	log        *zap.Logger
 	model      *vad.Model
@@ -145,16 +137,12 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 	}
 }
 
-// feedAudio runs the VAD over one PCM chunk, logging every detected
-// speech_start/speech_end boundary, recording end-of-speech timestamps for
-// later pairing with a transcript (when latency measurement is enabled), and
-// triggering a TTS barge-in once speech has been sustained past the confirm
-// delay (when interrupt is enabled). A new speech_end always replaces any
-// earlier unmatched one: VAD events and accepted transcripts aren't reliably
-// 1:1 (short blips, ambient noise, or pauses can trigger a speech_end that
-// never gets a transcript -- e.g. acceptASRTranscript rejects anything under
-// 3 words), so only the most recent event is ever a plausible match for the
-// *next* transcript.
+// feedAudio runs the VAD over one PCM chunk: logs each speech boundary,
+// records end-of-speech for later transcript pairing, and triggers TTS
+// barge-in once speech clears the confirm delay. A new speech_end always
+// replaces any earlier unmatched one, since VAD events and transcripts
+// aren't reliably 1:1 (blips/noise can trigger a speech_end with no
+// transcript), so only the most recent is a plausible match.
 func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	if t == nil {
 		return
@@ -216,12 +204,9 @@ func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
 }
 
 // recordTranscript pairs an accepted transcript with the most recent
-// unmatched VAD end-of-speech event, appends the resulting latency to the
-// output file, and feeds it into the om1_asr_latency_seconds Prometheus
-// metric (labeled with language/apiVersion as reported by the caller).
-// Transcripts with no pending VAD event (e.g. arriving before the feature
-// was enabled) are ignored, as are pairings old enough to be obviously stale
-// rather than a real ASR latency.
+// unmatched VAD end-of-speech event, then records the latency
+// (om1_asr_latency_seconds + JSONL). Drops transcripts with no pending
+// event or a pairing old enough to be implausible.
 func (t *vadLatencyTracker) recordTranscript(provider, language, apiVersion, text string) {
 	if t == nil {
 		return

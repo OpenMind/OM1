@@ -41,9 +41,8 @@ func TestNewVADLatencyTrackerDisabledReturnsNil(t *testing.T) {
 }
 
 func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
-	// No onnxruntime shared library is installed in the test environment, so
-	// loading must fail cleanly and the tracker must come back nil rather
-	// than panicking or blocking ASR startup.
+	// No onnxruntime library is installed in the test env; loading must fail
+	// cleanly, returning nil rather than panicking or blocking ASR startup.
 	tr := newVADLatencyTracker(vadLatencyConfig{
 		EnableVADLatency: true,
 		VADModelPath:     "/nonexistent/model.onnx",
@@ -55,9 +54,8 @@ func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 }
 
 func TestNewVADLatencyTrackerInterruptOnlyAlsoAttemptsLoad(t *testing.T) {
-	// EnableVADLatency is off, but enableTTSInterrupt alone must still trigger
-	// a load attempt (and degrade gracefully, same as above) rather than
-	// short-circuiting to nil the way the fully-disabled case does.
+	// enableTTSInterrupt alone (EnableVADLatency off) must still trigger a
+	// load attempt, not short-circuit to nil like the fully-disabled case.
 	tr := newVADLatencyTracker(vadLatencyConfig{
 		EnableVADLatency: false,
 		VADModelPath:     "/nonexistent/model.onnx",
@@ -117,11 +115,9 @@ func TestVADLatencyTrackerRecordTranscriptPairsAndWritesJSONL(t *testing.T) {
 	}
 }
 
-// TestVADLatencyTrackerDiscardsStaleUnmatchedEvent covers the bug where a
-// VAD speech_end that never got a matching transcript (e.g. a short blip
-// acceptASRTranscript rejected) would sit in a FIFO queue and later pair
-// with a much later, unrelated transcript, producing a nonsensical latency.
-// A newer speech_end must fully replace the stale one, not queue behind it.
+// TestVADLatencyTrackerDiscardsStaleUnmatchedEvent verifies a new speech_end
+// fully replaces a stale unmatched one instead of queuing behind it, so a
+// blip ASR never transcribed can't later pair with an unrelated transcript.
 func TestVADLatencyTrackerDiscardsStaleUnmatchedEvent(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")

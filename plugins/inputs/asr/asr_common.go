@@ -71,10 +71,8 @@ type asrSensorCore struct {
 	name string
 	log  *zap.Logger
 
-	// language and apiVersion label the om1_asr_latency_seconds metric that
-	// vad.recordTranscript emits. For a single-provider sensor these are
-	// fixed for the sensor's lifetime; ParallelASRSensor overrides them
-	// per-call since it fans one core out across multiple providers.
+	// language/apiVersion label the om1_asr_latency_seconds metric; empty for
+	// ParallelASRSensor, which supplies them per-call instead (see streamLabels).
 	language   string
 	apiVersion string
 
@@ -92,10 +90,9 @@ type asrSensorCore struct {
 	zenohPublisher zenohsession.Publisher
 }
 
-// newSensorCore builds the sensor core, initializing the zenoh publisher if
-// possible and the optional local VAD-latency tracker. language/apiVersion
-// label the VAD-based ASRLatency metric; pass "" for sensors (like
-// ParallelASRSensor) that supply per-call labels instead.
+// newSensorCore builds the sensor core, including the zenoh publisher and
+// optional VAD-latency tracker. Pass "" for language/apiVersion if the
+// sensor supplies per-call labels instead (see ParallelASRSensor).
 func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig, rate int, language, apiVersion string) *asrSensorCore {
 	log := logger.Get().Named(name)
 

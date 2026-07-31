@@ -313,10 +313,9 @@ func elevenlabsParseMessage(s *transcriberStream, msg ASRMessage) string {
 		return ""
 	}
 
-	// A committed message ends the segment, so reset the timer even when the transcript is dropped.
-	// ASRLatency is now measured against the locally-detected VAD end-of-speech
-	// (see vadLatencyTracker.recordTranscript) rather than this vendor-reported
-	// speech start, so no metric is observed here.
+	// A committed message ends the segment, so reset the timer even when the
+	// transcript is dropped. Latency itself is observed in
+	// vadLatencyTracker.recordTranscript, not here.
 	s.speechStarted = false
 
 	if msg.ASRReply == "" || !acceptASRTranscript(msg.ASRReply) {

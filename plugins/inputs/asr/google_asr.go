@@ -336,9 +336,8 @@ func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 		return ""
 	}
 
-	// ASRLatency is now measured against the locally-detected VAD end-of-speech
-	// (see vadLatencyTracker.recordTranscript) rather than this vendor-reported
-	// speech_start, so no metric is observed here -- just reset for the next utterance.
+	// Reset for the next utterance; latency itself is observed in
+	// vadLatencyTracker.recordTranscript, not here.
 	s.speechStarted = false
 	return msg.ASRReply
 }

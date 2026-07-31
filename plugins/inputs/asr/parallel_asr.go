@@ -225,10 +225,9 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 	s.pushTranscript(text)
 }
 
-// streamLabels returns the language/apiVersion of the first configured
-// stream for provider, so the shared VAD tracker can label the
-// om1_asr_latency_seconds metric correctly even though one tracker is
-// shared across every provider in a parallel sensor.
+// streamLabels returns provider's language/apiVersion, so the one shared
+// VAD tracker can label om1_asr_latency_seconds correctly despite covering
+// every provider in a parallel sensor.
 func (s *ParallelASRSensor) streamLabels(provider string) (language, apiVersion string) {
 	for _, st := range s.streams {
 		if st.provider == provider {
