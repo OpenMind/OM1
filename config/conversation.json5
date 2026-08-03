@@ -27,7 +27,7 @@
         enable_tts_interrupt: true,
         "enable_vad_latency": true,
         // Empty by default: VAD runs locally on CPU. Set VAD_SERVICE_URL
-        // (e.g. http://localhost:8200) to offload Silero VAD inference to
+        // (e.g. http://localhost:8300) to offload Silero VAD inference to
         // the GPU service instead (see docker/Dockerfile.vad in OM1-modules).
         "vad_service_url": "${VAD_SERVICE_URL:-}"
       },

@@ -33,12 +33,12 @@ func BenchmarkInferLocal(b *testing.B) {
 // GPU service (see docker/Dockerfile.vad in OM1-modules). Point
 // VAD_SERVICE_URL at a running instance, e.g.:
 //
-//	docker run --rm --runtime nvidia -p 8200:8200 vad-gpu-service:dev
-//	VAD_SERVICE_URL=http://localhost:8200 go test -bench=InferRemote ./internal/vad/...
+//	docker run --rm --runtime nvidia -p 8300:8300 vad-gpu-service:dev
+//	VAD_SERVICE_URL=http://localhost:8300 go test -bench=InferRemote ./internal/vad/...
 func BenchmarkInferRemote(b *testing.B) {
 	url := os.Getenv("VAD_SERVICE_URL")
 	if url == "" {
-		b.Skip("VAD_SERVICE_URL not set; point it at a running vad-gpu-service (e.g. http://localhost:8200)")
+		b.Skip("VAD_SERVICE_URL not set; point it at a running vad-gpu-service (e.g. http://localhost:8300)")
 	}
 	benchmarkInfer(b, NewRemoteModel(url))
 }

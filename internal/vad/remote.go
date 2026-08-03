@@ -17,7 +17,7 @@ import (
 
 // DefaultServiceURL is the base URL of the VAD GPU inference service
 // (see docker/Dockerfile.vad in OM1-modules) used when none is configured.
-const DefaultServiceURL = "http://localhost:8200"
+const DefaultServiceURL = "http://localhost:8300"
 
 const inferTimeout = 2 * time.Second
 
