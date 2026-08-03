@@ -54,11 +54,17 @@ func NewModel(modelPath, libPath string) (*Model, error) {
 		return nil, fmt.Errorf("vad: init onnxruntime environment: %w", err)
 	}
 
+	opts, err := newSingleThreadedSessionOptions()
+	if err != nil {
+		return nil, fmt.Errorf("vad: session options: %w", err)
+	}
+	defer func() { _ = opts.Destroy() }()
+
 	session, err := ort.NewDynamicAdvancedSession(
 		modelPath,
 		[]string{"input", "sr", "state"},
 		[]string{"output", "stateN"},
-		nil,
+		opts,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("vad: load model %q: %w", modelPath, err)
@@ -78,6 +84,42 @@ func NewModel(modelPath, libPath string) (*Model, error) {
 	}
 
 	return &Model{session: session, state: state, sr: sr}, nil
+}
+
+// newSingleThreadedSessionOptions builds ORT SessionOptions tuned for a tiny
+// recurrent model called once every 32ms: ORT's default options size the
+// intra-op thread pool to the number of logical CPUs and let idle threads
+// busy-spin (rather than sleep) waiting for the next call, which is meant to
+// minimize latency for larger, bursty workloads. For a model this small on a
+// steady ~31Hz cadence, that default cost dominates: measured on a 14-core
+// box, default options burned ~145% of one CPU core sustained, against
+// ~205us of actual compute per call (~0.6% of one core if it never had to
+// wait between calls). Forcing 1 thread and disabling spinning dropped that
+// to ~2% of one core -- in line with Silero VAD's typical reported cost --
+// with no change in output (thread count and spin behavior don't affect the
+// model's numerics).
+func newSingleThreadedSessionOptions() (*ort.SessionOptions, error) {
+	opts, err := ort.NewSessionOptions()
+	if err != nil {
+		return nil, fmt.Errorf("new session options: %w", err)
+	}
+	if err := opts.SetIntraOpNumThreads(1); err != nil {
+		_ = opts.Destroy()
+		return nil, fmt.Errorf("set intra-op threads: %w", err)
+	}
+	if err := opts.SetInterOpNumThreads(1); err != nil {
+		_ = opts.Destroy()
+		return nil, fmt.Errorf("set inter-op threads: %w", err)
+	}
+	if err := opts.AddSessionConfigEntry("session.intra_op.allow_spinning", "0"); err != nil {
+		_ = opts.Destroy()
+		return nil, fmt.Errorf("disable intra-op spinning: %w", err)
+	}
+	if err := opts.AddSessionConfigEntry("session.inter_op.allow_spinning", "0"); err != nil {
+		_ = opts.Destroy()
+		return nil, fmt.Errorf("disable inter-op spinning: %w", err)
+	}
+	return opts, nil
 }
 
 // Close releases the model's ONNX session and tensors.
