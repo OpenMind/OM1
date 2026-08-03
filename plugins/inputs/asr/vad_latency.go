@@ -29,18 +29,12 @@ const (
 )
 
 // vadLatencyConfig optionally enables local VAD-vs-ASR latency measurement
-// and/or VAD-driven TTS barge-in.
-//
-// If VADServiceURL is set, VAD inference runs on the remote GPU service at
-// that URL (see docker/Dockerfile.vad in OM1-modules) instead of loading
-// the Silero ONNX model locally and running it on CPU; VADModelPath and
-// VADLibraryPath are then ignored.
+// and/or VAD-driven TTS barge-in
 type vadLatencyConfig struct {
 	EnableVADLatency bool   `json:"enable_vad_latency"`
 	VADModelPath     string `json:"vad_model_path"`
 	VADLibraryPath   string `json:"vad_library_path"`
 	VADOutputPath    string `json:"vad_output_path"`
-	VADServiceURL    string `json:"vad_service_url"`
 
 	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
 }
@@ -59,7 +53,7 @@ type vadLatencyRecord struct {
 // latency measurement and TTS barge-in
 type vadLatencyTracker struct {
 	log        *zap.Logger
-	model      vad.Backend
+	model      *vad.Model
 	segmenter  *vad.Segmenter
 	outputPath string
 
@@ -83,9 +77,12 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		return nil
 	}
 
-	model, modelFields, err := newVADBackend(cfg)
+	modelPath := firstNonEmptyStr(cfg.VADModelPath, defaultVADModelPath)
+	libPath := vad.ResolveLibraryPath(cfg.VADLibraryPath)
+
+	model, err := vad.NewModel(modelPath, libPath)
 	if err != nil {
-		fields := append(modelFields, zap.Error(err))
+		fields := []zap.Field{zap.String("model_path", modelPath), zap.Error(err)}
 		if enableTTSInterrupt {
 			log.Error("vad-based tts interrupt disabled: failed to load Silero VAD model", fields...)
 		} else {
@@ -101,13 +98,14 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		confirmDelay = time.Duration(cfg.VADInterruptConfirmMS) * time.Millisecond
 	}
 
-	log.Info("vad tracking enabled", append(modelFields,
+	log.Info("vad tracking enabled",
+		zap.String("model_path", modelPath),
 		zap.String("output_path", outputPath),
 		zap.Int("source_rate", rate),
 		zap.Bool("latency_measurement", cfg.EnableVADLatency),
 		zap.Bool("tts_interrupt", enableTTSInterrupt),
 		zap.Duration("interrupt_confirm_delay", confirmDelay),
-	)...)
+	)
 
 	return &vadLatencyTracker{
 		log:                   log,
@@ -118,33 +116,6 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		enableInterrupt:       enableTTSInterrupt,
 		interruptConfirmDelay: confirmDelay,
 	}
-}
-
-// newVADBackend builds the Inferer backend selected by cfg: the remote GPU
-// service if VADServiceURL is set, otherwise the local CPU ONNX model. The
-// returned fields describe which backend was chosen and are meant to be
-// logged on both the success and failure paths.
-func newVADBackend(cfg vadLatencyConfig) (vad.Backend, []zap.Field, error) {
-	if cfg.VADServiceURL != "" {
-		fields := []zap.Field{
-			zap.String("backend", "remote-gpu"),
-			zap.String("service_url", cfg.VADServiceURL),
-		}
-		return vad.NewRemoteModel(cfg.VADServiceURL), fields, nil
-	}
-
-	modelPath := firstNonEmptyStr(cfg.VADModelPath, defaultVADModelPath)
-	libPath := vad.ResolveLibraryPath(cfg.VADLibraryPath)
-	fields := []zap.Field{
-		zap.String("backend", "local-cpu"),
-		zap.String("model_path", modelPath),
-	}
-
-	model, err := vad.NewModel(modelPath, libPath)
-	if err != nil {
-		return nil, fields, err
-	}
-	return model, fields, nil
 }
 
 // feedAudio runs the VAD over one PCM chunk: logs each speech boundary,

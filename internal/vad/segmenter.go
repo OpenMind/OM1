@@ -22,24 +22,6 @@ type SegmenterConfig struct {
 	MinSilenceDuration time.Duration
 }
 
-// Inferer runs one Silero VAD frame-inference step over FrameSamples of new
-// mono audio, returning that frame's speech probability. Model (local ONNX)
-// and RemoteModel (GPU service over HTTP) both implement it, so a Segmenter
-// can run against either backend interchangeably.
-type Inferer interface {
-	Infer(frame []float32) (float32, error)
-}
-
-// Backend is the full lifecycle of a VAD model as owned by a caller that
-// constructs and eventually releases it directly (unlike Segmenter, which
-// only ever needs Infer): it adds Close so the local (ONNX) and remote
-// (HTTP) backends can be released the same way regardless of which one is
-// configured. Model and RemoteModel both implement it.
-type Backend interface {
-	Inferer
-	Close() error
-}
-
 func (c SegmenterConfig) withDefaults() SegmenterConfig {
 	if c.Threshold <= 0 {
 		c.Threshold = 0.5
@@ -52,7 +34,7 @@ func (c SegmenterConfig) withDefaults() SegmenterConfig {
 
 // Segmenter turns a raw mono PCM stream into speech_start/speech_end events
 type Segmenter struct {
-	model   Inferer
+	model   *Model
 	cfg     SegmenterConfig
 	srcRate int
 
@@ -67,7 +49,7 @@ type Segmenter struct {
 }
 
 // NewSegmenter builds a Segmenter reading PCM
-func NewSegmenter(model Inferer, srcRate int, cfg SegmenterConfig) *Segmenter {
+func NewSegmenter(model *Model, srcRate int, cfg SegmenterConfig) *Segmenter {
 	return &Segmenter{
 		model:   model,
 		cfg:     cfg.withDefaults(),
