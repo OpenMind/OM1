@@ -87,17 +87,7 @@ func NewModel(modelPath, libPath string) (*Model, error) {
 }
 
 // newSingleThreadedSessionOptions builds ORT SessionOptions tuned for a tiny
-// recurrent model called once every 32ms: ORT's default options size the
-// intra-op thread pool to the number of logical CPUs and let idle threads
-// busy-spin (rather than sleep) waiting for the next call, which is meant to
-// minimize latency for larger, bursty workloads. For a model this small on a
-// steady ~31Hz cadence, that default cost dominates: measured on a 14-core
-// box, default options burned ~145% of one CPU core sustained, against
-// ~205us of actual compute per call (~0.6% of one core if it never had to
-// wait between calls). Forcing 1 thread and disabling spinning dropped that
-// to ~2% of one core -- in line with Silero VAD's typical reported cost --
-// with no change in output (thread count and spin behavior don't affect the
-// model's numerics).
+// recurrent model called once every 32ms
 func newSingleThreadedSessionOptions() (*ort.SessionOptions, error) {
 	opts, err := ort.NewSessionOptions()
 	if err != nil {
