@@ -68,6 +68,25 @@ func TestConnectSendReceive(t *testing.T) {
 	}
 }
 
+func TestConnectSendReceiveWithoutReconnect(t *testing.T) {
+	url := echoServer(t)
+
+	received := make(chan []byte, 1)
+	c := New(Config{URL: url, Reconnect: false}, zap.NewNop(), func(_ int, data []byte) {
+		received <- append([]byte(nil), data...)
+	})
+	require.NoError(t, c.Connect())
+	t.Cleanup(c.Close)
+
+	require.NoError(t, c.Send([]byte("ping")))
+	select {
+	case got := <-received:
+		require.Equal(t, []byte("ping"), got, "the server echoes the message back to onMessage")
+	case <-time.After(2 * time.Second):
+		t.Fatal("did not receive echoed message")
+	}
+}
+
 func TestConnectFailsForBadURL(t *testing.T) {
 	c := New(Config{URL: "ws://127.0.0.1:1"}, zap.NewNop(), nil)
 	require.Error(t, c.Connect(), "non-reconnecting client returns the dial error")

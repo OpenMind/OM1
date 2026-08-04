@@ -60,7 +60,13 @@ func New(cfg Config, log *zap.Logger, onMessage func(messageType int, data []byt
 // Connect dials the server and starts the send/read goroutines.
 func (c *Client) Connect() error {
 	if !c.cfg.Reconnect {
-		return c.dial()
+		if err := c.dial(); err != nil {
+			return err
+		}
+		c.wg.Add(2)
+		go c.sendLoop()
+		go c.readLoop()
+		return nil
 	}
 
 	for {
