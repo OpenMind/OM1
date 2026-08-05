@@ -2,7 +2,6 @@ package bme680
 
 import (
 	"math"
-	"os"
 )
 
 // calibration holds the factory calibration coefficients read from the sensor's
@@ -28,14 +27,14 @@ type calibration struct {
 }
 
 // readCalibration reads and parses both calibration blocks from the sensor.
-func readCalibration(f *os.File) (calibration, error) {
+func readCalibration(bus i2cBus) (calibration, error) {
 	var c calibration
 
-	b1, err := readBlock(f, regCalibStart1, 25) // 0x89-0xA1
+	b1, err := bus.readBlock(regCalibStart1, 25) // 0x89-0xA1
 	if err != nil {
 		return c, err
 	}
-	b2, err := readBlock(f, regCalibStart2, 16) // 0xE1-0xF0
+	b2, err := bus.readBlock(regCalibStart2, 16) // 0xE1-0xF0
 	if err != nil {
 		return c, err
 	}
@@ -60,19 +59,19 @@ func readCalibration(f *os.File) (calibration, error) {
 	c.parG1 = int8(b1[22])
 	c.parG3 = int8(b1[23])
 
-	rh, err := readReg(f, regHeatRange)
+	rh, err := bus.readReg(regHeatRange)
 	if err != nil {
 		return c, err
 	}
 	c.resHeatRange = (rh >> 4) & 0x03
 
-	hv, err := readReg(f, regHeatVal)
+	hv, err := bus.readReg(regHeatVal)
 	if err != nil {
 		return c, err
 	}
 	c.resHeatVal = int8(hv)
 
-	se, err := readReg(f, regRangeSwErr)
+	se, err := bus.readReg(regRangeSwErr)
 	if err != nil {
 		return c, err
 	}
