@@ -2,7 +2,6 @@ package pms5003
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -217,4 +216,3 @@ func pm25ToAQI(pm25 float64) int {
 	return 500
 }
 
-var _ = fmt.Sprintf // keep fmt imported if unused elsewhere later

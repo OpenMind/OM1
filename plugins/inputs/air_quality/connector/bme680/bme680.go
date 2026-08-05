@@ -16,7 +16,6 @@ import (
 // Register addresses per Bosch BME680 datasheet.
 const (
 	regChipID      = 0xD0
-	regReset       = 0xE0
 	regCtrlHum     = 0x72
 	regCtrlMeas    = 0x74
 	regConfig      = 0x75

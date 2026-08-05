@@ -194,14 +194,15 @@ func (s *AirQualitySensor) pollOnce(ctx context.Context) (*connector.AirQualityD
 		return nil, nil
 	}
 
-	data, err := s.conn.Read(ctx)
-	if err != nil {
-		return nil, err
-	}
+	data, readErr := s.conn.Read(ctx)
+
 	if derr := s.conn.Disconnect(ctx); derr != nil {
 		s.log.Warn("disconnect error", zap.Error(derr))
 	}
 
+	if readErr != nil {
+		return nil, readErr
+	}
 	return data, nil
 }
 
@@ -237,9 +238,10 @@ func (s *AirQualitySensor) rawToMessage(raw *connector.AirQualityData) *inputs.M
 
 	var parts []string
 
+	var aqiLabel, aqiDescription string
 	if raw.AQI != nil {
-		label, _ := connector.GetAQILevel(*raw.AQI)
-		parts = append(parts, fmt.Sprintf("Air Quality in %s: %s (AQI: %d)", raw.Location, label, *raw.AQI))
+		aqiLabel, aqiDescription = connector.GetAQILevel(*raw.AQI)
+		parts = append(parts, fmt.Sprintf("Air Quality in %s: %s (AQI: %d)", raw.Location, aqiLabel, *raw.AQI))
 	} else {
 		parts = append(parts, fmt.Sprintf("Air Quality in %s", raw.Location))
 	}
@@ -279,11 +281,10 @@ func (s *AirQualitySensor) rawToMessage(raw *connector.AirQualityData) *inputs.M
 	}
 
 	if raw.AQI != nil {
-		label, description := connector.GetAQILevel(*raw.AQI)
 		if *raw.AQI >= s.cfg.AQIDangerThreshold {
-			parts = append(parts, fmt.Sprintf("DANGER: Air quality is %s — %s", label, description))
+			parts = append(parts, fmt.Sprintf("DANGER: Air quality is %s — %s", aqiLabel, aqiDescription))
 		} else if *raw.AQI >= s.cfg.AQIWarningThreshold {
-			parts = append(parts, fmt.Sprintf("WARNING: Air quality is %s — %s", label, description))
+			parts = append(parts, fmt.Sprintf("WARNING: Air quality is %s — %s", aqiLabel, aqiDescription))
 		}
 	}
 

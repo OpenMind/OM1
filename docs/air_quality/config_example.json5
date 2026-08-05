@@ -2,12 +2,7 @@
 // Copy the relevant block into your own config's `agent_inputs` array.
 // Only one `connector` per AirQuality entry; add multiple entries if you
 // want to combine sources (e.g. aqicn for outdoor + bme680 for indoor).
-//
-// NOTE: `version` below is only present so this file can be validated
-// standalone during development. When copying entries into your own
-// config, use your config's own `version`, not this one.
 {
-  version: "v1.1.0",
   agent_inputs: [
     // --- aqicn: AQICN cloud API, no hardware needed ---------------------
     {

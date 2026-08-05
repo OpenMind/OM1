@@ -139,10 +139,6 @@ func (c calibration) calcHeaterResistance(targetTempC, ambientTempC float64) byt
 	return byte(resHeatX)
 }
 
-func (c *Connector) calcHeaterResistance(targetTempC, ambientTempC float64) byte {
-	return c.calib.calcHeaterResistance(targetTempC, ambientTempC)
-}
-
 // calcGasWait converts milliseconds into the gas_wait_x register encoding
 // (multiplier factor + 4x multiplier bits), per datasheet section 5.3.3.
 func calcGasWait(ms int) byte {
