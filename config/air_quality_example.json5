@@ -1,0 +1,60 @@
+// Example agent_inputs entries for the AirQuality sensor plugin.
+// Copy the relevant block into your own config's `agent_inputs` array.
+// Only one `connector` per AirQuality entry; add multiple entries if you
+// want to combine sources (e.g. aqicn for outdoor + bme680 for indoor).
+//
+// NOTE: `version` below is only present so this file can be validated
+// standalone during development. When copying entries into your own
+// config, use your config's own `version`, not this one.
+{
+  version: "v1.1.0",
+  agent_inputs: [
+    // --- aqicn: AQICN cloud API, no hardware needed ---------------------
+    {
+      type: "AirQuality",
+      config: {
+        connector: "aqicn",
+        connector_config: {
+          api_key: "${AQICN_API_KEY}",
+          latitude: -6.9667,
+          longitude: 110.4167,
+        },
+        poll_interval: 300.0,
+        aqi_warning_threshold: 100,
+        aqi_danger_threshold: 150,
+      },
+    },
+
+    // --- pms5003: PMS5003/PMS7003 particulate sensor via Serial/UART ---
+    {
+      type: "AirQuality",
+      config: {
+        connector: "pms5003",
+        connector_config: {
+          port: "/dev/ttyUSB0",
+          location: "Outdoor",
+        },
+        poll_interval: 60.0,
+        aqi_warning_threshold: 100,
+        aqi_danger_threshold: 150,
+      },
+    },
+
+    // --- bme680: BME680 environmental sensor via I2C --------------------
+    {
+      type: "AirQuality",
+      config: {
+        connector: "bme680",
+        connector_config: {
+          i2c_bus: "/dev/i2c-1",
+          i2c_address: 118, // 0x76
+          location: "Indoor",
+          gas_baseline: 50000.0,
+        },
+        poll_interval: 60.0,
+        aqi_warning_threshold: 100,
+        aqi_danger_threshold: 150,
+      },
+    },
+  ],
+}
