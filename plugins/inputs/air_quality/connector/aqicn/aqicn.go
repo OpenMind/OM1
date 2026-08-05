@@ -16,6 +16,10 @@ type Config struct {
 	APIKey    string  // config["api_key"]
 	Latitude  float64 // config["latitude"], default -6.2088
 	Longitude float64 // config["longitude"], default 106.8456
+
+	// BaseURL overrides the AQICN API base URL. Empty means the real API
+	// (https://api.waqi.info). Exists so tests can point at httptest.Server.
+	BaseURL string
 }
 
 // Connector implements connector.AirQualityConnector for the AQICN cloud API.
@@ -31,6 +35,9 @@ func New(cfg Config, logger *log.Logger) *Connector {
 	if cfg.Latitude == 0 && cfg.Longitude == 0 {
 		cfg.Latitude = -6.2088
 		cfg.Longitude = 106.8456
+	}
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = "https://api.waqi.info"
 	}
 	if logger == nil {
 		logger = log.Default()
@@ -68,7 +75,9 @@ type iaqiEntry struct {
 type aqicnPayload struct {
 	Status string `json:"status"`
 	Data   struct {
-		AQI  json.Number `json:"aqi"`
+		// AQI is raw because AQICN sends either a number or the literal
+		// string "-" when no AQI is available for the location.
+		AQI  json.RawMessage `json:"aqi"`
 		City struct {
 			Name string `json:"name"`
 		} `json:"city"`
@@ -92,7 +101,7 @@ func (c *Connector) Read(ctx context.Context) (*connector.AirQualityData, error)
 		return nil, nil
 	}
 
-	url := fmt.Sprintf("https://api.waqi.info/feed/geo:%v;%v/?token=%s", c.cfg.Latitude, c.cfg.Longitude, c.cfg.APIKey)
+	url := fmt.Sprintf("%s/feed/geo:%v;%v/?token=%s", c.cfg.BaseURL, c.cfg.Latitude, c.cfg.Longitude, c.cfg.APIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -131,9 +140,13 @@ func (c *Connector) parse(payload aqicnPayload) *connector.AirQualityData {
 	data := connector.NewAirQualityData()
 
 	// aqi_raw = data.get("aqi", "-"); aqi = int(aqi_raw) if aqi_raw not in ("-", None) else None
-	if aqiFloat, err := payload.Data.AQI.Float64(); err == nil {
-		aqi := int(aqiFloat)
-		data.AQI = &aqi
+	// AQI may be a JSON number or the literal string "-" (meaning unavailable).
+	var aqiNum json.Number
+	if err := json.Unmarshal(payload.Data.AQI, &aqiNum); err == nil {
+		if aqiFloat, err := aqiNum.Float64(); err == nil {
+			aqi := int(aqiFloat)
+			data.AQI = &aqi
+		}
 	}
 
 	get := func(e *iaqiEntry) *float64 {
