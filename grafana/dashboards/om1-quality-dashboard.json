@@ -152,7 +152,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (language) (increase(om1_quality_live_language_count[1h]))",
+          "expr": "sum by (language) (round(increase(om1_quality_live_language_count[1h])))",
           "legendFormat": "{{language}}",
           "instant": true,
           "range": false
@@ -200,7 +200,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (label) (increase(om1_quality_live_input_classification_count[1h]))",
+          "expr": "sum by (label) (round(increase(om1_quality_live_input_classification_count[1h])))",
           "legendFormat": "{{label}}",
           "instant": true,
           "range": false
@@ -248,7 +248,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (coherence) (increase(om1_quality_live_coherence_count[1h]))",
+          "expr": "sum by (coherence) (round(increase(om1_quality_live_coherence_count[1h])))",
           "legendFormat": "{{coherence}}",
           "instant": true,
           "range": false
@@ -304,19 +304,19 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_coherence_count{coherence=\"incoherent\"}[15m])",
+          "expr": "round(increase(om1_quality_live_coherence_count{coherence=\"incoherent\"}[15m]))",
           "legendFormat": "incoherent"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_coherence_count{coherence=\"marginal\"}[15m])",
+          "expr": "round(increase(om1_quality_live_coherence_count{coherence=\"marginal\"}[15m]))",
           "legendFormat": "marginal"
         },
         {
           "refId": "C",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_coherence_count{coherence=\"coherent\"}[15m])",
+          "expr": "round(increase(om1_quality_live_coherence_count{coherence=\"coherent\"}[15m]))",
           "legendFormat": "coherent"
         }
       ],
@@ -370,19 +370,19 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_input_classification_count{label=\"negative\"}[15m])",
+          "expr": "round(increase(om1_quality_live_input_classification_count{label=\"negative\"}[15m]))",
           "legendFormat": "negative"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_input_classification_count{label=\"marginal\"}[15m])",
+          "expr": "round(increase(om1_quality_live_input_classification_count{label=\"marginal\"}[15m]))",
           "legendFormat": "marginal"
         },
         {
           "refId": "C",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "increase(om1_quality_live_input_classification_count{label=\"positive\"}[15m])",
+          "expr": "round(increase(om1_quality_live_input_classification_count{label=\"positive\"}[15m]))",
           "legendFormat": "positive"
         }
       ],

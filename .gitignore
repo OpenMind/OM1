@@ -29,6 +29,11 @@ config/cron_job/
 # Zenoh
 .zenoh-c/
 
+# onnxruntime + local ML models (see `make download-onnxruntime`, `make download-vad-model`)
+.onnxruntime/
+models/
+*.onnx
+
 # Test
 coverage.out
 

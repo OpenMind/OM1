@@ -49,6 +49,8 @@ type GoogleASRConfig struct {
 	Language             string   `json:"language"`              // default "english"
 	AlternativeLanguages []string `json:"alternative_languages"` // v1 only
 	EnableTTSInterrupt   bool     `json:"enable_tts_interrupt"`
+
+	vadLatencyConfig
 }
 
 // googleASRParams carries the vendor inputs needed to build a Google asrCommon.
@@ -62,6 +64,8 @@ type googleASRParams struct {
 	language             string
 	alternativeLanguages []string
 	enableTTSInterrupt   bool
+
+	vadLatencyConfig
 }
 
 // GoogleASRSensor streams local microphone audio to Google ASR via the shared asrCommon.
@@ -99,6 +103,7 @@ func NewGoogleASR(configMap map[string]any) (inputs.Sensor, error) {
 		language:             cfg.Language,
 		alternativeLanguages: cfg.AlternativeLanguages,
 		enableTTSInterrupt:   cfg.EnableTTSInterrupt,
+		vadLatencyConfig:     cfg.vadLatencyConfig,
 	})
 	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
@@ -149,6 +154,7 @@ func (s *GoogleASRSensor) Stop() {
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
@@ -306,6 +312,7 @@ func resolveGoogleASRConfig(p googleASRParams) asrCommonConfig {
 		AltCodes:           altCodes,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       googleParseMessage,
+		vadLatencyConfig:   p.vadLatencyConfig,
 	}
 }
 
@@ -329,9 +336,6 @@ func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 		return ""
 	}
 
-	if s.speechStarted {
-		s.observeASR(metrics.ASRLatency, metrics.ASRLatencyLast, time.Since(s.speechStartTime))
-		s.speechStarted = false
-	}
+	s.speechStarted = false
 	return msg.ASRReply
 }
