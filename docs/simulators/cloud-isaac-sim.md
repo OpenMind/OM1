@@ -184,7 +184,7 @@ If Map view reads "Enable SLAM or select a map from Settings to view the map", t
 
 ### Step 5: Switch to Navigation on the Saved Map
 
-Here's the link that's easy to miss: **navigation doesn't use the map you just watched being built — it uses a saved map that you explicitly select.** Mapping and selecting are two separate actions.
+You'll normally navigate on the map you just built — but it doesn't carry over automatically. **The map has to be saved, and then selected for navigation**. Those are two extra actions after mapping finishes, and skipping either is the most common reason Navigation Mode and Route Planner appear to do nothing.
 
 Under **Navigation Mode**, choose **2D Navigation** (occupancy map) or **3D Navigation** (point cloud, BETA), then pick your saved map from the list below. Until a completed SLAM run exists, that panel reads:
 
