@@ -52,7 +52,7 @@ var (
 var (
 	ASRLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "om1_asr_latency_seconds",
-		Help: "Latency from locally-detected (VAD) end-of-speech to final transcript in seconds. Requires enable_vad_latency.",
+		Help: "Latency from locally-detected (VAD) end-of-speech to final transcript in seconds.",
 	}, []string{"model", "language", "api_version"})
 
 	ASRSpeechDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -67,7 +67,7 @@ var (
 
 	ASRLatencyLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "om1_asr_latency_last_seconds",
-		Help: "Most recent latency from locally-detected (VAD) end-of-speech to final transcript in seconds. Requires enable_vad_latency.",
+		Help: "Most recent latency from locally-detected (VAD) end-of-speech to final transcript in seconds.",
 	}, []string{"model", "language", "api_version"})
 
 	ASRSpeechDurationLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{

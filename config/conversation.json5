@@ -25,7 +25,6 @@
         rate: 16000,
         chunk: 1600,
         enable_tts_interrupt: true,
-        "enable_vad_latency": true
       },
     },
     {

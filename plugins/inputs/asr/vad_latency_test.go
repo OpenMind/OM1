@@ -30,18 +30,10 @@ func TestVADLatencyTrackerNilIsSafe(t *testing.T) {
 	tr.close()
 }
 
-func TestNewVADLatencyTrackerDisabledReturnsNil(t *testing.T) {
-	tr := newVADLatencyTracker(vadLatencyConfig{EnableVADLatency: false}, false, 16000, zap.NewNop())
-	if tr != nil {
-		t.Fatalf("expected nil tracker when disabled, got %+v", tr)
-	}
-}
-
 func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 	tr := newVADLatencyTracker(vadLatencyConfig{
-		EnableVADLatency: true,
-		VADModelPath:     "/nonexistent/model.onnx",
-		VADLibraryPath:   "/nonexistent/libonnxruntime.so",
+		VADModelPath:   "/nonexistent/model.onnx",
+		VADLibraryPath: "/nonexistent/libonnxruntime.so",
 	}, false, 16000, zap.NewNop())
 	if tr != nil {
 		t.Fatalf("expected nil tracker when the onnxruntime library is unavailable, got %+v", tr)
@@ -50,9 +42,8 @@ func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 
 func TestNewVADLatencyTrackerInterruptOnlyAlsoAttemptsLoad(t *testing.T) {
 	tr := newVADLatencyTracker(vadLatencyConfig{
-		EnableVADLatency: false,
-		VADModelPath:     "/nonexistent/model.onnx",
-		VADLibraryPath:   "/nonexistent/libonnxruntime.so",
+		VADModelPath:   "/nonexistent/model.onnx",
+		VADLibraryPath: "/nonexistent/libonnxruntime.so",
 	}, true, 16000, zap.NewNop())
 	if tr != nil {
 		t.Fatalf("expected nil tracker when the onnxruntime library is unavailable, got %+v", tr)

@@ -28,13 +28,12 @@ const (
 	maxSanePendingAge = 20 * time.Second
 )
 
-// vadLatencyConfig optionally enables local VAD-vs-ASR latency measurement
-// and/or VAD-driven TTS barge-in
+// vadLatencyConfig configures the local VAD tracker, which runs by default
+// for VAD-vs-ASR latency measurement and/or VAD-driven TTS barge-in
 type vadLatencyConfig struct {
-	EnableVADLatency bool   `json:"enable_vad_latency"`
-	VADModelPath     string `json:"vad_model_path"`
-	VADLibraryPath   string `json:"vad_library_path"`
-	VADOutputPath    string `json:"vad_output_path"`
+	VADModelPath   string `json:"vad_model_path"`
+	VADLibraryPath string `json:"vad_library_path"`
+	VADOutputPath  string `json:"vad_output_path"`
 
 	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
 }
@@ -57,7 +56,6 @@ type vadLatencyTracker struct {
 	segmenter  *vad.Segmenter
 	outputPath string
 
-	enableLatency         bool
 	enableInterrupt       bool
 	interruptConfirmDelay time.Duration
 
@@ -70,13 +68,9 @@ type vadLatencyTracker struct {
 	confirmed      bool
 }
 
-// newVADLatencyTracker builds a tracker from cfg, or returns nil if neither
-// latency measurement nor TTS interrupt is requested
+// newVADLatencyTracker builds a tracker from cfg, or returns nil if the
+// Silero VAD model fails to load
 func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate int, log *zap.Logger) *vadLatencyTracker {
-	if !cfg.EnableVADLatency && !enableTTSInterrupt {
-		return nil
-	}
-
 	modelPath := firstNonEmptyStr(cfg.VADModelPath, defaultVADModelPath)
 	libPath := vad.ResolveLibraryPath(cfg.VADLibraryPath)
 
@@ -102,7 +96,6 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		zap.String("model_path", modelPath),
 		zap.String("output_path", outputPath),
 		zap.Int("source_rate", rate),
-		zap.Bool("latency_measurement", cfg.EnableVADLatency),
 		zap.Bool("tts_interrupt", enableTTSInterrupt),
 		zap.Duration("interrupt_confirm_delay", confirmDelay),
 	)
@@ -112,7 +105,6 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		model:                 model,
 		segmenter:             vad.NewSegmenter(model, rate, vad.SegmenterConfig{}),
 		outputPath:            outputPath,
-		enableLatency:         cfg.EnableVADLatency,
 		enableInterrupt:       enableTTSInterrupt,
 		interruptConfirmDelay: confirmDelay,
 	}
@@ -141,9 +133,7 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 				t.confirmed = false
 			}
 		case vad.EventSpeechEnd:
-			if t.enableLatency {
-				t.pendingEnd = ev.At
-			}
+			t.pendingEnd = ev.At
 			fields := []zap.Field{zap.Time("at", ev.At)}
 			if !t.lastStart.IsZero() {
 				fields = append(fields, zap.Duration("utterance_duration", ev.At.Sub(t.lastStart)))
