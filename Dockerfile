@@ -15,7 +15,7 @@ RUN go mod download
 
 COPY . .
 
-RUN make build
+RUN make build download-onnxruntime download-vad-model
 
 FROM debian:bookworm-slim
 
@@ -54,10 +54,12 @@ WORKDIR /app/OM1
 
 COPY --from=builder /app/build/om1 /usr/local/bin/om1
 COPY --from=builder /app/.zenoh-c/lib/ /usr/local/lib/
+COPY --from=builder /app/.onnxruntime/lib/ /usr/local/lib/
 RUN ldconfig
 
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/knowledge_base ./knowledge_base
+COPY --from=builder /app/models ./models
 
 RUN cp -r config config_defaults
 
