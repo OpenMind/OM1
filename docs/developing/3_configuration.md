@@ -293,6 +293,22 @@ mcp_servers: [
 
 Refer to [MCP Integration](mcp-integration.md) to understand the complete architecture and how to configure new MCP tools with OM1.
 
+## Hooks (`hooks`)
+
+The `hooks` section allows you to configure runtime hooks that can be triggered by different events. Here is an example configuration for the `hooks` section:
+
+```json5
+  "hooks": {
+    "nav2": {
+      "action_server_name": "custom_navigate_to_pose"
+    }
+  }
+```
+
+This example configures the `nav2` hook.
+
+*   `action_server_name`: The name of the Nav2 action server. Defaults to `navigate_to_pose` if not specified.
+
 ## Transition rules
 
 Transition rules define how and when the robot switches between operational modes.
