@@ -88,9 +88,7 @@ type asrSensorCore struct {
 	zenohPublisher zenohsession.Publisher
 }
 
-// newSensorCore builds the sensor core, including the zenoh publisher and
-// optional VAD-latency tracker. Pass "" for language/apiVersion if the
-// sensor supplies per-call labels instead (see ParallelASRSensor).
+// newSensorCore builds a sensor core with the optional local VAD tracker and zenoh publisher.
 func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig, rate int, language, apiVersion string) *asrSensorCore {
 	log := logger.Get().Named(name)
 
@@ -295,8 +293,7 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 // connect dials the single stream's ASR websocket.
 func (c *asrCommon) connect() error { return c.stream.connect() }
 
-// sendChunk feeds the PCM chunk to the local VAD tracker (if enabled) and
-// forwards it to the single stream's websocket.
+// sendChunk fans out one PCM chunk to the single stream and the optional local VAD.
 func (c *asrCommon) sendChunk(pcm []byte) {
 	c.feedVAD(pcm)
 	c.stream.sendChunk(pcm)

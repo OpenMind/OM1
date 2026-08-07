@@ -13,9 +13,6 @@ import (
 	"github.com/openmind/om1/internal/providers/tts"
 )
 
-// resetTTSState clears the package-level tts.Speaking/tts.Interrupt atomics
-// before and after a test, since checkInterrupt reads/writes real global
-// state shared across the test binary.
 func resetTTSState(t *testing.T) {
 	t.Helper()
 	tts.Speaking.Store(false)
@@ -41,8 +38,6 @@ func TestNewVADLatencyTrackerDisabledReturnsNil(t *testing.T) {
 }
 
 func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
-	// No onnxruntime library is installed in the test env; loading must fail
-	// cleanly, returning nil rather than panicking or blocking ASR startup.
 	tr := newVADLatencyTracker(vadLatencyConfig{
 		EnableVADLatency: true,
 		VADModelPath:     "/nonexistent/model.onnx",
@@ -54,8 +49,6 @@ func TestNewVADLatencyTrackerDegradesGracefullyWithoutRuntime(t *testing.T) {
 }
 
 func TestNewVADLatencyTrackerInterruptOnlyAlsoAttemptsLoad(t *testing.T) {
-	// enableTTSInterrupt alone (EnableVADLatency off) must still trigger a
-	// load attempt, not short-circuit to nil like the fully-disabled case.
 	tr := newVADLatencyTracker(vadLatencyConfig{
 		EnableVADLatency: false,
 		VADModelPath:     "/nonexistent/model.onnx",
@@ -115,9 +108,6 @@ func TestVADLatencyTrackerRecordTranscriptPairsAndWritesJSONL(t *testing.T) {
 	}
 }
 
-// TestVADLatencyTrackerDiscardsStaleUnmatchedEvent verifies a new speech_end
-// fully replaces a stale unmatched one instead of queuing behind it, so a
-// blip ASR never transcribed can't later pair with an unrelated transcript.
 func TestVADLatencyTrackerDiscardsStaleUnmatchedEvent(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "vad_asr_latency.jsonl")
@@ -127,9 +117,6 @@ func TestVADLatencyTrackerDiscardsStaleUnmatchedEvent(t *testing.T) {
 		outputPath: outPath,
 	}
 
-	// Simulates what feedAudio does on each new speech_end: unconditionally
-	// overwrite pendingEnd, exactly as if a stale event were followed by a
-	// real one before any transcript consumed the stale one.
 	tr.pendingEnd = time.Now().Add(-58 * time.Second) // e.g. a noise blip ASR never transcribed
 	tr.pendingEnd = time.Now().Add(-3 * time.Second)  // the real end-of-speech
 

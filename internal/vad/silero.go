@@ -1,7 +1,3 @@
-// Package vad detects speech activity locally via the Silero VAD v5 ONNX
-// model (https://huggingface.co/runanywhere/silero-vad-v5), so ASR latency
-// can be measured against a local end-of-speech moment instead of a
-// vendor's own (later, vendor-biased) speech_end event.
 package vad
 
 import (

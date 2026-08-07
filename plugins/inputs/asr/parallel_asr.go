@@ -116,19 +116,24 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, "", ""),
-		cfg:           cfg,
-		dedupWindow:   dedupWindow,
+		cfg:         cfg,
+		dedupWindow: dedupWindow,
 	}
 	if cfg.Source == "mic" {
 		s.audioChunk = make([]int16, cfg.Chunk)
 	}
 
+	streamCfgs := make([]asrCommonConfig, len(cfg.Providers))
 	for i, p := range cfg.Providers {
 		streamCfg, err := s.buildStreamConfig(p)
 		if err != nil {
 			return nil, fmt.Errorf("ParallelASRInput: provider %d: %w", i, err)
 		}
+		streamCfgs[i] = streamCfg
+	}
+
+	s.asrSensorCore = newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, "", "")
+	for _, streamCfg := range streamCfgs {
 		s.streams = append(s.streams, newTranscriberStream(streamCfg, s.log, s.deliver))
 	}
 
@@ -287,9 +292,7 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAll feeds the local VAD tracker (if enabled) and fans one PCM chunk
-// out to every provider stream. Each stream packages the audio with its own
-// header, so the shared chunk is only read, never mutated.
+// sendToAll fans out one PCM chunk to all providers and the VAD.
 func (s *ParallelASRSensor) sendToAll(pcm []byte) {
 	s.feedVAD(pcm)
 	for _, st := range s.streams {
