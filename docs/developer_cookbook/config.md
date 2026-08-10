@@ -19,6 +19,8 @@ OM1 supports two config shapes, each with its own required fields (enforced by `
 - **Single-mode** (`single_mode_schema.json`) — one behavior. **Required:** `version`, `hertz`, `name`, `api_key`, `system_prompt_base`, `system_governance`, `system_prompt_examples`, `agent_inputs`, `cortex_llm`, `agent_actions`.
 - **Multi-mode** (`multi_mode_schema.json`) — several modes with transitions. **Required at top level:** `version`, `default_mode`, `api_key`, `system_governance`, `cortex_llm`, `modes`. The per-mode required fields are listed in [Step 7](#step-7-add-modes).
 
+> **Multi-mode is the canonical structure.** It's the only shape the runtime executes: at load time a single-mode config is folded into one synthesized mode (`internal/config/loader.go`). Single-mode is a convenience shorthand for a single-behavior agent — use it freely, but reach for multi-mode as soon as you need more than one behavior or any transitions.
+
 The table below describes the top-level fields:
 
 | Field                    | Type     | Required                     | Description                                                                      |

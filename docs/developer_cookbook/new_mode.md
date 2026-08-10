@@ -21,7 +21,7 @@ config/
 └── your_robot_modes.json5    # Mode configuration file
 ```
 
-> **Note:** Single mode is now deprecated. Any legacy single-mode config will now be converted into the multi-mode format, simplifying the runtime and CLI logic.
+> **Note:** Multi-mode is the canonical config structure — it is the only shape the runtime executes. A single-mode config is a convenience shorthand: at load time OM1 folds its top-level fields into one synthesized mode (`internal/config/loader.go`), so you never lose anything by writing single-mode, but multi-mode is preferred for anything beyond a single behavior.
 
 ## Configuration
 
