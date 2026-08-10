@@ -76,6 +76,7 @@ After downloading and extracting the archive, open a terminal in the extracted f
 
 ```bash
 chmod +x om1
+./om1 config = <your-config>
 ```
 
 On macOS, if the binary is blocked by Gatekeeper, run:
