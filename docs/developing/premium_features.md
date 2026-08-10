@@ -9,16 +9,19 @@ OM1 and Simulation environment are fully open source and publicly accessible. Yo
 
 ## Premium Features
 
-All other features beyond the core framework are available exclusively through our **Enterprise Plan**. This includes:
+All other features beyond the core framework are available exclusively through our **Enterprise Plan** and controlled via the OM1 ROS2 SDK REST APIs. This includes:
 
 - Advanced robotics integrations
 - Extended simulation capabilities
-- SLAM map generation and Navigation
+- 2D and 3D SLAM map generation and Navigation
 - Face detection and Anonymization
 - Person following
 - Obstacle avoidance
 - Remote control for the robots
 - Auto charging
+- Patrol
+- Memory Sync
+- Real-time alerts
 - Custom feature development
 
 ## Simulation Limitations

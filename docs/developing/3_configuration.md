@@ -151,8 +151,8 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 These fields appear in the shipped configs and are worth knowing when integrating OM1:
 
-* **use_tracer** Enables the execution tracer, optionally with a `quality_scorer`. Example: `use_tracer: { enabled: true, quality_scorer: { enabled: true } }`.
-* **knowledge_base** Configures RAG retrieval: `{ knowledge_base_name, base_url, min_score, top_k }`.
+* **use_tracer** Enables the execution tracer, optionally with a `quality_scorer`. Example: `use_tracer: { enabled: true, quality_scorer: { enabled: true } }`. See [Tracer & Quality Scorer](tracer.md).
+* **knowledge_base** Configures RAG retrieval: `{ knowledge_base_name, base_url, min_score, top_k }`. See [Knowledge Base (RAG)](knowledge_base.md).
 * **memory** Configures agent memory (`{ enabled, cloud_connection }`).
 * **lifecycle_hooks** / **global_lifecycle_hooks** Hooks fired on `on_startup` / `on_entry` / `on_exit` / `on_timeout`, each with a `handler_type` (`action` | `message` | `command`).
 * **agent_backgrounds** / **global_backgrounds** Background tasks that run alongside the cortex loop (see [Backgrounds](8_backgrounds.md)).
@@ -229,7 +229,7 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 * `UnitreeGo2Odom`
 * `ConversationHistoryInput`, `GreetingStatus`, `Paths`
 
-> The authoritative list is whatever is registered via `inputs.Register(...)` under `plugins/inputs/`. You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). Each input's `config` block is specific to its type — e.g. `GoogleASRInput` accepts `rate`, `chunk`, and `enable_tts_interrupt`.
+> The authoritative list is whatever is registered via `inputs.Register(...)` under `plugins/inputs/`. You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). Each input's `config` block is specific to its type — e.g. `GoogleASRInput` accepts `rate`, `chunk`, and `enable_tts_interrupt` (see [VAD & TTS Interrupt](vad_tts_interrupt.md)).
 
 ## Cortex LLM (`cortex_llm`)
 
