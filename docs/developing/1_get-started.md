@@ -23,7 +23,7 @@ icon: play
 
 Ensure you have the following installed on your machine:
 
-- `Go` >= 1.23.0 ([installation guide](https://go.dev/doc/install))
+- `Go` >= 1.25.0 ([installation guide](https://go.dev/doc/install))
 - `make` build tool
 - `portaudio` for audio input and output
 - `ffmpeg` for video processing
@@ -194,41 +194,26 @@ Then navigate to [http://localhost:3000](http://localhost:3000) (default login: 
 
 ### Understanding the Log Data
 
-The log data provide insight into how the `conversation` agent makes sense of its environment and decides on its next actions.
+OM1 writes structured (JSON) logs using [zap](https://github.com/uber-go/zap). At the default `info` level you see the high-level loop; run with `make dev` (or `-log-level debug`) for the full prompt, LLM response, and per-action detail.
 
-  - First, it detects a person using vision.
-  - Communicates with an external AI API for response generation.
-  - The LLM(s) decide on a set of actions (dancing and speaking).
-  - The simulated robot expresses emotions via a front-facing display.
-  - Logs latency and processing times to monitor system performance.
+The logs show one turn of the core loop — how the `conversation` agent senses its environment, calls the LLM, and dispatches actions:
 
-```bash
-Object Detector INPUT
-// START
-You see a person in front of you. You also see a laptop.
-// END
+  - **Inputs** (e.g. `GoogleASRInput` for speech, `VLMGemini` for vision) produce observations.
+  - The **State Fuser** combines them into a single natural-language prompt.
+  - The **cortex** ticks: it sends that prompt to the configured `cortex_llm` and receives a set of action calls.
+  - **Actions** (e.g. `speak`, `emotion`) are dispatched to their connectors.
+  - Latencies are exported to Prometheus/Grafana (see below).
 
-AVAILABLE ACTIONS:
-command: move
-    A movement to be performed by the agent.
-    Effect: Allows the agent to move.
-    Arguments: Allowed values: 'stand still', 'sit', 'dance', 'shake paw', 'walk', 'walk back', 'run', 'jump', 'wag tail'
+A representative run looks like this (fields abbreviated):
 
-command: speak
-    Words to be spoken by the agent.
-    Effect: Allows the agent to speak.
-    Arguments: <class 'str'>
-
-command: emotion
-    A facial expression to be performed by the agent.
-    Effect: Performs a given facial expression.
-    Arguments: Allowed values: 'cry', 'smile', 'frown', 'think', 'joy'
-
-What will you do? Command:
-
-INFO:httpx:HTTP Request: POST https://api.openmind.com/api/core/openai/chat/completions "HTTP/1.1 200 OK"
-INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), Command(type='speak', value="Hi there! I see you and I'm excited!"), Command(type='emotion', value='joy')]
+```json
+{"level":"info","ts":1749590400.12,"caller":"runtime/runtime.go","msg":"cortex loop started"}
+{"level":"info","ts":1749590401.34,"caller":"runtime/runtime.go","msg":"cortex tick","mode":"conversation","prompt":"You see a person in front of you. They said: \"Give me your paw!\""}
+{"level":"debug","ts":1749590401.98,"caller":"llm/gemini.go","msg":"llm response","actions":[{"name":"speak","value":"Hello, let's shake paws!"},{"name":"emotion","value":"happy"}]}
+{"level":"debug","ts":1749590402.01,"caller":"actions/action.go","msg":"dispatching action","name":"speak","connector":"elevenlabs_tts"}
 ```
+
+> **Note:** The exact prompt and actions depend on your agent config (`system_prompt_base`, `agent_inputs`, `agent_actions`) and on what the sensors observe. The `conversation` agent ships as a friendly dog named "Spot".
 
 ## More Examples
 
