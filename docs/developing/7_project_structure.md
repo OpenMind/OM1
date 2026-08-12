@@ -14,27 +14,38 @@ icon: diagram-project
 ├── internal/             # Core packages
 │   ├── actions/          # Action orchestrators
 │   ├── backgrounds/      # Background task orchestrators
+│   ├── cloudsession/     # Cloud session management
 │   ├── config/           # Configuration loading
 │   ├── fuser/            # Input fusion logic
+│   ├── geometry/         # Geometry / spatial helpers
 │   ├── hooks/            # Function hook registry
+│   ├── httpclient/       # Shared HTTP client
 │   ├── inputs/           # Input/sensor orchestrators
+│   ├── knowledgebase/    # RAG knowledge base client
 │   ├── llm/              # LLM integration
 │   ├── logger/           # Logging utilities
+│   ├── mcp/              # MCP client + orchestrator
+│   ├── memory/           # Agent memory
 │   ├── metrics/          # Prometheus metrics server
 │   ├── providers/        # I/O providers (TTS, ASR, audio)
 │   ├── runtime/          # Core runtime manager
+│   ├── tracer/           # Execution tracer
+│   ├── util/             # Shared utilities
+│   ├── vad/              # Voice activity detection
+│   ├── ws/               # WebSocket client
 │   └── zenoh/            # Zenoh integration (CDR codec, session)
+├── pkg/                  # Public/importable packages (e.g. memory)
 ├── plugins/              # Plugin implementations
-│   ├── actions/          # speak, emotion, arm_g1, etc.
+│   ├── actions/          # speak, emotion, navigation, unitree, etc.
 │   ├── backgrounds/      # Background task plugins
-│   ├── inputs/           # face_presence, google_asr
+│   ├── inputs/           # asr/, vlm/, face_presence, etc.
 │   └── llm/              # OpenAI, Gemini, DeepSeek, Ollama, etc.
 └── Makefile              # Build system
 ```
 
-The system is based on a loop that runs at a fixed frequency of `self.config.hertz`. The loop looks for the most recent data from various sources, fuses the data into a prompt (typical length ~1 paragraph), sends that prompt to one or more LLMs, and then sends the LLM responses to virtual agents or physical robots for conversion into real world actions.
+The system is based on a loop that runs at a fixed frequency set by the config field `hertz` (`cfg.Hertz` in Go). The loop looks for the most recent data from various sources, fuses the data into a prompt (typical length ~1 paragraph), sends that prompt to one or more LLMs, and then sends the LLM responses to virtual agents or physical robots for conversion into real world actions.
 
-> **Note:** In addition to the core loop running at `self.config.hertz`, a robot will have dozens of other control loops running at rates of 50-500 Hz (for physical stabilization and motions), 2-30 Hz for sensors such as LIDARS and laserscan, 10 Hz for GPS, 50 Hz for odometry, and so forth. The `self.config.hertz` setting refers only the basic fuser cycle that is best thought of as the refresh rate of the robot's core attention and working memory.
+> **Note:** In addition to the core loop running at `hertz`, a robot will have dozens of other control loops running at rates of 50-500 Hz (for physical stabilization and motions), 2-30 Hz for sensors such as LIDARS and laserscan, 10 Hz for GPS, 50 Hz for odometry, and so forth. The `hertz` setting refers only to the basic fuser cycle that is best thought of as the refresh rate of the robot's core attention and working memory.
 
 ## Flow Diagram
 
@@ -57,7 +68,7 @@ This raw data is then processed by an AI Captioning layer. This layer transforms
 
 - Platform state, and 3D environmental data.
 
-Example services for this stage include Google_ASR, Vim_coco_local for vision, and Wallet_Coinbase for financial state.
+Example services for this stage include `GoogleASRInput` for speech and `VLMGemini` / `VLMOpenAI` for vision.
 
 ### Fuser & Cortex LLM
 The Fuser is a critical component that integrates the processed sensory data from the AI Captioning layer with contextual and instructional data. This second set of inputs provides the necessary context for decision-making:

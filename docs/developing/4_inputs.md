@@ -9,8 +9,8 @@ icon: pen
 ## Basic Architecture
 
 - `Sensor` interface defines the core contract for all input plugins ([internal/inputs/sensor.go](https://github.com/OpenMind/OM1/blob/main/internal/inputs/sensor.go))
-- `InputOrchestrator` manages multiple input sources
-- Custom input plugins implement the `Sensor` interface
+- `Orchestrator` (`internal/inputs/orchestrator.go`) manages multiple input sources
+- Custom input plugins implement the `Sensor` interface and register themselves with `inputs.Register(...)`
 
 ```go
 // Sensor is the base interface for all input sensors.
@@ -38,8 +38,8 @@ type Sensor interface {
 
 Here are a few examples for you to reuse and build on:
 
-- [Google ASR](https://github.com/openmind/OM1/blob/main/plugins/inputs/google_asr/google_asr.go)
-- [Face Presence](https://github.com/openmind/OM1/blob/main/plugins/inputs/face_presence/face_presence.go)
-- [VLM COCO Local](https://github.com/openmind/OM1/blob/main/plugins/inputs/vlm_coco_local/vlm_coco_local.go)
+- [Google ASR](https://github.com/OpenMind/OM1/blob/main/plugins/inputs/asr/google_asr.go)
+- [Face Presence](https://github.com/OpenMind/OM1/blob/main/plugins/inputs/face_presence.go)
+- [VLM (Gemini)](https://github.com/OpenMind/OM1/blob/main/plugins/inputs/vlm/vlm_gemini.go)
 
 Learn how to build a new input plugin [here](../developer_cookbook/input.md)

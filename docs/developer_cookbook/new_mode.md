@@ -9,18 +9,19 @@ This guide walks you through creating a new mode for your robot system.
 ## Project Structure
 
 ```bash
+internal/config/
+└── types.go           # ModeConfig, ModeSystemConfig, TransitionRule, HookSpec types
+
 internal/runtime/
-├── config.go          # ModeConfig and ModeSystemConfig types
-├── manager.go         # ModeManager for transitions
-├── cortex.go          # ModeCortexRuntime for execution
-├── hook.go            # Lifecycle hooks
-└── converter.go       # Converts legacy single mode configs to multimode config
+├── config.go          # Mode config wiring + legacy single-mode → multi-mode conversion
+├── manager.go         # Mode manager: transitions and lifecycle
+└── runtime.go         # Core runtime / cortex loop
 
 config/
 └── your_robot_modes.json5    # Mode configuration file
 ```
 
-> **Note:** Single mode is now deprecated. Any legacy single-mode config will now be converted into the multi-mode format, simplifying the runtime and CLI logic.
+> **Note:** Multi-mode is the canonical config structure — it is the only shape the runtime executes. A single-mode config is a convenience shorthand: at load time OM1 folds its top-level fields into one synthesized mode (`internal/config/loader.go`), so you never lose anything by writing single-mode, but multi-mode is preferred for anything beyond a single behavior.
 
 ## Configuration
 
@@ -32,20 +33,21 @@ Create or modify a configuration file (e.g., `your_robot_modes.json5`) in the `/
 
 Add your new mode to the `modes` section of your configuration file.
 
+Per the schema, each mode **requires** `display_name`, `description`, `system_prompt_base`, `hertz`, `agent_inputs`, and `agent_actions`. Everything else is optional.
+
 | Field                  | Type      | Required | Description                                                                                                   |
 | ---------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------- |
 | `display_name`         | `string`  | Yes      | The human-readable name shown in the UI for this mode. Example: `"Your New Mode"`                             |
 | `description`          | `string`  | Yes      | Brief description explaining what this mode does and its purpose.                                             |
-| `system_prompt_base`   | `string`  | Yes      | The foundational system prompt that defines the agent's behavior and purpose in this mode.                    |
-| `hertz`                | `float`   | Yes      | The frequency (in Hz) at which the agent operates or processes information. Example: `1.0`                    |
-| `timeout_seconds`      | `integer` | Yes      | Maximum duration (in seconds) before the agent times out during execution. Example: `300`                     |
-| `remember_locations`   | `boolean` | Yes      | Whether the agent should persist and recall location data across interactions. Example: `false`               |
-| `save_interactions`    | `boolean` | Yes      | Whether to save conversation history and interactions for this mode. Example: `true`                          |
-| `agent_inputs`         | `array`   | Yes      | List of input sources or data types the agent can accept in this mode.                                        |
-| `agent_actions`        | `array`   | Yes      | List of actions or capabilities the agent can perform in this mode.                                           |
-| `lifecycle_hooks`      | `array`   | Yes      | Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).               |
-| `simulators`           | `array`   | Yes      | List of simulation environments or tools available to the agent in this mode.                                 |
-| `cortex_llm`           | `object`  | Yes      | Configuration object for the language model powering the agent's cortex.                                      |
+| `system_prompt_base`   | `string`  | Yes      | The foundational system prompt that defines the agent's behavior in this mode.                                |
+| `hertz`                | `number`  | Yes      | The frequency (in Hz) at which the agent's loop runs in this mode. Example: `1.0`                             |
+| `agent_inputs`         | `array`   | Yes      | Input sources the agent accepts in this mode.                                                                 |
+| `agent_actions`        | `array`   | Yes      | Actions the agent can perform in this mode.                                                                   |
+| `cortex_llm`           | `object`  | No       | Per-mode LLM override. If omitted, the top-level `cortex_llm` is used.                                        |
+| `agent_backgrounds`    | `array`   | No       | Background tasks that run while this mode is active.                                                          |
+| `mcp_servers`          | `array`   | No       | MCP servers available in this mode.                                                                           |
+| `lifecycle_hooks`      | `array`   | No       | Event handlers triggered at specific points in the agent's lifecycle (see [Step 6](#step-6-add-lifecycle-hooks-only-required-for-multi-mode)). |
+| `timeout_seconds`      | `number`  | No       | Duration (in seconds) after which a `time_based` transition / `on_timeout` hook can fire.                    |
 
 ### Step 3: Configure Input Plugins
 
@@ -53,7 +55,7 @@ Specify which inputs your mode needs:
 
 | Field    | Type     | Required | Description                                        |
 | -------- | -------- | -------- | -------------------------------------------------- |
-| `type`   | `string` | Yes      | The input type identifier. Example: `"AudioInput"` |
+| `type`   | `string` | Yes      | A registered input type. Example: `"GoogleASRInput"`. See [Inputs](../developing/4_inputs.md) for the full list. |
 | `config` | `object` | No       | Configuration options specific to this input type. |
 
 ### Step 4: Configure LLM (Optional - Can be overwritten for each mode)
@@ -75,8 +77,8 @@ Actions define what your agent can do. You can define movement, TTS or any other
 | --------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
 | `name`                | `string`  | Yes      | Human-readable identifier for the action. Example: `"speak"`                                                         |
 | `llm_label`           | `string`  | Yes      | Label the model uses to refer to this action. Example: `"speak"`                                                     |
-| `implementation`      | `string`  | No       | Defines the business logic. If none defined, defaults to `"passthrough"`. Example: `"passthrough"`                   |
-| `connector`           | `string`  | Yes      | Name of the connector. This is the Go file name defined under `plugins/actions/action_name/`. Example: `"elevenlabs_tts"` |
+| `implementation`      | `string`  | No       | Optional; commonly `"passthrough"`. Example: `"passthrough"`                                                          |
+| `connector`           | `string`  | Yes      | The connector for this action; resolved as `name + "/" + connector` against the registry in `plugins/actions/`. Example: `"elevenlabs_tts"` |
 | `config`              | `object`  | No       | Configuration options specific to this action.                                                                       |
 | `exclude_from_prompt` | `boolean` | No       | Whether to exclude this action from the LLM prompt. Default: `false`                                                 |
 
@@ -102,16 +104,16 @@ Add to the transition_rules section:
 | ------------------ | --------- | -------- | ------------------------------------------------------------------------ |
 | `from_mode`        | `string`  | Yes      | The source mode from which the transition originates.                    |
 | `to_mode`          | `string`  | Yes      | The target mode to which the agent will transition.                      |
-| `transition_type`  | `string`  | Yes      | The type of transition mechanism.                                        |
-| `trigger_keywords` | `array`   | Yes      | List of keywords that trigger this transition. Each item is a string.    |
+| `transition_type`  | `string`  | Yes      | The type of transition mechanism: `"input_triggered"`, `"time_based"`, or `"context_aware"`. |
 | `priority`         | `integer` | Yes      | Priority level for this transition rule when multiple rules match.       |
+| `trigger_keywords` | `array`   | No       | Keywords that trigger this transition (used by `input_triggered`). Not required for `time_based` / `context_aware`. |
 | `cooldown_seconds` | `number`  | No       | Minimum time (in seconds) before this transition can be triggered again. |
 
 ### Step 8: Update Default Mode (Optional)
 
-If "new_mode" should be the starting mode, define
+If "new_mode" should be the starting mode, set the top-level `default_mode`:
 
-```bash
+```json5
 "default_mode": "new_mode"
 ```
 

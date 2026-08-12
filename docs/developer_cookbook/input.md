@@ -133,8 +133,20 @@ func init() {
 - The `inputs.Load` function creates instances based on configuration
 - Plugin type names in config files must match the registered name
 
+### Make sure your plugin is loaded
+
+`init()` only runs if your package is imported. If you put your plugin in its own subdirectory (e.g. `plugins/inputs/your_plugin/`), you must blank-import that package from the aggregator [`plugins/inputs/inputs.go`](https://github.com/OpenMind/OM1/blob/main/plugins/inputs/inputs.go) so it is compiled in:
+
+```go
+import (
+    _ "github.com/openmind/om1/plugins/inputs/your_plugin"
+)
+```
+
+Files placed directly under `plugins/inputs/` (package `inputs`) are already part of the aggregator package and don't need a separate import. (The same pattern applies to actions via `plugins/actions/actions.go`.)
+
 ### Requirements:
 
 - Implement the `Sensor` interface from `internal/inputs/sensor.go`
 - Register your factory function with `inputs.Register`
-- File must be in `/plugins/inputs/` directory
+- Ensure the package is imported (directly under `plugins/inputs/`, or blank-imported in `plugins/inputs/inputs.go`)
