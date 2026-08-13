@@ -7,9 +7,9 @@
 * [Quick Start](developing/1_get-started.md)
 * [Architecture](developing/2_architecture.md)
 
-## Core Concepts <a href="#core-concepts" id="core-concepts"></a>
+## Build with OM1 <a href="#build" id="build"></a>
 
-* [Understanding Core Concepts](concepts.md)
+* [Core Concepts](concepts.md)
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
     * [Inputs](developing/4_inputs.md)
@@ -18,20 +18,20 @@
     * [Backgrounds](developing/8_backgrounds.md)
     * [Knowledge Base (RAG)](developing/knowledge_base.md)
     * [VAD & TTS Interrupt](developing/vad_tts_interrupt.md)
+* Modes & Lifecycle
+    * [Modes](full_autonomy_guidelines/modes.md)
+    * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
+    * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
+    * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
+* [MCP Integration](developing/mcp-integration.md)
 * [Middleware](developing/middleware.md)
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
+* Observability
+    * [Metrics Reference](developing/metrics.md)
+    * [Tracer & Quality Scorer](developing/tracer.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
-
-## MCP Integration <a href="#mcp" id="mcp"></a>
-
-* [MCP Integration](developing/mcp-integration.md)
-
-## Observability <a href="#observability" id="observability"></a>
-
-* [Metrics Reference](developing/metrics.md)
-* [Tracer & Quality Scorer](developing/tracer.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 
@@ -41,39 +41,44 @@
     * [New Mode](developer_cookbook/new_mode.md)
 * [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
-    * [Smart Toy](examples/smart_toy.md)
-* OM1 Integration with different machines
-    * [Unitree G1 Humanoid](robotics/unitree_g1_humanoid.md)
-    * [Unitree Go2 Quadruped](robotics/unitree_go2_quadruped.md)
-    * [Raspberry Pi](robotics/raspberrypi.md)
-    * [Tesla Dimo](robotics/tesla_dimo.md)
-    * [TurtleBot4](robotics/turtlebot4_zenoh.md)
-    * [UBTech Yanshee](robotics/ubtech_yanshee.md)
 
-## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
+## Deploy Autonomy <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
-* [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Overview](full_autonomy_guidelines/architecture_overview.md)
-* [Hybrid Localisation](full_autonomy_guidelines/localization.md)
+* [BrainPack](full_autonomy_guidelines/brainpack_introduction.md)
+* [API Overview](full_autonomy_guidelines/api_endpoints.md)
+* [Autonomy Features](full_autonomy_guidelines/features/README.md)
+    * [Mapping & SLAM](full_autonomy_guidelines/features/mapping-slam.md)
+    * [Hybrid Localisation](full_autonomy_guidelines/localization.md)
+    * [Navigation (Nav2)](full_autonomy_guidelines/features/navigation.md)
+    * [3D Map Navigation](full_autonomy_guidelines/features/3d-map-navigation.md)
+    * [Frontier Exploration](full_autonomy_guidelines/features/frontier-exploration.md)
+    * [Patrol](full_autonomy_guidelines/features/patrol.md)
+    * [Auto Charging](full_autonomy_guidelines/features/auto-charging.md)
+    * [Obstacle Avoidance](full_autonomy_guidelines/features/obstacle-avoidance.md)
+    * [Person Following](full_autonomy_guidelines/features/person-following.md)
+    * [Maps, Routes & Locations](full_autonomy_guidelines/features/maps-routes-locations.md)
+    * [Face Detection & Anonymization](full_autonomy_guidelines/features/face-detection-anonymization.md)
+* [Plans & Access](developing/premium_features.md)
+
+## Robots & Hardware <a href="#robots-hardware" id="robots-hardware"></a>
+
+* [Unitree G1 Humanoid](robotics/unitree_g1_humanoid.md)
+* [Unitree Go2 Quadruped](robotics/unitree_go2_quadruped.md)
+* [Raspberry Pi](robotics/raspberrypi.md)
+* [Tesla Dimo](robotics/tesla_dimo.md)
+* [TurtleBot4](robotics/turtlebot4_zenoh.md)
+* [UBTech Yanshee](robotics/ubtech_yanshee.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
-* [Premium Features](developing/premium_features.md)
-* [API Endpoints to Interact with Premium Features](full_autonomy_guidelines/api_endpoints.md)
-
-## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
-
-* [Modes](full_autonomy_guidelines/modes.md)
-* [Mode Selection](full_autonomy_guidelines/mode_selection.md)
-* [Transition Rules](full_autonomy_guidelines/transition_rules.md)
-* [Lifecycle](full_autonomy_guidelines/lifecycle.md)
 
 ## Simulators <a href="#simulators" id="simulators"></a>
 
-* [Gazebo](simulators/gazebo.md)
-* [Isaac Sim](simulators/isaac-sim.md)
 * [Cloud Isaac Sim](simulators/cloud-isaac-sim.md)
+* [Isaac Sim](simulators/isaac-sim.md)
+* [Gazebo](simulators/gazebo.md)
 * [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
-## API References <a href="#api-reference" id="api-reference"></a>
+## API Reference <a href="#api-reference" id="api-reference"></a>
 
 * [API Reference](api-reference/introduction.md)
     * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
@@ -111,7 +116,7 @@
     * [v1.0.x](release-notes/OM1-OTA/v1.0.x.md)
     * [Docker Images](release-notes/OM1-OTA/docker_images.md)
 
-## Good to know concepts <a href="#robotics" id="robotics"></a>
+## Good to Know <a href="#robotics" id="robotics"></a>
 
 * [Asimov Governance](robotics/asimov_governance.md)
 * [CRSF Long Range Control](robotics/crsf_long_range_control.md)
