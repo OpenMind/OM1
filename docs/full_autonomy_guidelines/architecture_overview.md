@@ -113,6 +113,8 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 
 #### Components
 
+![OM1 ROS2 SDK architecture](../.gitbook/assets/om1_ros2_sdk_w.png)
+
 The `om1-ros2-sdk` is composed of four internal services:
 
 | Service | Role |
