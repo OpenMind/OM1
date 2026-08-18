@@ -48,6 +48,7 @@
 * [BrainPack](full_autonomy_guidelines/brainpack_introduction.md)
 * [API Overview](full_autonomy_guidelines/api_endpoints.md)
 * [Autonomy Features](full_autonomy_guidelines/features/README.md)
+    * [Machine Teleops](full_autonomy_guidelines/features/machine-teleops.md)
     * [Mapping & SLAM](full_autonomy_guidelines/features/mapping-slam.md)
     * [Hybrid Localisation](full_autonomy_guidelines/localization.md)
     * [Navigation (Nav2)](full_autonomy_guidelines/features/navigation.md)
@@ -58,6 +59,9 @@
     * [Obstacle Avoidance](full_autonomy_guidelines/features/obstacle-avoidance.md)
     * [Person Following](full_autonomy_guidelines/features/person-following.md)
     * [Maps, Routes & Locations](full_autonomy_guidelines/features/maps-routes-locations.md)
+    * [Memory Sync](full_autonomy_guidelines/features/memory-sync.md)
+    * [Alerts](full_autonomy_guidelines/features/alerts.md)
+    * [Video Recording](full_autonomy_guidelines/features/video-recording.md)
     * [Face Detection & Anonymization](full_autonomy_guidelines/features/face-detection-anonymization.md)
 * [Plans & Access](developing/premium_features.md)
 

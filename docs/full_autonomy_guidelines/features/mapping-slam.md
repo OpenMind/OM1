@@ -13,6 +13,10 @@ There are two ways to map, both started with a single API call:
 
 If you just want to watch mapping happen, the [Cloud Simulator](../../simulators/cloud-isaac-sim.md) walks through it end to end without hardware. The rest of this page is the hands-on version for a real robot.
 
+## In the portal
+
+You don't have to touch the API — a full mapping session runs from the [OpenMind portal](https://portal.openmind.com). Open your machine's autonomy view, start SLAM (2D or 3D), drive or let it explore, and save the map when it looks complete.
+
 ## Before you start
 
 - The robot is online and its Orchestrator is reachable at `http://<robot>:5000`.

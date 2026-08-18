@@ -23,4 +23,6 @@ curl http://<robot>:5000/explore/status
 
 The `message` field is a JSON-encoded string — decode it for `running`, `paused`, `complete`, an `info` string, and `status_received` (whether the explorer has reported in yet). Once `complete` is true, save the map with `POST /maps/save` before you stop SLAM.
 
+In the [OpenMind portal](https://portal.openmind.com), exploration is part of the SLAM view — you'll see the map fill in automatically, with controls to pause and resume coverage.
+
 If pause and resume seem to do nothing, 2D SLAM probably isn't running — the explorer only exists while it is. See [Mapping & SLAM](mapping-slam.md) for the full mapping flow, and the [Autonomy API Overview](../api_endpoints.md) for endpoint details.

@@ -8,6 +8,10 @@ When a flat 2D grid isn't enough — think ramps, split levels, or anything wher
 
 Two pieces come up together: **ICP localization**, which matches the live LiDAR against the saved point cloud to track where the robot is, and the **PCT planner**, which plans a route from there to a goal. One thing to design around: this **localizes and plans only — it doesn't drive the robot**. A separate motion controller consumes the planned path, so pair it accordingly.
 
+## In the portal
+
+The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-cloud) map and set navigation goals against it from the machine's autonomy view, the same way you would for a 2D map.
+
 ## Before you start
 
 - You have a map with a saved **`.pcd`** — meaning it was saved while 3D SLAM was running.

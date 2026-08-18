@@ -6,6 +6,16 @@ icon: folder-open
 
 Everything the robot navigates on is data you manage: the **maps** it builds, the **route graphs** that constrain where it goes, and the **named locations** you use as goals. This page covers all three.
 
+## In the portal
+
+The [OpenMind portal](https://portal.openmind.com) gives you a visual view of all of this — your saved maps, the locations pinned on each map, and a route editor for drawing patrol routes — without calling the API.
+
+> **📸 Screenshot** — *Portal → Machines → your robot → Maps.* The saved-maps list. → `full-autonomy-assets/portal-maps-list.png`
+>
+> **📸 Screenshot** — A map with named locations pinned and the route/waypoint editor open. → `full-autonomy-assets/portal-map-locations.png`
+
+By default a robot's maps and routes are private to it. Robots placed in the same portal **Group** share their Maps and Routes (along with memory) — see [Memory Sync → Sharing across robots](memory-sync.md#sharing-across-robots-groups).
+
 ## Maps
 
 [SLAM](mapping-slam.md) produces maps; they live on the robot and get reused by [navigation](navigation.md) and [patrol](patrol.md). Saving is a single call — it writes every artifact the current SLAM mode can produce into one folder, with no partial option:

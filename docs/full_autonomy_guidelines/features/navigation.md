@@ -8,6 +8,12 @@ Once you have a [map](mapping-slam.md), navigation is what makes the robot usefu
 
 There are two APIs involved. You start and stop the Nav2 stack through the Orchestrator (`:5000`), then send goals and watch their progress through the Nav2 API (`:5001`). If you want the robot to stick to fixed paths rather than plan freely, point it at a [route graph](maps-routes-locations.md).
 
+## In the portal
+
+From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map or picking a saved [location](maps-routes-locations.md) — no API calls needed. The map view also shows the robot's live pose as it drives.
+
+> **📸 Screenshot** — *Portal → Machines → your robot → Navigate.* The map with saved locations and the "select a location to navigate" control. → `full-autonomy-assets/portal-select-location.png`
+
 ## Before you start
 
 - You have a **saved 2D map** (from either 2D or 3D SLAM).

@@ -8,6 +8,10 @@ For a robot that's meant to run all day, someone plugging it in defeats the purp
 
 Like patrol, this is **Go2-only** and needs Nav2 running.
 
+## In the portal
+
+The [OpenMind portal](https://portal.openmind.com) shows live battery state and lets you send the robot to dock (and stop docking) from the machine view.
+
 ## Docking and monitoring
 
 Send the robot to dock:
