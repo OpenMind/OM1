@@ -238,7 +238,7 @@ func TestMCPRuntimeEndToEnd(t *testing.T) {
 		Modes:            map[string]config.ModeConfig{"default": mode},
 	}
 
-	recorded := runRuntime(cfg, session, s, 1, 5*time.Second)
+	recorded := runRuntime(cfg, session, s, func(calls []recordedCall) bool { return len(calls) >= 1 }, 5*time.Second)
 
 	require.NotEmpty(t, recorded, "the runtime executed at least one OM1 action")
 	require.True(t, matchesAny(expectedCall{
