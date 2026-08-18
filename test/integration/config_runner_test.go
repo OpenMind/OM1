@@ -76,16 +76,29 @@ func runCaseFile(t *testing.T, path string) {
 		}
 	}
 
-	if len(tc.Expected.ForbiddenCalls) > 0 {
-		waitFor = 0
+	var done func([]recordedCall) bool
+	if len(tc.Expected.ForbiddenCalls) == 0 && !tc.Expected.NoCalls {
+		done = func(calls []recordedCall) bool {
+			if len(calls) < waitFor {
+				return false
+			}
+			for _, want := range tc.Expected.ActionCalls {
+				if !matchesAny(want, calls) {
+					return false
+				}
+			}
+			return true
+		}
 	}
 	timeout := 3 * time.Second
 	if tc.TimeoutMs > 0 {
 		timeout = time.Duration(tc.TimeoutMs) * time.Millisecond
 	}
 
+	drainModeContext()
+
 	session, s := newSession()
-	calls := runRuntime(sysCfg, session, s, waitFor, timeout)
+	calls := runRuntime(sysCfg, session, s, done, timeout)
 
 	evaluate(t, tc, calls)
 }
