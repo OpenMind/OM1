@@ -17,6 +17,8 @@ If you just want to watch mapping happen, the [Cloud Simulator](../../simulators
 
 You don't have to touch the API — a full mapping session runs from the [OpenMind portal](https://portal.openmind.com). Open your machine's autonomy view, start SLAM (2D or 3D), drive or let it explore, and save the map when it looks complete.
 
+![ ](../../.gitbook/assets/full-autonomy-assets/SLAM-maps.png)
+
 ## Before you start
 
 - The robot is online and its Orchestrator is reachable at `http://<robot>:5000`.
