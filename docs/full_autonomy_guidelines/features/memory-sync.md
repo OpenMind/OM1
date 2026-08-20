@@ -30,7 +30,7 @@ Cloud sync backs up one robot's memory; **Groups** are how you share it across a
 
 So a person remembered, a map built, or a route drawn on one robot in a group becomes available to the others in that group.
 
-> **📸 Screenshot** — *Portal → Manage Groups.* Creating a group and adding robots; grouped robots share resources while ungrouped ones stay private. → `full-autonomy-assets/portal-manage-groups.png`
+![ ](../../.gitbook/assets/full-autonomy-assets/portal-manage-groups.png)
 
 Cloud-synced memory is tied to your OpenMind account (via your API key); retention depends on your plan, so align with your OpenMind contact when enabling it for a deployment.
 
