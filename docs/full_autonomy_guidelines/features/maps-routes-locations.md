@@ -10,8 +10,6 @@ Everything the robot navigates on is data you manage: the **maps** it builds, th
 
 The [OpenMind portal](https://portal.openmind.com) gives you a visual view of all of this — your saved maps, the locations pinned on each map, and a route editor for drawing patrol routes — without calling the API.
 
-![ ](../../.gitbook/assets/full-autonomy-assets/portal-maps-list.png)
-
 ![ ](../../.gitbook/assets/full-autonomy-assets/map_locations.png)
 
 By default a robot's maps and routes are private to it. Robots placed in the same portal **Group** share their Maps and Routes (along with memory) — see [Memory Sync → Sharing across robots](memory-sync.md#sharing-across-robots-groups).

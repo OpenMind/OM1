@@ -110,7 +110,7 @@ Example config to setup time based transition type for transitioning into guard 
 
 5. In **SLAM Mode**, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
 
-   ![ ](../.gitbook/assets/full-autonomy-assets/slam_map.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/2D-slam-map.png)
 
 6. Once the map is saved, switch to **Navigation Mode** to make the robot move autonomously between locations. Use the dropdown menu to select a destination.
 
