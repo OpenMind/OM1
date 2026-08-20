@@ -12,6 +12,8 @@ Like patrol, this is **Go2-only** and needs Nav2 running.
 
 The [OpenMind portal](https://portal.openmind.com) shows live battery state and lets you send the robot to dock (and stop docking) from the machine view.
 
+![ ](../../.gitbook/assets/full-autonomy-assets/auto-charging.png)
+
 ## Docking and monitoring
 
 Send the robot to dock:

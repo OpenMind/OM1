@@ -12,9 +12,7 @@ Patrol is a **Go2-only** feature today, and it runs on top of Nav2 — so Nav2 n
 
 You can lay out a patrol route and start it from the [OpenMind portal](https://portal.openmind.com): draw the waypoints on the map, save the route, and start the patrol — then pause, resume, or stop it from the same view.
 
-> **📸 Screenshot** — *Portal → Machines → your robot → Patrol.* The route editor with waypoints placed on the map, and the **Start Patrol** control. → `full-autonomy-assets/portal-patrol-route.png`
->
-> **📸 Screenshot** — A patrol in progress, showing the robot's position along the route and the pause/resume controls. → `full-autonomy-assets/portal-patrol-running.png`
+![ ](../../.gitbook/assets/full-autonomy-assets/patrol.png)
 
 ## Running a patrol
 

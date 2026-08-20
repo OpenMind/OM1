@@ -41,6 +41,7 @@
     * [New Mode](developer_cookbook/new_mode.md)
 * [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
+    * [Smart Toy & Companion](examples/smart_toy.md)
 
 ## Deploy Autonomy <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 

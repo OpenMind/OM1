@@ -26,6 +26,8 @@ redirects:
   developer-cookbook/input: developer_cookbook/input.md
   developer-cookbook/new-mode: developer_cookbook/new_mode.md
   examples/conversation: examples/conversation.md
+  examples/smart-toy: examples/smart_toy.md
+  simulators/gazebo: simulators/gazebo.md
   full-autonomy-guidelines/brainpack-introduction: full_autonomy_guidelines/brainpack_introduction.md
   full-autonomy-guidelines/architecture-overview: full_autonomy_guidelines/architecture_overview.md
   full-autonomy-guidelines/modes: full_autonomy_guidelines/modes.md
