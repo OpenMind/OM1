@@ -12,6 +12,8 @@ Two pieces come up together: **ICP localization**, which matches the live LiDAR 
 
 The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-cloud) map and set navigation goals against it from the machine's autonomy view, the same way you would for a 2D map.
 
+![ ](../../.gitbook/assets/full-autonomy-assets/3D-slam-map.png)
+
 ## Before you start
 
 - You have a map with a saved **`.pcd`** — meaning it was saved while 3D SLAM was running.

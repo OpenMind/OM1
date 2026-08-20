@@ -12,7 +12,7 @@ There are two APIs involved. You start and stop the Nav2 stack through the Orche
 
 From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map or picking a saved [location](maps-routes-locations.md) — no API calls needed. The map view also shows the robot's live pose as it drives.
 
-> **📸 Screenshot** — *Portal → Machines → your robot → Navigate.* The map with saved locations and the "select a location to navigate" control. → `full-autonomy-assets/portal-select-location.png`
+![Select a map for navigation in the portal](../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
 
 ## Before you start
 

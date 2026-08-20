@@ -12,7 +12,7 @@ The [OpenMind portal](https://portal.openmind.com) gives you a visual view of al
 
 > **📸 Screenshot** — *Portal → Machines → your robot → Maps.* The saved-maps list. → `full-autonomy-assets/portal-maps-list.png`
 >
-> **📸 Screenshot** — A map with named locations pinned and the route/waypoint editor open. → `full-autonomy-assets/portal-map-locations.png`
+![Current map locations — saved named waypoints with positions](../../.gitbook/assets/full-autonomy-assets/map_locations.png)
 
 By default a robot's maps and routes are private to it. Robots placed in the same portal **Group** share their Maps and Routes (along with memory) — see [Memory Sync → Sharing across robots](memory-sync.md#sharing-across-robots-groups).
 

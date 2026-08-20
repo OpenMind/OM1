@@ -18,6 +18,8 @@ Open **Alerts** in the [OpenMind portal](https://portal.openmind.com). It shows 
 
 Under **Notification Settings**, choose how you're notified when a robot raises a critical or error alert. Each channel is a toggle:
 
+![ ](../../.gitbook/assets/full-autonomy-assets/alerts.png)
+
 - **Browser notifications** — a push notification in your browser.
 - **Email notifications** — an email to the address you set.
 - **Slack notifications** — a message to a Slack channel via an incoming webhook URL.
