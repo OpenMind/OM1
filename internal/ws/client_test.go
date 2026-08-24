@@ -97,9 +97,8 @@ func TestConnectSendReceiveWithoutReconnect(t *testing.T) {
 	require.NoError(t, c.Send([]byte("ping")))
 	select {
 	case got := <-received:
-		require.Equal(t, []byte("ping"), got,
-			"a non-reconnecting client still sends and receives after a successful dial")
+		require.Equal(t, []byte("ping"), got, "the server echoes the message back to onMessage")
 	case <-time.After(2 * time.Second):
-		t.Fatal("did not receive echoed message: send/read loops were never started")
+		t.Fatal("did not receive echoed message")
 	}
 }

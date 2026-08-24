@@ -58,8 +58,6 @@ func New(cfg Config, log *zap.Logger, onMessage func(messageType int, data []byt
 }
 
 // Connect dials the server and starts the send/read goroutines.
-// Reconnect controls whether a failed dial is retried, not whether the
-// send/read loops run: both are started after any successful dial.
 func (c *Client) Connect() error {
 	for {
 		err := c.dial()
