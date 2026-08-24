@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/openmind/om1/internal/httpclient"
@@ -36,7 +37,7 @@ func NewHTTPEmbedder(baseURL string) *HTTPEmbedder {
 		baseURL = DefaultBaseURL
 	}
 	return &HTTPEmbedder{
-		baseURL: baseURL,
+		baseURL: strings.TrimRight(baseURL, "/"),
 		client:  httpclient.Default(),
 	}
 }
