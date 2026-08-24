@@ -46,6 +46,17 @@ func TestEmbedSuccess(t *testing.T) {
 	require.Equal(t, "hello world", gotBody["query"], "query is sent in the request body")
 }
 
+func TestEmbedBaseURLWithTrailingSlash(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/embed", r.URL.Path)
+		_ = json.NewEncoder(w).Encode(embedResponse{EmbeddingB64: encodeEmbedding([]float32{1})})
+	}))
+	t.Cleanup(srv.Close)
+
+	_, err := NewHTTPEmbedder(srv.URL+"/").Embed(context.Background(), "query")
+	require.NoError(t, err)
+}
+
 func TestEmbedErrorStatus(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
