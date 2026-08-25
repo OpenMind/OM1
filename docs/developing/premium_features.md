@@ -54,7 +54,8 @@ Chekout [Academic Access](https://openmind.com/pricing/academic-access) for more
 
 To unlock premium features, contact our team to learn more about the Enterprise Plan:
 
-- **Email**: [Support Team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)
+- **Deployment & enterprise solutions**: [deploy@openmind.com](mailto:deploy@openmind.com?subject=Enterprise%20Deployment%20Inquiry)
+- **General support**: [support@openmind.com](mailto:support@openmind.com?subject=Inquiry)
 - **Website**: [OpenMind Portal](https://portal.openmind.com)
 
 Our team will work with you to understand your needs and provide access to the full suite of premium capabilities.
