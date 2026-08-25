@@ -97,8 +97,6 @@ The status badge at the top of the card tracks these as **Provisioning…**, **C
 
 Once you initiate the launch, the system begins setting up your cloud environment.
 
-![Provisioning progress showing the six launch stages with per-stage timings](../.gitbook/assets/cloud-isaac-sim-assets/provisioning_instance.png)
-
 ![Cloud Simulator card in the Processing state](../.gitbook/assets/cloud-isaac-sim-assets/processing.png)
 
 The instance is ready when the status changes to **Ready**.
