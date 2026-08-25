@@ -30,7 +30,7 @@ OM1 supports two LLM execution strategies depending on your latency, quality, an
 
 ### Single LLM Integration
 
-For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and provided to `internal/runtime/cortex.go` for distribution to the system actions:
+For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and handed to the runtime (`internal/runtime`), which distributes it to the system actions via the action orchestrator (`internal/actions/orchestrator.go`):
 
 ```go
 response, err := client.ChatCompletions(ctx, &ChatRequest{
@@ -44,7 +44,7 @@ parsedResponse := outputModel.Validate(response.Choices[0].Message.Content)
 return parsedResponse
 ```
 
-The standard output model is defined in `internal/llm/output_model.go`.
+The standard output model and response parsing live in the LLM package (`internal/llm`).
 
 Example config:
 
