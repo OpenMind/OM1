@@ -22,7 +22,7 @@ MCP is an open standard that lets AI agents discover and use tools dynamically. 
 | **Modes** | Each mode can have its own MCP servers, system prompt, inputs, and actions |
 | **MCP Servers** | Per-mode configuration that defines which external tools are available in that particular mode|
 | **Orchestrator** (`internal/mcp/orchestrator.go`) | Manages connections to MCP servers, discovers tools, and routes tool calls |
-| **Client** (`internal/mcp` interface) | Represents a connection to a single MCP server (transport `stdio`/`sse`/`http`) |
+| **Client** (`internal/mcp` `ClientManager`) | Manages connections to the configured MCP servers, each over its transport (`stdio`/`sse`/`http`) |
 | **MCP Tools** | External services like Slack, Google Maps, Weather APIs, Notion, and more |
 | **Robot Interface** | Physical or simulated robot that interacts with the real world |
 

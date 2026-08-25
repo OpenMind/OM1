@@ -13,7 +13,7 @@ The Action Plugins are core components of OM1. These plugins map high-level deci
 
 ## Action Orchestrator
 
-The Action Orchestrator (`internal/actions/orchestrator.go`) manages the execution of the actions selected in each tick. It supports three execution modes — `concurrent` (default), `sequential`, and `dependencies` — configured via the top-level `action_execution_mode` field.
+The Action Orchestrator (`internal/actions/orchestrator.go`) manages the execution of the actions selected in each tick. It supports three execution modes — `concurrent` (default), `sequential`, and `dependencies` — configured via the per-mode `action_execution_mode` field (set inside a mode block, not at the top level).
 
 [**Code**](https://github.com/OpenMind/OM1/blob/main/internal/actions/orchestrator.go)
 

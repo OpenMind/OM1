@@ -24,4 +24,4 @@ The docker images are also available at Docker Hub.
 - [v1.0.0](https://hub.docker.com/layers/openmindagi/ota/v1.0.0)
 - [v1.0.0-beta.1](https://hub.docker.com/layers/openmindagi/ota/v1.0.0-beta.1)
 
-For more technical details, please refer to the [docs](https://docs.openmind.com/full_autonomy_guidelines/ota_setup).
+For more technical details, please refer to the [docs](../../full_autonomy_guidelines/architecture_overview.md#om1-ota).
