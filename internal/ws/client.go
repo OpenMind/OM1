@@ -59,10 +59,6 @@ func New(cfg Config, log *zap.Logger, onMessage func(messageType int, data []byt
 
 // Connect dials the server and starts the send/read goroutines.
 func (c *Client) Connect() error {
-	if !c.cfg.Reconnect {
-		return c.dial()
-	}
-
 	for {
 		err := c.dial()
 		if err == nil {
@@ -70,6 +66,10 @@ func (c *Client) Connect() error {
 			go c.sendLoop()
 			go c.readLoop()
 			return nil
+		}
+
+		if !c.cfg.Reconnect {
+			return err
 		}
 
 		c.log.Warn("ws: initial connect failed, retrying", zap.Error(err))

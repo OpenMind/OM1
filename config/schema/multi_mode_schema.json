@@ -23,7 +23,28 @@
         },
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
         "use_sim": {"type": "boolean", "description": "Whether to use the cloud simulation environment instead of a real robot."},
-        "use_tracer": {"type": "boolean", "description": "Whether to enable the tracer for debugging monitoring."},
+        "use_tracer": {
+            "description": "Enables OM1's LLM interaction tracer (writes traces/<date>.jsonl and feeds any in-process subscriber) for debugging/monitoring. Either a plain bool or an object with quality_scorer nested in it.",
+            "oneOf": [
+                {"type": "boolean"},
+                {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "quality_scorer": {
+                            "type": "object",
+                            "description": "Optional live conversation-quality scorer (language/sentiment/coherence), scraped as Prometheus metrics. Requires use_tracer.enabled.",
+                            "properties": {
+                                "enabled": {"type": "boolean"},
+                                "model": {"type": "string"},
+                                "base_url": {"type": "string"},
+                                "api_key": {"type": "string", "description": "Overrides the top-level api_key for this scorer. Falls back to the top-level api_key if unset."}
+                            }
+                        }
+                    }
+                }
+            ]
+        },
         "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "knowledge_base": {

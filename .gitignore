@@ -4,6 +4,7 @@ build/
 # Claude Code
 CLAUDE.md
 .claude/
+LOCAL_CHANGES.md
 
 # Mac specific lint
 .DS_Store
@@ -27,6 +28,11 @@ config/cron_job/
 
 # Zenoh
 .zenoh-c/
+
+# onnxruntime + local ML models (see `make download-onnxruntime`, `make download-vad-model`)
+.onnxruntime/
+models/
+*.onnx
 
 # Test
 coverage.out

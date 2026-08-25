@@ -16,6 +16,8 @@
     * [LLMs](developing/5_llms.md)
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
+    * [Knowledge Base (RAG)](developing/knowledge_base.md)
+    * [VAD & TTS Interrupt](developing/vad_tts_interrupt.md)
 * [Middleware](developing/middleware.md)
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
@@ -25,6 +27,11 @@
 ## MCP Integration <a href="#mcp" id="mcp"></a>
 
 * [MCP Integration](developing/mcp-integration.md)
+
+## Observability <a href="#observability" id="observability"></a>
+
+* [Metrics Reference](developing/metrics.md)
+* [Tracer & Quality Scorer](developing/tracer.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 

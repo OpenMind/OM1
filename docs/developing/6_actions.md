@@ -13,17 +13,17 @@ The Action Plugins are core components of OM1. These plugins map high-level deci
 
 ## Action Orchestrator
 
-The Action Orchestrator is the central component that orchestrates the execution of actions. It manages the states, promise queue, and threads for each action.
+The Action Orchestrator (`internal/actions/orchestrator.go`) manages the execution of the actions selected in each tick. It supports three execution modes — `concurrent` (default), `sequential`, and `dependencies` — configured via the top-level `action_execution_mode` field.
 
 [**Code**](https://github.com/OpenMind/OM1/blob/main/internal/actions/orchestrator.go)
 
 ## Movement (Zenoh)
 
-This plugin is an example of how to use Zenoh to send movement commands to a [TurtleBot 4](https://github.com/OpenMind/OM1/tree/main/plugins/actions/move_turtle/zenoh.go).
+Movement commands can be sent over Zenoh. See the Unitree Go2 autonomy connector, which publishes `cmd_vel` over Zenoh: [`plugins/actions/unitree/go2/autonomy/move.go`](https://github.com/OpenMind/OM1/blob/main/plugins/actions/unitree/go2/autonomy/move.go) (registered as `unitree_go2_autonomy/move`).
 
-## Movement (Unitree SDK)
+## Navigation
 
-This plugin is an example of how to connect to the Unitree SDK to send movement commands to a [Go2 EDU](https://github.com/OpenMind/OM1/tree/main/plugins/actions/move_go2_autonomy/unitree_rplidar_sdk.go).
+The navigation action drives the robot to mapped locations: [`plugins/actions/navigation/navigation.go`](https://github.com/OpenMind/OM1/blob/main/plugins/actions/navigation/navigation.go) (registered as `navigation/navigation`).
 
 
 ## Speech and TTS
@@ -35,22 +35,33 @@ The Speech and TTS action plugin allows agents to speak using a text-to-speech (
 
 ## Adding New Actions
 
-Each action plugin consists of:
+An action is exposed to the LLM by its `name`, and each `name` can have one or more **connectors** that carry it out on a specific platform. A connector registers itself with `actions.Register("<name>/<connector>", ...)` and the runtime resolves it by `name + "/" + connector` (`internal/actions/action.go`).
 
-1. **Interface**: Defines input/output types via Go structs
-2. **Implementation**: Business logic (or passthrough for simple actions)
-3. **Connector**: Code that connects OM1 to specific virtual or physical environments
+The real layout groups connectors by action name (and, for robots, by platform):
 
 ```tree
 plugins/actions/
-├── move_{unique_hardware_id}/
-│   ├── interface.go      # Defines MoveInput/Output structs
-│   ├── passthrough.go    # Simple passthrough implementation
-│   ├── ros2.go           # Maps OM1 data/commands to ROS2
-│   ├── zenoh.go          # Maps OM1 data/commands to Zenoh
-│   └── unitree.go        # Maps OM1 data/commands to Unitree SDK
-└── speak/
-    └── elevenlabs_tts.go
+├── actions.go                                  # blank-imports every action package so init()/Register runs
+├── speak/
+│   ├── elevenlabs_tts.go                        # speak/elevenlabs_tts
+│   ├── elevenlabs_people_tts.go                 # speak/elevenlabs_people_tts
+│   └── kokoro_tts.go                            # speak/kokoro_tts
+├── emotion/
+│   └── zenoh.go                                 # emotion/zenoh
+├── navigation/
+│   └── navigation.go                            # navigation/navigation
+├── face_memory/
+│   └── face_memory.go                           # face_memory/face_memory
+├── greeting_conversation/
+│   └── greeting_conversation_elevenlabs.go      # greeting_conversation/greeting_conversation_elevenlabs
+├── robot_action/
+│   └── http.go                                  # robot_action/http
+└── unitree/
+    ├── g1/arm/zenoh.go                           # unitree_g1_arm/zenoh
+    └── go2/
+        ├── autonomy/move.go                      # unitree_go2_autonomy/move
+        ├── autonomy/mppi.go                      # unitree_go2_autonomy/mppi
+        └── location/location.go                  # unitree_go2_location/location
 ```
 
-In general, each robot will have specific capabilities, and therefore, each action will be hardware specific. For example, if you are adding support for the Unitree G1 Humanoid version 13.2b, which supports a new movement subtype such as `dance_2`, you could name the updated action `move_unitree_g1_13_2b` and select that action in your `unitree_g1.json` configuration file.
+In general, each robot has specific capabilities, so an action's connector is typically hardware-specific. To add a new connector, create a package under `plugins/actions/`, call `actions.Register("<name>/<connector>", <constructor>)` in its `init()`, and add a blank import for it in `plugins/actions/actions.go` so it is loaded. Then reference it from the `agent_actions` section of your config (e.g. `unitree_g1_conversation.json5`).

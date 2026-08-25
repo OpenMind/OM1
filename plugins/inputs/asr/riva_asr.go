@@ -49,6 +49,8 @@ type RivaASRConfig struct {
 	MicDeviceIndex     int    `json:"microphone_device_id"` // -1 = default
 	Language           string `json:"language"`             // default "english"
 	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
+
+	vadLatencyConfig
 }
 
 // rivaASRParams carries the vendor inputs needed to build a Riva asrCommon.
@@ -58,6 +60,8 @@ type rivaASRParams struct {
 	rate               int
 	language           string
 	enableTTSInterrupt bool
+
+	vadLatencyConfig
 }
 
 // RivaASRSensor streams local microphone audio to Riva ASR via the shared asrCommon.
@@ -88,6 +92,7 @@ func NewRivaASR(configMap map[string]any) (inputs.Sensor, error) {
 		rate:               cfg.Rate,
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
+		vadLatencyConfig:   cfg.vadLatencyConfig,
 	})
 	core.log.Info("microphone config", zap.Int("chunk", cfg.Chunk))
 
@@ -138,6 +143,7 @@ func (s *RivaASRSensor) Stop() {
 	s.closeWS()
 	providers.PortAudio.Release()
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
@@ -276,6 +282,7 @@ func resolveRivaASRConfig(p rivaASRParams) asrCommonConfig {
 		LanguageCode:       languageCode,
 		EnableTTSInterrupt: p.enableTTSInterrupt,
 		ParseMessage:       rivaParseMessage,
+		vadLatencyConfig:   p.vadLatencyConfig,
 	}
 }
 

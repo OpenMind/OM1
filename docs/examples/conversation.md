@@ -16,25 +16,16 @@ make run CONFIG=conversation
 
 Especially on Linux, such as on Ubuntu 20.04 on the Nvidia Orin, audio support can be marginal. Expect some audio inputs and outputs to not work correctly, or to advertise incorrect hardware capabilities, such as USB microphones that report zero input channels etc.
 
-## Enumerating your Audio
+## Selecting and testing your audio devices
 
-You can enumerate available audio via the test script in `/system_hw_test`:
+OM1 uses your operating system's default microphone and speaker (via `portaudio`). Set the correct defaults in your OS sound settings (macOS: **System Settings → Sound**; Linux: `pavucontrol` or `alsamixer`) and test them there before running the agent.
 
-```bash
-python test_audio.py
-```
+## Debugging audio
 
-## Testing Audio
-
-You can provide test sentences to speak by adding the `MockInput` to the config file:
+Run in dev mode to get verbose logs, including the ASR input and TTS playback state, which help diagnose audio issues:
 
 ```bash
-{
-    "type": "MockInput",
-    "config": {
-        "input_name": "Voice Input"
-    }
-}
+make dev CONFIG=conversation
 ```
 
-Then connect to the `ws` (`wscat -c ws://localhost:8765`) and type in the words you want the system to speak. This is useful to debug audio out issues and related settings such as chunk values.
+The ASR input's capture settings are controlled by its `config` block in the agent config — for example `GoogleASRInput` accepts `rate` (e.g. `16000`) and `chunk` (e.g. `1600`). Tune these if the microphone reports unexpected capabilities.

@@ -28,6 +28,8 @@ type RivaASRRTSPConfig struct {
 	BaseURL            string `json:"base_url"` // override WS endpoint
 	Language           string `json:"language"` // default "english"
 	EnableTTSInterrupt bool   `json:"enable_tts_interrupt"`
+
+	vadLatencyConfig
 }
 
 // RivaASRRTSPSensor streams audio from an RTSP URL (decoded via ffmpeg) and
@@ -60,6 +62,7 @@ func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		rate:               cfg.Rate,
 		language:           cfg.Language,
 		enableTTSInterrupt: cfg.EnableTTSInterrupt,
+		vadLatencyConfig:   cfg.vadLatencyConfig,
 	})
 	core.log.Info("rtsp config",
 		zap.String("rtsp_url", cfg.RTSPURL),
@@ -107,6 +110,7 @@ func (s *RivaASRRTSPSensor) Stop() {
 	s.waitCapture(captureDone)
 	s.closeWS()
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
