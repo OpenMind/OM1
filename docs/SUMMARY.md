@@ -18,7 +18,7 @@
     * [Backgrounds](developing/8_backgrounds.md)
     * [Knowledge Base (RAG)](developing/knowledge_base.md)
     * [VAD & TTS Interrupt](developing/vad_tts_interrupt.md)
-* Modes & Lifecycle
+* [Modes & Lifecycle](full_autonomy_guidelines/modes_lifecycle.md)
     * [Modes](full_autonomy_guidelines/modes.md)
     * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
     * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
@@ -28,7 +28,7 @@
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
-* Observability
+* [Observability](developing/observability.md)
     * [Metrics Reference](developing/metrics.md)
     * [Tracer & Quality Scorer](developing/tracer.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
@@ -43,7 +43,7 @@
     * [Conversation](examples/conversation.md)
     * [Smart Toy & Companion](examples/smart_toy.md)
 
-## Deploy Autonomy <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
+## Enterprise Deployment <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Overview](full_autonomy_guidelines/architecture_overview.md)
 * [BrainPack](full_autonomy_guidelines/brainpack_introduction.md)

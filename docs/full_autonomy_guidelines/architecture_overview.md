@@ -181,3 +181,12 @@ A self-update companion for `ota_agent`. Because `ota_agent` manages all other c
 ---
 
 Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you. To access the premium features through API endpoints refer the documentation [here](./api_endpoints.md).
+
+---
+
+## Deploying at Your Organization
+
+Planning an enterprise or fleet deployment, or want to explore a custom solution for your use case? Our deployment team can help scope hardware, autonomy features, and integration for production environments.
+
+- **Deployment & enterprise inquiries**: [deploy@openmind.com](mailto:deploy@openmind.com?subject=Enterprise%20Deployment%20Inquiry)
+- **Portal**: [portal.openmind.com](https://portal.openmind.com)
