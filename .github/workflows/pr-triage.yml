@@ -1,0 +1,170 @@
+name: PR Triage
+
+# Daily unattended triage of open PRs from non-OpenMind-org contributors.
+# Flags irrelevant / trivial / Python-authored PRs with a "Request changes"
+# review explaining why. Never approves, closes, or merges — a human makes
+# the actual accept/reject call from here.
+#
+# Prerequisite secret (not yet created as of this writing): ORG_READ_TOKEN,
+# a fine-grained PAT with `read:org` scope, ideally owned by a bot/service
+# account, used only to check OpenMind org membership.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 13:00 UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: pr-triage
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write # gh pr comment posts through the Issues API
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Find PRs needing triage
+        id: gate
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ORG_READ_TOKEN:-}" ]; then
+            echo "::error::ORG_READ_TOKEN secret is not set — cannot check org membership. Skipping run."
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          gh pr list --state open --json number,author,headRefOid \
+            --jq '.[] | [.number, .author.login, .headRefOid] | @tsv' \
+            > .pr-triage-open.tsv
+
+          echo "Open PRs: $(wc -l < .pr-triage-open.tsv)"
+
+          : > .pr-triage-candidates.tsv
+          while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
+            # Org membership check uses a separate token (ORG_READ_TOKEN) —
+            # the default GITHUB_TOKEN cannot read org membership.
+            STATUS="$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${ORG_READ_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/orgs/OpenMind/members/${LOGIN}")"
+
+            if [ "$STATUS" = "204" ]; then
+              echo "PR #$NUMBER by @$LOGIN: OpenMind org member — skipping."
+              continue
+            fi
+
+            # Idempotency: skip if we've already triaged this exact commit.
+            MARKER="<!-- gemini-triage:${HEAD_SHA} -->"
+            EXISTING="$(gh pr view "$NUMBER" --json comments \
+              --jq ".comments[].body | select(contains(\"${MARKER}\"))")"
+            if [ -n "$EXISTING" ]; then
+              echo "PR #$NUMBER: already triaged at $HEAD_SHA — skipping."
+              continue
+            fi
+
+            printf '%s\t%s\t%s\n' "$NUMBER" "$LOGIN" "$HEAD_SHA" >> .pr-triage-candidates.tsv
+          done < .pr-triage-open.tsv
+
+          COUNT="$(wc -l < .pr-triage-candidates.tsv)"
+          echo "PRs needing triage: $COUNT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "needs_review=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_review=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+
+      - name: Set up Node
+        if: steps.gate.outputs.needs_review == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Triage PRs (Gemini CLI)
+        if: steps.gate.outputs.needs_review == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+        run: |
+          set -euo pipefail
+          npm install -g @google/gemini-cli@0.49.0
+
+          gemini \
+            --model gemini-2.5-pro \
+            --approval-mode=yolo \
+            --prompt "$(cat <<'PROMPT'
+          You are triaging open pull requests on github.com/OpenMind/OM1 for a
+          maintainer. You have shell access (the `gh` CLI, already authenticated
+          for this repo) — use it to do everything below. Do NOT use git.
+
+          The file `.pr-triage-candidates.tsv` in the repo root lists PRs that
+          need triage: one row per PR, tab-separated columns
+          `number  author_login  head_commit_sha`. Every PR listed here is
+          already confirmed to be from someone outside the OpenMind org — do
+          not re-check org membership, and do not touch any PR not in this file.
+
+          For grounding on what this project is and what contributions are
+          on-topic, read `README.md` and `CONTRIBUTING.md` in the repo root
+          before judging relevance.
+
+          For EACH row in .pr-triage-candidates.tsv, do the following:
+
+          1. Inspect the PR: `gh pr view <number> --json title,body,files,additions,deletions`
+             and `gh pr diff <number>` for the actual change content.
+
+          2. Decide whether the PR should be flagged, using ONLY these three
+             criteria — do not flag a PR for any other reason, including code
+             quality, style, or disagreement with the approach:
+
+             a. IRRELEVANT — the PR is unrelated to OM1's actual purpose as
+                described in README.md/CONTRIBUTING.md (e.g. spam, unrelated
+                content, promotional edits, changes to a different project).
+             b. TRIVIAL — the change has no functional substance: whitespace-only,
+                a single typo fix, a comment-only edit, or similarly inconsequential.
+                A small but functionally meaningful fix is NOT trivial.
+             c. PYTHON — the PR's changed files are predominantly `.py` files.
+
+             Grounding rule: base the verdict only on what you actually read in
+             the diff, title, body, and files list — never guess or assume intent
+             that isn't evidenced in the PR itself.
+
+          3. If NONE of the three criteria apply: take no action on this PR
+             at all — do not comment, review, or label it.
+
+          4. If ONE OR MORE criteria apply:
+             a. Post a "request changes" review explaining exactly which
+                criterion/criteria triggered and why, quoting or citing the
+                specific evidence (e.g. which files are .py, which lines are
+                the only change). Be concise and factual, not scolding:
+                  gh pr review <number> --request-changes --body "<explanation>"
+             b. Add the label (create it first if needed, ignore error if it
+                already exists):
+                  gh label create needs-human-review --color FBCA04 --description "Auto-flagged by PR Triage — human decides accept/reject" 2>/dev/null || true
+                  gh pr edit <number> --add-label needs-human-review
+
+          5. Regardless of the verdict in step 3/4, mark the PR as triaged at
+             this commit so tomorrow's run doesn't reprocess it unless it gets
+             new commits. Post this as a plain comment (not a review):
+               gh pr comment <number> --body "<!-- gemini-triage:<head_commit_sha> -->"
+             Use the exact head_commit_sha from that PR's row in the tsv file.
+
+          IMPORTANT — never run `gh pr close`, `gh pr merge`, or approve a PR.
+          Your only allowed actions are: read commands, `gh pr review --request-changes`,
+          `gh pr edit --add-label`, `gh label create`, and `gh pr comment` (for the
+          triage marker only). A human maintainer makes the actual accept/reject
+          decision from your reviews.
+          PROMPT
+          )"
