@@ -1,7 +1,7 @@
 ---
 title: OM1 Modes
 description: "Introduction to the OM1 modes"
-icon: gamepad-modern
+icon: toggle-on
 ---
 
 ## What Are Modes?

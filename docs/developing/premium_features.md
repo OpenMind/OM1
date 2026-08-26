@@ -24,6 +24,8 @@ All other features beyond the core framework are available exclusively through o
 - Real-time alerts
 - Custom feature development
 
+> **Integrating these?** See the [Autonomy Features](../full_autonomy_guidelines/features/README.md) for per-feature guides (SLAM, Navigation, Patrol, Charging, and more), and the [Autonomy API Overview](../full_autonomy_guidelines/api_endpoints.md) for system endpoints.
+
 ## Simulation Limitations
 
 The open source simulation environment does not include the following features:
@@ -47,11 +49,13 @@ Based on your use case and feasibility, we may offer:
 - **Free Trial** - Limited-time access to premium features (7 days)
 - **Enterprise Plan**
 
+Chekout [Academic Access](https://openmind.com/pricing/academic-access) for more details.
 ## Getting Access
 
 To unlock premium features, contact our team to learn more about the Enterprise Plan:
 
-- **Email**: [Support Team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)
+- **Deployment & enterprise solutions**: [deploy@openmind.com](mailto:deploy@openmind.com?subject=Enterprise%20Deployment%20Inquiry)
+- **General support**: [support@openmind.com](mailto:support@openmind.com?subject=Inquiry)
 - **Website**: [OpenMind Portal](https://portal.openmind.com)
 
 Our team will work with you to understand your needs and provide access to the full suite of premium capabilities.

@@ -160,7 +160,7 @@ These fields appear in the shipped configs and are worth knowing when integratin
 * **memory** Configures agent memory (`{ enabled, cloud_connection }`).
 * **lifecycle_hooks** / **global_lifecycle_hooks** Hooks fired on `on_startup` / `on_entry` / `on_exit` / `on_timeout`, each with a `handler_type` (`action` | `message` | `command`).
 * **agent_backgrounds** / **global_backgrounds** Background tasks that run alongside the cortex loop (see [Backgrounds](8_backgrounds.md)).
-* **action_execution_mode** How actions in a tick are executed: `concurrent` (default), `sequential`, or `dependencies` (uses **action_dependencies**).
+* **action_execution_mode** *(set per mode, not top-level)* How actions in a tick are executed: `concurrent` (default), `sequential`, or `dependencies` (uses **action_dependencies**). Define this inside a mode block; in a single-mode config it lives alongside that mode's `actions`.
 * **robot_ip** IP address of the robot for middleware connections.
 * **use_sim** Set `true` when running against a simulator.
 

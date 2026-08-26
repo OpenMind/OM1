@@ -13,19 +13,19 @@ There are multiple ways to do this:
 
 ## Context Aware
 
-The system supports context-aware transition rules that enable automatic mode switching based on operational state and task completion for a particular mode.
+The system supports context-aware transition rules that enable automatic mode switching based on operational state and task completion for a particular mode. A context-aware transition fires on its own once the configured `context_conditions` are met — no user input required.
 
-Once the robot is powered on, it autonomously progresses through predefined operational modes without requiring user commands.
+The shipped Go2 config combines context-aware transitions with voice commands to move the robot through its operational modes:
 
-- Upon startup, the robot enters Welcome Mode, where it greets the user and performs facial capture for identification purposes.
+- Upon startup, the robot enters Welcome Mode (the default mode), where it greets the user and performs facial capture for identification purposes.
 
 - Facial data is processed in compliance with privacy-preserving mechanisms. Face detection and anonymisation takes place on the edge device.
 
-- After successful initialization and user recognition, the robot automatically transitions to SLAM (Simultaneous Localization and Mapping) Mode.
+- From Welcome Mode, the robot enters SLAM (Simultaneous Localization and Mapping) Mode. In the shipped config this is an `input_triggered` transition — a voice command such as "explore" or "slam" (see [Input Triggered](#input-triggered-voice-commands)). It can also be made `context_aware` so it fires automatically, provided Welcome Mode publishes a completion signal for the rule's `context_conditions` to match (for example `greeting_conversation_finished` when Welcome runs the greeting flow).
 
 - The robot maps the surrounding environment. Location labels are generated and stored for future navigation tasks.
 
-- Once the SLAM process is completed successfully, the robot transitions to Navigation Mode. The robot can now navigate autonomously within the mapped area.
+- Once the SLAM process is completed successfully (`exploration_done: true`), the robot **automatically** transitions to Navigation Mode via a `context_aware` rule. The robot can now navigate autonomously within the mapped area.
 
 - Guard Mode is excluded from context aware transitions and must be explicitly activated by the user via voice commands or through the OpenMind portal, as required.
 
@@ -68,7 +68,6 @@ Example config to setup time based transition type for transitioning into guard 
       "from_mode": "conversation",
       "to_mode": "guard",
       "transition_type": "time_based",
-      "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
       "priority": 2,
       "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
     }
@@ -110,7 +109,7 @@ Example config to setup time based transition type for transitioning into guard 
 
 5. In **SLAM Mode**, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
 
-   ![ ](../.gitbook/assets/full-autonomy-assets/slam_map.png)
+   ![ ](../.gitbook/assets/full-autonomy-assets/2D-slam-map.png)
 
 6. Once the map is saved, switch to **Navigation Mode** to make the robot move autonomously between locations. Use the dropdown menu to select a destination.
 
