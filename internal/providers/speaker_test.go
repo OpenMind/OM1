@@ -140,7 +140,6 @@ func TestWindowIsSentAndClamped(t *testing.T) {
 	}
 }
 
-
 func TestResolveAsyncInvalidatesPreviousSpeaker(t *testing.T) {
 	release := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

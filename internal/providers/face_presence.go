@@ -81,7 +81,7 @@ type FaceEntry struct {
 	CreatedAgoSec  *float64 `json:"created_ago_sec"`   // UUID age in seconds; null for unknown
 	LastSeenAgoSec *float64 `json:"last_seen_ago_sec"` // sticky session-start gap; null until first confident match
 	LastSeenISO    *string  `json:"last_seen_iso"`     // ISO timestamp of previous sighting
-	Enrolling bool `json:"enrolling"`
+	Enrolling      bool     `json:"enrolling"`
 }
 
 // PresenceSnapshot is the parsed /who response.
