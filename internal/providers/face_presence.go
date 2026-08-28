@@ -81,14 +81,6 @@ type FaceEntry struct {
 	CreatedAgoSec  *float64 `json:"created_ago_sec"`   // UUID age in seconds; null for unknown
 	LastSeenAgoSec *float64 `json:"last_seen_ago_sec"` // sticky session-start gap; null until first confident match
 	LastSeenISO    *string  `json:"last_seen_iso"`     // ISO timestamp of previous sighting
-	// Enrolling reports whether auto-enrolment is currently accumulating
-	// samples for this face. Resolved by the publisher, which owns the
-	// size/confidence/frontality thresholds; duplicating that test here
-	// would put the same constants on both sides of a network boundary.
-	//
-	// False on a face with no UUID is the actionable case: naming them
-	// cannot work yet, and will not start working on its own while they
-	// stay where they are.
 	Enrolling bool `json:"enrolling"`
 }
 
@@ -215,15 +207,6 @@ func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool)
 	for i := range faces {
 		f := &faces[i]
 		if f.Name == "unknown" || f.Name == "" {
-			// Unrecognised faces are normally dropped: a list of "unknown,
-			// unknown, unknown" tells the model nothing it can act on.
-			//
-			// The speaker is the exception. Once the audio has established
-			// that THIS face is the one talking, leaving them out makes the
-			// list contradict the Speaker line directly underneath it --
-			// naming somebody as the person being spoken to while the
-			// roster says nobody is there. Being unrecognised is not the
-			// same as being absent.
 			if f.TrackID != speakingTrack || speakingTrack < 0 {
 				continue
 			}
@@ -244,14 +227,6 @@ func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool)
 	// Tell the model the list is ordered by proximity and what that implies.
 	descriptor += " (nearest first; nearest face is closest to the camera and most likely addressing the robot)"
 
-	// Who actually spoke, if the audio-visual model was able to say.
-	//
-	// Proximity is the fallback, not the answer. It was the answer for a
-	// long time -- the nearest face was labelled "likely speaking" on the
-	// reasoning that whoever leaned in is whoever is talking -- and with
-	// one person present that is right often enough to pass. With two it
-	// attributes the sentence to the wrong face about as often as not,
-	// which is how "my name is X" ends up renaming somebody else.
 	var parts []string
 	var speakerEntry string
 	speakerEnrolling := false
@@ -305,17 +280,6 @@ func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool)
 		spk, available, speakingTrack, speakerEntry, speakerEnrolling, speakerUUID)
 }
 
-// speakerSuffix states the resolved speaker on its own line.
-//
-// Repeated rather than left implicit in the per-face tag: this is the one
-// fact the model needs before it can attach anything it is told -- a name, a
-// preference, a correction -- to the right identity, and a bracketed tag in
-// the middle of a list is easy for it to skim past. Saying it plainly, every
-// round, is cheap.
-//
-// The absent cases are spelled out too. "Unknown" has to read as unknown, or
-// the model fills the gap with the nearest face and the guess becomes
-// indistinguishable from a measurement one turn later.
 func speakerSuffix(
 	spk *SpeakerResult, available bool, speakingTrack int,
 	speakerEntry string, speakerEnrolling bool, speakerUUID string,
@@ -364,26 +328,6 @@ func speakerSuffix(
 		speakerName(spk), spk.TrackID, spk.Score)
 }
 
-// AttributedUser returns the identity the current turn belongs to: whose
-// words these were, and whose memory they should be filed under.
-//
-// The speaker when one was measured, the nearest face otherwise. Proximity
-// was the only rule here for a long time, and it is wrong in exactly the
-// situation the robot is built for -- somebody standing at a stand while a
-// colleague leans in to look at it. Every turn of that conversation was
-// filed against the colleague, and nothing about the record said it was a
-// guess, so the wrong person accumulated somebody else's history.
-//
-// A person with no NAME still has an identity. Not wanting to introduce
-// yourself is a normal thing to do, and an auto-enrolled uuid is a perfectly
-// good key to remember a conversation under -- the name is a label on that
-// key, not the key itself. So the uuid is returned whenever there is one,
-// even when the name is blank, and only the name is withheld for anon_
-// entries so the greeting can fall back to a generic hello instead of
-// saying "hello, anon_73d0a4".
-//
-// Returns measured=false when this is the proximity fallback, so a caller
-// that cares about the difference can tell.
 func (s *PresenceSnapshot) AttributedUser() (uuid string, name string, measured bool) {
 	if s == nil {
 		return "", "", false

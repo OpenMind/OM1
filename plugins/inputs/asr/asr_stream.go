@@ -133,21 +133,6 @@ func (s *transcriberStream) sendChunk(pcm []byte) {
 	s.stats.mu.Unlock()
 }
 
-// speechWindow reports when this utterance was actually spoken. Callers must
-// hold s.mu.
-//
-// The end is not simply now. A transcript lands after the vendor has decided
-// the utterance is over and finished decoding it, so "now" trails the last
-// word by the endpointing delay -- hundreds of milliseconds, sometimes more.
-// Handing that padded window to active-speaker detection charges a person for
-// silence they did not make: the scorer sees a stretch with no speech in it,
-// and the answer's lifetime, which is derived from how long they spoke, is
-// inflated by the same amount. So prefer a real speech-end mark when the
-// vendor sends one (Google does; ElevenLabs commits the transcript at the end
-// of speech, so now is already tight).
-//
-// A stale mark is worse than none: if it did not land inside this utterance,
-// fall back rather than report a window that ends before it starts.
 func (s *transcriberStream) speechWindow() (start, end time.Time) {
 	start = s.speechStartTime
 	if !s.speechEndTime.IsZero() && s.speechEndTime.After(start) {

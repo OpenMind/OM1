@@ -44,11 +44,6 @@ type FacePresenceSensor struct {
 	mu       sync.Mutex
 	messages []inputs.Message
 	stopped  bool
-	// lastSnap is kept so the line can be RE-RENDERED when the prompt is
-	// built rather than frozen at poll time. The speaker for an utterance
-	// is resolved after the utterance, so a line rendered on the poll
-	// before it is guaranteed not to know who spoke -- and this sensor
-	// polls on its own clock, unrelated to when anybody talks.
 	lastSnap *providers.PresenceSnapshot
 }
 
@@ -171,15 +166,6 @@ func (s *FacePresenceSensor) RawToText(_ context.Context, raw any) (*inputs.Mess
 	return msg, nil
 }
 
-// FormattedLatestBuffer returns the newest presence line and clears the buffer.
-//
-// The line is re-rendered here, at the moment the prompt is assembled, rather
-// than reused from the poll that produced it. Everything about WHO is on
-// screen was already settled at poll time; the speaker was not, because the
-// speaker of an utterance can only be resolved after the utterance, and this
-// sensor polls on a clock that knows nothing about when anybody talks. A line
-// frozen at poll time therefore reports the speaker of the PREVIOUS turn --
-// which, with two people alternating, means naming each of them as the other.
 func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()

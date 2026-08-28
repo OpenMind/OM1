@@ -140,11 +140,6 @@ func TestWindowIsSentAndClamped(t *testing.T) {
 	}
 }
 
-// --- the race between an utterance and its attribution -------------------
-//
-// The transcript and the prompt are the same event: accepting a transcript
-// fires TickNow and the cortex loop assembles the prompt immediately. These
-// pin the behaviour that stops a late answer becoming a wrong one.
 
 func TestResolveAsyncInvalidatesPreviousSpeaker(t *testing.T) {
 	release := make(chan struct{})
