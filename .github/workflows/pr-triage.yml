@@ -4,8 +4,9 @@ name: PR Triage
 # in real time as PRs are opened/updated (pull_request_target), with a
 # daily cron as a fallback catch-all for anything the event-based run
 # missed. Flags irrelevant / trivial / Python-authored PRs with a
-# "Request changes" review explaining why. Never approves, closes, or
-# merges — a human makes the actual accept/reject call from here.
+# "Request changes" review explaining why, then closes the PR. Never
+# approves or merges — closing is the only autonomous action taken, and
+# a human can always reopen a PR that was closed in error.
 #
 # pull_request_target (not pull_request) is required so this has secrets
 # and write access on PRs from forks. That's safe here because the job
@@ -180,12 +181,17 @@ jobs:
              a. Post a "request changes" review explaining exactly which
                 criterion/criteria triggered and why, quoting or citing the
                 specific evidence (e.g. which files are .py, which lines are
-                the only change). Be concise and factual, not scolding:
+                the only change). Be concise and factual, not scolding. End
+                the review by noting that the PR is being closed automatically
+                and that a maintainer can reopen it if this was flagged in
+                error:
                   gh pr review <number> --request-changes --body "<explanation>"
              b. Add the label (create it first if needed, ignore error if it
                 already exists):
-                  gh label create needs-human-review --color FBCA04 --description "Auto-flagged by PR Triage — human decides accept/reject" 2>/dev/null || true
+                  gh label create needs-human-review --color FBCA04 --description "Auto-flagged and closed by PR Triage — reopen if this was a mistake" 2>/dev/null || true
                   gh pr edit <number> --add-label needs-human-review
+             c. Close the PR, after the review and label above:
+                  gh pr close <number>
 
           5. Regardless of the verdict in step 3/4, mark the PR as triaged at
              this commit so tomorrow's run doesn't reprocess it unless it gets
@@ -193,10 +199,12 @@ jobs:
                gh pr comment <number> --body "<!-- gemini-triage:<head_commit_sha> -->"
              Use the exact head_commit_sha from that PR's row in the tsv file.
 
-          IMPORTANT — never run `gh pr close`, `gh pr merge`, or approve a PR.
+          IMPORTANT — never run `gh pr merge` or approve a PR. Closing a PR
+          (step 4c) is only allowed for a PR that actually matched one of the
+          three criteria in step 2 — never close a PR for any other reason.
           Your only allowed actions are: read commands, `gh pr review --request-changes`,
-          `gh pr edit --add-label`, `gh label create`, and `gh pr comment` (for the
-          triage marker only). A human maintainer makes the actual accept/reject
-          decision from your reviews.
+          `gh pr edit --add-label`, `gh label create`, `gh pr close`, and
+          `gh pr comment` (for the triage marker only). A human maintainer
+          can always reopen a PR that was closed in error.
           PROMPT
           )"
