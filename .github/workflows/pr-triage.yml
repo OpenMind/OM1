@@ -23,12 +23,6 @@ on:
   schedule:
     - cron: "0 13 * * *" # 13:00 UTC daily fallback
   workflow_dispatch:
-  # TEMPORARY — remove before merging to main. Lets this run on this branch
-  # without waiting for a default-branch merge (schedule/workflow_dispatch
-  # only activate from the default branch).
-  push:
-    branches:
-      - worktree-om1-pr-triage-workflow
 
 concurrency:
   group: pr-triage
