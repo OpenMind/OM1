@@ -1,17 +1,27 @@
 name: PR Triage
 
-# Daily unattended triage of open PRs from non-OpenMind-org contributors.
-# Flags irrelevant / trivial / Python-authored PRs with a "Request changes"
-# review explaining why. Never approves, closes, or merges — a human makes
-# the actual accept/reject call from here.
+# Unattended triage of open PRs from non-OpenMind-org contributors, run
+# in real time as PRs are opened/updated (pull_request_target), with a
+# daily cron as a fallback catch-all for anything the event-based run
+# missed. Flags irrelevant / trivial / Python-authored PRs with a
+# "Request changes" review explaining why. Never approves, closes, or
+# merges — a human makes the actual accept/reject call from here.
+#
+# pull_request_target (not pull_request) is required so this has secrets
+# and write access on PRs from forks. That's safe here because the job
+# never checks out or executes the PR's own code/ref — it only reads PR
+# metadata via `gh`/the GitHub API, using the workflow file and code from
+# the base branch.
 #
 # Prerequisite secret (not yet created as of this writing): ORG_READ_TOKEN,
 # a fine-grained PAT with `read:org` scope, ideally owned by a bot/service
 # account, used only to check OpenMind org membership.
 
 on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
   schedule:
-    - cron: "0 13 * * *" # 13:00 UTC daily
+    - cron: "0 13 * * *" # 13:00 UTC daily fallback
   workflow_dispatch:
   # TEMPORARY — remove before merging to main. Lets this run on this branch
   # without waiting for a default-branch merge (schedule/workflow_dispatch
@@ -51,11 +61,18 @@ jobs:
             exit 0
           fi
 
-          gh pr list --state open --json number,author,headRefOid \
-            --jq '.[] | [.number, .author.login, .headRefOid] | @tsv' \
-            > .pr-triage-open.tsv
+          if [ "${EVENT_NAME}" = "pull_request_target" ]; then
+            # Real-time run: only the PR that triggered this event.
+            printf '%s\t%s\t%s\n' "${PR_NUMBER}" "${PR_LOGIN}" "${PR_HEAD_SHA}" \
+              > .pr-triage-open.tsv
+          else
+            # Cron/manual fallback run: sweep every open PR.
+            gh pr list --state open --json number,author,headRefOid \
+              --jq '.[] | [.number, .author.login, .headRefOid] | @tsv' \
+              > .pr-triage-open.tsv
+          fi
 
-          echo "Open PRs: $(wc -l < .pr-triage-open.tsv)"
+          echo "PRs to consider: $(wc -l < .pr-triage-open.tsv)"
 
           : > .pr-triage-candidates.tsv
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
@@ -92,6 +109,10 @@ jobs:
           fi
         env:
           ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node
         if: steps.gate.outputs.needs_review == 'true'
