@@ -112,12 +112,6 @@ func (s *transcriberStream) packageAudio(pcm []byte, captureMs int64) ([]byte, e
 	return packet, nil
 }
 
-// sendChunk packages and sends a PCM chunk, stamping the capture time as now.
-// Callers that know the true acoustic capture instant should use sendChunkAt.
-// func (s *transcriberStream) sendChunk(pcm []byte) {
-// 	s.sendChunkAt(pcm, time.Now())
-// }
-
 // sendChunkAt packages and sends a PCM chunk captured at the given time,
 // updating statistics.
 func (s *transcriberStream) sendChunkAt(pcm []byte, capture time.Time) {
