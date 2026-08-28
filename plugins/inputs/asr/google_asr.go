@@ -248,6 +248,9 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		// Stamp capture time right after the buffer is read, so the ASR chunk
+		// carries the acoustic capture instant rather than the later send time.
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -258,7 +261,7 @@ func (s *GoogleASRSensor) captureLoop(ctx context.Context, stream *portaudio.Str
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }
 

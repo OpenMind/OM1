@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -47,7 +48,7 @@ func NewRivaASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.RTSPURL == "" {
-		cfg.RTSPURL = "rtsp://localhost:8554/audio"
+		cfg.RTSPURL = "rtsp://localhost:8555/live"
 	}
 	if cfg.Rate == 0 {
 		cfg.Rate = 16000
@@ -182,6 +183,8 @@ func (s *RivaASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
+		// Stamp capture time at read.
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -189,6 +192,6 @@ func (s *RivaASRRTSPSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }

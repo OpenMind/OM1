@@ -49,7 +49,7 @@ func BuildSchemaForAction(actionName, llmLabel string) (map[string]any, bool) {
 // tag overrides the auto-generated description.
 func BuildSchema(llmLabel, description string, inputExample any) map[string]any {
 	inputType := reflect.TypeOf(inputExample)
-	if inputType.Kind() == reflect.Ptr {
+	if inputType.Kind() == reflect.Pointer {
 		inputType = inputType.Elem()
 	}
 

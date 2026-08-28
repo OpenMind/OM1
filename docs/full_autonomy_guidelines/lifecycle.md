@@ -34,7 +34,6 @@ Each lifecycle is composed of several stages. Hooks are executed at specific poi
 | **Active** | — | Main operational phase; mode logic runs continuously (no fixed hook) |
 | **Exit** | `ON_EXIT` | Executes cleanup, saves state, and prepares for the next transition |
 | **Timeout** | `ON_TIMEOUT` | Handles cases where a mode exceeds its defined duration or fails to complete expected actions |
-| **Shutdown** | `ON_SHUTDOWN` | Performs final cleanup and safe termination of the lifecycle management system |
 
 ### Startup Stage
 
@@ -55,7 +54,3 @@ Triggered by `ON_EXIT`. Executes cleanup, saves state, and prepares for the next
 ### Timeout Stage
 
 Triggered by `ON_TIMEOUT`. Handles cases where a mode exceeds its defined duration or fails to complete expected actions.
-
-### Shutdown Stage
-
-Triggered by `ON_SHUTDOWN`. Performs final cleanup and safe termination of the lifecycle management system.

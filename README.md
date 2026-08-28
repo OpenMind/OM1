@@ -1,4 +1,4 @@
-![om1_banner_w](https://github.com/user-attachments/assets/86590615-018d-4443-b345-8d224227e83f)
+![om1_banner_w](https://github.com/user-attachments/assets/cc23bdfe-c3da-47e0-8ec1-ab31723affb6)
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
@@ -53,7 +53,7 @@ brew install portaudio ffmpeg
 For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install -y portaudio19-dev ffmpeg
+sudo apt-get install -y portaudio19-dev ffmpeg pkg-config
 ```
 
 > [!TIP]

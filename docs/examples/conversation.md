@@ -29,3 +29,7 @@ make dev CONFIG=conversation
 ```
 
 The ASR input's capture settings are controlled by its `config` block in the agent config — for example `GoogleASRInput` accepts `rate` (e.g. `16000`) and `chunk` (e.g. `1600`). Tune these if the microphone reports unexpected capabilities.
+
+## Give it a personality
+
+This agent's behavior comes mostly from its prompt. Change `system_prompt_base` and you have a different character on the same pipeline — see [Smart Toy & Companion](smart_toy.md) for two ready-to-copy examples.

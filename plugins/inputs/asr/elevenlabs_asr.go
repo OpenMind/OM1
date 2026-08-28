@@ -244,6 +244,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -254,7 +255,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }
 

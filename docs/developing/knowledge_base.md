@@ -29,7 +29,7 @@ knowledge_base: {
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `knowledge_base_name` | string | Yes | Name of the knowledge base. The runtime loads `<name>.graph` and `<name>.json` from the KB directory. |
-| `base_url` | string | No | Embedding service URL. Defaults to `http://localhost:8100`. |
+| `base_url` | string | No | Embedding service URL. Defaults to `http://localhost:8100`. Any trailing slash is automatically removed. |
 | `knowledge_base_root` | string | No | Explicit root directory for knowledge bases. If omitted, OM1 auto-resolves it (see below). |
 | `top_k` | int | No | Number of documents to return per query. Default `3`. |
 | `min_score` | float | No | Minimum similarity score; lower-scoring matches are discarded. |

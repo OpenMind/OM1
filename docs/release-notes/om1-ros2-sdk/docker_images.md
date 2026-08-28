@@ -14,4 +14,4 @@ The OM1-ros2-sdk is provided as a Docker image for easy setup. The docker images
 - [v1.0.0-beta.2](https://hub.docker.com/layers/openmindagi/unitree_go2_sdk/v1.0.0-beta.2)
 - [v1.0.0-beta.1](https://hub.docker.com/layers/openmindagi/unitree_go2_sdk/v1.0.0-beta.1)
 
-For more technical details, please refer to the [docs](https://docs.openmind.com/full_autonomy_guidelines/architecture_overview).
+For more technical details, please refer to the [docs](../../full_autonomy_guidelines/architecture_overview.md).
