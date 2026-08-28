@@ -195,8 +195,6 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
-		// Stamp capture time at read, so the ASR chunk carries the capture
-		// instant rather than the later send time.
 		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
