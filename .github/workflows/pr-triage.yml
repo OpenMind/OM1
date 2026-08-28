@@ -13,9 +13,9 @@ name: PR Triage
 # metadata via `gh`/the GitHub API, using the workflow file and code from
 # the base branch.
 #
-# Prerequisite secret (not yet created as of this writing): ORG_READ_TOKEN,
-# a fine-grained PAT with `read:org` scope, ideally owned by a bot/service
-# account, used only to check OpenMind org membership.
+# Requires repo secret ORG_READ_TOKEN: a GitHub PAT with `read:org` scope,
+# used only to check OpenMind org membership. GEMINI_API_KEY is also
+# required (already present in this repo for the Docs Sync workflow).
 
 on:
   pull_request_target:
