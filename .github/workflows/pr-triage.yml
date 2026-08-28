@@ -137,8 +137,12 @@ jobs:
           # doesn't inherit GH_TOKEN from this step's env, so gh reports
           # unauthenticated even though it's set here. Authenticating to disk
           # sidesteps that: gh falls back to the stored config regardless of
-          # what env a given subprocess does or doesn't have.
-          printf '%s' "$GH_TOKEN" | gh auth login --with-token
+          # what env a given subprocess does or doesn't have. GH_TOKEN must be
+          # unset first — gh refuses to write stored credentials while it's
+          # present, since the env var already takes precedence.
+          _GH_AUTH_TOKEN="$GH_TOKEN"
+          unset GH_TOKEN
+          printf '%s' "$_GH_AUTH_TOKEN" | gh auth login --with-token
 
           gemini \
             --model gemini-2.5-pro \
