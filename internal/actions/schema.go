@@ -60,6 +60,11 @@ func BuildSchema(llmLabel, description string, inputExample any) map[string]any 
 		field := inputType.Field(i)
 
 		propertyName := field.Tag.Get("json")
+		optional := false
+		if idx := strings.Index(propertyName, ","); idx >= 0 {
+			optional = strings.Contains(propertyName[idx:], "omitempty")
+			propertyName = propertyName[:idx]
+		}
 		if propertyName == "" {
 			propertyName = strings.ToLower(field.Name)
 		}
@@ -71,7 +76,9 @@ func BuildSchema(llmLabel, description string, inputExample any) map[string]any 
 		}
 
 		properties[propertyName] = BuildPropertySchema(field.Type, fieldDescription)
-		required = append(required, propertyName)
+		if !optional {
+			required = append(required, propertyName)
+		}
 	}
 
 	return map[string]any{

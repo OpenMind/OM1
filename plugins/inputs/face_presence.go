@@ -44,6 +44,12 @@ type FacePresenceSensor struct {
 	mu       sync.Mutex
 	messages []inputs.Message
 	stopped  bool
+	// lastSnap is kept so the line can be RE-RENDERED when the prompt is
+	// built rather than frozen at poll time. The speaker for an utterance
+	// is resolved after the utterance, so a line rendered on the poll
+	// before it is guaranteed not to know who spoke -- and this sensor
+	// polls on its own clock, unrelated to when anybody talks.
+	lastSnap *providers.PresenceSnapshot
 }
 
 func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
@@ -116,6 +122,8 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 
 			msg := inputs.NewMessage(text)
 			s.mu.Lock()
+			snapCopy := snap
+			s.lastSnap = &snapCopy
 			s.messages = append(s.messages, *msg)
 			if len(s.messages) > facePresenceMaxMessages {
 				s.messages = s.messages[len(s.messages)-facePresenceMaxMessages:]
@@ -123,9 +131,14 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 			s.mu.Unlock()
 
 			// Refresh shared IO entry and dynamic vars.
+			//
+			// These two are what the memory writer files the turn under
+			// (runtime.RecordInteraction), so they must name whoever SPOKE,
+			// not whoever is nearest. See PresenceSnapshot.AttributedUser.
+			uuid, name, _ := snap.AttributedUser()
 			providers.IO().AddInput(facePresenceIOKey, text, time.Now())
-			providers.IO().SetDynamicVar("current_user_id", snap.ClosestUUID)
-			providers.IO().SetDynamicVar("current_user_name", snap.ClosestName)
+			providers.IO().SetDynamicVar("current_user_id", uuid)
+			providers.IO().SetDynamicVar("current_user_name", name)
 		}
 	}()
 	return out, nil
@@ -159,6 +172,14 @@ func (s *FacePresenceSensor) RawToText(_ context.Context, raw any) (*inputs.Mess
 }
 
 // FormattedLatestBuffer returns the newest presence line and clears the buffer.
+//
+// The line is re-rendered here, at the moment the prompt is assembled, rather
+// than reused from the poll that produced it. Everything about WHO is on
+// screen was already settled at poll time; the speaker was not, because the
+// speaker of an utterance can only be resolved after the utterance, and this
+// sensor polls on a clock that knows nothing about when anybody talks. A line
+// frozen at poll time therefore reports the speaker of the PREVIOUS turn --
+// which, with two people alternating, means naming each of them as the other.
 func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -168,10 +189,25 @@ func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	}
 
 	latest := s.messages[len(s.messages)-1]
-	result := fmt.Sprintf("\n%s: '%s'\n", facePresenceDescriptor, latest.Message)
+	text := latest.Message
+	if s.lastSnap != nil {
+		if fresh := s.lastSnap.ToText(); fresh != "" {
+			text = fresh
+		}
+	}
+	result := fmt.Sprintf("\n%s: '%s'\n", facePresenceDescriptor, text)
 
 	ts := time.Unix(0, int64(latest.Timestamp*1e9))
-	providers.IO().AddInput(facePresenceIOKey, latest.Message, ts)
+	providers.IO().AddInput(facePresenceIOKey, text, ts)
+
+	// Re-file the turn too: the attribution has the same dependency on the
+	// speaker, and the memory writer reads these vars during this same tick.
+	if s.lastSnap != nil {
+		uuid, name, _ := s.lastSnap.AttributedUser()
+		providers.IO().SetDynamicVar("current_user_id", uuid)
+		providers.IO().SetDynamicVar("current_user_name", name)
+	}
+
 	s.messages = nil
 
 	return result

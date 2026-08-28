@@ -25,6 +25,25 @@ import (
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
+// How long a tick will wait for active-speaker resolution before giving up
+// and telling the model it does not yet know who spoke.
+//
+// Sized against the thing it is racing. /speaking runs a short inference per
+// face per window position on the same host: measured p90 54ms for one face,
+// and it grows with the crowd -- ~216ms for four faces at three positions,
+// which is the realistic worst case. 250ms clears that. Cutting it lower
+// starts timing out exactly when several people surround the robot, which is
+// when knowing the speaker matters most.
+//
+// Note what a timeout does NOT cost: ResolveAsync's goroutine keeps running
+// and still files its answer, so the budget only decides how long a tick
+// blocks -- an overrun delays the attribution by one turn, it does not lose
+// it. Waiting unbounded instead would mean up to 3s (the resolve's own
+// context) of dead air in front of a person if the endpoint ever wedges.
+// Trading a possible 3s silence for one prompt line is the wrong side of
+// that bargain. The LLM call right after this costs ~1181ms by comparison.
+const speakerResolveBudget = 250 * time.Millisecond
+
 type Options struct {
 	HotReload     bool
 	CheckInterval float64
@@ -484,6 +503,22 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
+	// Give active-speaker resolution a moment to land before the prompt is
+	// read out of the sensors.
+	//
+	// An accepted transcript does two things at once: it starts the /speaking
+	// request and it fires TickNow, which lands here. Without this wait the
+	// prompt is always assembled before the answer arrives, so the model is
+	// told who spoke LAST time -- and two people taking turns are named as
+	// each other on every turn.
+	//
+	// Bounded and cheap: it returns immediately when nothing is in flight,
+	// and the tick is about to make an LLM call that costs an order of
+	// magnitude more. Past the budget the prompt says the speaker is still
+	// being resolved, which is honest and recoverable; a wrong name is
+	// neither.
+	providers.Speaker().WaitFresh(ctx, speakerResolveBudget)
+
 	rt.ioProvider.IncrementTick()
 	sensorBuffers := current.inputOrchestrator.Buffers()
 
@@ -510,6 +545,24 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	}
 
 	rt.tracer.Gauge(prompt, traceOutput(response))
+
+	// Log what the model ANSWERED, not just what it was asked.
+	//
+	// The prompt has always been logged and the reply never was, which makes
+	// the one question worth asking unanswerable from the outside: when an
+	// action does not happen, did the model decline to call it, or did the
+	// call fail downstream? Those have nothing in common -- one is a prompt
+	// problem, the other is plumbing -- and without this line the only way to
+	// tell them apart is to guess.
+	calls := make([]string, 0, len(response.ToolCalls))
+	for _, tc := range response.ToolCalls {
+		calls = append(calls, fmt.Sprintf("%s(%s)", tc.Name, tc.Arguments))
+	}
+	rt.log.Info("cortex response",
+		zap.String("mode", rt.manager.CurrentMode()),
+		zap.Int("tool_calls", len(response.ToolCalls)),
+		zap.Strings("calls", calls),
+	)
 
 	toolCalls := response.ToolCalls
 

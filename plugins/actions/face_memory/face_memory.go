@@ -46,16 +46,24 @@ func (FaceMemoryOp) EnumValues() []string {
 }
 
 // FaceMemoryInput is the LLM-facing schema for the unified action.
+// FaceMemoryInput is the LLM-facing shape of the action.
+//
+// Only `op` is required. Every other field belongs to ONE operation -- the
+// descriptions say so -- and marking them required made the action impossible
+// to call under strict structured output: renaming somebody obliged the model
+// to invent a value for the selfie's `force`, the merge's `target_name` and
+// the search's `min_sim` as well. `omitempty` is what keeps them out of the
+// schema's `required` list.
 type FaceMemoryInput struct {
-	Op          FaceMemoryOp `json:"op"           description:"Which face memory operation to perform."`
-	ID          string       `json:"id"           description:"Target id for selfie enrollment (e.g. 'wendy'). Only used when op=selfie."`
-	Force       bool         `json:"force"        description:"Bypass cross-name reject for selfie (default false). Only used when op=selfie."`
-	FromID      string       `json:"from_id"      description:"Current (wrong) id for correct_identity."`
-	ToID        string       `json:"to_id"        description:"New id for correct_identity or set_name."`
-	TargetName  string       `json:"target_name"  description:"Confirmed name for merge (e.g. 'sean')."`
-	ConfirmedBy string       `json:"confirmed_by" description:"How merge was confirmed (e.g. 'user_voice')."`
-	TopK        int          `json:"top_k"        description:"Candidates for find_similar (default 3)."`
-	MinSim      float64      `json:"min_sim"      description:"Min cosine sim for find_similar (default 0.30)."`
+	Op          FaceMemoryOp `json:"op"                     description:"Which face memory operation to perform."`
+	ID          string       `json:"id,omitempty"           description:"Name for op=selfie ONLY. For op=set_name use to_id instead."`
+	Force       bool         `json:"force,omitempty"        description:"Bypass cross-name reject for selfie (default false). Only used when op=selfie."`
+	FromID      string       `json:"from_id,omitempty"      description:"Current (wrong) id for correct_identity."`
+	ToID        string       `json:"to_id,omitempty"        description:"The name to store. REQUIRED for op=set_name and op=correct_identity."`
+	TargetName  string       `json:"target_name,omitempty"  description:"Confirmed name for merge (e.g. 'sean')."`
+	ConfirmedBy string       `json:"confirmed_by,omitempty" description:"How merge was confirmed (e.g. 'user_voice')."`
+	TopK        int          `json:"top_k,omitempty"        description:"Candidates for find_similar (default 3)."`
+	MinSim      float64      `json:"min_sim,omitempty"      description:"Min cosine sim for find_similar (default 0.30)."`
 }
 
 func init() {
@@ -192,6 +200,28 @@ func (c *Connector) Tick(ctx context.Context) { <-ctx.Done() }
 func (c *Connector) Stop()                    {}
 
 func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, error) {
+	// Somebody who already has an identity does not need enrolling, only
+	// naming -- so route them to the rename regardless of which op was asked
+	// for.
+	//
+	// The two look interchangeable from the model's side: a person it has
+	// never been introduced to says their name, and "selfie (enroll a person)"
+	// is the obvious-sounding choice. But an auto-enrolled face already HAS a
+	// uuid, and /selfie then photographs whoever is most prominent, matches
+	// them against the gallery, and refuses -- observed as
+	// "face_belongs_to claimed=difan matched=wendy", the name of the person
+	// speaking rejected because it landed on the person standing in front.
+	//
+	// Only redirected when a speaker was actually measured. Without one there
+	// is nothing better than /selfie's own targeting to fall back on.
+	if spk := providers.Speaker().Latest(); spk.Identified() && spk.UUID != "" {
+		c.log.Info("face_memory/selfie: speaker already enrolled, naming instead",
+			zap.String("uuid", shortUUID(spk.UUID)), zap.Int("track", spk.TrackID))
+		return c.doSetName(ctx, map[string]any{
+			"to_id": util.StringFrom(args["id"], ""),
+		})
+	}
+
 	name := strings.TrimSpace(util.StringFrom(args["id"], ""))
 	if name == "" {
 		c.writeStatus("result=bad_id detail=empty")
@@ -608,19 +638,171 @@ func (c *Connector) dispatchMergeResponse(resp map[string]any, targetName string
 }
 
 func (c *Connector) doSetName(_ context.Context, args map[string]any) (any, error) {
+	// `id` accepted as well as `to_id`.
+	//
+	// One action dispatches six operations and carries a field for each, so
+	// the name a person just said out loud can be written into either of two
+	// plausible slots. Observed: op=set_name arriving with `id: li-fan` and no
+	// to_id, which came back "bad_id" and dropped a name that had been heard,
+	// transcribed and normalised correctly. `id` is documented as belonging to
+	// selfie, and selfie is a different op, so there is nothing here it could
+	// be confused with -- reading it costs nothing and saves the utterance.
 	toID := normID(args, "to_id")
+	if toID == "" {
+		toID = normID(args, "id")
+	}
 	if toID == "" {
 		c.writeStatus("result=bad_id to=")
 		c.log.Error("face_memory/set_name: missing to_id")
 		return nil, nil
 	}
 
-	resp := c.postJSON("/set_name_current", map[string]any{
-		"name":         toID,
-		"confirmed_by": "user_voice",
-	})
-	c.dispatchSetNameCurrentResponse(resp, toID)
-	return nil, nil
+	// Name whoever SPOKE, addressed by their track.
+	//
+	// /set_name_current renames "the largest currently-visible face", which
+	// is a statement about who is nearest the camera and not about who said
+	// anything. Somebody standing behind the person the robot is talking to
+	// says "my name is Sean", and the name lands on the person in front --
+	// silently overwriting a correct identity with a wrong one, which is
+	// worse than simply failing.
+	//
+	// track_id rather than uuid, because the two cases that matter both work
+	// through it. Already recognised: /set_name maps the track to its uuid
+	// and renames that. Not yet enrolled -- the usual state for somebody at
+	// the back who has never been the subject of a conversation -- it
+	// force-commits auto-enroll's buffered samples into a NEW identity
+	// carrying the name. Passing the uuid could only ever handle the first.
+	if spk := providers.Speaker().Latest(); spk.Identified() {
+		// Address them by UUID when the speaker verdict already carries one.
+		//
+		// It is the identity itself, so it does not depend on the receiver
+		// being able to map a track back to a person -- a lookup that only
+		// consults the front camera's tracker and only returns confidently
+		// matched tracks. Somebody the video plainly labels anon_xxxx can
+		// still miss that lookup and come back "track_not_identified", which
+		// reads as "I don't know who that is" about a face the operator can
+		// see the robot has already identified.
+		//
+		// track_id remains the fallback, and it is not merely a worse UUID:
+		// it is the ONLY thing that works for somebody with no identity yet,
+		// because the receiver can force-commit auto-enroll's buffered
+		// samples into a new one carrying the name.
+		body := map[string]any{"name": toID, "confirmed_by": "user_voice"}
+		if spk.UUID != "" {
+			body["uuid"] = spk.UUID
+		} else {
+			body["track_id"] = spk.TrackID
+		}
+
+		resp := c.postJSON("/set_name", body)
+
+		// A UUID that has gone away between the utterance and this call --
+		// merged, swept, or the gallery reloaded underneath us. The track is
+		// still the person in front of the robot, so try that before giving
+		// up on a name somebody just said out loud.
+		if spk.UUID != "" && resp != nil {
+			if errStr, _ := resp["error"].(string); errStr == "uuid_not_found" {
+				c.log.Info("face_memory/set_name: uuid gone, retrying by track",
+					zap.String("uuid", shortUUID(spk.UUID)), zap.Int("track", spk.TrackID))
+				resp = c.postJSON("/set_name", map[string]any{
+					"name":         toID,
+					"track_id":     spk.TrackID,
+					"confirmed_by": "user_voice",
+				})
+			}
+		}
+
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+	}
+
+	// No measured speaker. Fall back only where "who is nearest" is not
+	// actually a question.
+	//
+	// With one face it never was. With several, the old fallback resolved
+	// every time to whoever stood closest, which is how a name somebody at
+	// the back gave got written over the identity of the person in front --
+	// and overwriting a correct identity is worse than declining.
+	//
+	// But refusing outright made the feature unusable in the situation it
+	// exists for: the speaker model abstains often, and any bystander in
+	// frame then blocked every rename. So the middle case is decided on how
+	// lopsided the scene is. Someone standing right at the robot, with the
+	// next nearest person well behind them, is not an ambiguous scene just
+	// because the audio model had no opinion.
+	dominant, n := dominantFace()
+	switch {
+	case n == 0 || n == 1:
+		c.log.Info("face_memory/set_name: single face, no ambiguity",
+			zap.String("name", toID))
+		resp := c.postJSON("/set_name_current", map[string]any{
+			"name":         toID,
+			"confirmed_by": "user_voice",
+		})
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+
+	case dominant != nil:
+		c.log.Info("face_memory/set_name: no measured speaker, one face clearly dominant",
+			zap.Int("track", dominant.TrackID), zap.Int("visible_faces", n),
+			zap.String("name", toID))
+		body := map[string]any{"name": toID, "confirmed_by": "user_voice"}
+		if dominant.UUID != nil && *dominant.UUID != "" {
+			body["uuid"] = *dominant.UUID
+		} else {
+			body["track_id"] = dominant.TrackID
+		}
+		resp := c.postJSON("/set_name", body)
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+
+	default:
+		c.writeStatus(fmt.Sprintf("result=ambiguous_speaker faces=%d name=%s", n, toID))
+		c.log.Info("face_memory/set_name: declined, several faces and none dominant",
+			zap.Int("visible_faces", n), zap.String("name", toID))
+		return nil, nil
+	}
+}
+
+// faceDominanceRatio is how much bigger the nearest face must be than the
+// next one before the scene counts as unambiguous.
+//
+// A face's area falls with the square of its distance, so this is a statement
+// about distance in disguise: 2.5x the area is about 1.6x the range. Somebody
+// at 1.5 m with the next person at 2.4 m is plainly the one at the robot;
+// two people side by side are within a few percent of each other and are
+// nowhere near it.
+const faceDominanceRatio = 2.5
+
+// dominantFace returns the face that clearly stands out by area, and how many
+// faces were visible for the last resolved utterance. The face is nil when
+// nothing stands out, which is the case that must not be guessed at.
+func dominantFace() (*providers.SpeakerFace, int) {
+	spk := providers.Speaker().Latest()
+	if spk == nil || len(spk.Faces) == 0 {
+		return nil, 0
+	}
+	faces := spk.Faces
+	if len(faces) == 1 {
+		return &faces[0], 1
+	}
+
+	first, second := -1, -1
+	for i := range faces {
+		if first < 0 || faces[i].Area > faces[first].Area {
+			second, first = first, i
+		} else if second < 0 || faces[i].Area > faces[second].Area {
+			second = i
+		}
+	}
+	if first < 0 || second < 0 || faces[second].Area <= 0 {
+		return nil, len(faces)
+	}
+	ratio := float64(faces[first].Area) / float64(faces[second].Area)
+	if ratio < faceDominanceRatio {
+		return nil, len(faces)
+	}
+	return &faces[first], len(faces)
 }
 
 func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID string) {
@@ -653,6 +835,13 @@ func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID str
 	case "uuid_not_found":
 		c.writeStatus("result=uuid_not_found")
 		// c.speak("I couldn't find that person anymore.")
+	case "track_not_identified":
+		// The speaker has no identity yet AND auto-enroll had nothing
+		// buffered for them -- typically a face too small or too turned away
+		// to have cleared the enrolment gate. Distinct from "not found":
+		// there is nobody to rename, not a rename that missed.
+		detail := util.StringFrom(resp["detail"], "")
+		c.writeStatus(fmt.Sprintf("result=track_not_identified detail=%s", detail))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
 		// c.speak("I can't update names right now.")
@@ -776,7 +965,54 @@ func shortUUID(uuid string) string {
 	return uuid
 }
 
-// normID extracts a string arg and normalizes it to a lowercase, trimmed id.
+// normID extracts a string arg and normalizes it into a valid identity id.
+//
+// The receiver accepts lowercase letters, digits, underscore and dash, and
+// nothing else. A person says "my name is Li Fan", the model passes "Li Fan"
+// through faithfully, and the space alone got the whole thing rejected with
+// `bad_id detail=invalid_chars` -- a name spoken out loud, heard correctly,
+// transcribed correctly, and dropped on a character class.
+//
+// Normalising here rather than only asking the model to do it: the prompt can
+// describe the rule, but a name is user input arriving through a language
+// model, and it will keep producing spaces, accents and apostrophes. The
+// receiver's rule is a fact about the receiver, so the caller should satisfy
+// it rather than hope.
+//
+// Spaces become dashes, because "li-fan" reads back as two words while
+// "lifan" does not. Everything else outside the allowed set is dropped.
 func normID(args map[string]any, k string) string {
-	return util.TrimLower(util.StringFrom(args[k], ""))
+	return normalizeID(util.StringFrom(args[k], ""))
+}
+
+// normalizeID maps arbitrary text onto the receiver's identity-name rules:
+// lowercase, [a-z0-9_-], at most 32 characters.
+func normalizeID(raw string) string {
+	lowered := util.TrimLower(raw)
+
+	var b strings.Builder
+	lastDash := false
+	for _, r := range lowered {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_':
+			b.WriteRune(r)
+			lastDash = false
+		case r == ' ' || r == '-' || r == '\'' || r == '.':
+			// Word separators collapse to a single dash, and never lead.
+			if b.Len() > 0 && !lastDash {
+				b.WriteRune('-')
+				lastDash = true
+			}
+		default:
+			// Accents, CJK, punctuation: dropped rather than transliterated.
+			// A wrong guess at romanisation is worse than a shorter name,
+			// and the model is asked for a Latin spelling in the prompt.
+		}
+	}
+
+	out := strings.TrimRight(b.String(), "-")
+	if len(out) > 32 {
+		out = strings.TrimRight(out[:32], "-")
+	}
+	return out
 }

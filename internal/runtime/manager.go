@@ -15,6 +15,7 @@ import (
 
 	"github.com/openmind/om1/internal/config"
 	"github.com/openmind/om1/internal/hooks"
+	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/util"
 )
 
@@ -336,6 +337,13 @@ func (m *ModeManager) Transition(toMode, reason string, exitHooks, entryHooks *h
 			zap.Error(err),
 		)
 	}
+
+	// Whoever was last heard belongs to the mode being left. Its TTL would
+	// expire the answer on its own within seconds, but a mode entered inside
+	// that window would open holding somebody else's conversation partner --
+	// and the first thing the new mode does is tell the model who it is
+	// talking to.
+	providers.Speaker().Reset()
 
 	m.mu.Lock()
 	cooldownKey := m.state.CurrentMode + "→" + toMode
