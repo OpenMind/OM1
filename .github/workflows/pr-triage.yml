@@ -24,11 +24,6 @@ on:
   schedule:
     - cron: "0 13 * * *" # 13:00 UTC daily fallback
   workflow_dispatch:
-  # TEMPORARY — manual single-PR test of the new auto-close step against
-  # OpenMind/OM1#2681. Remove after verifying.
-  push:
-    branches:
-      - worktree-om1-pr-triage-workflow
 
 concurrency:
   group: pr-triage
@@ -61,9 +56,7 @@ jobs:
             exit 0
           fi
 
-          # TEMPORARY: push treated as single-PR mode too, for the manual
-          # test below (pull_request_target can't fire pre-merge).
-          if [ "${EVENT_NAME}" = "pull_request_target" ] || [ "${EVENT_NAME}" = "push" ]; then
+          if [ "${EVENT_NAME}" = "pull_request_target" ]; then
             # Real-time run: only the PR that triggered this event.
             printf '%s\t%s\t%s\n' "${PR_NUMBER}" "${PR_LOGIN}" "${PR_HEAD_SHA}" \
               > .pr-triage-open.tsv
@@ -112,11 +105,9 @@ jobs:
         env:
           ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
-          # TEMPORARY: hardcoded to OpenMind/OM1#2681 for the manual test.
-          # Restore to github.event.pull_request.* after.
-          PR_NUMBER: ${{ github.event.pull_request.number || 2681 }}
-          PR_LOGIN: ${{ github.event.pull_request.user.login || '25marcusbPersonal' }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '852956771fd4e87174348345de28a38baf8f560a' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node
         if: steps.gate.outputs.needs_review == 'true'
@@ -197,7 +188,7 @@ jobs:
                   gh pr review <number> --request-changes --body "<explanation>"
              b. Add the label (create it first if needed, ignore error if it
                 already exists):
-                  gh label create needs-human-review --color FBCA04 --description "Auto-flagged and closed by PR Triage — reopen if this was a mistake" 2>/dev/null || true
+                  gh label create needs-human-review --color FBCA04 --description "Auto-flagged and closed by PR Triage — reopen if this was a mistake" 2>/dev/null || gh label edit needs-human-review --description "Auto-flagged and closed by PR Triage — reopen if this was a mistake"
                   gh pr edit <number> --add-label needs-human-review
              c. Close the PR, after the review and label above:
                   gh pr close <number>
