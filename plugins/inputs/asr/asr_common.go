@@ -293,10 +293,11 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 // connect dials the single stream's ASR websocket.
 func (c *asrCommon) connect() error { return c.stream.connect() }
 
-// sendChunk fans out one PCM chunk to the single stream and the optional local VAD.
-func (c *asrCommon) sendChunk(pcm []byte) {
+// sendChunkAt fans out one PCM chunk, stamped with its capture time, to the
+// single stream's websocket and the optional local VAD.
+func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
 	c.feedVAD(pcm)
-	c.stream.sendChunk(pcm)
+	c.stream.sendChunkAt(pcm, capture)
 }
 
 // statsLoop logs the single stream's send statistics until ctx is cancelled.

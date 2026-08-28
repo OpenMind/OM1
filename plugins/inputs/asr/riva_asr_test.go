@@ -67,7 +67,7 @@ func TestRivaPackageAudioHeader(t *testing.T) {
 	s.languageCode = "en-US"
 
 	pcm := []byte{0x01, 0x02, 0x03, 0x04}
-	packet, err := s.packageAudio(pcm)
+	packet, err := s.packageAudio(pcm, 1234567)
 	require.NoError(t, err)
 
 	hLen := binary.BigEndian.Uint32(packet[0:4])
@@ -78,6 +78,8 @@ func TestRivaPackageAudioHeader(t *testing.T) {
 	require.EqualValues(t, 48000, header["rate"])
 	require.Equal(t, "en-US", header["language_code"])
 	require.Contains(t, header, "timestamp")
+	require.EqualValues(t, 1234567, header["timestamp"],
+		"packageAudio must stamp the provided capture time")
 	require.NotContains(t, header, "alternative_language_codes",
 		"Riva sends no alternative language codes; omitempty must drop the field")
 
