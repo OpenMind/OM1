@@ -292,9 +292,7 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAllAt fans one PCM chunk (captured at the given time) out to the VAD and
-// every provider stream. Each stream packages the audio with its own header, so
-// the shared chunk is only read, never mutated.
+// sendToAllAt fans out a PCM chunk to all provider streams, stamped with the capture time.
 func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
 	s.feedVAD(pcm)
 	for _, st := range s.streams {
@@ -410,7 +408,6 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
-		// Stamp capture time right after the buffer is read.
 		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
@@ -493,7 +490,6 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
-		// Stamp capture time when the chunk is read from the stream.
 		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {

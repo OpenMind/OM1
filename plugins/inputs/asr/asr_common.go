@@ -15,7 +15,6 @@ import (
 	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/providers"
-	"github.com/openmind/om1/internal/providers/tts"
 	zenohsession "github.com/openmind/om1/internal/zenoh"
 )
 
@@ -75,8 +74,6 @@ type asrSensorCore struct {
 	language   string
 	apiVersion string
 
-	enableTTSInterrupt bool
-
 	transcriptCh chan string
 
 	messages []string
@@ -101,10 +98,7 @@ func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig
 		language:     language,
 		apiVersion:   apiVersion,
 		transcriptCh: make(chan string, 32),
-
-		enableTTSInterrupt: enableTTSInterrupt,
-
-		vad: newVADLatencyTracker(vadCfg, enableTTSInterrupt, rate, log),
+		vad:          newVADLatencyTracker(vadCfg, enableTTSInterrupt, rate, log),
 	}
 
 	sess, err := zenohsession.Open()
@@ -304,20 +298,6 @@ func (c *asrCommon) connect() error { return c.stream.connect() }
 func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
 	c.feedVAD(pcm)
 	c.stream.sendChunkAt(pcm, capture)
-}
-
-// forwardChunk copies a freshly-read PCM chunk and sends it stamped at its
-// capture time. The chunk is dropped (and false returned) when TTS is currently
-// speaking and interruption is disabled. The copy is required because callers
-// reuse their read buffer for the next chunk.
-func (c *asrCommon) forwardChunk(buf []byte, capture time.Time) bool {
-	if tts.Speaking.Load() && !c.enableTTSInterrupt {
-		return false
-	}
-	pcm := make([]byte, len(buf))
-	copy(pcm, buf)
-	c.sendChunkAt(pcm, capture)
-	return true
 }
 
 // statsLoop logs the single stream's send statistics until ctx is cancelled.

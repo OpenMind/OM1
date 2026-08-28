@@ -7,14 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/openmind/om1/internal/providers/tts"
 	"github.com/openmind/om1/internal/ws"
 )
 
-// newSendableStream builds a transcriberStream with a websocket client whose
-// send buffer is large enough that Send() never blocks or fills. The client is
-// never Connect()-ed, so no goroutines start and Send simply enqueues onto the
-// buffered channel — enough to exercise packaging + statistics without a server.
 func newSendableStream(t *testing.T) *transcriberStream {
 	t.Helper()
 	s := newTestElevenLabsStream(make(chan string, 1))
@@ -45,7 +40,6 @@ func TestSendChunkAtSuccess(t *testing.T) {
 
 func TestSendChunkAtSendError(t *testing.T) {
 	s := newTestElevenLabsStream(make(chan string, 1))
-	// A single-slot buffer that we pre-fill, so the next Send fails.
 	s.wsClient = ws.New(
 		ws.Config{URL: "ws://127.0.0.1:0", SendBufferSize: 1},
 		zap.NewNop(),
@@ -73,57 +67,6 @@ func TestASRCommonSendChunkAtDelegates(t *testing.T) {
 		"asrCommon.sendChunkAt must forward to the underlying stream")
 }
 
-func TestForwardChunkSendsWhenNotSpeaking(t *testing.T) {
-	s := newSendableStream(t)
-	c := &asrCommon{asrSensorCore: newTestSensorCore(), stream: s}
-	// Ensure TTS is not "speaking" for this case.
-	tts.Speaking.Store(false)
-
-	sent := c.forwardChunk([]byte{0x01, 0x02, 0x03, 0x04}, time.UnixMilli(1_700_000_000_000))
-
-	require.True(t, sent, "chunk must be forwarded when TTS is silent")
-	s.stats.mu.RLock()
-	defer s.stats.mu.RUnlock()
-	require.Equal(t, uint64(1), s.stats.TotalChunksSent)
-}
-
-func TestForwardChunkDropsWhileSpeakingWithoutInterrupt(t *testing.T) {
-	s := newSendableStream(t)
-	core := newTestSensorCore()
-	core.enableTTSInterrupt = false
-	c := &asrCommon{asrSensorCore: core, stream: s}
-
-	tts.Speaking.Store(true)
-	defer tts.Speaking.Store(false)
-
-	sent := c.forwardChunk([]byte{0x01, 0x02}, time.Now())
-
-	require.False(t, sent, "chunk must be dropped while TTS speaks and interrupt is disabled")
-	s.stats.mu.RLock()
-	defer s.stats.mu.RUnlock()
-	require.Zero(t, s.stats.TotalChunksSent)
-}
-
-func TestForwardChunkSendsWhileSpeakingWithInterrupt(t *testing.T) {
-	s := newSendableStream(t)
-	core := newTestSensorCore()
-	core.enableTTSInterrupt = true
-	c := &asrCommon{asrSensorCore: core, stream: s}
-
-	tts.Speaking.Store(true)
-	defer tts.Speaking.Store(false)
-
-	sent := c.forwardChunk([]byte{0x01, 0x02}, time.Now())
-
-	require.True(t, sent, "interrupt-enabled sensors keep streaming during TTS")
-	s.stats.mu.RLock()
-	defer s.stats.mu.RUnlock()
-	require.Equal(t, uint64(1), s.stats.TotalChunksSent)
-}
-
-// TestASRRTSPDefaultURLs pins the RTSP audio source defaults to the
-// video-processor's muxed session stream (:8555/live) and verifies an explicit
-// URL is preserved.
 func TestASRRTSPDefaultURLs(t *testing.T) {
 	const wantDefault = "rtsp://localhost:8555/live"
 

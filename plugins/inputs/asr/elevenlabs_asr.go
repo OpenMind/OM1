@@ -244,7 +244,6 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
-		// Stamp capture time right after the buffer is read.
 		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {

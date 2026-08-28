@@ -130,14 +130,6 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 }
 
 // emitFrame forwards a decoded JPEG stamped with its receive time.
-//
-// Receive-time stamp is by design: this is when OM1 got the decoded frame, not
-// the original capture instant — JPEG-over-image2pipe carries no per-frame RTP
-// PTS. That's fine here: OM1 fuses VLM output as coarse "recent context", so
-// sub-second pipeline jitter doesn't matter. Any timing-critical, frame-accurate
-// A/V work lives in the video-processor (capture-stamped at the source). If OM1
-// ever needs true capture time, switch this consumer to an RTSP client that
-// exposes RTP/RTCP timing (e.g. gortsplib) rather than the ffmpeg->JPEG pipe.
 func (v *VideoRTSPStream) emitFrame(frame []byte) {
 	v.send(Frame{Timestamp: time.Now(), JPEG: frame})
 }

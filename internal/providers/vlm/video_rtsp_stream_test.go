@@ -7,10 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestVideoRTSPDefaultURLValue pins the actual default endpoint string to the
-// video-processor's clean (pre-CV) camera view. The sibling
-// TestNewVideoRTSPStreamDefaults asserts against the defaultRTSPURL constant, so
-// this guards the constant's value itself against accidental changes.
 func TestVideoRTSPDefaultURLValue(t *testing.T) {
 	require.Equal(t, "rtsp://localhost:8556/raw", defaultRTSPURL)
 
@@ -18,18 +14,14 @@ func TestVideoRTSPDefaultURLValue(t *testing.T) {
 	require.Equal(t, "rtsp://localhost:8556/raw", v.cfg.RTSPURL)
 }
 
-// TestNewVideoRTSPStreamPreservesExplicitURL covers the non-default branch: a
-// caller-supplied URL must not be overwritten.
 func TestNewVideoRTSPStreamPreservesExplicitURL(t *testing.T) {
 	v := NewVideoRTSPStream(VideoRTSPStreamConfig{RTSPURL: "rtsp://example.test/live"})
 	require.Equal(t, "rtsp://example.test/live", v.cfg.RTSPURL)
 }
 
-// TestEmitFrameStampsReceiveTime verifies each decoded frame is forwarded with a
-// receive-time stamp and its JPEG payload intact.
 func TestEmitFrameStampsReceiveTime(t *testing.T) {
 	v := NewVideoRTSPStream(VideoRTSPStreamConfig{})
-	v.out = make(chan Frame, 1) // stand in for the channel start() would create
+	v.out = make(chan Frame, 1)
 
 	jpeg := []byte{0xFF, 0xD8, 0xFF, 0xD9}
 	before := time.Now()

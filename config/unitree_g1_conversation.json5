@@ -80,11 +80,6 @@ You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
       agent_inputs: [
         {
-          // Defaults preserve legacy behavior (local PortAudio mic). To consume
-          // the synchronized A+V stream from the GStreamer video-processor, set
-          // ASR_INPUT_PLUGIN=GoogleASRRTSPInput and
-          // ASR_RTSP_URL=rtsp://localhost:8555/live. GoogleASRInput ignores the
-          // extra rtsp_url key, so the default is harmless.
           type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
@@ -95,10 +90,6 @@ You should prioritize safe, comfortable, and positive human interaction.",
           },
         },
         {
-          // VLM consumes the video-processor's RAW (pre-CV, no overlays/blur)
-          // camera view directly — the clean scene gives the best descriptions.
-          // Override with VLM_RTSP_URL (e.g. rtsp://localhost:8555/live for the
-          // processed/blurred view).
           type: "VLMGeminiRTSP",
           config: {
             rtsp_url: "${VLM_RTSP_URL:-rtsp://localhost:8556/raw}",

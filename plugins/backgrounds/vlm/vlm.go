@@ -23,8 +23,7 @@ func init() {
 }
 
 const (
-	defaultFPS = 10
-	// GStreamer video-processor's raw (pre-CV) camera view; see inputs/vlm.
+	defaultFPS     = 10
 	defaultRTSPURL = "rtsp://localhost:8556/raw"
 
 	vlmRestartDelay = 2 * time.Second
