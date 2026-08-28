@@ -56,6 +56,8 @@ type asrCommonConfig struct {
 	AltCodes           []string
 	EnableTTSInterrupt bool
 	ParseMessage       asrMessageParser
+
+	vadLatencyConfig
 }
 
 // asrCommon couples the sensor core with a single vendor stream.
@@ -70,6 +72,9 @@ type asrSensorCore struct {
 	name string
 	log  *zap.Logger
 
+	language   string
+	apiVersion string
+
 	enableTTSInterrupt bool
 
 	transcriptCh chan string
@@ -80,19 +85,26 @@ type asrSensorCore struct {
 	stopped     bool
 	captureDone chan struct{}
 
+	vad *vadLatencyTracker
+
 	zenohSession   zenohsession.Session
 	zenohPublisher zenohsession.Publisher
 }
 
-// newSensorCore builds the sensor core, initializing the zenoh publisher if possible.
-func newSensorCore(name string, enableTTSInterrupt bool) *asrSensorCore {
+// newSensorCore builds a sensor core with the optional local VAD tracker and zenoh publisher.
+func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig, rate int, language, apiVersion string) *asrSensorCore {
 	log := logger.Get().Named(name)
 
 	a := &asrSensorCore{
-		name:               name,
-		log:                log,
+		name:         name,
+		log:          log,
+		language:     language,
+		apiVersion:   apiVersion,
+		transcriptCh: make(chan string, 32),
+
 		enableTTSInterrupt: enableTTSInterrupt,
-		transcriptCh:       make(chan string, 32),
+
+		vad: newVADLatencyTracker(vadCfg, enableTTSInterrupt, rate, log),
 	}
 
 	sess, err := zenohsession.Open()
@@ -124,11 +136,6 @@ func (a *asrSensorCore) pushTranscript(text string) {
 
 	a.log.Info("transcript accepted", zap.String("text", text))
 
-	if a.enableTTSInterrupt && tts.Speaking.Load() {
-		tts.RequestInterrupt()
-		a.log.Info("interrupting TTS due to detected speech")
-	}
-
 	select {
 	case a.transcriptCh <- text:
 	default:
@@ -136,14 +143,18 @@ func (a *asrSensorCore) pushTranscript(text string) {
 	}
 }
 
-// deliver is the default onTranscript handler for a single-provider stream: it
-// ignores the provider label and forwards every accepted transcript.
-func (a *asrSensorCore) deliver(_ string, text string) {
+// records the VAD-vs-ASR latency and forwards every accepted transcript.
+func (a *asrSensorCore) deliver(provider string, text string) {
+	a.vad.recordTranscript(provider, a.language, a.apiVersion, text)
 	a.pushTranscript(text)
 }
 
-// Poll returns the next accepted transcript, blocking until one is available or
-// ctx is cancelled.
+// feedVAD runs the optional local VAD-latency tracker over one PCM chunk.
+func (a *asrSensorCore) feedVAD(pcm []byte) {
+	a.vad.feedAudio(pcm)
+}
+
+// Poll returns the next accepted transcript, blocking until one is available
 func (a *asrSensorCore) Poll(ctx context.Context) (any, error) {
 	select {
 	case text, ok := <-a.transcriptCh:
@@ -248,6 +259,11 @@ func (a *asrSensorCore) waitCapture(captureDone chan struct{}) {
 	}
 }
 
+// closeVAD releases the optional local VAD tracker's ONNX session, if any.
+func (a *asrSensorCore) closeVAD() {
+	a.vad.close()
+}
+
 // closeZenoh drops the zenoh publisher and closes the session.
 func (a *asrSensorCore) closeZenoh() {
 	if a.zenohPublisher != nil {
@@ -265,7 +281,7 @@ func (a *asrSensorCore) closeZenoh() {
 // newASRCommon constructs an asrCommon from a vendor-resolved config, building the
 // sensor core (with zenoh publisher) and the single websocket stream.
 func newASRCommon(cfg asrCommonConfig) *asrCommon {
-	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt)
+	agg := newSensorCore(cfg.Name, cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, cfg.Language, cfg.APIVersion)
 	agg.log.Info("initializing",
 		zap.String("provider", cfg.Provider),
 		zap.String("language", cfg.Language),
@@ -283,11 +299,10 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 // connect dials the single stream's ASR websocket.
 func (c *asrCommon) connect() error { return c.stream.connect() }
 
-// sendChunk forwards a PCM chunk to the single stream's websocket.
-//func (c *asrCommon) sendChunk(pcm []byte) { c.stream.sendChunk(pcm) }
-
-// sendChunkAt forwards a PCM chunk with its capture time to the single stream.
+// sendChunkAt fans out one PCM chunk, stamped with its capture time, to the
+// single stream's websocket and the optional local VAD.
 func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
+	c.feedVAD(pcm)
 	c.stream.sendChunkAt(pcm, capture)
 }
 

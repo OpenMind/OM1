@@ -20,7 +20,7 @@ Each transition rule is represented as an object with required and optional fiel
 | `to_mode`              | `string`        | Yes      | The target mode to transition into when the rule is triggered                                                                            |
 | `transition_type`      | `string`        | Yes      | Defines how the transition is triggered. Supported values: `input_triggered`, `time_based`, `context_aware`                              |
 | `priority`             | `integer`       | Yes      | Determines rule precedence when multiple transition rules are eligible (higher value takes precedence)                                   |
-| `trigger_keywords`     | `array<string>` | No       | List of keywords or phrases that can trigger the transition via user input; applicable to `input_triggered` and `time_based` transitions |
+| `trigger_keywords`     | `array<string>` | No       | List of keywords or phrases that can trigger the transition via user input; applies to `input_triggered` transitions only (ignored for `time_based` and `context_aware`) |
 | `cooldown_seconds`     | `number`        | No       | Minimum time in seconds before the same transition rule can be triggered again, preventing rapid or repeated transitions                 |
 | `context_conditions`   | `object`        | No       | Contextual conditions that must be satisfied for a `context_aware` transition to be eligible                                             |
 

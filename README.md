@@ -1,4 +1,4 @@
-![om1_banner_w](https://github.com/user-attachments/assets/86590615-018d-4443-b345-8d224227e83f)
+![om1_banner_w](https://github.com/user-attachments/assets/cc23bdfe-c3da-47e0-8ec1-ab31723affb6)
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
@@ -12,7 +12,7 @@
 
 OM1 was originally built in Python, and the Go runtime is a newer, performance-focused implementation. We migrated to Go for lower latency, better performance, efficient concurrency, a smaller memory footprint for edge devices, and simpler deployment as a single Go binary (with the Zenoh C library bundled alongside it).
 
-The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. The table below gives a high-level comparison to help you choose the right runtime for your use case.
+The Go runtime covers the core agent pipeline, but several capabilities available in the Python runtime are still under active development. For most new development we recommend the Go runtime.
 
 > [!NOTE]
 > However, **Python** version is available at [`python`](https://github.com/OpenMind/OM1/tree/python) for use, if preferred. It is now deprecated and will not be maintained.
@@ -76,6 +76,7 @@ After downloading and extracting the archive, open a terminal in the extracted f
 
 ```bash
 chmod +x om1
+./om1 config = <your-config>
 ```
 
 On macOS, if the binary is blocked by Gatekeeper, run:
@@ -89,7 +90,7 @@ xattr -d com.apple.quarantine om1 2>/dev/null || true
 
 #### Option B: Build from Source
 
-Requires Go 1.23.0+ ([installation guide](https://go.dev/doc/install)) and `make`.
+Requires Go 1.25.0+ ([installation guide](https://go.dev/doc/install)) and `make`.
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
@@ -162,9 +163,9 @@ Navigate to <http://localhost:3000> in your browser (default login: `admin`/`adm
 ### Troubleshooting
 
 - `Authentication` errors: confirm `OM_API_KEY` is set and not expired.
-- `Build` errors: ensure Go 1.23.0+ is installed and run `make deps` first.
+- `Build` errors: ensure Go 1.25.0+ is installed and run `make deps` first.
 - `Camera` access issues: grant terminal/IDE camera permissions in OS settings.
-- `Address already in use` on port `8000`: stop the conflicting process or free the port.
+- `Address already in use` on the metrics port `9090`: stop the conflicting process (e.g. another Prometheus) or free the port.
 
 ### OMCU
 
@@ -186,14 +187,7 @@ For more help connecting OM1 to your robot hardware, see [getting started](https
 
 ## Interfacing with New Robot Hardware
 
-OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `plugins/actions/move/ros2.go`:
-
-```go
-case "shake paw":
-    if connector.sportClient != nil {
-        connector.sportClient.Hello()
-    }
-```
+OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. Action connectors live under `plugins/actions/`. For example, the Unitree Go2 movement connector [`plugins/actions/unitree/go2/autonomy/move.go`](plugins/actions/unitree/go2/autonomy/move.go) (registered as `unitree_go2_autonomy/move`) translates high-level goals into `cmd_vel` velocity commands published over Zenoh. See the [Actions guide](docs/developing/6_actions.md) for how connectors are registered and resolved.
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
 

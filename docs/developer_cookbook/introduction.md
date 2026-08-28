@@ -12,9 +12,16 @@ Here's what you can do with OM1
 2. Introduce a new mode
 3. Configure a new Input Plugin
 
-Before building with OM1, make sure you've completed the [Getting Started](../developing/1_get-started) guide and have OM1 installed. Understand the important concepts and components that are part of OM1.
+Before building with OM1, make sure you've completed the [Getting Started](../developing/1_get-started.md) guide and have OM1 installed. Understand the important concepts and components that are part of OM1.
 
-Then dive into any recipe that interests you!
+At minimum, from a fresh clone you should have run:
+
+```bash
+make deps    # download the zenoh-c library and Go module dependencies
+make build   # compile the om1 binary
+```
+
+You can then run any agent config with `make run CONFIG=<name>` (or `make dev CONFIG=<name>` for verbose logs). Then dive into any recipe that interests you!
 
 ## Development workflow
 

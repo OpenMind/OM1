@@ -53,6 +53,8 @@ type ParallelASRConfig struct {
 	DedupWindowMS      int                         `json:"dedup_window_ms"`      // first-wins suppression window (default 3000)
 	EnableTTSInterrupt bool                        `json:"enable_tts_interrupt"`
 	Providers          []ParallelASRProviderConfig `json:"providers"`
+
+	vadLatencyConfig
 }
 
 // ParallelASRSensor captures audio from source, fans the PCM out, and forwards the first
@@ -114,19 +116,24 @@ func NewParallelASR(configMap map[string]any) (inputs.Sensor, error) {
 	}
 
 	s := &ParallelASRSensor{
-		asrSensorCore: newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt),
-		cfg:           cfg,
-		dedupWindow:   dedupWindow,
+		cfg:         cfg,
+		dedupWindow: dedupWindow,
 	}
 	if cfg.Source == "mic" {
 		s.audioChunk = make([]int16, cfg.Chunk)
 	}
 
+	streamCfgs := make([]asrCommonConfig, len(cfg.Providers))
 	for i, p := range cfg.Providers {
 		streamCfg, err := s.buildStreamConfig(p)
 		if err != nil {
 			return nil, fmt.Errorf("ParallelASRInput: provider %d: %w", i, err)
 		}
+		streamCfgs[i] = streamCfg
+	}
+
+	s.asrSensorCore = newSensorCore("ParallelASRInput", cfg.EnableTTSInterrupt, cfg.vadLatencyConfig, cfg.Rate, "", "")
+	for _, streamCfg := range streamCfgs {
 		s.streams = append(s.streams, newTranscriberStream(streamCfg, s.log, s.deliver))
 	}
 
@@ -216,7 +223,19 @@ func (s *ParallelASRSensor) deliver(provider, text string) {
 
 	metrics.ASRParallelTranscripts.WithLabelValues(provider, "won").Inc()
 	s.log.Info("winner", zap.String("winner", provider), zap.String("text", text))
+	language, apiVersion := s.streamLabels(provider)
+	s.vad.recordTranscript(provider, language, apiVersion, text)
 	s.pushTranscript(text)
+}
+
+// streamLabels returns provider's language/apiVersion
+func (s *ParallelASRSensor) streamLabels(provider string) (language, apiVersion string) {
+	for _, st := range s.streams {
+		if st.provider == provider {
+			return st.language, st.apiVersion
+		}
+	}
+	return "", ""
 }
 
 // Listen starts the sensor: it connects every provider stream, begins capture from
@@ -273,20 +292,15 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAll fans one PCM chunk out to every provider stream, stamping capture
-// time as now. Callers with the true capture instant should use sendToAllAt.
-// func (s *ParallelASRSensor) sendToAll(pcm []byte) {
-// 	s.sendToAllAt(pcm, time.Now())
-// }
-
-// sendToAllAt fans one PCM chunk (captured at the given time) out to every
-// provider stream. Each stream packages the audio with its own header, so the
-// shared chunk is only read, never mutated.
-// func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
-// 	for _, st := range s.streams {
-// 		st.sendChunkAt(pcm, capture)
-// 	}
-// }
+// sendToAllAt fans one PCM chunk (captured at the given time) out to the VAD and
+// every provider stream. Each stream packages the audio with its own header, so
+// the shared chunk is only read, never mutated.
+func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
+	s.feedVAD(pcm)
+	for _, st := range s.streams {
+		st.sendChunkAt(pcm, capture)
+	}
+}
 
 // Stop signals capture to stop, waits for it to finish, and cleans up resources.
 func (s *ParallelASRSensor) Stop() {
@@ -305,6 +319,7 @@ func (s *ParallelASRSensor) Stop() {
 		providers.PortAudio.Release()
 	}
 	s.closeZenoh()
+	s.closeVAD()
 
 	s.log.Info("sensor stopped")
 }
@@ -396,7 +411,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			s.log.Warn("read error", zap.Error(err))
 		}
 		// Stamp capture time right after the buffer is read.
-		//tCapture := time.Now()
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -407,7 +422,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		// s.sendToAllAt(pcm, tCapture)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }
 
@@ -479,7 +494,7 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 			return fmt.Errorf("read pcm: %w", err)
 		}
 		// Stamp capture time when the chunk is read from the stream.
-		//tCapture := time.Now()
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -487,6 +502,6 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		// s.sendToAllAt(pcm, tCapture)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }

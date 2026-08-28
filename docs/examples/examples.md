@@ -20,11 +20,11 @@ Examples can be executed using:
 make run CONFIG=<example_name>
 ```
 
-Some examples to get started with
+You can list every available config with `make list-configs`. Some examples to get started with:
 
-- [Conversation](https://github.com/OpenMind/OM1/blob/main/config/conversation.json5)
-- [Unitree G1](https://github.com/OpenMind/OM1/blob/main/config/unitree_g1.json5)
-- [Unitree Go2](https://github.com/OpenMind/OM1/blob/main/config/unitree_go2.json5)
-- [UbTech Mini Humanoid](https://github.com/OpenMind/OM1/blob/main/config/ubtech_yanshee.json5)
-- [Turtlebot](https://github.com/OpenMind/OM1/blob/main/config/turtlebot4.json5)
-- [MCP Integration](https://github.com/OpenMind/OM1/blob/main/config/conversation_mcp.json5)
+- [Conversation](https://github.com/OpenMind/OM1/blob/main/config/conversation.json5) — `make run CONFIG=conversation`
+- [Greeting Conversation](https://github.com/OpenMind/OM1/blob/main/config/greeting_conversation.json5) — `make run CONFIG=greeting_conversation`
+- [Unitree G1 Humanoid](https://github.com/OpenMind/OM1/blob/main/config/unitree_g1_conversation.json5) — `make run CONFIG=unitree_g1_conversation`
+- [Unitree Go2 Autonomy](https://github.com/OpenMind/OM1/blob/main/config/unitree_go2_autonomy.json5) — `make run CONFIG=unitree_go2_autonomy`
+- [Unitree Go2 Modes](https://github.com/OpenMind/OM1/blob/main/config/unitree_go2_modes.json5) — `make run CONFIG=unitree_go2_modes`
+- [MCP Integration](https://github.com/OpenMind/OM1/blob/main/config/conversation_mcp.json5) — `make run CONFIG=conversation_mcp`

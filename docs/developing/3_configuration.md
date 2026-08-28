@@ -6,11 +6,15 @@ icon: gear
 
 ## Configuration
 
-Agents are configured via JSON5 files in the `/config` directory. The configuration file is used to define the LLM `system prompt`, agent's inputs, LLM configuration, and actions etc. Here is an example of the configuration file:
+Agents are configured via JSON5 files in the `/config` directory. The configuration file is used to define the LLM `system prompt`, agent's inputs, LLM configuration, and actions etc.
+
+> **Single-mode vs multi-mode.** A config can either be **single-mode** (top-level `agent_inputs` / `cortex_llm` / `agent_actions` for one behavior) or **multi-mode** (a `modes` map with transitions). Multi-mode is the canonical structure the runtime executes — a single-mode config is folded into one synthesized mode at load (`internal/config/loader.go`). Write single-mode for a single-behavior agent; use multi-mode once you need more than one behavior. The example below is multi-mode.
+
+Here is an example of the configuration file:
 
 ```json5
 {
-  version: "v1.0.5",
+  version: "v1.1.0",
   default_mode: "welcome",
   allow_manual_switching: true,
   mode_memory_enabled: true,
@@ -34,10 +38,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
       hertz: 0.01,
       agent_inputs: [
         {
-          type: "VLM_COCO_Local",
-          config: {
-            camera_index: 0,
-          },
+          type: "VLMGemini",
         },
         {
           type: "GoogleASRInput",
@@ -67,10 +68,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
           type: "GoogleASRInput",
         },
         {
-          type: "VLM_COCO_Local",
-          config: {
-            camera_index: 0,
-          },
+          type: "VLMGemini",
         },
       ],
       agent_actions: [
@@ -149,9 +147,22 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 * **system_prompt_base** Defines the agent's personality and behavior.
 * **system_governance** The agent's laws and constitution.
 * **system_prompt_examples** The agent's example inputs/actions.
-* **default_mode** The default mode for the robot to start in.
-* **allow_manual_switching** To decide if manual switching of mode is allowed or not.
-* **mode_memory_enabled** Whether mode memory is enabled.
+* **default_mode** The default mode for the robot to start in (multi-mode configs only).
+* **allow_manual_switching** Whether manual switching of mode is allowed (multi-mode configs only).
+* **mode_memory_enabled** Whether mode memory is enabled (multi-mode configs only).
+
+### Optional top-level settings
+
+These fields appear in the shipped configs and are worth knowing when integrating OM1:
+
+* **use_tracer** Enables the execution tracer, optionally with a `quality_scorer`. Example: `use_tracer: { enabled: true, quality_scorer: { enabled: true } }`. See [Tracer & Quality Scorer](tracer.md).
+* **knowledge_base** Configures RAG retrieval: `{ knowledge_base_name, base_url, min_score, top_k }`. See [Knowledge Base (RAG)](knowledge_base.md).
+* **memory** Configures agent memory (`{ enabled, cloud_connection }`).
+* **lifecycle_hooks** / **global_lifecycle_hooks** Hooks fired on `on_startup` / `on_entry` / `on_exit` / `on_timeout`, each with a `handler_type` (`action` | `message` | `command`).
+* **agent_backgrounds** / **global_backgrounds** Background tasks that run alongside the cortex loop (see [Backgrounds](8_backgrounds.md)).
+* **action_execution_mode** *(set per mode, not top-level)* How actions in a tick are executed: `concurrent` (default), `sequential`, or `dependencies` (uses **action_dependencies**). Define this inside a mode block; in a single-mode config it lives alongside that mode's `actions`.
+* **robot_ip** IP address of the robot for middleware connections.
+* **use_sim** Set `true` when running against a simulator.
 
 ## version
 
@@ -167,25 +178,21 @@ The internal/config/version.go module handles:
   - checking compatibility between config and runtime
   - producing detailed logs and helpful error messages when mismatches occur
 
-### Available versions
+### Current version
 
-  - `v1.0.5` (latest)
+The current runtime version is **`v1.1.0`** (defined by `LatestRuntimeVersion` in `internal/config/version.go`). Set `version: "v1.1.0"` in every config; all shipped configs in `/config` use this value.
 
-    Adds support for global custom environment variables in the configuration file, allowing users to use `yaml` syntax to define environment variables throughout their configuration. This enables more flexible and dynamic configurations, such as securely referencing API keys or adjusting settings based on the deployment environment.
+Compatibility is checked at load time (`IsVersionSupported`):
 
-  - `v1.0.2`
+  - **Major version mismatch** (e.g. `v2.x` config on a `v1.x` runtime) → the config is **rejected with an error**.
+  - **Minor version mismatch** (e.g. `v1.0` config on a `v1.1` runtime) → the config **loads with a warning** logged.
+  - An empty `version` is an error.
 
-    Adds support for multiple TTS.
+> **Note:** Always use the current runtime version in your configuration files unless you have a specific reason to pin an older one.
 
-  - `v1.0.1`
+### Environment variables
 
-    Adds support for context-aware mode for full autonomy.
-
-  - `v1.0.0`
-
-    Initial stable configuration version.
-
-> **Note:** Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
+Every string value supports shell-style interpolation with defaults: `${VAR:-default}`. This is used throughout the shipped configs, e.g. `api_key: "${OM_API_KEY:-openmind_free}"` and `base_url: "${KB_BASE_URL:-http://localhost:8100}"`. Define the variable in your environment (or a `.env` file) to override the default.
 
 ## Agent Inputs (`agent_inputs`)
 
@@ -194,29 +201,39 @@ Example configuration for the agent_inputs section:
 ```json5
   agent_inputs: [
     {
-      type: "GoogleASRInput"
+      type: "GoogleASRInput",
+      config: {
+        rate: 16000,
+        chunk: 1600,
+        enable_tts_interrupt: true,
+      },
     },
     {
-      type: "VLM_COCO_Local",
-      config: {
-        camera_index: 0
-      }
-    }
+      type: "VLMGemini",
+    },
   ]
 ```
 
-The `agent_inputs` section defines the inputs for the agent. Inputs might include a camera, a LiDAR, a microphone, or governance information. OM1 implements the following input types:
+The `agent_inputs` section defines the inputs for the agent. Inputs might include a camera, a microphone, localization, or conversation history. The input `type` must match a registered input plugin. The currently registered input types are:
 
-* GoogleASRInput
-* VLMVila
-* VLM_COCO_Local
-* RPLidar
-* TurtleBot4Batt
-* UnitreeG1Basic
-* UnitreeGo2Lowstate
-* more being added continuously...
+**Speech (ASR)**
+* `GoogleASRInput`, `GoogleASRRTSPInput`
+* `ElevenLabsASRInput`, `ElevenLabsASRRTSPInput`
+* `RivaASRInput`, `RivaASRRTSPInput`
+* `ParallelASRInput`
 
-You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). The `agent_inputs` config section is specific to each input type. For example, the `VLM_COCO_Local` input accepts a `camera_index` parameter.
+**Vision (VLM)**
+* `VLMGemini`, `VLMGeminiRTSP`
+* `VLMOpenAI`, `VLMOpenAIRTSP`
+* `VLMBackground`
+
+**Perception & state**
+* `FacePresence`
+* `LocalizationInput`, `LocationsInput`
+* `UnitreeGo2Odom`
+* `ConversationHistoryInput`, `GreetingStatus`, `Paths`
+
+> The authoritative list is whatever is registered via `inputs.Register(...)` under `plugins/inputs/`. You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). Each input's `config` block is specific to its type — e.g. `GoogleASRInput` accepts `rate`, `chunk`, and `enable_tts_interrupt` (see [VAD & TTS Interrupt](vad_tts_interrupt.md)).
 
 ## Cortex LLM (`cortex_llm`)
 
@@ -251,30 +268,38 @@ You can implement your own LLM endpoints or use more sophisticated approaches su
 
 ## Agent Actions (`agent_actions`)
 
-Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them. Here is an example configuration for the `agent_actions` section:
+Defines the agent's available capabilities. Each action has a `name` (exposed to the LLM), an optional `llm_label`, and a `connector` that executes it. Internally the runtime resolves the connector by `name + "/" + connector` (see `internal/actions/action.go`), so the `connector` value must match a registered connector for that action name. Here is an example configuration for the `agent_actions` section:
 
 ```json5
   agent_actions: [
     {
-      name: "move",
-      llm_label: "move",
-      implementation: "passthrough",
-      connector: "ros2"
-    },
-    {
       name: "speak",
       llm_label: "speak",
-      implementation: "passthrough",
-      connector: "ros2"
+      connector: "elevenlabs_tts",
       config: {
         voice_id: "TbMNBJ27fH2U0VgpSNko",
         silence_rate: 0,
       },
-  }
+    },
+    {
+      name: "emotion",
+      llm_label: "emotion",
+      connector: "zenoh",
+    },
   ]
 ```
 
-You can customize the actions following the [Action Plugin Guide](6_actions.md)
+The currently registered action connectors (as `name/connector`) are:
+
+* **speak** — `speak/elevenlabs_tts`, `speak/elevenlabs_people_tts`, `speak/kokoro_tts`
+* **emotion** — `emotion/zenoh`
+* **navigation** — `navigation/navigation`
+* **face_memory** — `face_memory/face_memory`
+* **greeting_conversation** — `greeting_conversation/greeting_conversation_elevenlabs`
+* **robot_action** — `robot_action/http`
+* **Unitree** — `unitree_go2_autonomy/move`, `unitree_go2_autonomy/mppi`, `unitree_go2_location/location`, `unitree_g1_arm/zenoh`
+
+> The authoritative list is whatever is registered via `actions.Register(...)` under `plugins/actions/`. You can add your own actions and connectors following the [Action Plugin Guide](6_actions.md).
 
 ## MCP servers
 

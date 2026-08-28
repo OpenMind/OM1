@@ -24,7 +24,28 @@
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
         "use_sim": {"type": "boolean"},
-        "use_tracer": {"type": "boolean"},
+        "use_tracer": {
+            "description": "Enables OM1's LLM interaction tracer (writes traces/<date>.jsonl and feeds any in-process subscriber). Either a plain bool or an object with quality_scorer nested in it.",
+            "oneOf": [
+                {"type": "boolean"},
+                {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "quality_scorer": {
+                            "type": "object",
+                            "description": "Optional live conversation-quality scorer (language/sentiment/coherence), scraped as Prometheus metrics. Requires use_tracer.enabled.",
+                            "properties": {
+                                "enabled": {"type": "boolean"},
+                                "model": {"type": "string"},
+                                "base_url": {"type": "string"},
+                                "api_key": {"type": "string", "description": "Overrides the top-level api_key for this scorer. Falls back to the top-level api_key if unset."}
+                            }
+                        }
+                    }
+                }
+            ]
+        },
         "unitree_ethernet": {"type": "string"},
         "system_prompt_base": {"type": "string"},
         "system_governance": {"type": "string"},

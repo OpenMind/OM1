@@ -12,7 +12,7 @@ redirects:
   developing/7_project_structure: developing/7_project_structure.md
   developing/8_backgrounds: developing/8_backgrounds.md
   developing/9_troubleshooting_guide: developing/9_troubleshooting_guide.md
-  developing/mcp-integration: developing/mcp_integration.md
+  developing/mcp-integration: developing/mcp-integration.md
   api-reference/introduction: api-reference/introduction.md
   api-reference/api_pricing: api-reference/api_pricing.md
   api-reference/endpoints/google-asr: api-reference/endpoints/google_asr.md
@@ -25,20 +25,15 @@ redirects:
   developer-cookbook/config: developer_cookbook/config.md
   developer-cookbook/input: developer_cookbook/input.md
   developer-cookbook/new-mode: developer_cookbook/new_mode.md
-  examples/overview: examples/overview.md
   examples/conversation: examples/conversation.md
-  simulators/gazebo: examples/gazebo.md
-  examples/llm-models: examples/llm_models.md
   examples/smart-toy: examples/smart_toy.md
+  simulators/gazebo: simulators/gazebo.md
   full-autonomy-guidelines/brainpack-introduction: full_autonomy_guidelines/brainpack_introduction.md
   full-autonomy-guidelines/architecture-overview: full_autonomy_guidelines/architecture_overview.md
-  full-autonomy-guidelines/setup-system: full_autonomy_guidelines/setup_system.md
-  full-autonomy-guidelines/system-config: full_autonomy_guidelines/system_config.md
   full-autonomy-guidelines/modes: full_autonomy_guidelines/modes.md
   full-autonomy-guidelines/mode-selection: full_autonomy_guidelines/mode_selection.md
   full-autonomy-guidelines/transition-rules: full_autonomy_guidelines/transition_rules.md
   full-autonomy-guidelines/lifecycle: full_autonomy_guidelines/lifecycle.md
-  full-autonomy-guidelines/ota-setup: full_autonomy_guidelines/ota_setup.md
   robotics/asimov-governance: robotics/asimov_governance.md
   robotics/crsf-long-range-control: robotics/crsf_long_range_control.md
   robotics/gps-compass: robotics/gps_compass.md
@@ -60,17 +55,17 @@ redirects:
   release-notes/beta/om: release-notes/om/beta.md
   release-notes/beta/om1-avatar: release-notes/om1-avatar/beta.md
   release-notes/beta/om1-ros2-sdk: release-notes/om1-ros2-sdk/beta.md
-  release-notes/beta/om1-system-setup: release-notes/om1-system-setup/beta.md
+  release-notes/beta/om1-system-setup: release-notes/OM1-OTA/beta.md
   release-notes/beta/video-processor: release-notes/om1-video-processor/beta.md
   release-notes/major-updates/beta-release: release-notes/major-updates/beta_release.md
   release-notes/major-updates/production-ready-release: release-notes/major-updates/production_ready_release.md
   release-notes/v1.0.x/om: release-notes/om/v1.0.x.md
   release-notes/v1.0.x/om1-avatar: release-notes/om1-avatar/v1.0.x.md
   release-notes/v1.0.x/om1-ros2-sdk: release-notes/om1-ros2-sdk/v1.0.x.md
-  release-notes/v1.0.x/om1-system-setup: release-notes/om1-system-setup/v1.0.x.md
+  release-notes/v1.0.x/om1-system-setup: release-notes/OM1-OTA/v1.0.x.md
   release-notes/v1.0.x/video-processor: release-notes/om1-video-processor/v1.0.x.md
   release-notes/docker-images/om: release-notes/om/docker_images.md
   release-notes/docker-images/om1-avatar: release-notes/om1-avatar/docker_images.md
   release-notes/docker-images/om1-ros2-sdk: release-notes/om1-ros2-sdk/docker_images.md
-  release-notes/docker-images/om1-system-setup: release-notes/om1-system-setup/docker_images.md
+  release-notes/docker-images/om1-system-setup: release-notes/OM1-OTA/docker_images.md
   release-notes/docker-images/video-processor: release-notes/om1-video-processor/docker_images.md

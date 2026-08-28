@@ -21,8 +21,8 @@ MCP is an open standard that lets AI agents discover and use tools dynamically. 
 | **OM1 Agent** | The main agent runtime for the machine |
 | **Modes** | Each mode can have its own MCP servers, system prompt, inputs, and actions |
 | **MCP Servers** | Per-mode configuration that defines which external tools are available in that particular mode|
-| **Orchestrator** | Coordinates communication between the agent and external services |
-| **MCPClientManager** | Manages connections to MCP servers, discovers tools, and routes tool calls |
+| **Orchestrator** (`internal/mcp/orchestrator.go`) | Manages connections to MCP servers, discovers tools, and routes tool calls |
+| **Client** (`internal/mcp` `ClientManager`) | Manages connections to the configured MCP servers, each over its transport (`stdio`/`sse`/`http`) |
 | **MCP Tools** | External services like Slack, Google Maps, Weather APIs, Notion, and more |
 | **Robot Interface** | Physical or simulated robot that interacts with the real world |
 
@@ -31,8 +31,8 @@ MCP is an open standard that lets AI agents discover and use tools dynamically. 
 Each mode operates independently with its own set of MCP servers. For example:
 
 ```
-Mode 1 ──► [Slack, Google Maps]     ──► MCPClientManager instance 1
-Mode 2 ──► [Weather, News]          ──► MCPClientManager instance 2
+Mode 1 ──► [Slack, Google Maps]     ──► Orchestrator instance 1
+Mode 2 ──► [Weather, News]          ──► Orchestrator instance 2
 Mode 3 ──► (no MCP servers)         ──► Offline mode
 ```
 
@@ -71,7 +71,7 @@ If you don't have node installed on your system, follow the steps [here](https:/
 ┌─────────────────────────────────────────────────────────────┐
 │                        OM1 Agent                            │
 │                                                             │
-│   Config ──► load_mcp() ──► MCPClientManager                │
+│   Config ──► NewOrchestrator() ──► Orchestrator             │
 │                                   │                         │
 │                                   ├── Discovers tools       │
 │                                   ├── Manages connections   │
@@ -86,9 +86,9 @@ If you don't have node installed on your system, follow the steps [here](https:/
 ```
 
 1. **Configuration**: MCP servers are defined in your mode's config file
-2. **Initialization**: `MCPClientManager` launches and connects to each server
+2. **Initialization**: the `Orchestrator` launches and connects to each server
 3. **Discovery**: Tools are automatically discovered from connected servers
-4. **Execution**: When the LLM decides to use a tool, `MCPClientManager` routes the call
+4. **Execution**: When the LLM decides to use a tool, the `Orchestrator` routes the call
 
 Example config file [conversation_mcp](https://github.com/OpenMind/OM1/blob/main/config/conversation_mcp.json5)
 
@@ -101,5 +101,5 @@ Browse community-maintained MCP servers:
 
 ## Next Steps
 
-- [Configuration Guide](../core-concepts/3_configuration.md) — Learn more about OM1 config files
+- [Configuration Guide](./3_configuration.md) — Learn more about OM1 config files
 - [MCP Specification](https://modelcontextprotocol.io) — Official MCP documentation

@@ -12,20 +12,33 @@ To ensure your configuration is valid, follow the format defined [here](https://
 #### Steps to build a new config file
 
 1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.com/). Copy it and save it, you'll paste it into the config later.
-2. Create a new config file config.json5
+2. Create a new config file, e.g. `config/my_agent.json5`.
 
-| Field                    | Type     | Required | Description                                                                      |
-| ------------------------ | -------- | -------- | -------------------------------------------------------------------------------- |
-| `version`                | `string` | Yes      | The version of the configuration format. Example: `"v1.0.0"`                     |
-| `hertz`                  | `number` | Yes      | How often (in Hz) the agent runs its update loop. Example: `0.01`                |
-| `name`                   | `string` | Yes      | The name of the agent. Example: `"conversation"`                                 |
-| `default_mode`           | `string` | Yes      | The default_mode defines the mode robot starts in. Example: `"welcome"`          |
-| `allow_manual_switching` | `bool`   | Yes      | Defines if manual mode switching is allowed. Example: `true`                     |
-| `mode_memory_enabled`    | `bool`   | Yes      | Enables or disables mode memory. Example: `true`                                 |
-| `api_key`                | `string` | Yes      | API key used to authenticate the agent. Example: `"openmind_free"`               |
-| `system_prompt_base`     | `string` | Yes      | Defines the agent's core personality and behavior. Serves as the primary system prompt for the LLM. |
-| `system_governance`      | `string` | Yes      | The laws or constraints that the agent must follow during operation. Modeled similarly to Asimov's laws. |
-| `system_prompt_examples` | `string` | No       | Example interactions that help guide the model's behavior.                       |
+OM1 supports two config shapes, each with its own required fields (enforced by `config/schema/`):
+
+- **Single-mode** (`single_mode_schema.json`) — one behavior. **Required:** `version`, `hertz`, `name`, `api_key`, `system_prompt_base`, `system_governance`, `system_prompt_examples`, `agent_inputs`, `cortex_llm`, `agent_actions`.
+- **Multi-mode** (`multi_mode_schema.json`) — several modes with transitions. **Required at top level:** `version`, `default_mode`, `api_key`, `system_governance`, `cortex_llm`, `modes`. The per-mode required fields are listed in [Step 7](#step-7-add-modes).
+
+> **Multi-mode is the canonical structure.** It's the only shape the runtime executes: at load time a single-mode config is folded into one synthesized mode (`internal/config/loader.go`). Single-mode is a convenience shorthand for a single-behavior agent — use it freely, but reach for multi-mode as soon as you need more than one behavior or any transitions.
+
+The table below describes the top-level fields:
+
+| Field                    | Type     | Required                     | Description                                                                      |
+| ------------------------ | -------- | ---------------------------- | -------------------------------------------------------------------------------- |
+| `version`                | `string` | Yes (both)                   | The runtime configuration version. Use `"v1.1.0"`.                               |
+| `api_key`                | `string` | Yes (both)                   | API key used to authenticate the agent. Example: `"${OM_API_KEY:-openmind_free}"` |
+| `system_governance`      | `string` | Yes (both)                   | The laws or constraints the agent must follow. Modeled on Asimov's laws.         |
+| `hertz`                  | `number` | Yes (single-mode)            | How often (in Hz) the agent runs its update loop. Example: `0.01`. In multi-mode, `hertz` is set per mode. |
+| `name`                   | `string` | Yes (single-mode)            | The name of the agent. Example: `"conversation"`                                 |
+| `system_prompt_base`     | `string` | Yes (single-mode)            | The agent's core personality and behavior. In multi-mode, set per mode.          |
+| `system_prompt_examples` | `string` | Yes (single-mode)            | Example interactions that guide the model's behavior.                            |
+| `agent_inputs`           | `array`  | Yes (single-mode)            | Input sources. In multi-mode, set per mode.                                      |
+| `cortex_llm`             | `object` | Yes (both)                   | The LLM configuration (see [Step 5](#step-5-configure-the-llm)).                 |
+| `agent_actions`          | `array`  | Yes (single-mode)            | Actions the agent can perform. In multi-mode, set per mode.                      |
+| `default_mode`           | `string` | Yes (multi-mode)             | The mode the robot starts in. Example: `"welcome"`                               |
+| `modes`                  | `object` | Yes (multi-mode)             | The map of mode definitions (see [Step 7](#step-7-add-modes)).                   |
+| `allow_manual_switching` | `bool`   | No (multi-mode)              | Whether manual mode switching is allowed. Example: `true`                        |
+| `mode_memory_enabled`    | `bool`   | No (multi-mode)              | Whether mode memory is enabled. Example: `true`                                  |
 
 ### Step 3. Customize the system prompts
 
@@ -49,8 +62,8 @@ To ensure your configuration is valid, follow the format defined [here](https://
 
 | Field    | Type     | Required | Description                                                        |
 | -------- | -------- | -------- | ------------------------------------------------------------------ |
-| `type`   | `string` | Yes      | The input type identifier. Example: `"AudioInput"`                 |
-| `config` | `object` | No       | Configuration options specific to this input type. Example: `GoogleASRInput` |
+| `type`   | `string` | Yes      | A registered input type. Example: `"GoogleASRInput"`. See the full list in [Inputs](../developing/4_inputs.md) / [Configuration](../developing/3_configuration.md#agent-inputs-agent_inputs). |
+| `config` | `object` | No       | Options specific to this input type. Example: `GoogleASRInput` accepts `{ rate: 16000, chunk: 1600 }`. |
 
 ### Step 5. Configure the LLM
 
@@ -69,30 +82,39 @@ To ensure your configuration is valid, follow the format defined [here](https://
 | ---------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `name`           | `string` | Yes      | Human-readable identifier for the action. Example: `"speak"`                                                               |
 | `llm_label`      | `string` | Yes      | Label the model uses to refer to this action. Example: `"speak"`                                                           |
-| `implementation` | `string` | No       | Defines the business logic. If none defined, defaults to `"passthrough"`. Example: `"passthrough"`                         |
-| `connector`      | `string` | Yes      | Name of the connector. This is the Go file name defined under `plugins/actions/action_name/`. Example: `"elevenlabs_tts"` |
+| `implementation` | `string` | No       | Optional; commonly `"passthrough"`. Example: `"passthrough"`                                                              |
+| `connector`      | `string` | Yes      | The connector for this action. The runtime resolves it as `name + "/" + connector` against the registry in `plugins/actions/`. Example: `"elevenlabs_tts"` (→ `speak/elevenlabs_tts`). |
 
 ### Step 7: Add modes
 
 Add `modes` section in your config file and introduce the modes you'd like to configure for you agent.
 
+Per the schema, each mode **requires** `display_name`, `description`, `system_prompt_base`, `hertz`, `agent_inputs`, and `agent_actions`. Everything else is optional.
+
 | Field                  | Type      | Required | Description                                                                                                   |
 | ---------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------- |
 | `display_name`         | `string`  | Yes      | The human-readable name shown in the UI for this mode. Example: `"Your New Mode"`                             |
 | `description`          | `string`  | Yes      | Brief description explaining what this mode does and its purpose.                                             |
-| `system_prompt_base`   | `string`  | Yes      | The foundational system prompt that defines the agent's behavior and purpose in this mode.                    |
-| `hertz`                | `float`   | Yes      | The frequency (in Hz) at which the agent operates or processes information. Example: `1.0`                    |
-| `timeout_seconds`      | `integer` | Yes      | Maximum duration (in seconds) before the agent times out during execution. Example: `300`                     |
-| `remember_locations`   | `boolean` | Yes      | Whether the agent should persist and recall location data across interactions. Example: `false`               |
-| `save_interactions`    | `boolean` | Yes      | Whether to save conversation history and interactions for this mode. Example: `true`                          |
-| `agent_inputs`         | `array`   | Yes      | List of input sources or data types the agent can accept in this mode.                                        |
-| `agent_actions`        | `array`   | Yes      | List of actions or capabilities the agent can perform in this mode.                                           |
-| `lifecycle_hooks`      | `array`   | Yes      | Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).               |
-| `simulators`           | `array`   | Yes      | List of simulation environments or tools available to the agent in this mode.                                 |
-| `cortex_llm`           | `object`  | Yes      | Configuration object for the language model powering the agent's cortex.                                      |
+| `system_prompt_base`   | `string`  | Yes      | The foundational system prompt that defines the agent's behavior in this mode.                                |
+| `hertz`                | `number`  | Yes      | The frequency (in Hz) at which the agent's loop runs in this mode. Example: `1.0`                             |
+| `agent_inputs`         | `array`   | Yes      | Input sources the agent accepts in this mode.                                                                 |
+| `agent_actions`        | `array`   | Yes      | Actions the agent can perform in this mode.                                                                   |
+| `cortex_llm`           | `object`  | No       | Per-mode LLM override. If omitted, the top-level `cortex_llm` is used.                                        |
+| `agent_backgrounds`    | `array`   | No       | Background tasks that run while this mode is active.                                                          |
+| `mcp_servers`          | `array`   | No       | MCP servers available in this mode.                                                                           |
+| `lifecycle_hooks`      | `array`   | No       | Event handlers triggered on `on_startup` / `on_entry` / `on_exit` / `on_timeout`.                            |
+| `timeout_seconds`      | `number`  | No       | Duration (in seconds) after which a `time_based` transition / `on_timeout` hook can fire.                    |
 
 For a better understanding of how modes are configured, refer the documentation [here](new_mode.md)
 
-### Step 8. Validate the config
+### Step 8. Validate and run the config
 
-    Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.
+Before using the file: check for JSON5 errors (commas, quotes, and braces), and confirm the correct API key is configured (via `api_key` or the `OM_API_KEY` environment variable).
+
+Then run your config by its filename (without the `.json5` extension):
+
+```bash
+make run CONFIG=my_agent
+```
+
+Use `make dev CONFIG=my_agent` for verbose debug logging, and `make list-configs` to see all available configs.

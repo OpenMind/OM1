@@ -10,20 +10,19 @@ The Background Tasks system provides a framework for running continuous, long-ru
 
 Key components:
 
-- **BackgroundOrchestrator**: Manages the lifecycle of all background tasks, including startup and graceful shutdown.
-- **Plugins**: Background tasks are loaded dynamically from the `backgrounds/plugins` directory.
-- Each background task runs in its own thread, with thread pooling for efficient resource utilization.
+- **Orchestrator** (`internal/backgrounds/orchestrator.go`): Manages the lifecycle of all background tasks, including startup and graceful shutdown.
+- **Plugins**: Background tasks live under `plugins/backgrounds/` and register themselves via `bg.Register(...)`.
+- Each background task runs in its own goroutine (one goroutine per background); the orchestrator waits for all of them to finish on shutdown.
 
-Available background tasks include:
+The currently registered background tasks are:
 
-- **GPS**: Handles GPS data processing
-- **ODOM**: Manages odometry data
-- **RF Mapper**: Implements RF signal mapping functionality
-- **RPLIDAR**: Interfaces with RPLIDAR sensors
-- **RTK**: Real-Time Kinematic positioning
-- **Unitree Go2 State**: Manages state for Unitree Go2 robots
+- **`TTSControl`**: Coordinates text-to-speech playback state.
+- **`ApproachingPerson`**: Reacts when a person approaches.
+- **`VLMGemini`**, **`VLMGeminiRTSP`**: Background vision captioning via Gemini.
+- **`VLMOpenAI`**, **`VLMOpenAIRTSP`**: Background vision captioning via OpenAI.
+- **`UnitreeGo2FrontierExploration`**: Autonomous frontier exploration for the Unitree Go2.
 
-Background tasks are configured through the main runtime configuration and can be extended by adding new plugin modules.
+> The authoritative list is whatever is registered via `bg.Register(...)` under `plugins/backgrounds/`. Background tasks are configured through the runtime config and can be extended by adding new plugin modules.
 
 ### Scopes: `agent_backgrounds` vs `global_backgrounds`
 

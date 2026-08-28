@@ -35,6 +35,28 @@ endif
 
 ZENOH_URL=https://github.com/eclipse-zenoh/zenoh-c/releases/download/$(ZENOH_C_VERSION)/zenoh-c-$(ZENOH_C_VERSION)-$(ZENOH_PLATFORM)-standalone.zip
 
+ONNXRUNTIME_VERSION=1.27.1
+ONNXRUNTIME_DIR=.onnxruntime
+ifeq ($(UNAME_S),Linux)
+	ifeq ($(UNAME_M),x86_64)
+		ONNXRUNTIME_PLATFORM=linux-x64
+	else ifeq ($(UNAME_M),aarch64)
+		ONNXRUNTIME_PLATFORM=linux-aarch64
+	endif
+else ifeq ($(UNAME_S),Darwin)
+	ifeq ($(UNAME_M),arm64)
+		ONNXRUNTIME_PLATFORM=osx-arm64
+	else
+		ONNXRUNTIME_PLATFORM=osx-x86_64
+	endif
+endif
+ONNXRUNTIME_ARCHIVE=onnxruntime-$(ONNXRUNTIME_PLATFORM)-$(ONNXRUNTIME_VERSION)
+ONNXRUNTIME_URL=https://github.com/microsoft/onnxruntime/releases/download/v$(ONNXRUNTIME_VERSION)/$(ONNXRUNTIME_ARCHIVE).tgz
+
+VAD_MODEL_DIR=models
+VAD_MODEL_PATH=$(VAD_MODEL_DIR)/silero_vad_v5.onnx
+VAD_MODEL_URL=https://huggingface.co/runanywhere/silero-vad-v5/resolve/main/silero_vad.onnx
+
 export CGO_ENABLED=1
 export CGO_CFLAGS=-I$(ZENOH_C_ABS_DIR)/include
 export CGO_LDFLAGS=-L$(ZENOH_C_ABS_DIR)/lib -lzenohc -Wl,-rpath,$(ZENOH_C_ABS_DIR)/lib
@@ -61,6 +83,8 @@ help:
 	@echo "  install          - Install binary to GOPATH/bin"
 	@echo "  check            - Run fmt, vet, lint, and test"
 	@echo "  download-zenohc  - Download and extract zenohc library"
+	@echo "  download-onnxruntime - Download onnxruntime (needed for enable_vad_latency)"
+	@echo "  download-vad-model   - Download the Silero VAD v5 model (needed for enable_vad_latency)"
 	@echo "  list-configs     - List available configuration files"
 
 download-zenohc:
@@ -80,6 +104,32 @@ download-zenohc:
 		fi; \
 	else \
 		echo "zenoh-c already installed in $(ZENOH_C_DIR)"; \
+	fi
+
+.PHONY: download-onnxruntime
+download-onnxruntime:
+	@echo "Downloading onnxruntime $(ONNXRUNTIME_VERSION) for $(ONNXRUNTIME_PLATFORM)..."
+	@mkdir -p $(ONNXRUNTIME_DIR)
+	@if [ ! -f "$(ONNXRUNTIME_DIR)/lib/libonnxruntime.so" ] && [ ! -f "$(ONNXRUNTIME_DIR)/lib/libonnxruntime.dylib" ]; then \
+		echo "Fetching $(ONNXRUNTIME_URL)..."; \
+		curl -sSL -o /tmp/onnxruntime.tgz $(ONNXRUNTIME_URL); \
+		tar xzf /tmp/onnxruntime.tgz --strip-components=1 -C $(ONNXRUNTIME_DIR); \
+		rm /tmp/onnxruntime.tgz; \
+		echo "onnxruntime installed to $(ONNXRUNTIME_DIR)"; \
+	else \
+		echo "onnxruntime already installed in $(ONNXRUNTIME_DIR)"; \
+	fi
+
+.PHONY: download-vad-model
+download-vad-model:
+	@echo "Downloading Silero VAD v5 model..."
+	@mkdir -p $(VAD_MODEL_DIR)
+	@if [ ! -f "$(VAD_MODEL_PATH)" ]; then \
+		echo "Fetching $(VAD_MODEL_URL)..."; \
+		curl -sSL -o $(VAD_MODEL_PATH) $(VAD_MODEL_URL); \
+		echo "VAD model installed to $(VAD_MODEL_PATH)"; \
+	else \
+		echo "VAD model already installed at $(VAD_MODEL_PATH)"; \
 	fi
 
 .PHONY: build

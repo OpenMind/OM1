@@ -10,6 +10,12 @@
   // Global settings
   api_key: "${OM_API_KEY:-openmind_free}",
   system_governance: "",
+  use_tracer: {
+    enabled: true,
+    quality_scorer: {
+      enabled: true,
+    },
+  },
   cortex_llm: {
     type: "GeminiLLM",
     config: {
@@ -44,7 +50,7 @@
           type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
-            enable_tts_interrupt: false,
+            enable_tts_interrupt: true,
             rate: 16000,
             chunk: 1600,
           },
@@ -117,7 +123,7 @@ You should prioritize safe, comfortable, and positive human interaction.",
           type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
-            enable_tts_interrupt: false,
+            enable_tts_interrupt: true,
             rate: 16000,
             chunk: 1600,
           },

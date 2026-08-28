@@ -82,12 +82,6 @@ func (s *sink) snapshot() []recordedCall {
 	return out
 }
 
-func (s *sink) len() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.calls)
-}
-
 var (
 	sinksMu sync.Mutex
 	sinks   = map[string]*sink{}
@@ -124,10 +118,11 @@ type mockSensor struct {
 	publishContext map[string]any
 	voiceKey       string
 	dynamicVars    map[string]string
+	consumed       chan struct{}
 }
 
 func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
-	s := &mockSensor{triggers: true}
+	s := &mockSensor{triggers: true, consumed: make(chan struct{}, 1)}
 	if v, ok := cfg["triggers_tick"].(bool); ok {
 		s.triggers = v
 	}
@@ -181,11 +176,15 @@ func (s *mockSensor) Listen(ctx context.Context) (<-chan any, error) {
 			s.mu.Unlock()
 			select {
 			case ch <- m:
-				if i < len(s.messages)-1 {
-					time.Sleep(100 * time.Millisecond)
-				}
 			case <-ctx.Done():
 				return
+			}
+			if i < len(s.messages)-1 {
+				select {
+				case <-s.consumed:
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 		<-ctx.Done()
@@ -205,6 +204,12 @@ func (s *mockSensor) FormattedLatestBuffer() string {
 	msg := s.currentMsg
 	s.currentMsg = ""
 	s.mu.Unlock()
+	if msg != "" {
+		select {
+		case s.consumed <- struct{}{}:
+		default:
+		}
+	}
 	if s.voiceKey != "" && msg != "" {
 		providers.IO().AddInput(s.voiceKey, msg, time.Now())
 		return msg
@@ -307,7 +312,7 @@ func (c *recordingConnector) Tick(ctx context.Context) {
 
 func (c *recordingConnector) Stop() {}
 
-func runRuntime(cfg *config.SystemConfig, session string, s *sink, waitForCalls int, timeout time.Duration) []recordedCall {
+func runRuntime(cfg *config.SystemConfig, session string, s *sink, done func([]recordedCall) bool, timeout time.Duration) []recordedCall {
 	injectActionMeta(cfg, session)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -326,7 +331,7 @@ func runRuntime(cfg *config.SystemConfig, session string, s *sink, waitForCalls 
 	poll := time.NewTicker(10 * time.Millisecond)
 	defer poll.Stop()
 
-	for waitForCalls <= 0 || s.len() < waitForCalls {
+	for done == nil || !done(s.snapshot()) {
 		select {
 		case <-deadline.C:
 			goto stop
