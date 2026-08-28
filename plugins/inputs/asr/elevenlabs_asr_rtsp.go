@@ -187,7 +187,6 @@ func (s *ElevenLabsASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
-		// Stamp capture time at read.
 		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
