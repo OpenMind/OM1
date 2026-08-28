@@ -6,7 +6,7 @@
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
-**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4, and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
+**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4 and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and reconfigure to accommodate different physical form factors.
 
 ## Pick Your Runtime
 
@@ -63,7 +63,7 @@ sudo apt-get install -y portaudio19-dev ffmpeg pkg-config
 
 #### Option A: Download Pre-built Binary (Recommended)
 
-No Go installation required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases).
+Go installation not required. Download the latest release for your platform from the [Releases page](https://github.com/OpenMind/OM1/releases).
 
 Current pre-built binaries are available for:
 
