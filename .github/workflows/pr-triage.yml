@@ -23,12 +23,6 @@ on:
   schedule:
     - cron: "0 13 * * *" # 13:00 UTC daily fallback
   workflow_dispatch:
-  # TEMPORARY — remove after the single-PR test. pull_request_target can't
-  # fire pre-merge (GitHub only evaluates it from the default branch), so
-  # this stands in for it on a controlled, hardcoded PR (see gate step).
-  push:
-    branches:
-      - worktree-om1-pr-triage-workflow
 
 concurrency:
   group: pr-triage
@@ -61,9 +55,7 @@ jobs:
             exit 0
           fi
 
-          # TEMPORARY: push treated as single-PR mode too, for the manual
-          # test below (pull_request_target can't fire pre-merge).
-          if [ "${EVENT_NAME}" = "pull_request_target" ] || [ "${EVENT_NAME}" = "push" ]; then
+          if [ "${EVENT_NAME}" = "pull_request_target" ]; then
             # Real-time run: only the PR that triggered this event.
             printf '%s\t%s\t%s\n' "${PR_NUMBER}" "${PR_LOGIN}" "${PR_HEAD_SHA}" \
               > .pr-triage-open.tsv
@@ -112,13 +104,9 @@ jobs:
         env:
           ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
-          # TEMPORARY: hardcoded to OpenMind/OM1#2678 for the manual push-based
-          # single-PR test. On a real pull_request_target event these would
-          # come from github.event.pull_request.* instead — restore that
-          # after the test.
-          PR_NUMBER: ${{ github.event.pull_request.number || 2678 }}
-          PR_LOGIN: ${{ github.event.pull_request.user.login || '25marcusbPersonal' }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '852956771fd4e87174348345de28a38baf8f560a' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node
         if: steps.gate.outputs.needs_review == 'true'
