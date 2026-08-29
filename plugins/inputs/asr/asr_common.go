@@ -169,6 +169,23 @@ func (a *asrSensorCore) pollLoop(ctx context.Context, out chan any) {
 		if err != nil {
 			return
 		}
+		// Settle who spoke before the transcript goes downstream.
+		//
+		// Sending on out is what makes the orchestrator tick, and the cortex
+		// loop builds the prompt straight away -- so a transcript forwarded
+		// while the lookup is still in flight produces a prompt with no
+		// speaker in it. Nor does the answer get picked up afterwards: a
+		// conversation config ticks at 0.001 Hz, so the next tick IS the next
+		// utterance, which starts a new lookup and drops this answer first.
+		//
+		// This goroutine is the right one to hold. It exists only to forward
+		// transcripts, the websocket read loop already handed off through a
+		// buffered channel and has moved on, and audio upload runs elsewhere.
+		// Waiting here costs the tick its own latency -- tens of milliseconds,
+		// measured -- and costs nothing else. Ordering is safe because this is
+		// a single goroutine draining a FIFO.
+		providers.Speaker().WaitFresh(ctx)
+
 		select {
 		case out <- raw:
 		case <-ctx.Done():

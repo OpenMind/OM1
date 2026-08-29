@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -53,8 +54,6 @@ func TestResolveIdentifiesSpeaker(t *testing.T) {
 	if got.Name != "wendy" || got.UUID != uuid {
 		t.Errorf("identity not carried through: %+v", got)
 	}
-	// The larger face (jan, area 8000) is NOT the speaker. This is the whole
-	// point: proximity would have picked the wrong person.
 	if len(got.Faces) != 2 || got.Faces[1].Speaking {
 		t.Errorf("non-speaker should not be flagged: %+v", got.Faces)
 	}
@@ -70,8 +69,6 @@ func TestLatestExpires(t *testing.T) {
 	defer srv.Close()
 
 	p := NewSpeakerProvider(srv.URL)
-	// No window, so the answer expires against p.ttl rather than against an
-	// utterance it does not have. See resultTTL.
 	p.ttl = 50 * time.Millisecond
 	if _, err := p.Resolve(context.Background(), time.Time{}, time.Now()); err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -128,8 +125,6 @@ func TestWindowIsSentAndClamped(t *testing.T) {
 
 	p := NewSpeakerProvider(srv.URL)
 	end := time.Now()
-	// A window far longer than one utterance: must be trimmed to the tail,
-	// or /speaking scores whoever dominated the whole stretch.
 	got, err := p.Resolve(context.Background(), end.Add(-90*time.Second), end)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -159,14 +154,11 @@ func TestResolveAsyncInvalidatesPreviousSpeaker(t *testing.T) {
 
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
-	// The moment a NEW utterance is being resolved, the old answer must be
-	// gone. Serving it here is what names two alternating speakers as each
-	// other, every turn.
 	require.Nil(t, p.Latest(), "stale speaker must not survive into the next utterance")
 	require.True(t, p.Pending())
 
 	close(release)
-	p.WaitFresh(context.Background(), 2*time.Second)
+	p.WaitFresh(context.Background())
 	got := p.Latest()
 	require.NotNil(t, got)
 	require.Equal(t, 61, got.TrackID, "the new utterance's speaker, not the old one")
@@ -182,43 +174,19 @@ func TestWaitFreshReturnsWhenResolved(t *testing.T) {
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
 	start := time.Now()
-	p.WaitFresh(context.Background(), 2*time.Second)
+	p.WaitFresh(context.Background())
 	require.Less(t, time.Since(start), 2*time.Second, "should return on completion, not on timeout")
 	require.NotNil(t, p.Latest(), "the answer is available to the prompt being built")
 	require.False(t, p.Pending())
 }
 
-func TestWaitFreshGivesUpOnBudget(t *testing.T) {
-	block := make(chan struct{})
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		<-block
-	}))
-	// LIFO: unblock the handler BEFORE Close, which waits for outstanding
-	// requests and would otherwise deadlock against it.
-	defer srv.Close()
-	defer close(block)
-
-	p := NewSpeakerProvider(srv.URL)
-	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
-
-	start := time.Now()
-	p.WaitFresh(context.Background(), 80*time.Millisecond)
-	elapsed := time.Since(start)
-	require.GreaterOrEqual(t, elapsed, 70*time.Millisecond)
-	require.Less(t, elapsed, time.Second, "a slow endpoint must not stall the tick")
-	// And the prompt gets an honest absence rather than the previous answer.
-	require.Nil(t, p.Latest())
-}
-
 func TestWaitFreshNoOpWhenNothingPending(t *testing.T) {
 	p := NewSpeakerProvider("http://127.0.0.1:1")
 	start := time.Now()
-	p.WaitFresh(context.Background(), time.Second)
+	p.WaitFresh(context.Background())
 	require.Less(t, time.Since(start), 50*time.Millisecond)
 }
 
-// --- how long an answer stays usable ------------------------------------
-//
 // The verdict describes one utterance, so its shelf life should come from
 // that utterance. A fixed constant treats a half-second "yeah" and a
 // five-second introduction as equally durable, and the constant was picked
@@ -268,4 +236,56 @@ func TestLatestExpiresAgainstItsOwnUtterance(t *testing.T) {
 	}
 	p.mu.Unlock()
 	require.NotNil(t, p.Latest(), "a long introduction stays relevant longer")
+}
+
+func TestWaitFreshEndsWhenTheContextDoes(t *testing.T) {
+	// The only bound the wait imposes itself. Everything else -- how long a
+	// slow endpoint may take -- belongs to the HTTP client, not here.
+	block := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-block
+	}))
+	defer srv.Close()
+	defer close(block)
+
+	p := NewSpeakerProvider(srv.URL)
+	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	p.WaitFresh(ctx)
+	require.Less(t, time.Since(start), time.Second,
+		"a cancelled tick must not sit on a wedged endpoint")
+}
+
+func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
+	// The conversation is the thing that must not stall. A wedged endpoint
+	// costs the turn its attribution and nothing else.
+	block := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-block
+	}))
+	defer srv.Close()
+	defer close(block)
+
+	t.Setenv(speakerWaitEnv, "50")
+	speakerWaitOnce = sync.Once{}
+	defer func() { speakerWaitOnce = sync.Once{} }()
+
+	p := NewSpeakerProvider(srv.URL)
+	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
+
+	start := time.Now()
+	p.WaitFresh(context.Background())
+	elapsed := time.Since(start)
+
+	require.Less(t, elapsed, time.Second,
+		"the reply must not wait on the network timeout")
+	require.GreaterOrEqual(t, elapsed, 40*time.Millisecond)
+	require.Nil(t, p.Latest(), "and it proceeds with an honest absence")
 }

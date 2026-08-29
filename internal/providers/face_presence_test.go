@@ -179,11 +179,6 @@ func TestFetchSnapshotErrorStatus(t *testing.T) {
 	require.Contains(t, err.Error(), "/who")
 }
 
-// --- speaker attribution -------------------------------------------------
-//
-// The case these exist for: the person talking is NOT the biggest face.
-// Proximity picks the wrong one, and everything the model is told in that
-// turn -- a name above all -- lands on the wrong identity.
 
 func twoFaces() *PresenceSnapshot {
 	return &PresenceSnapshot{Faces: []FaceEntry{
@@ -243,20 +238,11 @@ func TestToText_SpeakerNoLongerVisible(t *testing.T) {
 func TestToText_EnrolledButUnnamedSpeaker(t *testing.T) {
 	spk := &SpeakerResult{TrackID: 54, Name: "anon_73d0a4", UUID: "w1", Score: 0.7, ResolvedAt: timeNow()}
 	text := twoFaces().toTextWithSpeaker(spk, true)
-
-	// "unnamed" and "unrecognised" are different situations: the first can
-	// be given a name right now, the second cannot.
 	require.Contains(t, text, "an enrolled but unnamed person")
 }
 
-// timeNow is a stable stand-in for time.Now in these fixtures.
 func timeNow() time.Time { return time.Now() }
 
-// --- memory attribution --------------------------------------------------
-//
-// Who the turn gets FILED under, which is a different question from who is
-// tagged on screen and has a different failure mode: a wrong tag is visible,
-// a wrong filing silently accumulates one person's history under another's.
 
 func TestAttributedUser_FollowsSpeakerNotProximity(t *testing.T) {
 	Speaker().Reset()
@@ -279,8 +265,6 @@ func TestAttributedUser_UnnamedPersonStillGetsRecorded(t *testing.T) {
 	Speaker().Reset()
 	defer Speaker().Reset()
 
-	// Somebody who declined to give a name: auto-enrolled, anon_ label.
-	// The uuid is a perfectly good key to remember the conversation under.
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "anon_73d0a4", UUID: "a1", Area: 3000, TrackID: 54},
 	}}
@@ -325,12 +309,8 @@ func TestAttributedUser_SpeakerOffScreenKeepsIdentity(t *testing.T) {
 	require.True(t, measured)
 }
 
-// --- enrolment blocked --------------------------------------------------
 
 func TestToText_SpeakerCannotBeEnrolled(t *testing.T) {
-	// Heard clearly, no identity, and standing where the enrolment gate will
-	// never clear. The model needs to know the difference between this and
-	// "not enrolled yet", because only one of them is worth a word.
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "wendy", UUID: "w1", Area: 9000, TrackID: 54},
 		{Name: "unknown", UUID: "", Area: 900, TrackID: 77, Enrolling: false},
@@ -370,14 +350,10 @@ func TestToText_EnrolledSpeakerNeverAskedToMove(t *testing.T) {
 		"someone already in the gallery has nothing to gain by moving")
 }
 
-// The failure an operator sees as "it keeps asking me to step closer at
-// somebody the video has already labelled anon_xxxx".
 func TestToText_EnrolledSpeakerIsNotAskedToMove(t *testing.T) {
 	Speaker().Reset()
 	defer Speaker().Reset()
 
-	// The face HAS an identity. /speaking does not report one, because the
-	// match was not confident at that instant -- routine for anon faces.
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "anon_73d0a4", UUID: "a1", Area: 4000, TrackID: 77, Enrolling: false},
 	}}
@@ -391,7 +367,6 @@ func TestToText_EnrolledSpeakerIsNotAskedToMove(t *testing.T) {
 	require.NotContains(t, text, "come closer")
 	require.Contains(t, text, "attribute what was just said to THIS person")
 
-	// And the rename path must now see that identity.
 	require.Equal(t, "a1", Speaker().Latest().UUID,
 		"the presence snapshot's uuid should reach the rename path")
 }

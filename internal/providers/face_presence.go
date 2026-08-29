@@ -178,11 +178,6 @@ func (s *PresenceSnapshot) ToText() string {
 	return s.toTextWithSpeaker(Speaker().Latest(), Speaker().Available())
 }
 
-// toTextWithSpeaker renders the line against a given speaker verdict.
-//
-// Split from ToText so the rendering can be exercised for a speaker that is
-// present, absent, unresolved, or off-screen without standing up an HTTP
-// server and driving the singleton into each of those states.
 func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool) string {
 	if s == nil || len(s.Faces) == 0 {
 		return ""
@@ -246,21 +241,8 @@ func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool)
 			entry += " [SPEAKING NOW]"
 			speakerEntry = entry
 			speakerEnrolling = f.Enrolling
-			// The face's OWN uuid, not the speaker verdict's.
-			//
-			// /speaking reports a uuid only for a track it matched
-			// confidently at that instant, so it comes back null for
-			// somebody the video is plainly labelling anon_xxxx. Testing
-			// the verdict's copy therefore concluded "no identity" about a
-			// person who visibly has one, and the robot asked them to step
-			// closer -- repeatedly, and pointlessly, since nothing about
-			// moving would have changed an identity they already had.
 			speakerUUID = f.UUID
 		case speakingTrack >= 0:
-			// A measured speaker exists and it is not this face. Saying
-			// nothing here would leave the model to fall back on the
-			// proximity hint in the descriptor and contradict the
-			// measurement.
 			entry += " [not speaking]"
 		case f == closest:
 			entry += " [closest, likely speaking — GUESS, no speech detection]"
@@ -272,8 +254,6 @@ func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool)
 	if speakerUUID == "" {
 		speakerUUID = spk.identityUUID()
 	} else {
-		// Hand it back so the rename path sees the identity too, instead of
-		// re-deriving it from a track lookup that misses the same faces.
 		Speaker().NoteIdentity(speakingTrack, speakerUUID)
 	}
 	return line + speakerSuffix(
@@ -290,9 +270,6 @@ func speakerSuffix(
 	}
 	if spk == nil {
 		if Speaker().Pending() {
-			// Distinct from "nobody spoke": the answer is on its way and
-			// simply did not beat the prompt. Saying so stops the model
-			// treating the gap as evidence that nobody was talking.
 			return "\nSpeaker: still being resolved for this utterance — " +
 				"do not attribute it to anyone yet"
 		}
@@ -302,12 +279,6 @@ func speakerSuffix(
 		return "\nSpeaker: unknown (nobody scored as speaking over the last utterance)"
 	}
 	if speakerUUID == "" && !speakerEnrolling {
-		// They spoke, the robot heard them, and there is nothing to hang a
-		// name on -- the face is too far away, too small or too turned away
-		// to clear the enrolment gate, and standing there will not change
-		// that. Worth saying, because the fix is something a person can do
-		// in one step; worth saying ONCE, because it is a favour to ask and
-		// not a requirement to meet.
 		return fmt.Sprintf(
 			"\nSpeaker: %s (track %d, confidence %.2f) — their face cannot be "+
 				"enrolled from where they are, so you cannot save a name for "+
@@ -316,9 +287,6 @@ func speakerSuffix(
 			speakerName(spk), spk.TrackID, spk.Score)
 	}
 	if speakerEntry == "" {
-		// Resolved to a track that is no longer among the visible faces --
-		// they turned away or the track was dropped between the utterance
-		// and this poll.
 		return fmt.Sprintf(
 			"\nSpeaker: %s (track %d, confidence %.2f) — no longer visible",
 			speakerName(spk), spk.TrackID, spk.Score)
@@ -344,9 +312,6 @@ func (s *PresenceSnapshot) AttributedUser() (uuid string, name string, measured 
 			}
 			return f.UUID, n, true
 		}
-		// Measured, but that track is not in this snapshot. Prefer the
-		// speaker's own copy of the identity over silently falling back to
-		// whoever is nearest -- they are still the one who spoke.
 		if spk.UUID != "" {
 			n := spk.Name
 			if strings.HasPrefix(n, "anon_") || n == "unknown" {
@@ -358,8 +323,6 @@ func (s *PresenceSnapshot) AttributedUser() (uuid string, name string, measured 
 	return s.ClosestUUID, s.ClosestName, false
 }
 
-// speakerName renders the speaker's identity, keeping "unnamed" distinct from
-// "unrecognised": the first can be given a name, the second cannot yet.
 func speakerName(spk *SpeakerResult) string {
 	switch {
 	case spk.Name != "" && !strings.HasPrefix(spk.Name, "anon_") && spk.Name != "unknown":
