@@ -169,21 +169,6 @@ func (a *asrSensorCore) pollLoop(ctx context.Context, out chan any) {
 		if err != nil {
 			return
 		}
-		// Settle who spoke before the transcript goes downstream.
-		//
-		// Sending on out is what makes the orchestrator tick, and the cortex
-		// loop builds the prompt straight away -- so a transcript forwarded
-		// while the lookup is still in flight produces a prompt with no
-		// speaker in it. Nor does the answer get picked up afterwards: a
-		// conversation config ticks at 0.001 Hz, so the next tick IS the next
-		// utterance, which starts a new lookup and drops this answer first.
-		//
-		// This goroutine is the right one to hold. It exists only to forward
-		// transcripts, the websocket read loop already handed off through a
-		// buffered channel and has moved on, and audio upload runs elsewhere.
-		// Waiting here costs the tick its own latency -- tens of milliseconds,
-		// measured -- and costs nothing else. Ordering is safe because this is
-		// a single goroutine draining a FIFO.
 		providers.Speaker().WaitFresh(ctx)
 
 		select {
@@ -310,11 +295,10 @@ func newASRCommon(cfg asrCommonConfig) *asrCommon {
 // connect dials the single stream's ASR websocket.
 func (c *asrCommon) connect() error { return c.stream.connect() }
 
-// sendChunkAt fans out one PCM chunk, stamped with its capture time, to the
-// single stream's websocket and the optional local VAD.
-func (c *asrCommon) sendChunkAt(pcm []byte, capture time.Time) {
+// sendChunk fans out one PCM chunk to the single stream and the optional local VAD.
+func (c *asrCommon) sendChunk(pcm []byte) {
 	c.feedVAD(pcm)
-	c.stream.sendChunkAt(pcm, capture)
+	c.stream.sendChunk(pcm)
 }
 
 // statsLoop logs the single stream's send statistics until ctx is cancelled.
