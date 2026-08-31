@@ -229,9 +229,15 @@ func toolCallsToMaps(toolCalls []llm.ToolCall) []map[string]any {
 	return result
 }
 
-// traceOutput converts an LLM response's tool calls into a slice of maps for structured tracing.
+// traceOutput converts an LLM response's text and tool calls into a slice of maps for structured tracing.
 func traceOutput(response *llm.Response) []map[string]any {
-	out := make([]map[string]any, 0, len(response.ToolCalls))
+	out := make([]map[string]any, 0, len(response.ToolCalls)+1)
+	if response.TextContent != "" {
+		out = append(out, map[string]any{
+			"type":  "text",
+			"value": response.TextContent,
+		})
+	}
 	for _, tc := range response.ToolCalls {
 		out = append(out, map[string]any{
 			"type":  tc.Name,
