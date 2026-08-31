@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -75,7 +74,7 @@ func TestLatestExpires(t *testing.T) {
 	defer srv.Close()
 
 	p := newTestSpeaker(srv.URL)
-	p.ttl = 50 * time.Millisecond
+	p.defaultTTL = 50 * time.Millisecond
 	if _, err := p.Resolve(context.Background(), time.Time{}, time.Now()); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -212,8 +211,8 @@ func TestTTLScalesWithHowLongTheySpoke(t *testing.T) {
 
 func TestTTLFallsBackWithoutAWindow(t *testing.T) {
 	p := newTestSpeaker("")
-	require.Equal(t, p.ttl, p.resultTTL(&SpeakerResult{}))
-	require.Equal(t, p.ttl, p.resultTTL(nil))
+	require.Equal(t, p.defaultTTL, p.resultTTL(&SpeakerResult{}))
+	require.Equal(t, p.defaultTTL, p.resultTTL(nil))
 }
 
 func TestLatestExpiresAgainstItsOwnUtterance(t *testing.T) {
@@ -268,11 +267,8 @@ func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
 	defer srv.Close()
 	defer close(block)
 
-	t.Setenv(speakerWaitEnv, "50")
-	speakerWaitOnce = sync.Once{}
-	defer func() { speakerWaitOnce = sync.Once{} }()
-
 	p := newTestSpeaker(srv.URL)
+	p.maxWait = 50 * time.Millisecond
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
 	start := time.Now()

@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -16,15 +14,14 @@ import (
 )
 
 const (
-	speakerDefaultBaseURL = "http://127.0.0.1:6793"
-	speakerDefaultTimeout = 2 * time.Second
-	speakerDefaultTTL     = 5 * time.Second
-	speakerTTLPerSecond   = 3.0
-	speakerTTLMin         = 2 * time.Second
-	speakerTTLMax         = 12 * time.Second
-	speakerMaxWindowSec   = 15.0
-	speakerWaitDefault    = 300 * time.Millisecond
-	speakerWaitEnv        = "OM1_SPEAKER_WAIT_MS"
+	speakerDefaultBaseURL     = "http://127.0.0.1:6793"
+	speakerDefaultHTTPTimeout = 2 * time.Second
+	speakerDefaultMaxWait     = 300 * time.Millisecond
+	speakerDefaultTTL         = 5 * time.Second
+	speakerTTLPerSecond       = 3.0
+	speakerTTLMin             = 2 * time.Second
+	speakerTTLMax             = 12 * time.Second
+	speakerMaxWindowSec       = 15.0
 )
 
 // SpeakerFace is one face's verdict for an utterance window.
@@ -81,48 +78,48 @@ func (r *SpeakerResult) Identified() bool { return r != nil && r.TrackID >= 0 }
 type SpeakerProvider struct {
 	baseURL string
 	client  *http.Client
-	ttl     time.Duration
 
-	enabled  bool
-	latest   *SpeakerResult
-	pending  chan struct{}
-	disabled bool
-	lastErr  error
+	defaultTTL time.Duration
+	maxWait    time.Duration
+
+	enabled     bool
+	unsupported bool
+
+	latest      *SpeakerResult
+	resolveDone chan struct{}
+	lastErr     error
 
 	mu sync.RWMutex
 }
 
 var (
-	speakerWaitOnce  sync.Once
-	speakerWaitValue time.Duration
-
-	speakerMu       sync.RWMutex
-	speakerInstance *SpeakerProvider
+	speakerInstanceMu sync.RWMutex
+	speakerInstance   *SpeakerProvider
 )
 
 func Speaker() *SpeakerProvider {
-	speakerMu.RLock()
-	p := speakerInstance
-	speakerMu.RUnlock()
-	if p != nil {
-		return p
+	speakerInstanceMu.RLock()
+	provider := speakerInstance
+	speakerInstanceMu.RUnlock()
+	if provider != nil {
+		return provider
 	}
 
-	speakerMu.Lock()
-	defer speakerMu.Unlock()
+	speakerInstanceMu.Lock()
+	defer speakerInstanceMu.Unlock()
 	if speakerInstance == nil {
 		speakerInstance = NewSpeakerProvider("")
 	}
 	return speakerInstance
 }
 
-func SetSpeaker(p *SpeakerProvider) {
-	if p == nil {
-		p = NewSpeakerProvider("")
+func SetSpeaker(provider *SpeakerProvider) {
+	if provider == nil {
+		provider = NewSpeakerProvider("")
 	}
-	speakerMu.Lock()
-	speakerInstance = p
-	speakerMu.Unlock()
+	speakerInstanceMu.Lock()
+	speakerInstance = provider
+	speakerInstanceMu.Unlock()
 }
 
 func NewSpeakerProvider(baseURL string) *SpeakerProvider {
@@ -130,11 +127,12 @@ func NewSpeakerProvider(baseURL string) *SpeakerProvider {
 		baseURL = speakerDefaultBaseURL
 	}
 	return &SpeakerProvider{
-		baseURL: baseURL,
-		ttl:     speakerDefaultTTL,
+		baseURL:    baseURL,
+		defaultTTL: speakerDefaultTTL,
+		maxWait:    speakerDefaultMaxWait,
 		client: &http.Client{
 			Transport: httpclient.Default().Transport,
-			Timeout:   speakerDefaultTimeout,
+			Timeout:   speakerDefaultHTTPTimeout,
 		},
 	}
 }
@@ -148,15 +146,15 @@ func (p *SpeakerProvider) Latest() *SpeakerResult {
 	if time.Since(p.latest.ResolvedAt) > p.resultTTL(p.latest) {
 		return nil
 	}
-	cp := *p.latest
-	return &cp
+	snapshot := *p.latest
+	return &snapshot
 }
 
-func (p *SpeakerProvider) resultTTL(r *SpeakerResult) time.Duration {
-	if r == nil || r.WindowStart.IsZero() || !r.WindowEnd.After(r.WindowStart) {
-		return p.ttl
+func (p *SpeakerProvider) resultTTL(result *SpeakerResult) time.Duration {
+	if result == nil || result.WindowStart.IsZero() || !result.WindowEnd.After(result.WindowStart) {
+		return p.defaultTTL
 	}
-	spoken := r.WindowEnd.Sub(r.WindowStart)
+	spoken := result.WindowEnd.Sub(result.WindowStart)
 	ttl := time.Duration(float64(spoken) * speakerTTLPerSecond)
 	if ttl < speakerTTLMin {
 		return speakerTTLMin
@@ -176,7 +174,7 @@ func (p *SpeakerProvider) Enable() {
 func (p *SpeakerProvider) Available() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return p.enabled && !p.disabled
+	return p.enabled && !p.unsupported
 }
 
 func (p *SpeakerProvider) ResolveAsync(start, end time.Time) {
@@ -184,68 +182,54 @@ func (p *SpeakerProvider) ResolveAsync(start, end time.Time) {
 		return
 	}
 
-	done := make(chan struct{})
+	resolved := make(chan struct{})
 	p.mu.Lock()
-	if p.pending != nil {
-		close(p.pending)
+	if p.resolveDone != nil {
+		close(p.resolveDone)
 	}
 	p.latest = nil
-	p.pending = done
+	p.resolveDone = resolved
 	p.mu.Unlock()
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), speakerDefaultTimeout+time.Second)
+		ctx, cancel := context.WithTimeout(
+			context.Background(), speakerDefaultHTTPTimeout+time.Second)
 		defer cancel()
 		_, _ = p.Resolve(ctx, start, end)
 
 		p.mu.Lock()
-		if p.pending == done {
-			p.pending = nil
+		if p.resolveDone == resolved {
+			p.resolveDone = nil
 		}
 		p.mu.Unlock()
-		close(done)
+		close(resolved)
 	}()
 }
 
 func (p *SpeakerProvider) WaitFresh(ctx context.Context) {
 	p.mu.RLock()
-	done := p.pending
-	off := !p.enabled || p.disabled
+	resolved := p.resolveDone
+	unavailable := !p.enabled || p.unsupported
+	maxWait := p.maxWait
 	p.mu.RUnlock()
-	if done == nil || off {
+	if resolved == nil || unavailable {
 		return
 	}
 
-	timer := time.NewTimer(speakerWait())
+	timer := time.NewTimer(maxWait)
 	defer timer.Stop()
 
 	select {
-	case <-done:
+	case <-resolved:
 	case <-timer.C:
 	case <-ctx.Done():
 	}
 }
 
-func speakerWait() time.Duration {
-	speakerWaitOnce.Do(func() {
-		speakerWaitValue = speakerWaitDefault
-		raw := os.Getenv(speakerWaitEnv)
-		if raw == "" {
-			return
-		}
-		ms, err := strconv.Atoi(raw)
-		if err != nil || ms <= 0 {
-			return
-		}
-		speakerWaitValue = time.Duration(ms) * time.Millisecond
-	})
-	return speakerWaitValue
-}
-
 func (p *SpeakerProvider) Pending() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return p.pending != nil
+	return p.resolveDone != nil
 }
 
 func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*SpeakerResult, error) {
@@ -253,22 +237,22 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 		end = time.Now()
 	}
 
-	body := map[string]any{}
+	reqFields := map[string]any{}
 	if !start.IsZero() && end.After(start) {
 		if end.Sub(start).Seconds() > speakerMaxWindowSec {
 			start = end.Add(-time.Duration(speakerMaxWindowSec * float64(time.Second)))
 		}
-		body["win_start_ms"] = start.UnixMilli()
-		body["win_end_ms"] = end.UnixMilli()
+		reqFields["win_start_ms"] = start.UnixMilli()
+		reqFields["win_end_ms"] = end.UnixMilli()
 	}
 
-	raw, err := json.Marshal(body)
+	reqBody, err := json.Marshal(reqFields)
 	if err != nil {
 		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, p.baseURL+"/speaking", bytes.NewReader(raw))
+		ctx, http.MethodPost, p.baseURL+"/speaking", bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, err
 	}
@@ -287,14 +271,14 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 		return nil, err
 	}
 
-	payload, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		p.noteErr(err)
 		return nil, err
 	}
 
 	var parsed speakingResponse
-	if err := json.Unmarshal(payload, &parsed); err != nil {
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
 		p.noteErr(err)
 		return nil, err
 	}
@@ -303,7 +287,7 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 		err := fmt.Errorf("speaking: %s", parsed.Error)
 		if parsed.Error == "vvad_disabled" {
 			p.mu.Lock()
-			p.disabled = true
+			p.unsupported = true
 			p.lastErr = err
 			p.mu.Unlock()
 			return nil, err
@@ -333,8 +317,8 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 	p.lastErr = nil
 	p.mu.Unlock()
 
-	cp := *result
-	return &cp, nil
+	snapshot := *result
+	return &snapshot, nil
 }
 
 func (p *SpeakerProvider) NoteIdentity(trackID int, uuid string) {
