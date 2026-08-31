@@ -283,11 +283,13 @@ func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
 
 func TestDetectionIsOffUntilEnabled(t *testing.T) {
 	asked := make(chan struct{}, 1)
+	block := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		asked <- struct{}{}
-		<-r.Context().Done()
+		<-block
 	}))
 	defer srv.Close()
+	defer close(block)
 
 	p := NewSpeakerProvider(srv.URL)
 	require.False(t, p.Available(), "speaker detection is opt-in")
