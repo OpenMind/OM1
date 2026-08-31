@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -52,12 +53,18 @@ func Start(ctx context.Context, records <-chan tracetype.TraceRecord, log *zap.L
 					continue
 				}
 
+				// Prometheus label values must be valid UTF-8 -- WithLabelValues
+				// panics otherwise (crashing this whole process, not just this
+				// goroutine). Truncated multi-byte characters upstream (e.g. a
+				// memory snippet cut at a byte boundary) can produce invalid
+				// UTF-8 in a prompt, so scrub both text fields defensively
+				// rather than trust every upstream source to hand back clean text.
 				lv := labelValues{
 					strconv.FormatInt(nextSeq, 10),
 					rec.Timestamp,
 					strconv.Itoa(rec.Generation),
-					rec.LLMInput,
-					string(outputJSON),
+					strings.ToValidUTF8(rec.LLMInput, "�"),
+					strings.ToValidUTF8(string(outputJSON), "�"),
 				}
 				nextSeq++
 
