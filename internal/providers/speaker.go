@@ -15,17 +15,16 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 )
 
-
 const (
 	speakerDefaultBaseURL = "http://127.0.0.1:6793"
 	speakerDefaultTimeout = 2 * time.Second
-	speakerDefaultTTL = 5 * time.Second
-	speakerTTLPerSecond = 3.0
-	speakerTTLMin = 2 * time.Second
-	speakerTTLMax = 12 * time.Second
-	speakerMaxWindowSec = 15.0
-	speakerWaitDefault = 300 * time.Millisecond
-	speakerWaitEnv     = "OM1_SPEAKER_WAIT_MS"
+	speakerDefaultTTL     = 5 * time.Second
+	speakerTTLPerSecond   = 3.0
+	speakerTTLMin         = 2 * time.Second
+	speakerTTLMax         = 12 * time.Second
+	speakerMaxWindowSec   = 15.0
+	speakerWaitDefault    = 300 * time.Millisecond
+	speakerWaitEnv        = "OM1_SPEAKER_WAIT_MS"
 )
 
 // SpeakerFace is one face's verdict for an utterance window.
@@ -91,11 +90,11 @@ type SpeakerProvider struct {
 	client  *http.Client
 	ttl     time.Duration
 
-	mu     sync.RWMutex
-	latest *SpeakerResult
-	pending chan struct{}
+	mu       sync.RWMutex
+	latest   *SpeakerResult
+	pending  chan struct{}
 	disabled bool
-	lastErr error
+	lastErr  error
 }
 
 var (

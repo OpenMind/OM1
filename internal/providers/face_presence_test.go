@@ -179,7 +179,6 @@ func TestFetchSnapshotErrorStatus(t *testing.T) {
 	require.Contains(t, err.Error(), "/who")
 }
 
-
 func twoFaces() *PresenceSnapshot {
 	return &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "jan", UUID: "j1", Area: 9000, TrackID: 61},   // nearest
@@ -242,7 +241,6 @@ func TestToText_EnrolledButUnnamedSpeaker(t *testing.T) {
 }
 
 func timeNow() time.Time { return time.Now() }
-
 
 func TestAttributedUser_FollowsSpeakerNotProximity(t *testing.T) {
 	Speaker().Reset()
@@ -308,7 +306,6 @@ func TestAttributedUser_SpeakerOffScreenKeepsIdentity(t *testing.T) {
 	require.Equal(t, "w1", uuid)
 	require.True(t, measured)
 }
-
 
 func TestToText_SpeakerCannotBeEnrolled(t *testing.T) {
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
