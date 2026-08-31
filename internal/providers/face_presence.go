@@ -81,6 +81,7 @@ type FaceEntry struct {
 	CreatedAgoSec  *float64 `json:"created_ago_sec"`   // UUID age in seconds; null for unknown
 	LastSeenAgoSec *float64 `json:"last_seen_ago_sec"` // sticky session-start gap; null until first confident match
 	LastSeenISO    *string  `json:"last_seen_iso"`     // ISO timestamp of previous sighting
+	Enrolling      bool     `json:"enrolling"`
 }
 
 // PresenceSnapshot is the parsed /who response.
@@ -174,6 +175,10 @@ func (p *FacePresenceProvider) FetchSnapshot(ctx context.Context) (PresenceSnaps
 // ToText renders the snapshot into one LLM-readable line.
 // Returns "" when no actionable faces are present.
 func (s *PresenceSnapshot) ToText() string {
+	return s.toTextWithSpeaker(Speaker().Latest(), Speaker().Available())
+}
+
+func (s *PresenceSnapshot) toTextWithSpeaker(spk *SpeakerResult, available bool) string {
 	if s == nil || len(s.Faces) == 0 {
 		return ""
 	}
@@ -188,11 +193,18 @@ func (s *PresenceSnapshot) ToText() string {
 		return faces[i].TrackID < faces[j].TrackID
 	})
 
+	speakingTrack := -1
+	if spk.Identified() {
+		speakingTrack = spk.TrackID
+	}
+
 	var kept []*FaceEntry
 	for i := range faces {
 		f := &faces[i]
 		if f.Name == "unknown" || f.Name == "" {
-			continue
+			if f.TrackID != speakingTrack || speakingTrack < 0 {
+				continue
+			}
 		}
 		kept = append(kept, f)
 	}
@@ -211,20 +223,115 @@ func (s *PresenceSnapshot) ToText() string {
 	descriptor += " (nearest first; nearest face is closest to the camera and most likely addressing the robot)"
 
 	var parts []string
+	var speakerEntry string
+	speakerEnrolling := false
+	speakerUUID := ""
 	for _, f := range kept {
 		var entry string
-		if strings.HasPrefix(f.Name, "anon_") {
+		switch {
+		case f.Name == "unknown" || f.Name == "":
+			entry = "an unrecognised person"
+		case strings.HasPrefix(f.Name, "anon_"):
 			entry = formatAnonEntry(*f)
-		} else {
+		default:
 			entry = formatNamedEntry(*f)
 		}
-		if f == closest {
-			entry += " [closest, likely speaking]"
+		switch {
+		case speakingTrack >= 0 && f.TrackID == speakingTrack:
+			entry += " [SPEAKING NOW]"
+			speakerEntry = entry
+			speakerEnrolling = f.Enrolling
+			speakerUUID = f.UUID
+		case speakingTrack >= 0:
+			entry += " [not speaking]"
+		case f == closest:
+			entry += " [closest, likely speaking — GUESS, no speech detection]"
 		}
 		parts = append(parts, entry)
 	}
 
-	return fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
+	line := fmt.Sprintf("%s — %s", descriptor, strings.Join(parts, ", "))
+	if speakerUUID == "" {
+		speakerUUID = spk.identityUUID()
+	} else {
+		Speaker().NoteIdentity(speakingTrack, speakerUUID)
+	}
+	return line + speakerSuffix(
+		spk, available, speakingTrack, speakerEntry, speakerEnrolling, speakerUUID)
+}
+
+func speakerSuffix(
+	spk *SpeakerResult, available bool, speakingTrack int,
+	speakerEntry string, speakerEnrolling bool, speakerUUID string,
+) string {
+	if !available {
+		return "\nSpeaker: unknown (no active-speaker detection running; " +
+			"do NOT assume the nearest face is the one talking)"
+	}
+	if spk == nil {
+		if Speaker().Pending() {
+			return "\nSpeaker: still being resolved for this utterance — " +
+				"do not attribute it to anyone yet"
+		}
+		return "\nSpeaker: unknown (no utterance resolved yet)"
+	}
+	if speakingTrack < 0 {
+		return "\nSpeaker: unknown (nobody scored as speaking over the last utterance)"
+	}
+	if speakerUUID == "" && !speakerEnrolling {
+		return fmt.Sprintf(
+			"\nSpeaker: %s (track %d, confidence %.2f) — their face cannot be "+
+				"enrolled from where they are, so you cannot save a name for "+
+				"them yet. You may invite them once to come closer or face you; "+
+				"if they do not, let it go and keep talking normally.",
+			speakerName(spk), spk.TrackID, spk.Score)
+	}
+	if speakerEntry == "" {
+		return fmt.Sprintf(
+			"\nSpeaker: %s (track %d, confidence %.2f) — no longer visible",
+			speakerName(spk), spk.TrackID, spk.Score)
+	}
+	return fmt.Sprintf(
+		"\nSpeaker: %s (track %d, confidence %.2f) — attribute what was just said to THIS person",
+		speakerName(spk), spk.TrackID, spk.Score)
+}
+
+func (s *PresenceSnapshot) AttributedUser() (uuid string, name string, measured bool) {
+	if s == nil {
+		return "", "", false
+	}
+	if spk := Speaker().Latest(); spk.Identified() {
+		for i := range s.Faces {
+			f := &s.Faces[i]
+			if f.TrackID != spk.TrackID || f.UUID == "" {
+				continue
+			}
+			n := f.Name
+			if strings.HasPrefix(n, "anon_") || n == "unknown" {
+				n = ""
+			}
+			return f.UUID, n, true
+		}
+		if spk.UUID != "" {
+			n := spk.Name
+			if strings.HasPrefix(n, "anon_") || n == "unknown" {
+				n = ""
+			}
+			return spk.UUID, n, true
+		}
+	}
+	return s.ClosestUUID, s.ClosestName, false
+}
+
+func speakerName(spk *SpeakerResult) string {
+	switch {
+	case spk.Name != "" && !strings.HasPrefix(spk.Name, "anon_") && spk.Name != "unknown":
+		return spk.Name
+	case spk.UUID != "":
+		return "an enrolled but unnamed person"
+	default:
+		return "an unrecognised person"
+	}
 }
 
 // formatNamedEntry — three-tier label based on last-seen gap.

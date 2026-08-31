@@ -324,9 +324,11 @@ func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 	switch msg.Type {
 	case "speech_start":
 		s.speechStartTime = time.Now()
+		s.speechEndTime = time.Time{}
 		s.speechStarted = true
 	case "speech_end":
 		if s.speechStarted {
+			s.speechEndTime = time.Now()
 			s.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, time.Since(s.speechStartTime))
 		}
 	case "end_of_utterance":

@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 )
 
@@ -52,6 +53,7 @@ type transcriberStream struct {
 
 	mu              sync.Mutex
 	speechStartTime time.Time
+	speechEndTime   time.Time
 	speechStarted   bool
 
 	stats ASRStatistics
@@ -136,6 +138,14 @@ func (s *transcriberStream) sendChunkAt(pcm []byte, capture time.Time) {
 	s.stats.mu.Unlock()
 }
 
+func (s *transcriberStream) speechWindow() (start, end time.Time) {
+	start = s.speechStartTime
+	if !s.speechEndTime.IsZero() && s.speechEndTime.After(start) {
+		return start, s.speechEndTime
+	}
+	return start, time.Now()
+}
+
 // onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing to parseMessage,
 // and forwards any accepted transcript to onTranscript.
 func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
@@ -149,11 +159,14 @@ func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
 
 	s.mu.Lock()
 	transcript := s.parseMessage(s, msg)
+	speechStart, speechEnd := s.speechWindow()
 	s.mu.Unlock()
 
 	if transcript == "" {
 		return
 	}
+
+	providers.Speaker().ResolveAsync(speechStart, speechEnd)
 
 	if s.onTranscript != nil {
 		s.onTranscript(s.provider, transcript)

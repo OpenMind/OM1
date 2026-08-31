@@ -169,6 +169,8 @@ func (a *asrSensorCore) pollLoop(ctx context.Context, out chan any) {
 		if err != nil {
 			return
 		}
+		providers.Speaker().WaitFresh(ctx)
+
 		select {
 		case out <- raw:
 		case <-ctx.Done():

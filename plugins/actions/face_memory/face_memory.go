@@ -47,15 +47,15 @@ func (FaceMemoryOp) EnumValues() []string {
 
 // FaceMemoryInput is the LLM-facing schema for the unified action.
 type FaceMemoryInput struct {
-	Op          FaceMemoryOp `json:"op"           description:"Which face memory operation to perform."`
-	ID          string       `json:"id"           description:"Target id for selfie enrollment (e.g. 'wendy'). Only used when op=selfie."`
-	Force       bool         `json:"force"        description:"Bypass cross-name reject for selfie (default false). Only used when op=selfie."`
-	FromID      string       `json:"from_id"      description:"Current (wrong) id for correct_identity."`
-	ToID        string       `json:"to_id"        description:"New id for correct_identity or set_name."`
-	TargetName  string       `json:"target_name"  description:"Confirmed name for merge (e.g. 'sean')."`
-	ConfirmedBy string       `json:"confirmed_by" description:"How merge was confirmed (e.g. 'user_voice')."`
-	TopK        int          `json:"top_k"        description:"Candidates for find_similar (default 3)."`
-	MinSim      float64      `json:"min_sim"      description:"Min cosine sim for find_similar (default 0.30)."`
+	Op          FaceMemoryOp `json:"op"                     description:"Which face memory operation to perform."`
+	ID          string       `json:"id,omitempty"           description:"Name for op=selfie ONLY. For op=set_name use to_id instead."`
+	Force       bool         `json:"force,omitempty"        description:"Bypass cross-name reject for selfie (default false). Only used when op=selfie."`
+	FromID      string       `json:"from_id,omitempty"      description:"Current (wrong) id for correct_identity."`
+	ToID        string       `json:"to_id,omitempty"        description:"The name to store. REQUIRED for op=set_name and op=correct_identity."`
+	TargetName  string       `json:"target_name,omitempty"  description:"Confirmed name for merge (e.g. 'sean')."`
+	ConfirmedBy string       `json:"confirmed_by,omitempty" description:"How merge was confirmed (e.g. 'user_voice')."`
+	TopK        int          `json:"top_k,omitempty"        description:"Candidates for find_similar (default 3)."`
+	MinSim      float64      `json:"min_sim,omitempty"      description:"Min cosine sim for find_similar (default 0.30)."`
 }
 
 func init() {
@@ -192,6 +192,14 @@ func (c *Connector) Tick(ctx context.Context) { <-ctx.Done() }
 func (c *Connector) Stop()                    {}
 
 func (c *Connector) doSelfie(ctx context.Context, args map[string]any) (any, error) {
+	if spk := providers.Speaker().Latest(); spk.Identified() && spk.UUID != "" {
+		c.log.Info("face_memory/selfie: speaker already enrolled, naming instead",
+			zap.String("uuid", shortUUID(spk.UUID)), zap.Int("track", spk.TrackID))
+		return c.doSetName(ctx, map[string]any{
+			"to_id": util.StringFrom(args["id"], ""),
+		})
+	}
+
 	name := strings.TrimSpace(util.StringFrom(args["id"], ""))
 	if name == "" {
 		c.writeStatus("result=bad_id detail=empty")
@@ -610,17 +618,102 @@ func (c *Connector) dispatchMergeResponse(resp map[string]any, targetName string
 func (c *Connector) doSetName(_ context.Context, args map[string]any) (any, error) {
 	toID := normID(args, "to_id")
 	if toID == "" {
+		toID = normID(args, "id")
+	}
+	if toID == "" {
 		c.writeStatus("result=bad_id to=")
 		c.log.Error("face_memory/set_name: missing to_id")
 		return nil, nil
 	}
 
-	resp := c.postJSON("/set_name_current", map[string]any{
-		"name":         toID,
-		"confirmed_by": "user_voice",
-	})
-	c.dispatchSetNameCurrentResponse(resp, toID)
-	return nil, nil
+	if spk := providers.Speaker().Latest(); spk.Identified() {
+		body := map[string]any{"name": toID, "confirmed_by": "user_voice"}
+		if spk.UUID != "" {
+			body["uuid"] = spk.UUID
+		} else {
+			body["track_id"] = spk.TrackID
+		}
+
+		resp := c.postJSON("/set_name", body)
+
+		if spk.UUID != "" && resp != nil {
+			if errStr, _ := resp["error"].(string); errStr == "uuid_not_found" {
+				c.log.Info("face_memory/set_name: uuid gone, retrying by track",
+					zap.String("uuid", shortUUID(spk.UUID)), zap.Int("track", spk.TrackID))
+				resp = c.postJSON("/set_name", map[string]any{
+					"name":         toID,
+					"track_id":     spk.TrackID,
+					"confirmed_by": "user_voice",
+				})
+			}
+		}
+
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+	}
+
+	dominant, n := dominantFace()
+	switch {
+	case n == 0 || n == 1:
+		c.log.Info("face_memory/set_name: single face, no ambiguity",
+			zap.String("name", toID))
+		resp := c.postJSON("/set_name_current", map[string]any{
+			"name":         toID,
+			"confirmed_by": "user_voice",
+		})
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+
+	case dominant != nil:
+		c.log.Info("face_memory/set_name: no measured speaker, one face clearly dominant",
+			zap.Int("track", dominant.TrackID), zap.Int("visible_faces", n),
+			zap.String("name", toID))
+		body := map[string]any{"name": toID, "confirmed_by": "user_voice"}
+		if dominant.UUID != nil && *dominant.UUID != "" {
+			body["uuid"] = *dominant.UUID
+		} else {
+			body["track_id"] = dominant.TrackID
+		}
+		resp := c.postJSON("/set_name", body)
+		c.dispatchSetNameCurrentResponse(resp, toID)
+		return nil, nil
+
+	default:
+		c.writeStatus(fmt.Sprintf("result=ambiguous_speaker faces=%d name=%s", n, toID))
+		c.log.Info("face_memory/set_name: declined, several faces and none dominant",
+			zap.Int("visible_faces", n), zap.String("name", toID))
+		return nil, nil
+	}
+}
+
+const faceDominanceRatio = 2.5
+
+func dominantFace() (*providers.SpeakerFace, int) {
+	spk := providers.Speaker().Latest()
+	if spk == nil || len(spk.Faces) == 0 {
+		return nil, 0
+	}
+	faces := spk.Faces
+	if len(faces) == 1 {
+		return &faces[0], 1
+	}
+
+	first, second := -1, -1
+	for i := range faces {
+		if first < 0 || faces[i].Area > faces[first].Area {
+			second, first = first, i
+		} else if second < 0 || faces[i].Area > faces[second].Area {
+			second = i
+		}
+	}
+	if first < 0 || second < 0 || faces[second].Area <= 0 {
+		return nil, len(faces)
+	}
+	ratio := float64(faces[first].Area) / float64(faces[second].Area)
+	if ratio < faceDominanceRatio {
+		return nil, len(faces)
+	}
+	return &faces[first], len(faces)
 }
 
 func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID string) {
@@ -653,6 +746,9 @@ func (c *Connector) dispatchSetNameCurrentResponse(resp map[string]any, toID str
 	case "uuid_not_found":
 		c.writeStatus("result=uuid_not_found")
 		// c.speak("I couldn't find that person anymore.")
+	case "track_not_identified":
+		detail := util.StringFrom(resp["detail"], "")
+		c.writeStatus(fmt.Sprintf("result=track_not_identified detail=%s", detail))
 	case "recognition_disabled":
 		c.writeStatus("result=recognition_disabled")
 		// c.speak("I can't update names right now.")
@@ -776,7 +872,39 @@ func shortUUID(uuid string) string {
 	return uuid
 }
 
-// normID extracts a string arg and normalizes it to a lowercase, trimmed id.
+// normID extracts a string arg and normalizes it into a valid identity id.
 func normID(args map[string]any, k string) string {
-	return util.TrimLower(util.StringFrom(args[k], ""))
+	return normalizeID(util.StringFrom(args[k], ""))
+}
+
+// normalizeID maps arbitrary text onto the receiver's identity-name rules:
+// lowercase, [a-z0-9_-], at most 32 characters.
+func normalizeID(raw string) string {
+	lowered := util.TrimLower(raw)
+
+	var b strings.Builder
+	lastDash := false
+	for _, r := range lowered {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_':
+			b.WriteRune(r)
+			lastDash = false
+		case r == ' ' || r == '-' || r == '\'' || r == '.':
+			// Word separators collapse to a single dash, and never lead.
+			if b.Len() > 0 && !lastDash {
+				b.WriteRune('-')
+				lastDash = true
+			}
+		default:
+			// Accents, CJK, punctuation: dropped rather than transliterated.
+			// A wrong guess at romanisation is worse than a shorter name,
+			// and the model is asked for a Latin spelling in the prompt.
+		}
+	}
+
+	out := strings.TrimRight(b.String(), "-")
+	if len(out) > 32 {
+		out = strings.TrimRight(out[:32], "-")
+	}
+	return out
 }
