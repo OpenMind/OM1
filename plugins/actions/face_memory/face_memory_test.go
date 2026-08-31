@@ -51,7 +51,7 @@ func testConnector(t *testing.T, baseURL string) *Connector {
 }
 
 func setSpeaker(trackID int, name, uuid string) {
-	providers.Speaker().Reset()
+	providers.Speaker().SetLatestForTest(nil)
 	providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 		TrackID: trackID, Name: name, UUID: uuid, ResolvedAt: time.Now(),
 	})
@@ -65,7 +65,7 @@ func TestSetNameTargetsTheSpeakerNotTheNearestFace(t *testing.T) {
 		"ok": true, "uuid": "s1", "name": "sean", "created": true, "sample_count": 3,
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(77, "unknown", "") // Sean: heard, but not enrolled yet
 	c := testConnector(t, srv.URL)
@@ -92,9 +92,9 @@ func TestSetNameFallsBackWhenNoSpeakerMeasured(t *testing.T) {
 		"ok": true, "uuid": "w1", "name": "wendy",
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
-	providers.Speaker().Reset() // nothing resolved
+	providers.Speaker().SetLatestForTest(nil) // nothing resolved
 	c := testConnector(t, srv.URL)
 
 	_, err := c.doSetName(context.Background(), map[string]any{"to_id": "wendy"})
@@ -110,10 +110,10 @@ func TestSetNameFallsBackWhenNoSpeakerMeasured(t *testing.T) {
 func TestSetNameFallsBackWhenNobodyScoredAsSpeaking(t *testing.T) {
 	srv, got, mu := fakeVideoProcessor(t, map[string]any{"ok": true, "name": "x"})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	// Resolved, but nobody cleared the threshold: TrackID -1 is not an identity.
-	providers.Speaker().Reset()
+	providers.Speaker().SetLatestForTest(nil)
 	providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 		TrackID: -1, ResolvedAt: time.Now(),
 	})
@@ -130,7 +130,7 @@ func TestSetNameFallsBackWhenNobodyScoredAsSpeaking(t *testing.T) {
 func TestSetNameRejectsEmptyName(t *testing.T) {
 	srv, got, mu := fakeVideoProcessor(t, map[string]any{"ok": true})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(77, "", "")
 	c := testConnector(t, srv.URL)
@@ -148,11 +148,11 @@ func TestSetNameRejectsEmptyName(t *testing.T) {
 func TestSetNameRefusesWhenSeveralFacesAreComparable(t *testing.T) {
 	srv, got, mu := fakeVideoProcessor(t, map[string]any{"ok": true, "name": "sean"})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	// Two people side by side: nothing distinguishes them by area, and the
 	// audio model had no opinion.
-	providers.Speaker().Reset()
+	providers.Speaker().SetLatestForTest(nil)
 	providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 		TrackID:    -1,
 		ResolvedAt: time.Now(),
@@ -180,10 +180,10 @@ func TestSetNameAcceptsAClearlyDominantFace(t *testing.T) {
 		"ok": true, "uuid": "s1", "name": "sean",
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	uuid := "s1"
-	providers.Speaker().Reset()
+	providers.Speaker().SetLatestForTest(nil)
 	providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 		TrackID:    -1,
 		ResolvedAt: time.Now(),
@@ -206,7 +206,7 @@ func TestSetNameAcceptsAClearlyDominantFace(t *testing.T) {
 
 func TestDominanceRatioIsTheBoundary(t *testing.T) {
 	mk := func(a, b int) int {
-		providers.Speaker().Reset()
+		providers.Speaker().SetLatestForTest(nil)
 		providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 			TrackID: -1, ResolvedAt: time.Now(),
 			Faces: []providers.SpeakerFace{
@@ -220,7 +220,7 @@ func TestDominanceRatioIsTheBoundary(t *testing.T) {
 		}
 		return d.TrackID
 	}
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	require.Equal(t, 0, mk(2400, 1000), "2.4x is not clear enough")
 	require.Equal(t, 1, mk(2500, 1000), "2.5x is the boundary")
@@ -233,9 +233,9 @@ func TestSetNameStillWorksWithASingleFace(t *testing.T) {
 		"ok": true, "uuid": "w1", "name": "wendy",
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
-	providers.Speaker().Reset()
+	providers.Speaker().SetLatestForTest(nil)
 	providers.Speaker().SetLatestForTest(&providers.SpeakerResult{
 		TrackID:    -1,
 		ResolvedAt: time.Now(),
@@ -259,7 +259,7 @@ func TestSetNameUsesTheSpeakerUUIDWhenKnown(t *testing.T) {
 		"ok": true, "uuid": "s1", "name": "sean",
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(77, "anon_73d0a4", "s1") // enrolled, unnamed
 	c := testConnector(t, srv.URL)
@@ -298,7 +298,7 @@ func TestSetNameRetriesByTrackWhenUUIDVanished(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "uuid": "new", "name": "sean"})
 	}))
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(77, "anon_73d0a4", "gone")
 	c := testConnector(t, srv.URL)
@@ -364,7 +364,7 @@ func TestSetNameAcceptsNameInEitherField(t *testing.T) {
 				"ok": true, "uuid": "s1", "name": "li-fan",
 			})
 			defer srv.Close()
-			defer providers.Speaker().Reset()
+			defer providers.Speaker().SetLatestForTest(nil)
 
 			setSpeaker(77, "anon_1", "s1")
 			c := testConnector(t, srv.URL)
@@ -383,7 +383,7 @@ func TestSetNameAcceptsNameInEitherField(t *testing.T) {
 func TestSetNamePrefersToIDWhenBothPresent(t *testing.T) {
 	srv, got, mu := fakeVideoProcessor(t, map[string]any{"ok": true, "name": "b"})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(77, "anon_1", "s1")
 	c := testConnector(t, srv.URL)
@@ -406,7 +406,7 @@ func TestSelfieBecomesRenameWhenTheSpeakerIsAlreadyEnrolled(t *testing.T) {
 		"ok": true, "uuid": "d1", "name": "difan",
 	})
 	defer srv.Close()
-	defer providers.Speaker().Reset()
+	defer providers.Speaker().SetLatestForTest(nil)
 
 	setSpeaker(3, "anon_f3b609", "d1") // auto-enrolled, unnamed
 	c := testConnector(t, srv.URL)

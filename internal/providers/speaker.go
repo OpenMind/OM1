@@ -165,18 +165,6 @@ func (p *SpeakerProvider) LastError() error {
 	return p.lastErr
 }
 
-func (p *SpeakerProvider) Reset() {
-	p.mu.Lock()
-	if p.pending != nil {
-		close(p.pending)
-		p.pending = nil
-	}
-	p.latest = nil
-	p.disabled = false
-	p.lastErr = nil
-	p.mu.Unlock()
-}
-
 func (p *SpeakerProvider) ResolveAsync(start, end time.Time) {
 	if !p.Available() {
 		return

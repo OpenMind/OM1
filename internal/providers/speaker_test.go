@@ -110,10 +110,6 @@ func TestVVADDisabledLatchesOff(t *testing.T) {
 	if p.Available() {
 		t.Error("vvad_disabled is structural; the provider should stop asking")
 	}
-	p.Reset()
-	if !p.Available() {
-		t.Error("Reset should clear the latch")
-	}
 }
 
 func TestWindowIsSentAndClamped(t *testing.T) {
