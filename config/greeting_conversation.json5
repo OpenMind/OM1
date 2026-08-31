@@ -166,6 +166,9 @@ You should prioritize safe, comfortable, and positive human interaction.",
         },
         {
           type: "FacePresence",
+          config: {
+            speaker_detection: true,
+          },
         },
         {
           type: "GreetingStatus",
@@ -339,6 +342,9 @@ You should prioritize safe, comfortable, and positive human interaction.",
         },
         {
           type: "FacePresence",
+          config: {
+            speaker_detection: true,
+          },
         },
         {
           type: "VLMBackground",

@@ -328,8 +328,6 @@ func googleParseMessage(s *transcriberStream, msg ASRMessage) string {
 		s.speechStarted = true
 	case "speech_end":
 		if s.speechStarted {
-			// Google tells us when the talking stopped, well before the
-			// transcript is ready. Keep it: see speechWindow.
 			s.speechEndTime = time.Now()
 			s.observeASR(metrics.ASRSpeechDuration, metrics.ASRSpeechDurationLast, time.Since(s.speechStartTime))
 		}

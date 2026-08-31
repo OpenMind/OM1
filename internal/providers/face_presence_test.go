@@ -243,8 +243,8 @@ func TestToText_EnrolledButUnnamedSpeaker(t *testing.T) {
 func timeNow() time.Time { return time.Now() }
 
 func TestAttributedUser_FollowsSpeakerNotProximity(t *testing.T) {
-	Speaker().SetLatestForTest(nil)
-	defer Speaker().SetLatestForTest(nil)
+	SetSpeaker(nil)
+	defer SetSpeaker(nil)
 
 	snap := twoFaces()
 	snap.ClosestUUID, snap.ClosestName = "j1", "jan" // what proximity would pick
@@ -260,8 +260,8 @@ func TestAttributedUser_FollowsSpeakerNotProximity(t *testing.T) {
 }
 
 func TestAttributedUser_UnnamedPersonStillGetsRecorded(t *testing.T) {
-	Speaker().SetLatestForTest(nil)
-	defer Speaker().SetLatestForTest(nil)
+	SetSpeaker(nil)
+	defer SetSpeaker(nil)
 
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "anon_73d0a4", UUID: "a1", Area: 3000, TrackID: 54},
@@ -278,8 +278,8 @@ func TestAttributedUser_UnnamedPersonStillGetsRecorded(t *testing.T) {
 }
 
 func TestAttributedUser_FallsBackToProximity(t *testing.T) {
-	Speaker().SetLatestForTest(nil)
-	defer Speaker().SetLatestForTest(nil)
+	SetSpeaker(nil)
+	defer SetSpeaker(nil)
 
 	snap := twoFaces()
 	snap.ClosestUUID, snap.ClosestName = "j1", "jan"
@@ -291,8 +291,8 @@ func TestAttributedUser_FallsBackToProximity(t *testing.T) {
 }
 
 func TestAttributedUser_SpeakerOffScreenKeepsIdentity(t *testing.T) {
-	Speaker().SetLatestForTest(nil)
-	defer Speaker().SetLatestForTest(nil)
+	SetSpeaker(nil)
+	defer SetSpeaker(nil)
 
 	snap := twoFaces()
 	snap.ClosestUUID, snap.ClosestName = "j1", "jan"
@@ -348,14 +348,16 @@ func TestToText_EnrolledSpeakerNeverAskedToMove(t *testing.T) {
 }
 
 func TestToText_EnrolledSpeakerIsNotAskedToMove(t *testing.T) {
-	Speaker().SetLatestForTest(nil)
-	defer Speaker().SetLatestForTest(nil)
+	SetSpeaker(nil)
+	defer SetSpeaker(nil)
 
 	snap := &PresenceSnapshot{Faces: []FaceEntry{
 		{Name: "anon_73d0a4", UUID: "a1", Area: 4000, TrackID: 77, Enrolling: false},
 	}}
 	spk := &SpeakerResult{TrackID: 77, Name: "anon_73d0a4", UUID: "", Score: 0.8, ResolvedAt: timeNow()}
-	Speaker().SetLatestForTest(spk)
+	Speaker().mu.Lock()
+	Speaker().latest = spk
+	Speaker().mu.Unlock()
 
 	text := snap.toTextWithSpeaker(spk, true)
 

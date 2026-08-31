@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// The window handed to active-speaker detection must cover the talking and
-// nothing else. These pin the three ways it gets its end.
-
 func TestWindowEndsAtTheVendorsSpeechEnd(t *testing.T) {
 	s := &transcriberStream{}
 	s.speechStartTime = time.Now().Add(-2 * time.Second)
@@ -24,7 +21,6 @@ func TestWindowEndsAtTheVendorsSpeechEnd(t *testing.T) {
 }
 
 func TestWindowFallsBackToNowWithoutASpeechEnd(t *testing.T) {
-	// ElevenLabs' path: the transcript itself marks the end.
 	s := &transcriberStream{}
 	s.speechStartTime = time.Now().Add(-time.Second)
 
@@ -36,8 +32,6 @@ func TestWindowFallsBackToNowWithoutASpeechEnd(t *testing.T) {
 }
 
 func TestStaleSpeechEndIsIgnored(t *testing.T) {
-	// A mark left over from the previous utterance would end this window
-	// before it began, and /speaking would be asked about negative time.
 	s := &transcriberStream{}
 	s.speechEndTime = time.Now().Add(-10 * time.Second)
 	s.speechStartTime = time.Now().Add(-time.Second)

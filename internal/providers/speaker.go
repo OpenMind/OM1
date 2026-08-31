@@ -54,26 +54,19 @@ type speakingResponse struct {
 
 // SpeakerResult is one resolved utterance: who said it, and how the rest scored.
 type SpeakerResult struct {
-	// TrackID is the face the audio-visual model picked. -1 when nobody
-	// scored above the threshold -- silence, an off-camera voice, or the
-	// robot hearing itself.
 	TrackID int
 	Name    string
 	UUID    string
 	Score   float64
 	Faces   []SpeakerFace
 
-	// ResolvedAt is when the answer arrived, for the staleness check.
 	ResolvedAt time.Time
-	// Window is the utterance span that was scored.
+
 	WindowStart time.Time
 	WindowEnd   time.Time
 }
 
-// identityUUID is the speaker verdict's own copy of the identity, used only
-// as a fallback. It is null whenever the match was not confident at that
-// instant, which is routine for an auto-enrolled face, so the face entry in
-// the presence snapshot is the better source.
+// identityUUID returns the speaker's UUID, or "" if none.
 func (r *SpeakerResult) identityUUID() string {
 	if r == nil {
 		return ""
@@ -90,27 +83,48 @@ type SpeakerProvider struct {
 	client  *http.Client
 	ttl     time.Duration
 
-	mu       sync.RWMutex
+	enabled  bool
 	latest   *SpeakerResult
 	pending  chan struct{}
 	disabled bool
 	lastErr  error
+
+	mu sync.RWMutex
 }
 
 var (
-	speakerOnce      sync.Once
 	speakerWaitOnce  sync.Once
 	speakerWaitValue time.Duration
-	speakerInstance  *SpeakerProvider
+
+	speakerMu       sync.RWMutex
+	speakerInstance *SpeakerProvider
 )
 
-// Speaker returns the singleton SpeakerProvider.
 func Speaker() *SpeakerProvider {
-	speakerOnce.Do(func() { speakerInstance = NewSpeakerProvider("") })
+	speakerMu.RLock()
+	p := speakerInstance
+	speakerMu.RUnlock()
+	if p != nil {
+		return p
+	}
+
+	speakerMu.Lock()
+	defer speakerMu.Unlock()
+	if speakerInstance == nil {
+		speakerInstance = NewSpeakerProvider("")
+	}
 	return speakerInstance
 }
 
-// NewSpeakerProvider constructs a provider. An empty baseURL uses the default.
+func SetSpeaker(p *SpeakerProvider) {
+	if p == nil {
+		p = NewSpeakerProvider("")
+	}
+	speakerMu.Lock()
+	speakerInstance = p
+	speakerMu.Unlock()
+}
+
 func NewSpeakerProvider(baseURL string) *SpeakerProvider {
 	if baseURL == "" {
 		baseURL = speakerDefaultBaseURL
@@ -153,16 +167,16 @@ func (p *SpeakerProvider) resultTTL(r *SpeakerResult) time.Duration {
 	return ttl
 }
 
+func (p *SpeakerProvider) Enable() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.enabled = true
+}
+
 func (p *SpeakerProvider) Available() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return !p.disabled
-}
-
-func (p *SpeakerProvider) LastError() error {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.lastErr
+	return p.enabled && !p.disabled
 }
 
 func (p *SpeakerProvider) ResolveAsync(start, end time.Time) {
@@ -196,8 +210,9 @@ func (p *SpeakerProvider) ResolveAsync(start, end time.Time) {
 func (p *SpeakerProvider) WaitFresh(ctx context.Context) {
 	p.mu.RLock()
 	done := p.pending
+	off := !p.enabled || p.disabled
 	p.mu.RUnlock()
-	if done == nil {
+	if done == nil || off {
 		return
 	}
 
@@ -241,8 +256,6 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 	body := map[string]any{}
 	if !start.IsZero() && end.After(start) {
 		if end.Sub(start).Seconds() > speakerMaxWindowSec {
-			// Keep the tail: the end of a long window is the part that
-			// produced the transcript just accepted.
 			start = end.Add(-time.Duration(speakerMaxWindowSec * float64(time.Second)))
 		}
 		body["win_start_ms"] = start.UnixMilli()
@@ -289,8 +302,6 @@ func (p *SpeakerProvider) Resolve(ctx context.Context, start, end time.Time) (*S
 	if parsed.Error != "" {
 		err := fmt.Errorf("speaking: %s", parsed.Error)
 		if parsed.Error == "vvad_disabled" {
-			// Structural, not transient: the pipeline was started without
-			// an LR-ASD engine and no amount of retrying will change that.
 			p.mu.Lock()
 			p.disabled = true
 			p.lastErr = err
@@ -336,19 +347,6 @@ func (p *SpeakerProvider) NoteIdentity(trackID int, uuid string) {
 		return
 	}
 	p.latest.UUID = uuid
-}
-
-func (p *SpeakerProvider) SetLatestForTest(r *SpeakerResult) {
-	p.mu.Lock()
-	p.latest = r
-	p.mu.Unlock()
-}
-
-func (p *SpeakerProvider) SetBaseURLForTest(u string) {
-	p.mu.Lock()
-	p.baseURL = u
-	p.disabled = false
-	p.mu.Unlock()
 }
 
 func (p *SpeakerProvider) noteErr(err error) {

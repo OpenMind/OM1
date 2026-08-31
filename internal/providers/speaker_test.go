@@ -29,6 +29,12 @@ func speakingServer(t *testing.T, body map[string]any) *httptest.Server {
 	}))
 }
 
+func newTestSpeaker(baseURL string) *SpeakerProvider {
+	p := NewSpeakerProvider(baseURL)
+	p.Enable()
+	return p
+}
+
 func TestResolveIdentifiesSpeaker(t *testing.T) {
 	uuid := "7fc36a8ae5654cfb994e758436f95e09"
 	srv := speakingServer(t, map[string]any{
@@ -42,7 +48,7 @@ func TestResolveIdentifiesSpeaker(t *testing.T) {
 	})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	start := time.Now().Add(-2 * time.Second)
 	got, err := p.Resolve(context.Background(), start, time.Now())
 	if err != nil {
@@ -68,7 +74,7 @@ func TestLatestExpires(t *testing.T) {
 	})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	p.ttl = 50 * time.Millisecond
 	if _, err := p.Resolve(context.Background(), time.Time{}, time.Now()); err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -89,7 +95,7 @@ func TestNobodySpeaking(t *testing.T) {
 	})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	got, err := p.Resolve(context.Background(), time.Now().Add(-time.Second), time.Now())
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -103,7 +109,7 @@ func TestVVADDisabledLatchesOff(t *testing.T) {
 	srv := speakingServer(t, map[string]any{"error": "vvad_disabled"})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	if _, err := p.Resolve(context.Background(), time.Now(), time.Now()); err == nil {
 		t.Fatal("expected an error")
 	}
@@ -119,7 +125,7 @@ func TestWindowIsSentAndClamped(t *testing.T) {
 	})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	end := time.Now()
 	got, err := p.Resolve(context.Background(), end.Add(-90*time.Second), end)
 	if err != nil {
@@ -141,7 +147,7 @@ func TestResolveAsyncInvalidatesPreviousSpeaker(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	// Seed the previous utterance's answer.
 	p.mu.Lock()
 	p.latest = &SpeakerResult{TrackID: 54, Name: "wendy", ResolvedAt: time.Now()}
@@ -166,7 +172,7 @@ func TestWaitFreshReturnsWhenResolved(t *testing.T) {
 	})
 	defer srv.Close()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
 	start := time.Now()
@@ -177,7 +183,7 @@ func TestWaitFreshReturnsWhenResolved(t *testing.T) {
 }
 
 func TestWaitFreshNoOpWhenNothingPending(t *testing.T) {
-	p := NewSpeakerProvider("http://127.0.0.1:1")
+	p := newTestSpeaker("http://127.0.0.1:1")
 	start := time.Now()
 	p.WaitFresh(context.Background())
 	require.Less(t, time.Since(start), 50*time.Millisecond)
@@ -189,7 +195,7 @@ func TestWaitFreshNoOpWhenNothingPending(t *testing.T) {
 // by hand rather than measured.
 
 func TestTTLScalesWithHowLongTheySpoke(t *testing.T) {
-	p := NewSpeakerProvider("")
+	p := newTestSpeaker("")
 	end := time.Now()
 
 	mk := func(d time.Duration) *SpeakerResult {
@@ -205,17 +211,15 @@ func TestTTLScalesWithHowLongTheySpoke(t *testing.T) {
 }
 
 func TestTTLFallsBackWithoutAWindow(t *testing.T) {
-	// The lookback path carries no window; there is nothing to derive from.
-	p := NewSpeakerProvider("")
+	p := newTestSpeaker("")
 	require.Equal(t, p.ttl, p.resultTTL(&SpeakerResult{}))
 	require.Equal(t, p.ttl, p.resultTTL(nil))
 }
 
 func TestLatestExpiresAgainstItsOwnUtterance(t *testing.T) {
-	p := NewSpeakerProvider("")
+	p := newTestSpeaker("")
 	now := time.Now()
 
-	// Spoke for 300 ms, resolved 3 s ago: past even the floor.
 	p.mu.Lock()
 	p.latest = &SpeakerResult{
 		TrackID: 1, ResolvedAt: now.Add(-3 * time.Second),
@@ -224,7 +228,6 @@ func TestLatestExpiresAgainstItsOwnUtterance(t *testing.T) {
 	p.mu.Unlock()
 	require.Nil(t, p.Latest(), "a very short utterance should not linger")
 
-	// Spoke for 4 s, resolved 3 s ago: still inside 12 s.
 	p.mu.Lock()
 	p.latest = &SpeakerResult{
 		TrackID: 1, ResolvedAt: now.Add(-3 * time.Second),
@@ -235,8 +238,6 @@ func TestLatestExpiresAgainstItsOwnUtterance(t *testing.T) {
 }
 
 func TestWaitFreshEndsWhenTheContextDoes(t *testing.T) {
-	// The only bound the wait imposes itself. Everything else -- how long a
-	// slow endpoint may take -- belongs to the HTTP client, not here.
 	block := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-block
@@ -244,7 +245,7 @@ func TestWaitFreshEndsWhenTheContextDoes(t *testing.T) {
 	defer srv.Close()
 	defer close(block)
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -260,8 +261,6 @@ func TestWaitFreshEndsWhenTheContextDoes(t *testing.T) {
 }
 
 func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
-	// The conversation is the thing that must not stall. A wedged endpoint
-	// costs the turn its attribution and nothing else.
 	block := make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-block
@@ -273,7 +272,7 @@ func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
 	speakerWaitOnce = sync.Once{}
 	defer func() { speakerWaitOnce = sync.Once{} }()
 
-	p := NewSpeakerProvider(srv.URL)
+	p := newTestSpeaker(srv.URL)
 	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
 
 	start := time.Now()
@@ -284,4 +283,36 @@ func TestATurnProceedsWithoutAnAnswer(t *testing.T) {
 		"the reply must not wait on the network timeout")
 	require.GreaterOrEqual(t, elapsed, 40*time.Millisecond)
 	require.Nil(t, p.Latest(), "and it proceeds with an honest absence")
+}
+
+func TestDetectionIsOffUntilEnabled(t *testing.T) {
+	asked := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked <- struct{}{}
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	p := NewSpeakerProvider(srv.URL)
+	require.False(t, p.Available(), "speaker detection is opt-in")
+
+	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
+	require.False(t, p.Pending(), "nothing should be dispatched")
+
+	start := time.Now()
+	p.WaitFresh(context.Background())
+	require.Less(t, time.Since(start), 20*time.Millisecond,
+		"a feature that is off must not delay the transcript at all")
+
+	select {
+	case <-asked:
+		t.Fatal("the service must not be contacted while detection is off")
+	default:
+	}
+
+	p.Enable()
+	require.True(t, p.Available())
+	p.ResolveAsync(time.Now().Add(-time.Second), time.Now())
+	require.True(t, p.Pending())
+	<-asked
 }
