@@ -233,6 +233,17 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 * `UnitreeGo2Odom`
 * `ConversationHistoryInput`, `GreetingStatus`, `Paths`
 
+A `FacePresence` example with speaker detection:
+```json5
+{
+  "type": "FacePresence",
+  "config": {
+    "speaker_detection": true
+  }
+}
+```
+When `speaker_detection` is enabled, OM1 uses audio-visual cues to identify who is speaking. This is more reliable than the default "closest face" heuristic, especially in groups. It makes actions like `face_memory` (see below) more accurate and improves the `current_user_name` and `current_user_id` variables. It requires a capable camera and microphone array.
+
 > The authoritative list is whatever is registered via `inputs.Register(...)` under `plugins/inputs/`. You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). Each input's `config` block is specific to its type — e.g. `GoogleASRInput` accepts `rate`, `chunk`, and `enable_tts_interrupt` (see [VAD & TTS Interrupt](vad_tts_interrupt.md)).
 
 ## Cortex LLM (`cortex_llm`)
@@ -294,7 +305,7 @@ The currently registered action connectors (as `name/connector`) are:
 * **speak** — `speak/elevenlabs_tts`, `speak/elevenlabs_people_tts`, `speak/kokoro_tts`
 * **emotion** — `emotion/zenoh`
 * **navigation** — `navigation/navigation`
-* **face_memory** — `face_memory/face_memory`
+* **face_memory** — `face_memory/face_memory`. Manages the robot's memory of faces, allowing it to learn new people (`selfie`, `set_name`) and recognize them later. The `set_name` operation becomes significantly more accurate when `speaker_detection` is enabled in the `FacePresence` input, as it will name the person who is actually speaking rather than guessing based on proximity.
 * **greeting_conversation** — `greeting_conversation/greeting_conversation_elevenlabs`
 * **robot_action** — `robot_action/http`
 * **Unitree** — `unitree_go2_autonomy/move`, `unitree_go2_autonomy/mppi`, `unitree_go2_location/location`, `unitree_g1_arm/zenoh`
