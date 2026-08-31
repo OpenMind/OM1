@@ -40,7 +40,7 @@ type providerDefaults struct {
 var openAIDefaults = providerDefaults{
 	baseURL:   "https://api.openmind.com/api/core/openai",
 	model:     "gpt-4o-mini",
-	prompt:    "In one concise sentence, describe what you see in this image.",
+	prompt:    "In one concise sentence, describe what you see in the current camera frame.",
 	maxTokens: 300,
 }
 
@@ -62,6 +62,9 @@ type VLMConfig struct {
 	JPEGQuality int    `json:"jpeg_quality"`
 	Width       int    `json:"resolution_width"`
 	Height      int    `json:"resolution_height"`
+
+	// Memory harness: past frames and descriptions re-sent with each request.
+	video.MemoryOptions
 
 	CameraIndex int    `json:"camera_index"`
 	RTSPURL     string `json:"rtsp_url"`
@@ -145,6 +148,7 @@ type vlmBackground struct {
 	log       *zap.Logger
 	describer *video.Describer
 	source    frameSource
+	memory    *video.Memory
 
 	mu      sync.Mutex
 	stopped bool
@@ -153,16 +157,20 @@ type vlmBackground struct {
 // newBackground wires up the frame source and describer for the given config.
 func NewBackground(name string, cfg VLMConfig, source frameSource) bg.Background {
 	log := logger.Get().Named(name)
+	memoryCfg := cfg.MemoryOptions.Config()
 	log.Info("initializing background",
 		zap.String("base_url", cfg.BaseURL),
 		zap.String("model", cfg.Model),
 		zap.Int("fps", cfg.FPS),
+		zap.Int("memory_frames", memoryCfg.MaxFrames),
+		zap.Int("memory_texts", memoryCfg.MaxTexts),
 	)
 
 	return &vlmBackground{
 		name:   name,
 		log:    log,
 		source: source,
+		memory: video.NewMemory(memoryCfg),
 		describer: video.NewDescriber(video.Describer{
 			Name:      name,
 			APIKey:    cfg.APIKey,
@@ -192,7 +200,9 @@ func (b *vlmBackground) Run(ctx context.Context) {
 
 			providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
 
-			text, err := b.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
+			jpegBase64 := base64.StdEncoding.EncodeToString(frame.JPEG)
+			text, err := b.describer.DescribeWithHistory(ctx, jpegBase64,
+				b.memory.History(frame.Timestamp))
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -203,6 +213,7 @@ func (b *vlmBackground) Run(ctx context.Context) {
 			if text == "" {
 				continue
 			}
+			b.memory.Add(frame.Timestamp, jpegBase64, text)
 
 			video.LatestDescription().Set(text, frame.Timestamp)
 		}

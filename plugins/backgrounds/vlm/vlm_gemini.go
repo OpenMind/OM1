@@ -12,7 +12,7 @@ func init() {
 var geminiDefaults = providerDefaults{
 	baseURL: "https://api.openmind.com/api/core/gemini",
 	model:   "gemini-2.5-flash",
-	prompt: "In one concise sentence, describe what you see in this image. " +
+	prompt: "In one concise sentence, describe what you see in the current camera frame. " +
 		"Just the description — no explanation of your reasoning.",
 	maxTokens: 1024,
 }

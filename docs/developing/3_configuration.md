@@ -233,6 +233,27 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 * `UnitreeGo2Odom`
 * `ConversationHistoryInput`, `GreetingStatus`, `Paths`
 
+#### VLM memory harness
+
+The camera-backed VLM inputs and backgrounds (`VLMGemini`, `VLMOpenAI`, and their RTSP variants) do not send a single frame in isolation. Each request carries a short trajectory: a few earlier frames, each labelled with its age and the description the model produced for it, followed by the current frame. That gives the model change over time — someone approaching rather than someone standing there — instead of one still image.
+
+```json5
+{
+  type: "VLMGemini",
+  config: {
+    memory_frames: 3,          // past frames re-sent with the current one (0 disables)
+    memory_texts: 3,           // past descriptions included as a text-only cache
+    memory_interval_sec: 2.0,  // minimum spacing between remembered steps
+    memory_capacity: 12,       // steps retained before the oldest is evicted
+    memory_sampling: "uniform", // "uniform" or "recency" (recency weights the last few seconds)
+  },
+}
+```
+
+The values above are the defaults, so the harness is on without any config. How far back the window reaches is `(memory_capacity - 1)` × the spacing between remembered steps — at least 22s at the defaults. `memory_interval_sec` is a floor on that spacing, not the exact value: a step is remembered only when a description completes at least that long after the last remembered one, so a slower vision endpoint stretches the window rather than shrinking it. Frames captured closer together than the interval are still described, just not remembered, and frames dropped when the endpoint can't keep up never enter memory at all.
+
+Note that `memory_capacity` sizes the buffer, not the request. Only `memory_frames` images are sampled out of it and sent (oldest, newest, and evenly spaced in between), alongside `memory_texts` recent descriptions — raising the capacity lengthens the remembered window without adding image tokens. Set `memory_frames: 0` to send only the current frame — worth doing if per-request image tokens or latency matter more than temporal context. Keep `memory_texts` non-zero even then: the text cache is cheap and carries most of the continuity.
+
 > The authoritative list is whatever is registered via `inputs.Register(...)` under `plugins/inputs/`. You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). Each input's `config` block is specific to its type — e.g. `GoogleASRInput` accepts `rate`, `chunk`, and `enable_tts_interrupt` (see [VAD & TTS Interrupt](vad_tts_interrupt.md)).
 
 ## Cortex LLM (`cortex_llm`)
