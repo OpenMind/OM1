@@ -62,4 +62,16 @@ Timings for OM1's proxy to upstream AI services:
 | `om1_http_upstream_total_seconds` / `_last_seconds` | histogram / gauge | Total upstream service time. |
 | `om1_http_upstream_ttfb_seconds` / `_last_seconds` | histogram / gauge | Upstream time-to-first-byte. |
 
+## Trace export
+
+Emitted only when `use_tracer.prometheus_export.enabled` is set — see [Tracer & Quality Scorer](tracer.md#prometheus-trace-export).
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `om1_trace_info` | gauge ("info" pattern) | One series per buffered trace record; value always `1`, full record (timestamp, generation, `llm_input`, `llm_output`) carried in labels. |
+
+**This metric is served on a separate endpoint, `GET :9090/traces/metrics` — not on `/metrics`, and not on the default registry `/metrics` reads from.** `om1_trace_info` has one time series per LLM turn and carries unbounded free-text label values (full prompts and completions); scraping that into a real Prometheus TSDB on a short interval, the way `job_name: om1` in `prometheus.yml` scrapes `/metrics` every second with 30-day retention, would mean storing every trace forever as permanent, ever-growing cardinality — exactly what Prometheus's data model isn't built for. `/traces/metrics` exists for a single deliberate poller (e.g. a co-located telemetry sidecar) to pull from and archive elsewhere. **Do not add `/traces/metrics` as a target in `prometheus.yml`.**
+
+The exporter only keeps the most recent 200 records buffered (`internal/tracer/traceexport.maxBuffered`); older ones are evicted as new ones arrive, so a poller needs to poll more often than that window fills at the deployment's trace rate, or it will miss records.
+
 > The authoritative list is defined in `internal/metrics/metrics.go`.

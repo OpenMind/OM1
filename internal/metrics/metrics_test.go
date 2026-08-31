@@ -3,6 +3,7 @@ package metrics
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -75,4 +76,25 @@ func TestRecordQualityTurnNoResponse(t *testing.T) {
 	RecordQualityTurn("English", "not_addressed", "")
 	require.Equal(t, beforeTurns, testutil.ToFloat64(QualityLiveTurnsScored),
 		"no coherence label (no robot response that turn), so turns_scored does not increment")
+}
+
+func TestTraceInfoIsolatedFromDefaultRegistry(t *testing.T) {
+	TraceInfo.WithLabelValues("0", "2026-01-01T00:00:00Z", "1", "some prompt text", "[]").Set(1)
+
+	families, err := prometheus.DefaultGatherer.Gather()
+	require.NoError(t, err)
+	for _, f := range families {
+		require.NotEqual(t, "om1_trace_info", f.GetName(),
+			"om1_trace_info carries full trace text and must never reach the default /metrics registry that the fleet's Prometheus scrapes")
+	}
+
+	families, err = traceRegistry.Gather()
+	require.NoError(t, err)
+	found := false
+	for _, f := range families {
+		if f.GetName() == "om1_trace_info" {
+			found = true
+		}
+	}
+	require.True(t, found, "om1_trace_info should be registered on traceRegistry, served at /traces/metrics")
 }
