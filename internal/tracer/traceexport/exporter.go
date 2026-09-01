@@ -1,5 +1,5 @@
 // Package traceexport broadcasts live LLM trace records as Prometheus
-// series on GET /traces/metrics for a co-located telemetry sidecar to poll.
+// series on GET /metrics for a co-located telemetry sidecar to poll.
 package traceexport
 
 import (
@@ -25,7 +25,7 @@ type labelValues [5]string
 // Start begins exporting trace records from records as Prometheus series,
 // evicting the oldest once maxBuffered is exceeded.
 func Start(ctx context.Context, records <-chan tracetype.TraceRecord, log *zap.Logger) {
-	log.Info("traceexport: started, exporting live trace records on /traces/metrics")
+	log.Info("traceexport: started, exporting live trace records on /metrics")
 
 	go func() {
 		var window []labelValues

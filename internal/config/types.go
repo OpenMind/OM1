@@ -154,7 +154,7 @@ type QualityScorerConfig struct {
 }
 
 // PrometheusExportConfig broadcasts live trace records as Prometheus series
-// on GET /traces/metrics, separate from the default /metrics endpoint.
+// on the default GET /metrics endpoint.
 type PrometheusExportConfig struct {
 	Enabled bool `json:"enabled"`
 }

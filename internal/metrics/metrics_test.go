@@ -78,17 +78,10 @@ func TestRecordQualityTurnNoResponse(t *testing.T) {
 		"no coherence label (no robot response that turn), so turns_scored does not increment")
 }
 
-func TestTraceInfoIsolatedFromDefaultRegistry(t *testing.T) {
+func TestTraceInfoOnDefaultRegistry(t *testing.T) {
 	TraceInfo.WithLabelValues("0", "2026-01-01T00:00:00Z", "1", "some prompt text", "[]").Set(1)
 
 	families, err := prometheus.DefaultGatherer.Gather()
-	require.NoError(t, err)
-	for _, f := range families {
-		require.NotEqual(t, "om1_trace_info", f.GetName(),
-			"om1_trace_info carries full trace text and must never reach the default /metrics registry that the fleet's Prometheus scrapes")
-	}
-
-	families, err = traceRegistry.Gather()
 	require.NoError(t, err)
 	found := false
 	for _, f := range families {
@@ -96,5 +89,5 @@ func TestTraceInfoIsolatedFromDefaultRegistry(t *testing.T) {
 			found = true
 		}
 	}
-	require.True(t, found, "om1_trace_info should be registered on traceRegistry, served at /traces/metrics")
+	require.True(t, found, "om1_trace_info should be registered on the default registry, served at /metrics")
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/openmind/om1/internal/tracer/traceexport"
 )
 
-// startTraceExport starts broadcasting trace records on /traces/metrics if
+// startTraceExport starts broadcasting trace records on /metrics if
 // enabled in cfg, using a context that can be cancelled on shutdown.
 func (t *Tracer) startTraceExport(ctx context.Context, cfg *config.PrometheusExportConfig, log *zap.Logger) {
 	if cfg == nil || !cfg.Enabled {

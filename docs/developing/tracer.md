@@ -10,7 +10,7 @@ OM1 includes an **execution tracer** that records what the runtime does each tur
 
 - The **tracer** (`internal/tracer`) writes structured trace events to disk.
 - The **quality scorer** subscribes to those trace events and scores each turn for coherence, input classification, and language, exporting the results as Prometheus metrics.
-- The **Prometheus trace exporter** subscribes to the same trace events and broadcasts each one, full prompt and response text included, as a Prometheus series on `GET /traces/metrics` -- separate from the main `/metrics` endpoint (see [Metrics Reference → Trace export](metrics.md#trace-export) for why).
+- The **Prometheus trace exporter** subscribes to the same trace events and broadcasts each one, full prompt and response text included, as a Prometheus series on the main `GET /metrics` endpoint (see [Metrics Reference → Trace export](metrics.md#trace-export) for the cardinality implications).
 
 All three are off by default and enabled through the `use_tracer` config block.
 
@@ -32,7 +32,7 @@ use_tracer: {
 |-------|------|---------|-------------|
 | `use_tracer.enabled` | bool | `false` | Turns the execution tracer on. |
 | `use_tracer.quality_scorer.enabled` | bool | `false` | Turns the live quality scorer on. Requires `use_tracer.enabled: true`. |
-| `use_tracer.prometheus_export.enabled` | bool | `false` | Broadcasts trace records on `/traces/metrics`. Requires `use_tracer.enabled: true`. |
+| `use_tracer.prometheus_export.enabled` | bool | `false` | Broadcasts trace records on `/metrics`. Requires `use_tracer.enabled: true`. |
 
 > **Note:** If `quality_scorer.enabled` or `prometheus_export.enabled` is `true` but `use_tracer.enabled` is `false`, that feature will **not** start (the tracer logs a warning). Both depend on the trace event stream.
 
@@ -58,4 +58,4 @@ The scores are exported as the `om1_quality_live_*` Prometheus metrics, so you c
 
 ## Prometheus trace export
 
-With `prometheus_export.enabled: true`, every trace record is also broadcast on `GET :9090/traces/metrics` as an `om1_trace_info` series -- full `llm_input`/`llm_output` text included as labels, value always `1`. This is meant for a co-located collector (e.g. a telemetry sidecar) to poll and archive to its own durable storage, not for a dashboard: see [Metrics Reference → Trace export](metrics.md#trace-export) for why this stays off the main `/metrics` endpoint, and for the eviction behavior a slow or absent poller should know about.
+With `prometheus_export.enabled: true`, every trace record is also broadcast on `GET :9090/metrics` as an `om1_trace_info` series -- full `llm_input`/`llm_output` text included as labels, value always `1`. This is meant for a co-located collector (e.g. a telemetry sidecar) to poll and archive to its own durable storage, not for a dashboard: see [Metrics Reference → Trace export](metrics.md#trace-export) for the cardinality/retention implications of putting this on the main endpoint, and for the eviction behavior a slow or absent poller should know about.

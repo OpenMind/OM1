@@ -199,10 +199,6 @@ var qualityCoherenceScore = map[string]float64{
 	"coherent":   1.0,
 }
 
-// traceRegistry is deliberately separate from the default registry that
-// backs /metrics, since om1_trace_info carries unbounded free-text content.
-var traceRegistry = prometheus.NewRegistry()
-
 // TraceInfo is an "info" metric (value always 1, all content in labels) --
 // the same pattern as kube_pod_info.
 var TraceInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -211,11 +207,8 @@ var TraceInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 }, []string{"seq", "ts", "generation", "llm_input", "llm_output"})
 
 func init() {
-	traceRegistry.MustRegister(TraceInfo)
-}
-
-func init() {
 	prometheus.MustRegister(
+		TraceInfo,
 		LLMLatency, LLMLatencyLast,
 		VLMLatency, VLMLatencyLast,
 		ASRLatency, ASRLatencyLast,
@@ -343,7 +336,6 @@ func StartServer(log *zap.Logger) func(context.Context) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.Handle("/traces/metrics", promhttp.HandlerFor(traceRegistry, promhttp.HandlerOpts{}))
 	srv := &http.Server{Handler: mux}
 
 	go func() {
