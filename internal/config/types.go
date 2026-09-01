@@ -153,11 +153,8 @@ type QualityScorerConfig struct {
 	APIKey string `json:"api_key"`
 }
 
-// PrometheusExportConfig broadcasts live trace records (full prompt/response
-// text) as Prometheus series on GET /traces/metrics -- a registry separate
-// from the default /metrics endpoint, meant for a co-located telemetry
-// sidecar to poll and archive, not for the fleet's own Prometheus/Grafana
-// stack to scrape and store permanently.
+// PrometheusExportConfig broadcasts live trace records as Prometheus series
+// on GET /traces/metrics, separate from the default /metrics endpoint.
 type PrometheusExportConfig struct {
 	Enabled bool `json:"enabled"`
 }

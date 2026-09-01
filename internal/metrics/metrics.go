@@ -200,18 +200,11 @@ var qualityCoherenceScore = map[string]float64{
 }
 
 // traceRegistry is deliberately separate from the default registry that
-// backs /metrics: om1_trace_info has one time series per recent trace
-// record, each carrying full prompt/response text as label values. Scraping
-// that into the fleet's own Prometheus (job "om1" at /metrics, 1s interval,
-// 30d retention -- see prometheus.yml) would store unbounded free-text
-// content as permanent time series. Keeping it on its own registry served at
-// /traces/metrics means only a deliberate scraper (the telemetry sidecar)
-// ever reads it, and it never reaches /metrics or the default gatherer.
+// backs /metrics, since om1_trace_info carries unbounded free-text content.
 var traceRegistry = prometheus.NewRegistry()
 
 // TraceInfo is an "info" metric (value always 1, all content in labels) --
-// the same pattern as kube_pod_info. See traceRegistry's doc comment for why
-// this isn't on the default registry.
+// the same pattern as kube_pod_info.
 var TraceInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "om1_trace_info",
 	Help: "One series per buffered LLM trace record awaiting export by the telemetry sidecar; value is always 1, full record in labels.",

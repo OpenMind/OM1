@@ -1,7 +1,5 @@
 // Package traceexport broadcasts live LLM trace records as Prometheus
-// series on GET /traces/metrics, for a co-located telemetry sidecar to poll
-// and archive to its own storage -- see internal/metrics's traceRegistry
-// doc comment for why this stays off the default /metrics registry.
+// series on GET /traces/metrics for a co-located telemetry sidecar to poll.
 package traceexport
 
 import (
@@ -16,16 +14,12 @@ import (
 	"github.com/openmind/om1/internal/tracer/tracetype"
 )
 
-// maxBuffered bounds how many recent trace records stay exposed on
-// /traces/metrics at once. Each record is its own Prometheus series until
-// evicted, so this caps memory even if no sidecar ever polls. At OM1's
-// typical trace rate (roughly one per LLM turn) this is many hours of
-// headroom -- a sidecar just needs to poll more often than that.
+// maxBuffered bounds how many recent trace records stay exposed at once,
+// capping memory even if no sidecar ever polls.
 const maxBuffered = 200
 
 // labelValues is one record's Prometheus label values, in the exact order
-// metrics.TraceInfo declares them -- kept so eviction can call
-// DeleteLabelValues with the same tuple used to create the series.
+// metrics.TraceInfo declares them.
 type labelValues [5]string
 
 // Start begins exporting trace records from records as Prometheus series,
