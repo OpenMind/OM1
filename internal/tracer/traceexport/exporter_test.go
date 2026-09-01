@@ -58,7 +58,6 @@ func TestStart_evictsOldestBeyondMaxBuffered(t *testing.T) {
 
 	Start(ctx, records, zap.NewNop())
 
-	// One more than maxBuffered: the last insert must evict the first.
 	for i := 0; i <= maxBuffered; i++ {
 		records <- tracetype.TraceRecord{
 			Timestamp:  fmt.Sprintf("ts-%d", i),
@@ -68,26 +67,18 @@ func TestStart_evictsOldestBeyondMaxBuffered(t *testing.T) {
 		}
 	}
 
-	// Wait for the last record (seq == maxBuffered) to be set, which -- since
-	// the exporter processes records one at a time on a single goroutine --
-	// guarantees the eviction that follows record 0 has already happened.
 	lastSeq := fmt.Sprintf("%d", maxBuffered)
 	waitFor(t, 2*time.Second, func() bool {
 		g := metrics.TraceInfo.WithLabelValues(lastSeq, fmt.Sprintf("ts-%d", maxBuffered), "1", "input", "[]")
 		return testutil.ToFloat64(g) == 1
 	})
 
-	// Re-fetching the evicted series' exact label tuple must yield a freshly
-	// created child at 0, not the original value of 1 -- proof it was deleted.
 	evicted := metrics.TraceInfo.WithLabelValues("0", "ts-0", "1", "input", "[]")
 	require.Equal(t, 0.0, testutil.ToFloat64(evicted), "oldest record must be evicted once maxBuffered is exceeded")
 }
 
-// TestStart_invalidUTF8DoesNotPanic reproduces a real production crash: a
-// memory snippet truncated at a byte boundary (not a rune boundary) leaves a
-// dangling multi-byte sequence in the prompt, which is invalid UTF-8.
-// Prometheus's WithLabelValues panics on invalid UTF-8 -- an unrecovered
-// panic in this goroutine crashes the entire OM1 process, not just tracing.
+// Reproduces a real production crash: WithLabelValues panics on invalid
+// UTF-8, which crashes the entire OM1 process, not just tracing.
 func TestStart_invalidUTF8DoesNotPanic(t *testing.T) {
 	records := make(chan tracetype.TraceRecord, 1)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -95,11 +86,6 @@ func TestStart_invalidUTF8DoesNotPanic(t *testing.T) {
 
 	Start(ctx, records, zap.NewNop())
 
-	// "спога\xd1" -- a Cyrillic word with its last multi-byte rune cut in half,
-	// the same shape as the real crash logs. The processing goroutine panics
-	// asynchronously (a channel send doesn't wait for the receiver), so an
-	// unrecovered panic here would crash this whole test binary -- waitFor
-	// succeeding is the proof nothing panicked.
 	invalid := "Привіт, я пам'ятаю наші спога\xd1"
 
 	records <- tracetype.TraceRecord{

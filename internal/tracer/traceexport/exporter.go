@@ -29,8 +29,7 @@ const maxBuffered = 200
 type labelValues [5]string
 
 // Start begins exporting trace records from records as Prometheus series,
-// evicting the oldest once maxBuffered is exceeded. Runs until records is
-// closed or ctx is cancelled.
+// evicting the oldest once maxBuffered is exceeded.
 func Start(ctx context.Context, records <-chan tracetype.TraceRecord, log *zap.Logger) {
 	log.Info("traceexport: started, exporting live trace records on /traces/metrics")
 
@@ -53,12 +52,6 @@ func Start(ctx context.Context, records <-chan tracetype.TraceRecord, log *zap.L
 					continue
 				}
 
-				// Prometheus label values must be valid UTF-8 -- WithLabelValues
-				// panics otherwise (crashing this whole process, not just this
-				// goroutine). Truncated multi-byte characters upstream (e.g. a
-				// memory snippet cut at a byte boundary) can produce invalid
-				// UTF-8 in a prompt, so scrub both text fields defensively
-				// rather than trust every upstream source to hand back clean text.
 				lv := labelValues{
 					strconv.FormatInt(nextSeq, 10),
 					rec.Timestamp,
