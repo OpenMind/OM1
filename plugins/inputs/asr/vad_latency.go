@@ -66,6 +66,7 @@ type vadLatencyTracker struct {
 
 	speechActive   bool
 	candidateStart time.Time
+	candidateProb  float32
 	confirmed      bool
 }
 
@@ -134,6 +135,7 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 			if t.enableInterrupt {
 				t.speechActive = true
 				t.candidateStart = ev.At
+				t.candidateProb = ev.Prob
 				t.confirmed = false
 			}
 		case vad.EventSpeechEnd:
@@ -168,7 +170,8 @@ func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
 	t.confirmed = true
 	if tts.Speaking.Load() {
 		t.log.Info("vad: barge-in detected, interrupting TTS",
-			zap.Duration("confirm_delay", now.Sub(t.candidateStart)))
+			zap.Duration("confirm_delay", now.Sub(t.candidateStart)),
+			zap.Float32("confidence", t.candidateProb))
 		tts.RequestInterrupt()
 	}
 }
