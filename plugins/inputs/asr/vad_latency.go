@@ -35,7 +35,8 @@ type vadLatencyConfig struct {
 	VADLibraryPath string `json:"vad_library_path"`
 	VADOutputPath  string `json:"vad_output_path"`
 
-	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
+	VADInterruptConfirmMS  int     `json:"vad_interrupt_confirm_ms"`
+	VADConfidenceThreshold float64 `json:"vad_confidence_threshold"` // Silero speech-probability threshold, 0-1 (default 0.5)
 }
 
 // vadLatencyRecord is one JSONL line pairing a locally-detected end-of-speech
@@ -98,12 +99,15 @@ func newVADLatencyTracker(cfg vadLatencyConfig, enableTTSInterrupt bool, rate in
 		zap.Int("source_rate", rate),
 		zap.Bool("tts_interrupt", enableTTSInterrupt),
 		zap.Duration("interrupt_confirm_delay", confirmDelay),
+		zap.Float64("confidence_threshold", cfg.VADConfidenceThreshold),
 	)
+
+	segCfg := vad.SegmenterConfig{Threshold: float32(cfg.VADConfidenceThreshold)}
 
 	return &vadLatencyTracker{
 		log:                   log,
 		model:                 model,
-		segmenter:             vad.NewSegmenter(model, rate, vad.SegmenterConfig{}),
+		segmenter:             vad.NewSegmenter(model, rate, segCfg),
 		outputPath:            outputPath,
 		enableInterrupt:       enableTTSInterrupt,
 		interruptConfirmDelay: confirmDelay,
