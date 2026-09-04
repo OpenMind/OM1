@@ -62,4 +62,16 @@ Timings for OM1's proxy to upstream AI services:
 | `om1_http_upstream_total_seconds` / `_last_seconds` | histogram / gauge | Total upstream service time. |
 | `om1_http_upstream_ttfb_seconds` / `_last_seconds` | histogram / gauge | Upstream time-to-first-byte. |
 
+## Trace export
+
+Emitted only when `use_tracer.prometheus_export.enabled` is set — see [Tracer & Quality Scorer](tracer.md#prometheus-trace-export).
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `om1_trace_info` | gauge ("info" pattern) | One series per buffered trace record; value always `1`, full record (timestamp, generation, `llm_input`, `llm_output`) carried in labels. |
+
+**This metric is served on the default `GET :9090/metrics` endpoint, alongside every other metric on this page**, so it's scraped by the same `job_name: om1` target in `prometheus.yml` (1s interval, 30-day retention). `om1_trace_info` has one time series per LLM turn and carries unbounded free-text label values (full prompts and completions) — that means permanent, ever-growing cardinality in the TSDB, and any remote-write or long-term-storage backend downstream should be checked for a label-value size limit (an unusually long completion could exceed it).
+
+The exporter only keeps the most recent 200 records buffered (`internal/tracer/traceexport.maxBuffered`); older ones are evicted as new ones arrive, so a poller needs to poll more often than that window fills at the deployment's trace rate, or it will miss records.
+
 > The authoritative list is defined in `internal/metrics/metrics.go`.

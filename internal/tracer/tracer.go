@@ -29,6 +29,7 @@ type Tracer struct {
 	subscribers []chan<- TraceRecord
 
 	qualityScoreCancel context.CancelFunc
+	traceExportCancel  context.CancelFunc
 }
 
 var (
@@ -54,11 +55,15 @@ func (t *Tracer) Start(ctx context.Context, cfg *config.TracerConfig, systemAPIK
 		if cfg.QualityScorer != nil && cfg.QualityScorer.Enabled {
 			log.Warn("tracer: quality_scorer.enabled is true but use_tracer.enabled is false -- quality scorer will not start")
 		}
+		if cfg.PrometheusExport != nil && cfg.PrometheusExport.Enabled {
+			log.Warn("tracer: prometheus_export.enabled is true but use_tracer.enabled is false -- Prometheus trace export will not start")
+		}
 		return
 	}
 	t.Enable()
 
 	t.startQualityScore(ctx, cfg.QualityScorer, systemAPIKey, log)
+	t.startTraceExport(ctx, cfg.PrometheusExport, log)
 }
 
 // Enable turns tracing on and ensures the output directory exists.
@@ -145,9 +150,10 @@ func (t *Tracer) Gauge(llmInput string, llmOutput []map[string]any) {
 	}
 }
 
-// Stop stops the tracer and its quality scorer, closing any open file handle.
+// Stop stops the tracer, its quality scorer, and its trace exporter, closing any open file handle.
 func (t *Tracer) Stop() {
 	t.stopQualityScore()
+	t.stopTraceExport()
 
 	t.mu.Lock()
 	defer t.mu.Unlock()

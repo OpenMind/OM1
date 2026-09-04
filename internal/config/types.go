@@ -122,6 +122,9 @@ type TracerConfig struct {
 
 	// QualityScorer is nested here since it depends entirely on tracing being on.
 	QualityScorer *QualityScorerConfig `json:"quality_scorer"`
+
+	// PrometheusExport is nested here since it depends entirely on tracing being on.
+	PrometheusExport *PrometheusExportConfig `json:"prometheus_export"`
 }
 
 // UnmarshalJSON lets use_tracer be written as either a bool or an object -- see TracerConfig's doc comment.
@@ -148,6 +151,12 @@ type QualityScorerConfig struct {
 
 	// APIKey overrides the top-level system api_key; falls back to it if unset (see cmd/main.go).
 	APIKey string `json:"api_key"`
+}
+
+// PrometheusExportConfig broadcasts live trace records as Prometheus series
+// on the default GET /metrics endpoint.
+type PrometheusExportConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 // MemorySpec describes the optional long-term memory system.

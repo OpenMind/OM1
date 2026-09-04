@@ -9,6 +9,7 @@ import (
 type Event struct {
 	Type string //"speech_start" or "speech_end"
 	At   time.Time
+	Prob float32 // Silero speech probability of the frame that triggered this event
 }
 
 const (
@@ -83,7 +84,7 @@ func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
 		s.haveSilence = false
 		if !s.inSpeech {
 			s.inSpeech = true
-			return Event{Type: EventSpeechStart, At: t}, true
+			return Event{Type: EventSpeechStart, At: t, Prob: prob}, true
 		}
 		return Event{}, false
 	}
@@ -101,7 +102,7 @@ func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
 	if t.Sub(s.silenceSince) >= s.cfg.MinSilenceDuration {
 		s.inSpeech = false
 		s.haveSilence = false
-		return Event{Type: EventSpeechEnd, At: s.silenceSince}, true
+		return Event{Type: EventSpeechEnd, At: s.silenceSince, Prob: prob}, true
 	}
 	return Event{}, false
 }
