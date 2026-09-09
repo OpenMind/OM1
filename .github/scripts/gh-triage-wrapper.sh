@@ -2,11 +2,6 @@
 # Installed in place of the real `gh` binary during pr-triage.yml's triage
 # step: only lets Gemini's shell tool run an allowlisted set of gh commands
 # against the one PR it's currently triaging.
-#
-# Config comes from a baked-in path (REAL_GH_PATH_PLACEHOLDER, substituted
-# at install time) and a file in the working directory rather than env
-# vars, since env vars don't reliably reach subprocesses Gemini's shell
-# tool spawns.
 set -euo pipefail
 
 REAL_GH="REAL_GH_PATH_PLACEHOLDER"

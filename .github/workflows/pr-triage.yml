@@ -108,16 +108,10 @@ jobs:
           set -euo pipefail
           npm install -g @google/gemini-cli@0.49.0
 
-          # gh in Gemini's shell subprocess doesn't inherit GH_TOKEN from this
-          # step's env, so auth to disk instead (unset first — gh won't write
-          # stored creds while GH_TOKEN is set, since the env var wins).
           _GH_AUTH_TOKEN="$GH_TOKEN"
           unset GH_TOKEN
           printf '%s' "$_GH_AUTH_TOKEN" | gh auth login --with-token
 
-          # Swap gh for a wrapper that only allows the commands this workflow
-          # needs, scoped to the one PR each gemini invocation is triaging —
-          # see gh-triage-wrapper.sh.
           REAL_GH_PATH="$(command -v gh)"
           GH_SHADOW="$RUNNER_TEMP/gh-real"
           mkdir -p "$(dirname "$GH_SHADOW")"
