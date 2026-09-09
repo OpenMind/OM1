@@ -1,32 +1,6 @@
 name: PR Triage
 
-# Unattended triage of open PRs from non-OpenMind-org contributors, run
-# in real time as PRs are opened/updated (pull_request_target), with a
-# daily cron as a fallback catch-all for anything the event-based run
-# missed. Flags irrelevant / trivial / Python-authored PRs with a
-# "Request changes" review explaining why, then closes the PR. Never
-# approves or merges — closing is the only autonomous action taken, and
-# a human can always reopen a PR that was closed in error.
-#
-# pull_request_target (not pull_request) is required so this has secrets
-# and write access on PRs from forks. That's safe here because the job
-# never checks out or executes the PR's own code/ref — it only reads PR
-# metadata via `gh`/the GitHub API, using the workflow file and code from
-# the base branch.
-#
-# Requires repo secret ORG_READ_TOKEN: a GitHub PAT with `read:org` scope,
-# used only to check OpenMind org membership. GEMINI_API_KEY is also
-# required (already present in this repo for the Docs Sync workflow).
-#
-# Prompt-injection containment: the triage step hands Gemini (running with
-# no per-command approval) untrusted PR content — the external contributor's
-# own title/body/diff — while it holds a gh token that can write to any PR
-# or issue in the repo. Rather than relying on the prompt text to keep the
-# model in its lane, that step replaces `gh` itself with a validating
-# wrapper (.github/scripts/gh-triage-wrapper.sh) that only allows the exact
-# subcommands this workflow needs, and only against the one PR each Gemini
-# invocation was launched for. See that script and the step below for
-# details.
+# Requires repo secrets: ORG_READ_TOKEN (a `read:org` PAT) and GEMINI_API_KEY.
 
 on:
   pull_request_target:
@@ -134,34 +108,16 @@ jobs:
           set -euo pipefail
           npm install -g @google/gemini-cli@0.49.0
 
-          # Gemini CLI's run_shell_command tool spawns gh in a subprocess that
-          # doesn't inherit GH_TOKEN from this step's env, so gh reports
-          # unauthenticated even though it's set here. Authenticating to disk
-          # sidesteps that: gh falls back to the stored config regardless of
-          # what env a given subprocess does or doesn't have. GH_TOKEN must be
-          # unset first — gh refuses to write stored credentials while it's
-          # present, since the env var already takes precedence.
+          # gh in Gemini's shell subprocess doesn't inherit GH_TOKEN from this
+          # step's env, so auth to disk instead (unset first — gh won't write
+          # stored creds while GH_TOKEN is set, since the env var wins).
           _GH_AUTH_TOKEN="$GH_TOKEN"
           unset GH_TOKEN
           printf '%s' "$_GH_AUTH_TOKEN" | gh auth login --with-token
 
-          # --- Prompt-injection containment ---------------------------------
-          # Below, Gemini reads untrusted content (an external contributor's
-          # own PR title/body/diff) in --approval-mode=yolo, i.e. with no
-          # per-command confirmation, while holding a gh token that can write
-          # to any PR/issue in the repo. A crafted PR body could try to steer
-          # the model into acting on some OTHER PR, not just the one it's
-          # meant to be triaging. That's enforced here, not just requested in
-          # the prompt: `gh` is replaced in place with a validating wrapper
-          # (.github/scripts/gh-triage-wrapper.sh) for the rest of this step,
-          # and each PR gets its own gemini invocation scoped to that PR's
-          # number, so no single run can even name another PR to the wrapper.
-          #
-          # The wrapper takes its config from a baked-in path and a plain
-          # file in the working directory rather than env vars — the GH_TOKEN
-          # env var set for this very step already failed to reach
-          # subprocesses spawned by Gemini's shell tool (see the comment
-          # above), so env vars aren't trusted to reach the wrapper either.
+          # Swap gh for a wrapper that only allows the commands this workflow
+          # needs, scoped to the one PR each gemini invocation is triaging —
+          # see gh-triage-wrapper.sh.
           REAL_GH_PATH="$(command -v gh)"
           GH_SHADOW="$RUNNER_TEMP/gh-real"
           mkdir -p "$(dirname "$GH_SHADOW")"
