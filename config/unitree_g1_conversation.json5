@@ -80,16 +80,20 @@ You should prioritize safe, comfortable, and positive human interaction.",
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "GoogleASRInput",
+          type: "${ASR_INPUT_PLUGIN:-GoogleASRInput}",
           config: {
             api_version: "v2",
             enable_tts_interrupt: true,
             rate: 16000,
             chunk: 1600,
+            rtsp_url: "${ASR_RTSP_URL:-rtsp://localhost:8555/live}",
           },
         },
         {
           type: "VLMGeminiRTSP",
+          config: {
+            rtsp_url: "${VLM_RTSP_URL:-rtsp://localhost:8556/raw}",
+          },
         }
       ],
       cortex_llm: {

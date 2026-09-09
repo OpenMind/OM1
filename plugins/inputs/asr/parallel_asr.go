@@ -292,11 +292,11 @@ func (s *ParallelASRSensor) connectStreams() {
 	wg.Wait()
 }
 
-// sendToAll fans out one PCM chunk to all providers and the VAD.
-func (s *ParallelASRSensor) sendToAll(pcm []byte) {
+// sendToAllAt fans out a PCM chunk to all provider streams, stamped with the capture time.
+func (s *ParallelASRSensor) sendToAllAt(pcm []byte, capture time.Time) {
 	s.feedVAD(pcm)
 	for _, st := range s.streams {
-		st.sendChunk(pcm)
+		st.sendChunkAt(pcm, capture)
 	}
 }
 
@@ -408,6 +408,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -418,7 +419,7 @@ func (s *ParallelASRSensor) micCaptureLoop(ctx context.Context, stream *portaudi
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendToAll(pcm)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }
 
@@ -489,6 +490,7 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -496,6 +498,6 @@ func (s *ParallelASRSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		s.sendToAll(pcm)
+		s.sendToAllAt(pcm, tCapture)
 	}
 }

@@ -244,6 +244,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 		if err := stream.Read(); err != nil && err.Error() != "Input overflowed" {
 			s.log.Warn("read error", zap.Error(err))
 		}
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -254,7 +255,7 @@ func (s *ElevenLabsASRSensor) captureLoop(ctx context.Context, stream *portaudio
 			binary.LittleEndian.PutUint16(pcm[i*2:], uint16(sample))
 		}
 
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }
 
@@ -304,6 +305,10 @@ func elevenlabsParseMessage(s *transcriberStream, msg ASRMessage) string {
 		// Stamp the start only on the first partial, else latency measures time-since-last-partial.
 		if !s.speechStarted {
 			s.speechStartTime = time.Now()
+			// ElevenLabs sends no speech-end event; committed arrives at the
+			// end of speech, so speechWindow's fallback is already tight.
+			// Clear any mark so a previous utterance's cannot be reused.
+			s.speechEndTime = time.Time{}
 			s.speechStarted = true
 		}
 		return ""

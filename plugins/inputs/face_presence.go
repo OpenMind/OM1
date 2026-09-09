@@ -30,9 +30,10 @@ const (
 )
 
 type FacePresenceConfig struct {
-	BaseURL         string  `json:"face_http_base_url"`
-	RecentSec       float64 `json:"face_recent_sec"`
-	PollIntervalSec float64 `json:"face_poll_interval_sec"`
+	BaseURL          string  `json:"face_http_base_url"`
+	RecentSec        float64 `json:"face_recent_sec"`
+	PollIntervalSec  float64 `json:"face_poll_interval_sec"`
+	SpeakerDetection bool    `json:"speaker_detection"`
 }
 
 type FacePresenceSensor struct {
@@ -44,6 +45,7 @@ type FacePresenceSensor struct {
 	mu       sync.Mutex
 	messages []inputs.Message
 	stopped  bool
+	lastSnap *providers.PresenceSnapshot
 }
 
 func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
@@ -68,10 +70,17 @@ func NewFacePresence(configMap map[string]any) (inputs.Sensor, error) {
 		Timeout:   2 * time.Second,
 	})
 
+	if cfg.SpeakerDetection {
+		speaker := providers.NewSpeakerProvider(cfg.BaseURL)
+		speaker.Enable()
+		providers.SetSpeaker(speaker)
+	}
+
 	log.Info("initializing",
 		zap.String("base_url", cfg.BaseURL),
 		zap.Float64("recent_sec", cfg.RecentSec),
 		zap.Float64("poll_interval_sec", cfg.PollIntervalSec),
+		zap.Bool("speaker_detection", cfg.SpeakerDetection),
 	)
 
 	return &FacePresenceSensor{
@@ -116,6 +125,8 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 
 			msg := inputs.NewMessage(text)
 			s.mu.Lock()
+			snapCopy := snap
+			s.lastSnap = &snapCopy
 			s.messages = append(s.messages, *msg)
 			if len(s.messages) > facePresenceMaxMessages {
 				s.messages = s.messages[len(s.messages)-facePresenceMaxMessages:]
@@ -123,9 +134,10 @@ func (s *FacePresenceSensor) Listen(ctx context.Context) (<-chan any, error) {
 			s.mu.Unlock()
 
 			// Refresh shared IO entry and dynamic vars.
+			uuid, name, _ := snap.AttributedUser()
 			providers.IO().AddInput(facePresenceIOKey, text, time.Now())
-			providers.IO().SetDynamicVar("current_user_id", snap.ClosestUUID)
-			providers.IO().SetDynamicVar("current_user_name", snap.ClosestName)
+			providers.IO().SetDynamicVar("current_user_id", uuid)
+			providers.IO().SetDynamicVar("current_user_name", name)
 		}
 	}()
 	return out, nil
@@ -158,7 +170,6 @@ func (s *FacePresenceSensor) RawToText(_ context.Context, raw any) (*inputs.Mess
 	return msg, nil
 }
 
-// FormattedLatestBuffer returns the newest presence line and clears the buffer.
 func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -168,10 +179,23 @@ func (s *FacePresenceSensor) FormattedLatestBuffer() string {
 	}
 
 	latest := s.messages[len(s.messages)-1]
-	result := fmt.Sprintf("\n%s: '%s'\n", facePresenceDescriptor, latest.Message)
+	text := latest.Message
+	if s.lastSnap != nil {
+		if fresh := s.lastSnap.ToText(); fresh != "" {
+			text = fresh
+		}
+	}
+	result := fmt.Sprintf("\n%s: '%s'\n", facePresenceDescriptor, text)
 
 	ts := time.Unix(0, int64(latest.Timestamp*1e9))
-	providers.IO().AddInput(facePresenceIOKey, latest.Message, ts)
+	providers.IO().AddInput(facePresenceIOKey, text, ts)
+
+	if s.lastSnap != nil {
+		uuid, name, _ := s.lastSnap.AttributedUser()
+		providers.IO().SetDynamicVar("current_user_id", uuid)
+		providers.IO().SetDynamicVar("current_user_name", name)
+	}
+
 	s.messages = nil
 
 	return result

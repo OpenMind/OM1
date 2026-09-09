@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
+	"github.com/openmind/om1/internal/providers"
 	"github.com/openmind/om1/internal/ws"
 )
 
@@ -52,6 +53,7 @@ type transcriberStream struct {
 
 	mu              sync.Mutex
 	speechStartTime time.Time
+	speechEndTime   time.Time
 	speechStarted   bool
 
 	stats ASRStatistics
@@ -87,12 +89,16 @@ func (s *transcriberStream) closeWS() {
 }
 
 // packageAudio prepends the JSON audio header (length-prefixed) to a PCM chunk.
-func (s *transcriberStream) packageAudio(pcm []byte) ([]byte, error) {
+// captureMs is the capture time (Unix ms) of this chunk, stamped at ingest so
+// the timestamp reflects when the audio was captured rather than when it was
+// packaged/sent. This lets downstream consumers align audio with video-derived
+// features on a common timeline.
+func (s *transcriberStream) packageAudio(pcm []byte, captureMs int64) ([]byte, error) {
 	meta := AudioMetadata{
 		Rate:                     s.rate,
 		LanguageCode:             s.languageCode,
 		AlternativeLanguageCodes: s.altCodes,
-		Timestamp:                time.Now().UnixMilli(),
+		Timestamp:                captureMs,
 	}
 
 	headerBytes, err := json.Marshal(meta)
@@ -108,9 +114,10 @@ func (s *transcriberStream) packageAudio(pcm []byte) ([]byte, error) {
 	return packet, nil
 }
 
-// sendChunk packages and sends a PCM chunk over the websocket, updating statistics.
-func (s *transcriberStream) sendChunk(pcm []byte) {
-	packet, err := s.packageAudio(pcm)
+// sendChunkAt packages and sends a PCM chunk captured at the given time,
+// updating statistics.
+func (s *transcriberStream) sendChunkAt(pcm []byte, capture time.Time) {
+	packet, err := s.packageAudio(pcm, capture.UnixMilli())
 	if err != nil {
 		s.log.Warn("package error", zap.Error(err))
 		return
@@ -131,6 +138,14 @@ func (s *transcriberStream) sendChunk(pcm []byte) {
 	s.stats.mu.Unlock()
 }
 
+func (s *transcriberStream) speechWindow() (start, end time.Time) {
+	start = s.speechStartTime
+	if !s.speechEndTime.IsZero() && s.speechEndTime.After(start) {
+		return start, s.speechEndTime
+	}
+	return start, time.Now()
+}
+
 // onWSMessage decodes an ASR websocket message, delegates vendor-specific parsing to parseMessage,
 // and forwards any accepted transcript to onTranscript.
 func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
@@ -144,11 +159,14 @@ func (s *transcriberStream) onWSMessage(msgType int, data []byte) {
 
 	s.mu.Lock()
 	transcript := s.parseMessage(s, msg)
+	speechStart, speechEnd := s.speechWindow()
 	s.mu.Unlock()
 
 	if transcript == "" {
 		return
 	}
+
+	providers.Speaker().ResolveAsync(speechStart, speechEnd)
 
 	if s.onTranscript != nil {
 		s.onTranscript(s.provider, transcript)

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultRTSPURL     = "rtsp://localhost:8554/live"
+	defaultRTSPURL     = "rtsp://localhost:8556/raw"
 	defaultRTSPWidth   = 480
 	defaultRTSPHeight  = 640
 	rtspReconnectDelay = 2 * time.Second
@@ -124,9 +124,14 @@ func (v *VideoRTSPStream) stream(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return false
 		}
-		v.send(Frame{Timestamp: time.Now(), JPEG: frame})
+		v.emitFrame(frame)
 		return true
 	})
+}
+
+// emitFrame forwards a decoded JPEG stamped with its receive time.
+func (v *VideoRTSPStream) emitFrame(frame []byte) {
+	v.send(Frame{Timestamp: time.Now(), JPEG: frame})
 }
 
 // GrabFrame captures a single frame from the RTSP source using ffmpeg and returns it as a JPEG-encoded byte slice.

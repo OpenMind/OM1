@@ -53,7 +53,7 @@ brew install portaudio ffmpeg
 For Linux:
 ```bash
 sudo apt-get update
-sudo apt-get install -y portaudio19-dev ffmpeg
+sudo apt-get install -y portaudio19-dev ffmpeg pkg-config
 ```
 
 > [!TIP]

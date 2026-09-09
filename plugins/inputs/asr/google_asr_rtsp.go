@@ -56,7 +56,7 @@ func NewGoogleASRRTSP(configMap map[string]any) (inputs.Sensor, error) {
 		return nil, fmt.Errorf("GoogleASRRTSPInput: api_key required")
 	}
 	if cfg.RTSPURL == "" {
-		cfg.RTSPURL = "rtsp://localhost:8554/audio"
+		cfg.RTSPURL = "rtsp://localhost:8555/live"
 	}
 	if cfg.Rate == 0 {
 		cfg.Rate = 16000
@@ -195,6 +195,7 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 		if _, err := io.ReadFull(stdout, buf); err != nil {
 			return fmt.Errorf("read pcm: %w", err)
 		}
+		tCapture := time.Now()
 
 		if tts.Speaking.Load() && !s.cfg.EnableTTSInterrupt {
 			continue
@@ -202,6 +203,6 @@ func (s *GoogleASRRTSPSensor) streamRTSP(ctx context.Context) error {
 
 		pcm := make([]byte, chunkBytes)
 		copy(pcm, buf)
-		s.sendChunk(pcm)
+		s.sendChunkAt(pcm, tCapture)
 	}
 }

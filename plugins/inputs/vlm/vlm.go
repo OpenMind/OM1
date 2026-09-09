@@ -25,7 +25,7 @@ const (
 	vlmDescriptor  = "Vision"
 	vlmMaxMessages = 10
 	defaultFPS     = 10
-	defaultRTSPURL = "rtsp://localhost:8554/top_camera_raw"
+	defaultRTSPURL = "rtsp://localhost:8556/raw"
 )
 
 type providerDefaults struct {
