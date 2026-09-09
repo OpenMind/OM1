@@ -55,15 +55,12 @@ func (t *Tracer) Start(ctx context.Context, cfg *config.TracerConfig, systemAPIK
 		if cfg.QualityScorer != nil && cfg.QualityScorer.Enabled {
 			log.Warn("tracer: quality_scorer.enabled is true but use_tracer.enabled is false -- quality scorer will not start")
 		}
-		if cfg.PrometheusExport != nil && cfg.PrometheusExport.Enabled {
-			log.Warn("tracer: prometheus_export.enabled is true but use_tracer.enabled is false -- Prometheus trace export will not start")
-		}
 		return
 	}
 	t.Enable()
 
 	t.startQualityScore(ctx, cfg.QualityScorer, systemAPIKey, log)
-	t.startTraceExport(ctx, cfg.PrometheusExport, log)
+	t.startTraceExport(ctx, log)
 }
 
 // Enable turns tracing on and ensures the output directory exists.

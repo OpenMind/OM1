@@ -64,7 +64,7 @@ Timings for OM1's proxy to upstream AI services:
 
 ## Trace export
 
-Emitted only when `use_tracer.prometheus_export.enabled` is set — see [Tracer & Quality Scorer](tracer.md#prometheus-trace-export).
+Emitted whenever `use_tracer.enabled` is set — see [Tracer & Quality Scorer](tracer.md#prometheus-trace-export).
 
 | Metric | Type | Description |
 |--------|------|-------------|
