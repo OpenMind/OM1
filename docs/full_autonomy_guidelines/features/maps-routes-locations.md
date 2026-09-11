@@ -33,6 +33,26 @@ curl -X POST http://<robot>:5000/maps/delete -H 'Content-Type: application/json'
 
 `/maps/list` returns each map's name, path, and creation time; deleting a map that doesn't exist returns `404`. Map names are validated everywhere — no `/`, `\`, `..`, or spaces.
 
+### Downloading a 3D map
+
+A [3D map](mapping-slam.md) is stored in up to three resolution tiers, and you choose which one you pull:
+
+```bash
+# default (raw = the reference .pcd); also resolution=downsampled or resolution=full
+curl -OJ "http://<robot>:5000/maps/office/pcd/raw?resolution=full"
+
+# the colorized cloud instead of the geometry cloud
+curl -OJ "http://<robot>:5000/maps/office/pcd/raw?resolution=downsampled&variant=color"
+```
+
+| `resolution` | File you get | Notes |
+|---|---|---|
+| `raw` *(default)* | `<map>.pcd` | The reference cloud |
+| `downsampled` | `<map>_downsampled.pcd` | Voxel-downsampled; the version uploaded to the cloud |
+| `full` | `<map>_raw.pcd` | The full-resolution cloud — only exists if the map was built with `raw_map: true` |
+
+Add `variant=color` to any of these to pull the colorized cloud (`<map>_color*.pcd`) instead. To see what's available first, `GET /maps/<map_name>/pcd/info` reports the file, byte size, and point count for each tier (`null` when a tier wasn't produced). Only the **downsampled** tiers are uploaded to the cloud; the full-resolution `_raw.pcd` stays on the robot and is fetched on demand through these endpoints.
+
 ## Route graphs
 
 A route graph pins the robot to fixed paths instead of letting it plan freely — used by graph-constrained [navigation](navigation.md) and by [patrol](patrol.md). It's stored per map as GeoJSON: **nodes** are `Point` features (each with an `id`), **edges** are `LineString` features linking `from` → `to` with an optional `cost`.

@@ -161,20 +161,28 @@ Drive the robot around to verify that it's connected and responding correctly. T
 
 ### Step 4: Build a Map with SLAM
 
-In the **Robot Settings** panel, find **Robot Mode Control**. Choose your mapping type *before* enabling the toggle:
+In the **Robot Settings** panel, under **SLAM Mode**, pick one of four cards *before* enabling the toggle:
 
 - **2D SLAM** — occupancy map. The default, and what patrols and 2D navigation consume.
-- **3D SLAM** — point cloud, marked **BETA**. Note the limitation: **3D SLAM does not support frontier exploration**, so the robot won't map autonomously in this mode.
+- **3D SLAM** — point cloud (**BETA**). Note the limitation: **3D SLAM does not support frontier exploration**, so the robot won't map autonomously in this mode.
+- **3D Color** — a colorized (RGB) point cloud (**BETA**). Photoreal, but **view-only** — it produces no navigable map, so use it for inspection, not for patrols or navigation.
+- **3D Full** — "Nav + color" (**BETA**): runs the geometry and color stacks together, so one run gives you a navigable 3D map *and* the colorized cloud.
+
+> **On a real Go2, only 2D SLAM is available** — the three 3D modes are simulation-only for Go2. The cloud simulator is where you can try them on a Go2. (M20 supports 3D on hardware too.) See [Robot & simulation support](../full_autonomy_guidelines/features/robot-support.md).
 
 Now enable **SLAM Mode**. What happens next surprises people who expect to chauffeur the robot around:
 
-> **The robot explores and builds the map by itself.** It "will explore and create a new map automatically", with real-time visualization, and the "map will be saved to database when complete." Manual driving is optional, not required.
+> **In 2D SLAM the robot explores and builds the map by itself**, with real-time visualization, and the map is saved to the database when complete. Manual driving is optional. The 3D modes don't self-explore — drive those yourself.
 
-Watch progress on the **Map view** tab. SLAM produces a live **3D point cloud** of the space, colored by height, that you can rotate and zoom to inspect:
+Watch progress on the **Map view** tab. The map header has a variant dropdown — **2D map**, **3D point cloud**, or **Colored cloud** — so you can flip between representations of the same run. The 3D SLAM point cloud is colored by height:
 
 ![Live 3D SLAM point cloud coloured by height](../.gitbook/assets/cloud-isaac-sim-assets/3D_slam_map.png)
 
-The point cloud is also flattened into a **2D navigation map** — an occupancy grid showing walls and obstacles. This is the navigation-ready artifact used for autonomous tasks like patrols and navigation.
+A **3D Color** or **3D Full** run instead renders a true-color (RGB) cloud — the environment in its real colors:
+
+![Colorized RGB point cloud from a 3D Full run](../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png)
+
+Every run is also flattened into a **2D navigation map** — an occupancy grid showing walls and obstacles. This is the navigation-ready artifact used for autonomous tasks like patrols and navigation.
 
 If Map view reads "Enable SLAM or select a map from Settings to view the map", the toggle didn't take.
 
@@ -202,11 +210,20 @@ Open the **Route Planner** tab and create a **patrol route** by placing waypoint
 
 1. Click **+ New Route** to start a fresh route.
 2. Toggle **Add Waypoints** and click points across the map to lay out the path. Use smooth turns so the robot can navigate naturally. **Undo Last** removes the most recent waypoint, and the node/edge count updates as you build. You can also **Import** or **Export** a route to reuse it later.
-3. When you're happy with the path, click **Deploy**.
+3. When you're happy with the path, click **Deploy** and choose how it should run:
+   - **Manual** — run the route once; nothing restarts it.
+   - **Continuous** — patrol until stopped, charging and resuming as the battery needs.
+   - **Scheduled** — patrol only inside set weekday/time windows; the robot waits on the charger in between.
 
-The robot then takes over and begins following the route autonomously, navigating between each waypoint while continuously localizing itself within the map.
+The robot then takes over and begins following the route autonomously, navigating between each waypoint while continuously localizing itself within the map. The route overlays on whichever map variant you're viewing — the 2D occupancy grid:
 
-![Route Planner showing a deployed patrol route with waypoints](../.gitbook/assets/cloud-isaac-sim-assets/patrol.png)
+![Deployed patrol route with numbered waypoints on the 2D map](../.gitbook/assets/cloud-isaac-sim-assets/patrol-2D.png)
+
+…or the 3D point cloud:
+
+![Deployed patrol route with waypoints on the 3D point cloud](../.gitbook/assets/cloud-isaac-sim-assets/patrol-3D-point-cloud.png)
+
+For the full deploy flow — Manual vs Continuous vs Scheduled, the weekday/time-window editor, and how it ties into auto-charging — see [Patrol → Scheduling patrols](../full_autonomy_guidelines/features/patrol.md#scheduling-patrols).
 
 ### Step 7: Monitor the Patrol
 
@@ -227,7 +244,7 @@ Set the minimum battery level. Once the battery drops below that threshold, the 
 
 Once charged, it's ready to continue operating. This enables long-running deployments with minimal manual intervention.
 
-> **Note**: Automatic charging is currently supported on **Unitree Go2 only**.
+> **Note**: Automatic charging is supported on the **Unitree Go2** and the **Deep Robotics M20**, and it behaves the same in the simulator as on hardware. On a multi-pack robot like the M20, battery state shows per pack (front / rear). See [Auto Charging](../full_autonomy_guidelines/features/auto-charging.md).
 
 ### Step 9: Automatic Localization
 
