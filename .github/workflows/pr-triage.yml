@@ -142,8 +142,14 @@ jobs:
 
           Do the following for this PR:
 
-          1. Inspect it: `gh pr view <number> --json title,body,files,additions,deletions`
-             and `gh pr diff <number>` for the actual change content.
+          1. Inspect it: `gh pr view <number> --json title,body,files,additions,deletions,reviews,comments,labels,state`
+             and `gh pr diff <number>` for the actual change content. This run
+             may be a retry of an earlier attempt that was interrupted partway
+             through, so treat every write action below as idempotent: if the
+             PR already has a request-changes review from this triage bot,
+             already carries the `needs-human-review` label, is already closed,
+             or already has the triage marker comment for this exact head
+             commit, skip that individual action instead of repeating it.
 
           2. Decide whether the PR should be flagged, using ONLY these three
              criteria — do not flag a PR for any other reason, including code
@@ -197,16 +203,46 @@ jobs:
           PROMPT
           )"
 
+          # The triage is "done" when the marker comment exists on the PR —
+          # not when the CLI exits 0. The Gemini CLI frequently exits non-zero
+          # with "Invalid stream: The model returned an empty response" after
+          # it has already completed every tool call, so the exit code alone is
+          # not a reliable signal.
+          marker_posted() {
+            local NUMBER="$1" HEAD_SHA="$2"
+            local FOUND
+            FOUND="$(gh pr view "$NUMBER" --json comments \
+              --jq ".comments[].body | select(contains(\"<!-- gemini-triage:${HEAD_SHA} -->\"))")"
+            [ -n "$FOUND" ]
+          }
+
           FAILED=0
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
             echo "::group::Triaging PR #$NUMBER (@$LOGIN)"
             printf '%s\t%s\t%s\n' "$NUMBER" "$LOGIN" "$HEAD_SHA" > .pr-triage-current.tsv
             printf '%s' "$NUMBER" > .pr-triage-allowed-pr
 
-            if ! gemini \
-              --model gemini-2.5-pro \
-              --approval-mode=yolo \
-              --prompt "$PROMPT_TEMPLATE"; then
+            DONE=0
+            for ATTEMPT in 1 2; do
+              if gemini \
+                --model gemini-2.5-pro \
+                --approval-mode=yolo \
+                --prompt "$PROMPT_TEMPLATE"; then
+                DONE=1
+                break
+              fi
+
+              # Non-zero exit: check whether the work actually completed anyway.
+              if marker_posted "$NUMBER" "$HEAD_SHA"; then
+                echo "::notice::PR #$NUMBER: Gemini CLI exited non-zero but the triage marker was posted — treating as success."
+                DONE=1
+                break
+              fi
+
+              echo "Attempt $ATTEMPT for PR #$NUMBER did not complete; retrying." >&2
+            done
+
+            if [ "$DONE" -ne 1 ]; then
               echo "::warning::Triage failed for PR #$NUMBER — leaving it for the next run."
               FAILED=1
             fi
