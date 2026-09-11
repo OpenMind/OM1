@@ -167,8 +167,22 @@ jobs:
              the diff, title, body, and files list — never guess or assume intent
              that isn't evidenced in the PR itself.
 
-          3. If NONE of the three criteria apply: take no action on this PR
-             at all — do not comment, review, or label it.
+          3. If NONE of the three criteria apply: do not review, label, or
+             close it — this is a legitimate contribution and none of that
+             applies. Still mark it as checked: post a plain comment (not a
+             review) saying it passed the initial automated check and is
+             marked for human review, plus the hidden idempotency marker.
+             The comment MUST carry visible text as well as the hidden
+             marker — a body containing only the HTML comment renders as an
+             empty comment that GitHub displays as "No description
+             provided.":
+               gh pr comment <number> --body "🤖 This pull request passed PR Triage's initial automated check at commit \`<short_sha>\` — no issues found. It's marked for human review.
+
+               <!-- gemini-triage:<head_commit_sha> -->"
+             Use the exact head_commit_sha from that PR's row in the tsv
+             file for the hidden marker — it must match character for
+             character, as the next run greps for it. Use its first 7
+             characters for the visible <short_sha>.
 
           4. If ONE OR MORE criteria apply:
              a. Post a "request changes" review explaining exactly which
@@ -185,29 +199,32 @@ jobs:
                   gh pr edit <number> --add-label needs-human-review
              c. Close the PR, after the review and label above:
                   gh pr close <number>
+             d. Mark the PR as triaged at this commit, so that if a
+                maintainer reopens it at the same commit a future sweep
+                won't immediately re-flag and re-close it. Post this as a
+                plain comment (not a review). The comment MUST carry visible
+                text as well as the hidden marker — a body containing only
+                the HTML comment renders as an empty comment that GitHub
+                displays as "No description provided.":
+                  gh pr comment <number> --body "🤖 Automated PR triage flagged and closed this pull request at commit \`<short_sha>\` — see the review above for why.
 
-          5. Regardless of the verdict in step 3/4, mark the PR as triaged at
-             this commit so tomorrow's run doesn't reprocess it unless it gets
-             new commits. Post this as a plain comment (not a review). The
-             comment MUST carry visible text as well as the hidden marker —
-             a body containing only the HTML comment renders as an empty
-             comment that GitHub displays as "No description provided.":
-               gh pr comment <number> --body "🤖 Automated PR triage checked this pull request at commit \`<short_sha>\`. If no review was posted alongside this comment, nothing was flagged.
-
-               <!-- gemini-triage:<head_commit_sha> -->"
-             Use the exact head_commit_sha from that PR's row in the tsv file
-             for the hidden marker — it must match character for character, as
-             the next run greps for it. Use its first 7 characters for the
-             visible <short_sha>.
+                  <!-- gemini-triage:<head_commit_sha> -->"
+                Use the exact head_commit_sha from that PR's row in the tsv
+                file for the hidden marker — it must match character for
+                character, as the next run greps for it. Use its first 7
+                characters for the visible <short_sha>.
 
           IMPORTANT — never run `gh pr merge` or approve a PR. Closing a PR
           (step 4c) is only allowed for a PR that actually matched one of the
           three criteria in step 2 — never close a PR for any other reason.
+          Exactly one triage marker comment (step 3 or step 4d, worded for
+          whichever outcome actually happened) must be posted for every PR
+          you process — never skip it, and never post both.
           Your only allowed actions are: read commands, `gh pr review --request-changes`,
           `gh pr edit --add-label`, `gh label create`, `gh pr close`, and
-          `gh pr comment` (for the triage marker only), all against the one
-          PR number in .pr-triage-current.tsv. A human maintainer can always
-          reopen a PR that was closed in error.
+          `gh pr comment` (for the triage marker, step 3 or step 4d), all
+          against the one PR number in .pr-triage-current.tsv. A human
+          maintainer can always reopen a PR that was closed in error.
           PROMPT
           )"
 
