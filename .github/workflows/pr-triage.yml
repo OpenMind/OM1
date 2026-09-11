@@ -1,14 +1,8 @@
 name: PR Triage
 
-# Requires repo secrets: GEMINI_API_KEY and PR_TRIAGE_APPROVED_AUTHORS (a
-# list of exempt GitHub usernames, one per line — Settings > Secrets and
-# variables > Actions > Secrets). It's a secret rather than a variable or a
-# committed file because this repo is public: secret values are masked
-# wherever they'd otherwise appear in run logs, including the automatic
-# per-step env dump, and a committed file would put the list in public git
-# history. To add someone, update the secret directly (repo write access
-# required, and you'll need your own copy of the current list — secrets are
-# write-only, there's no PR-reviewable diff for it).
+# Requires repo secrets: GEMINI_API_KEY and PR_TRIAGE_APPROVED_AUTHORS (exempt
+# GitHub usernames, one per line — a secret, not a variable or committed file,
+# since this repo is public and only secrets get masked in run logs).
 
 on:
   pull_request_target:
@@ -65,10 +59,8 @@ jobs:
 
           : > .pr-triage-candidates.tsv
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
-            # Approved-author check against the PR_TRIAGE_APPROVED_AUTHORS
-            # secret (see header comment) — a static list, not a live
-            # org-membership API call, so there's no token to expire or
-            # misconfigure.
+            # Static allowlist check (PR_TRIAGE_APPROVED_AUTHORS), not a
+            # live org-membership API call.
             if printf '%s\n' "$APPROVED_AUTHORS" | grep -qixF "$LOGIN"; then
               echo "PR #$NUMBER by @$LOGIN: approved author — skipping."
               continue
