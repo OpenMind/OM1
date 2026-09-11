@@ -14,6 +14,8 @@ From the [OpenMind portal](https://portal.openmind.com) you can send the robot s
 
 ![Select a map for navigation in the portal](../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
 
+![Autonomous navigation](../../.gitbook/assets/gifs/navigation.gif)
+
 ## Before you start
 
 - You have a **saved 2D map** (from either 2D or 3D SLAM).

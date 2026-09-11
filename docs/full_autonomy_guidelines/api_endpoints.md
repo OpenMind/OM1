@@ -40,7 +40,13 @@ The one call to check what's running and the battery state before starting or st
 | `battery_temperature` | `float` | °C |
 | `current_patrol` | `object` \| `null` | Map (and route, if any) currently loaded, or `null`. Precedence: patrol > Nav2 > 3D nav; only `map_name` is guaranteed |
 | `robot_type` | `str` | e.g. `"go2"`, `"g1"`, `"tron"`, `"m20"` |
-| `slam_3d_supported` | `bool` | Whether this robot has a 3D SLAM stack — use this to decide whether to offer 3D SLAM |
+| `use_sim` | `bool` | Whether the robot is running in simulation — affects what's supported (e.g. 3D SLAM on Go2) |
+| `slam_3d_supported` | `bool` | Whether this robot has a 3D SLAM (geometry) stack — use this to decide whether to offer 3D SLAM |
+| `slam_3d_color_supported` | `bool` | Whether this robot has the 3D color stack (`3d_color` / `3d_full`) |
+| `patrol_mode`, `patrol_phase` | `str` | Patrol supervisor mode (`manual`/`continuous`/`scheduled`) and phase |
+| `patrol_next_map_name`, `patrol_next_route_name`, `patrol_next_run_at` | `str` \| `null` | The next scheduled patrol and when it's due |
+
+See [Robot & Simulation Support](features/robot-support.md) for how `robot_type`, `use_sim`, and the `*_supported` flags combine.
 
 ## Base control
 
@@ -70,10 +76,13 @@ Every feature-specific endpoint is documented — with how, when, and why to use
 
 | Feature | Endpoints | Guide |
 |---------|-----------|-------|
-| Mapping & SLAM | `/start/slam/2d`, `/start/slam/3d`, `/stop/slam`, `/maps/save` | [Mapping & SLAM](features/mapping-slam.md) |
+| Mapping & SLAM | `/start/slam/2d`, `/start/slam/3d`, `/start/slam/3d_color`, `/start/slam/3d_full`, `/stop/slam`, `/maps/save` | [Mapping & SLAM](features/mapping-slam.md) |
 | Navigation | `/start/nav2`, `/stop/nav2`, `/api/move_to_pose`, `/api/nav2_status` | [Navigation (Nav2)](features/navigation.md) |
 | 3D Map Navigation | `/start/nav3d`, `/stop/nav3d` | [3D Map Navigation](features/3d-map-navigation.md) |
+| Relocalization | `/localization/status`, `/localization/reseed` | [Relocalization](features/relocalization.md) |
 | Frontier Exploration | `/explore/stop`, `/explore/resume`, `/explore/status` | [Frontier Exploration](features/frontier-exploration.md) |
-| Patrol | `/start/patrol`, `/stop/patrol`, `/pause/patrol`, `/resume/patrol` | [Patrol](features/patrol.md) |
-| Auto Charging | `/charging/dock`, `/charging/stop`, `/charging/status`, `/charging/location`, `/charging/location/save` | [Auto Charging](features/auto-charging.md) |
-| Maps, Routes & Locations | `/maps/list`, `/maps/delete`, `/maps/route/save`, `/maps/locations/*` | [Maps, Routes & Locations](features/maps-routes-locations.md) |
+| Patrol | `/start/patrol`, `/stop/patrol`, `/pause/patrol`, `/resume/patrol`, `/patrol/mode`, `/patrol/schedules*` | [Patrol](features/patrol.md) |
+| Deploy & Commissioning | `/deploy`, `/deploy/status`, `/deploy/cancel` | [Deploy & Commissioning](features/deploy-commissioning.md) |
+| Auto Charging | `/charging/dock`, `/charging/stop`, `/charging/status`, `/charging/auto`, `/charging/undock`, `/charging/location`, `/charging/location/save` | [Auto Charging](features/auto-charging.md) |
+| Maps, Routes & Locations | `/maps/list`, `/maps/delete`, `/maps/route/save`, `/maps/locations/*`, `/maps/<map>/pcd/raw`, `/maps/<map>/pcd/info` | [Maps, Routes & Locations](features/maps-routes-locations.md) |
+| Keep-out Zones | `/maps/keepout/save`, `/maps/keepout/list`, `/maps/keepout/get`, `/maps/keepout/delete` | [Keep-out Zones](features/keepout-zones.md) |
