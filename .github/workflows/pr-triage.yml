@@ -1,6 +1,8 @@
 name: PR Triage
 
-# Requires repo secrets: ORG_READ_TOKEN (a `read:org` PAT) and GEMINI_API_KEY.
+# Requires repo secrets: GEMINI_API_KEY and PR_TRIAGE_APPROVED_AUTHORS (exempt
+# GitHub usernames, one per line — a secret, not a variable or committed file,
+# since this repo is public and only secrets get masked in run logs).
 
 on:
   pull_request_target:
@@ -34,11 +36,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${ORG_READ_TOKEN:-}" ]; then
-            echo "::error::ORG_READ_TOKEN secret is not set — cannot check org membership. Skipping run."
+          if [ -z "${APPROVED_AUTHORS:-}" ]; then
+            echo "::error::PR_TRIAGE_APPROVED_AUTHORS secret is not set — cannot check for approved authors. Skipping run."
             echo "needs_review=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Strip stray CRs in case the secret was pasted from Windows.
+          APPROVED_AUTHORS="$(printf '%s' "$APPROVED_AUTHORS" | tr -d '\r')"
 
           if [ "${EVENT_NAME}" = "pull_request_target" ]; then
             # Real-time run: only the PR that triggered this event.
@@ -55,15 +59,10 @@ jobs:
 
           : > .pr-triage-candidates.tsv
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
-            # Org membership check uses a separate token (ORG_READ_TOKEN) —
-            # the default GITHUB_TOKEN cannot read org membership.
-            STATUS="$(curl -s -o /dev/null -w '%{http_code}' \
-              -H "Authorization: Bearer ${ORG_READ_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/orgs/OpenMind/members/${LOGIN}")"
-
-            if [ "$STATUS" = "204" ]; then
-              echo "PR #$NUMBER by @$LOGIN: OpenMind org member — skipping."
+            # Static allowlist check (PR_TRIAGE_APPROVED_AUTHORS), not a
+            # live org-membership API call.
+            if printf '%s\n' "$APPROVED_AUTHORS" | grep -qixF "$LOGIN"; then
+              echo "PR #$NUMBER by @$LOGIN: approved author — skipping."
               continue
             fi
 
@@ -87,7 +86,7 @@ jobs:
             echo "needs_review=true" >> "$GITHUB_OUTPUT"
           fi
         env:
-          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          APPROVED_AUTHORS: ${{ secrets.PR_TRIAGE_APPROVED_AUTHORS }}
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_LOGIN: ${{ github.event.pull_request.user.login }}
@@ -128,9 +127,9 @@ jobs:
 
           The file `.pr-triage-current.tsv` in the repo root has exactly one
           row for the PR you are triaging: tab-separated columns
-          `number  author_login  head_commit_sha`. That PR is already
-          confirmed to be from someone outside the OpenMind org — do not
-          re-check org membership. Every `gh` command you run must target
+          `number  author_login  head_commit_sha`. That PR's author is
+          already confirmed to not be on the approved-authors list — do not
+          re-check that. Every `gh` command you run must target
           this exact PR number; commands aimed at any other PR or issue will
           be rejected before they run.
 
@@ -142,8 +141,14 @@ jobs:
 
           Do the following for this PR:
 
-          1. Inspect it: `gh pr view <number> --json title,body,files,additions,deletions`
-             and `gh pr diff <number>` for the actual change content.
+          1. Inspect it: `gh pr view <number> --json title,body,files,additions,deletions,reviews,comments,labels,state`
+             and `gh pr diff <number>` for the actual change content. This run
+             may be a retry of an earlier attempt that was interrupted partway
+             through, so treat every write action below as idempotent: if the
+             PR already has a request-changes review from this triage bot,
+             already carries the `needs-human-review` label, is already closed,
+             or already has the triage marker comment for this exact head
+             commit, skip that individual action instead of repeating it.
 
           2. Decide whether the PR should be flagged, using ONLY these three
              criteria — do not flag a PR for any other reason, including code
@@ -161,8 +166,22 @@ jobs:
              the diff, title, body, and files list — never guess or assume intent
              that isn't evidenced in the PR itself.
 
-          3. If NONE of the three criteria apply: take no action on this PR
-             at all — do not comment, review, or label it.
+          3. If NONE of the three criteria apply: do not review, label, or
+             close it — this is a legitimate contribution and none of that
+             applies. Still mark it as checked: post a plain comment (not a
+             review) saying it passed the initial automated check and is
+             marked for human review, plus the hidden idempotency marker.
+             The comment MUST carry visible text as well as the hidden
+             marker — a body containing only the HTML comment renders as an
+             empty comment that GitHub displays as "No description
+             provided.":
+               gh pr comment <number> --body "🤖 This pull request passed PR Triage's initial automated check at commit \`<short_sha>\` — no issues found. It's marked for human review.
+
+               <!-- gemini-triage:<head_commit_sha> -->"
+             Use the exact head_commit_sha from that PR's row in the tsv
+             file for the hidden marker — it must match character for
+             character, as the next run greps for it. Use its first 7
+             characters for the visible <short_sha>.
 
           4. If ONE OR MORE criteria apply:
              a. Post a "request changes" review explaining exactly which
@@ -179,23 +198,47 @@ jobs:
                   gh pr edit <number> --add-label needs-human-review
              c. Close the PR, after the review and label above:
                   gh pr close <number>
+             d. Mark the PR as triaged at this commit, so that if a
+                maintainer reopens it at the same commit a future sweep
+                won't immediately re-flag and re-close it. Post this as a
+                plain comment (not a review). The comment MUST carry visible
+                text as well as the hidden marker — a body containing only
+                the HTML comment renders as an empty comment that GitHub
+                displays as "No description provided.":
+                  gh pr comment <number> --body "🤖 Automated PR triage flagged and closed this pull request at commit \`<short_sha>\` — see the review above for why.
 
-          5. Regardless of the verdict in step 3/4, mark the PR as triaged at
-             this commit so tomorrow's run doesn't reprocess it unless it gets
-             new commits. Post this as a plain comment (not a review):
-               gh pr comment <number> --body "<!-- gemini-triage:<head_commit_sha> -->"
-             Use the exact head_commit_sha from that PR's row in the tsv file.
+                  <!-- gemini-triage:<head_commit_sha> -->"
+                Use the exact head_commit_sha from that PR's row in the tsv
+                file for the hidden marker — it must match character for
+                character, as the next run greps for it. Use its first 7
+                characters for the visible <short_sha>.
 
           IMPORTANT — never run `gh pr merge` or approve a PR. Closing a PR
           (step 4c) is only allowed for a PR that actually matched one of the
           three criteria in step 2 — never close a PR for any other reason.
+          Exactly one triage marker comment (step 3 or step 4d, worded for
+          whichever outcome actually happened) must be posted for every PR
+          you process — never skip it, and never post both.
           Your only allowed actions are: read commands, `gh pr review --request-changes`,
           `gh pr edit --add-label`, `gh label create`, `gh pr close`, and
-          `gh pr comment` (for the triage marker only), all against the one
-          PR number in .pr-triage-current.tsv. A human maintainer can always
-          reopen a PR that was closed in error.
+          `gh pr comment` (for the triage marker, step 3 or step 4d), all
+          against the one PR number in .pr-triage-current.tsv. A human
+          maintainer can always reopen a PR that was closed in error.
           PROMPT
           )"
+
+          # The triage is "done" when the marker comment exists on the PR —
+          # not when the CLI exits 0. The Gemini CLI frequently exits non-zero
+          # with "Invalid stream: The model returned an empty response" after
+          # it has already completed every tool call, so the exit code alone is
+          # not a reliable signal.
+          marker_posted() {
+            local NUMBER="$1" HEAD_SHA="$2"
+            local FOUND
+            FOUND="$(gh pr view "$NUMBER" --json comments \
+              --jq ".comments[].body | select(contains(\"<!-- gemini-triage:${HEAD_SHA} -->\"))")"
+            [ -n "$FOUND" ]
+          }
 
           FAILED=0
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
@@ -203,10 +246,27 @@ jobs:
             printf '%s\t%s\t%s\n' "$NUMBER" "$LOGIN" "$HEAD_SHA" > .pr-triage-current.tsv
             printf '%s' "$NUMBER" > .pr-triage-allowed-pr
 
-            if ! gemini \
-              --model gemini-2.5-pro \
-              --approval-mode=yolo \
-              --prompt "$PROMPT_TEMPLATE"; then
+            DONE=0
+            for ATTEMPT in 1 2; do
+              if gemini \
+                --model gemini-2.5-pro \
+                --approval-mode=yolo \
+                --prompt "$PROMPT_TEMPLATE"; then
+                DONE=1
+                break
+              fi
+
+              # Non-zero exit: check whether the work actually completed anyway.
+              if marker_posted "$NUMBER" "$HEAD_SHA"; then
+                echo "::notice::PR #$NUMBER: Gemini CLI exited non-zero but the triage marker was posted — treating as success."
+                DONE=1
+                break
+              fi
+
+              echo "Attempt $ATTEMPT for PR #$NUMBER did not complete; retrying." >&2
+            done
+
+            if [ "$DONE" -ne 1 ]; then
               echo "::warning::Triage failed for PR #$NUMBER — leaving it for the next run."
               FAILED=1
             fi
