@@ -1,6 +1,14 @@
 name: PR Triage
 
-# Requires repo secrets: ORG_READ_TOKEN (a `read:org` PAT) and GEMINI_API_KEY.
+# Requires repo secrets: GEMINI_API_KEY and PR_TRIAGE_APPROVED_AUTHORS (a
+# list of exempt GitHub usernames, one per line — Settings > Secrets and
+# variables > Actions > Secrets). It's a secret rather than a variable or a
+# committed file because this repo is public: secret values are masked
+# wherever they'd otherwise appear in run logs, including the automatic
+# per-step env dump, and a committed file would put the list in public git
+# history. To add someone, update the secret directly (repo write access
+# required, and you'll need your own copy of the current list — secrets are
+# write-only, there's no PR-reviewable diff for it).
 
 on:
   pull_request_target:
@@ -34,11 +42,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${ORG_READ_TOKEN:-}" ]; then
-            echo "::error::ORG_READ_TOKEN secret is not set — cannot check org membership. Skipping run."
+          if [ -z "${APPROVED_AUTHORS:-}" ]; then
+            echo "::error::PR_TRIAGE_APPROVED_AUTHORS secret is not set — cannot check for approved authors. Skipping run."
             echo "needs_review=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Strip stray CRs in case the secret was pasted from Windows.
+          APPROVED_AUTHORS="$(printf '%s' "$APPROVED_AUTHORS" | tr -d '\r')"
 
           if [ "${EVENT_NAME}" = "pull_request_target" ]; then
             # Real-time run: only the PR that triggered this event.
@@ -55,15 +65,12 @@ jobs:
 
           : > .pr-triage-candidates.tsv
           while IFS=$'\t' read -r NUMBER LOGIN HEAD_SHA; do
-            # Org membership check uses a separate token (ORG_READ_TOKEN) —
-            # the default GITHUB_TOKEN cannot read org membership.
-            STATUS="$(curl -s -o /dev/null -w '%{http_code}' \
-              -H "Authorization: Bearer ${ORG_READ_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/orgs/OpenMind/members/${LOGIN}")"
-
-            if [ "$STATUS" = "204" ]; then
-              echo "PR #$NUMBER by @$LOGIN: OpenMind org member — skipping."
+            # Approved-author check against the PR_TRIAGE_APPROVED_AUTHORS
+            # secret (see header comment) — a static list, not a live
+            # org-membership API call, so there's no token to expire or
+            # misconfigure.
+            if printf '%s\n' "$APPROVED_AUTHORS" | grep -qixF "$LOGIN"; then
+              echo "PR #$NUMBER by @$LOGIN: approved author — skipping."
               continue
             fi
 
@@ -87,7 +94,7 @@ jobs:
             echo "needs_review=true" >> "$GITHUB_OUTPUT"
           fi
         env:
-          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+          APPROVED_AUTHORS: ${{ secrets.PR_TRIAGE_APPROVED_AUTHORS }}
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_LOGIN: ${{ github.event.pull_request.user.login }}
@@ -128,9 +135,9 @@ jobs:
 
           The file `.pr-triage-current.tsv` in the repo root has exactly one
           row for the PR you are triaging: tab-separated columns
-          `number  author_login  head_commit_sha`. That PR is already
-          confirmed to be from someone outside the OpenMind org — do not
-          re-check org membership. Every `gh` command you run must target
+          `number  author_login  head_commit_sha`. That PR's author is
+          already confirmed to not be on the approved-authors list — do not
+          re-check that. Every `gh` command you run must target
           this exact PR number; commands aimed at any other PR or issue will
           be rejected before they run.
 
