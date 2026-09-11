@@ -14,6 +14,8 @@ You can lay out a patrol route and start it from the [OpenMind portal](https://p
 
 ![ ](../../.gitbook/assets/full-autonomy-assets/patrol.png)
 
+![Autonomous patrol running in the Cloud Simulator](../../.gitbook/assets/gifs/patrol.gif)
+
 When you deploy a route, you choose how it should run — **Manual**, **Continuous**, or **Scheduled**:
 
 ![Deploy route dialog with Manual, Continuous, and Scheduled options](../../.gitbook/assets/full-autonomy-assets/patrol-deploy-methods.png)

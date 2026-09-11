@@ -27,6 +27,8 @@ A **3D Color** or **3D Full** run renders the space in true color (RGB) rather t
 
 ![Colorized RGB point cloud from a 3D Full run](../../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png)
 
+![Building a 3D color map on an M20 Pro in the Cloud Simulator](../../.gitbook/assets/gifs/3dcolorm20.gif)
+
 <!-- SCREENSHOT: SLAM Mode cards (2D SLAM / 3D SLAM / 3D Color / 3D Full) in Machine Teleops -->
 _The three 3D cards are marked **BETA**; on a real Go2 they're disabled and only 2D SLAM is selectable._
 

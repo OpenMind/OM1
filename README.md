@@ -220,6 +220,14 @@ OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The follow
 - **Auto Charging** - Automated docking and battery charging workflows.
 - **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
 
+### See it in action
+
+Full autonomy running in the [Cloud Simulator](docs/simulators/cloud-isaac-sim.md) — mapping, navigation, and patrol, no hardware required:
+
+| Navigation | Autonomous Patrol | 3D Color Mapping |
+|:---:|:---:|:---:|
+| ![Autonomous navigation](docs/.gitbook/assets/gifs/navigation.gif) | ![Autonomous patrol](docs/.gitbook/assets/gifs/patrol.gif) | ![3D color mapping](docs/.gitbook/assets/gifs/3dcolorm20.gif) |
+
 For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
 
 The BrainPack is open-source and you can refer to the guidelines to build your own [here](https://github.com/OpenMind/brainpack).
