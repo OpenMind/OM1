@@ -10,7 +10,7 @@ Cloud Isaac Sim enables you to run robot simulations on managed cloud infrastruc
 
 This guide has two parts:
 
-- **[Part 1 — Autonomy in the Portal](#part-1-autonomy-in-the-portal)**: launch a simulated robot, build a map with SLAM, create an autonomous patrol, monitor it remotely, and configure automatic charging — no code required.
+- **[Part 1 — Autonomy in the Portal](#part-1-autonomy-in-the-portal)**: launch a simulated robot, build a map with SLAM, create an autonomous patrol, monitor it remotely, and configure autonomous charging — no code required.
 - **[Part 2 — Connecting OM1](#part-2-connecting-om1)**: run the OM1 runtime against your cloud simulator instance, either in the cloud or from your local machine.
 
 ## Prerequisites
@@ -231,7 +231,7 @@ While the robot carries out its patrol, monitor everything directly from Machine
 
 Sessions can also be captured for later review from **Recordings** in the sidebar.
 
-### Step 8: Configure Automatic Charging
+### Step 8: Configure Autonomous Charging
 
 Autonomous robots also need to manage their battery. Instead of waiting for an operator to intervene, configure a **battery threshold** that automatically sends the robot back to its charging station.
 
@@ -244,9 +244,9 @@ Set the minimum battery level. Once the battery drops below that threshold, the 
 
 Once charged, it's ready to continue operating. This enables long-running deployments with minimal manual intervention.
 
-> **Note**: Automatic charging is supported on the **Unitree Go2** and the **Deep Robotics M20**, and it behaves the same in the simulator as on hardware. On a multi-pack robot like the M20, battery state shows per pack (front / rear). See [Auto Charging](../full_autonomy_guidelines/features/auto-charging.md).
+> **Note**: Autonomous charging is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and it behaves the same in the simulator as on hardware. On a multi-pack robot like the M20 Pro, battery state shows per pack (front / rear). See [Auto Charging](../full_autonomy_guidelines/features/auto-charging.md).
 
-### Step 9: Automatic Localization
+### Step 9: Autonomous Localization
 
 If the robot starts up again or loses localization, it can automatically determine its position on the existing map before continuing its mission. This removes another manual step from the deployment process and helps keep operations running smoothly.
 

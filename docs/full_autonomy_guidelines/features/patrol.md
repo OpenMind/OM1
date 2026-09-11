@@ -6,7 +6,7 @@ icon: shield-halved
 
 Patrol turns navigation into a routine: the robot loops between the waypoints of a [route graph](maps-routes-locations.md), over and over, without anyone driving it. It's the backbone of monitoring and inspection deployments. If you've set up [auto-charging](auto-charging.md), a patrol becomes genuinely hands-off — when the battery runs low the robot docks, tops up, and picks the route back up where it left off.
 
-Patrol is a **Go2-only** feature today, and it runs on top of Nav2 — so Nav2 needs to be up on the map first, with a route graph saved for it.
+Patrol is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and it runs on top of Nav2 — so Nav2 needs to be up on the map first, with a route graph saved for it.
 
 ## In the portal
 
@@ -122,7 +122,7 @@ Use `/patrol/schedules/replace` (body `{"schedules": [...]}`) when you're editin
 
 ## If something goes wrong
 
-- **`400` starting** — not a Go2, Nav2 isn't running, a patrol is already going, or you left out `map_name`/`route_name`.
+- **`400` starting** — the robot type doesn't support patrol, Nav2 isn't running, a patrol is already going, or you left out `map_name`/`route_name`.
 - **`400` route missing** — save the route first with `POST /maps/route/save`.
 - **`400` on pause/resume** — nothing is patrolling.
 
