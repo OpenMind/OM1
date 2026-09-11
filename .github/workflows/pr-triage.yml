@@ -188,9 +188,17 @@ jobs:
 
           5. Regardless of the verdict in step 3/4, mark the PR as triaged at
              this commit so tomorrow's run doesn't reprocess it unless it gets
-             new commits. Post this as a plain comment (not a review):
-               gh pr comment <number> --body "<!-- gemini-triage:<head_commit_sha> -->"
-             Use the exact head_commit_sha from that PR's row in the tsv file.
+             new commits. Post this as a plain comment (not a review). The
+             comment MUST carry visible text as well as the hidden marker —
+             a body containing only the HTML comment renders as an empty
+             comment that GitHub displays as "No description provided.":
+               gh pr comment <number> --body "🤖 Automated PR triage checked this pull request at commit \`<short_sha>\`. If no review was posted alongside this comment, nothing was flagged.
+
+               <!-- gemini-triage:<head_commit_sha> -->"
+             Use the exact head_commit_sha from that PR's row in the tsv file
+             for the hidden marker — it must match character for character, as
+             the next run greps for it. Use its first 7 characters for the
+             visible <short_sha>.
 
           IMPORTANT — never run `gh pr merge` or approve a PR. Closing a PR
           (step 4c) is only allowed for a PR that actually matched one of the
