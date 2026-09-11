@@ -3,8 +3,11 @@ package vlm
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -155,6 +158,65 @@ func TestSensorListenDescribesFramesAndBuffers(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("source was not stopped")
 	}
+}
+
+func TestSensorSendsMemoryWithLaterFrames(t *testing.T) {
+	var mu sync.Mutex
+	var bodies []string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		mu.Lock()
+		bodies = append(bodies, string(raw))
+		mu.Unlock()
+
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"a hallway"}}]}`))
+	}))
+	defer srv.Close()
+
+	// Frames spaced wider than the default memory interval, so the second
+	// request recalls the first.
+	source := newFakeSource(
+		video.Frame{Timestamp: time.Unix(10, 0), JPEG: []byte{0x01}},
+		video.Frame{Timestamp: time.Unix(14, 0), JPEG: []byte{0x02}},
+	)
+	s := NewSensor("VLMOpenAI", VLMConfig{
+		APIKey:  "k",
+		BaseURL: srv.URL,
+		Model:   "test",
+		Prompt:  "describe",
+	}, source)
+	defer s.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	out, err := s.Listen(ctx)
+	require.NoError(t, err)
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-out:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for description %d", i+1)
+		}
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Len(t, bodies, 2)
+
+	assert.Equal(t, 1, strings.Count(bodies[0], "data:image/jpeg;base64,"),
+		"first request has no history to send")
+	assert.NotContains(t, bodies[0], "you reported")
+
+	assert.Equal(t, 2, strings.Count(bodies[1], "data:image/jpeg;base64,"),
+		"second request carries the remembered frame alongside the current one")
+	assert.Contains(t, bodies[1], "you reported")
+	assert.Contains(t, bodies[1], "a hallway")
+	assert.Contains(t, bodies[1], "4.0s ago")
 }
 
 func TestRawToTextIgnoresNonStrings(t *testing.T) {

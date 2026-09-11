@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,24 +43,29 @@ func NewDescriber(d Describer) *Describer {
 	return &d
 }
 
-// Describe sends the prompt to the vision endpoint and returns the generated
-// text. When jpegBase64 is non-empty the frame is attached as an image; when it
-// is empty the request is text-only, so callers can still get a response if
-// frame capture failed. An empty result is returned (without error) when the
-// model produces no choices.
+const (
+	historyHeader = "--- Memory: earlier camera frames and what you reported for each, " +
+		"oldest first. They are context for how the scene got here; do not " +
+		"describe them as if they were happening now. ---"
+	textCacheHeader = "Other recent reports (frames omitted):"
+	currentHeader   = "--- Current camera frame (now) ---"
+	historyFooter   = "Answer for the current frame, using the memory above as context."
+)
+
+// Describe sends the prompt to the vision endpoint with a single frame and no
+// memory. See DescribeWithHistory for the general form.
 func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, error) {
-	content := []any{
-		map[string]any{"type": "text", "text": d.Prompt},
-	}
-	if jpegBase64 != "" {
-		content = append(content, map[string]any{
-			"type": "image_url",
-			"image_url": map[string]any{
-				"url":    "data:image/jpeg;base64," + jpegBase64,
-				"detail": "low",
-			},
-		})
-	}
+	return d.DescribeWithHistory(ctx, jpegBase64, History{})
+}
+
+// DescribeWithHistory sends the prompt, any recalled history, and the current
+// frame to the vision endpoint and returns the generated text. When jpegBase64
+// is non-empty the frame is attached as an image; when it is empty the request
+// carries no current frame, so callers can still get a response if frame
+// capture failed. An empty result is returned (without error) when the model
+// produces no choices.
+func (d *Describer) DescribeWithHistory(ctx context.Context, jpegBase64 string, hist History) (string, error) {
+	content := buildContent(d.Prompt, jpegBase64, hist)
 
 	requestBody := map[string]any{
 		"model":      d.Model,
@@ -113,4 +119,62 @@ func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, er
 	d.Log.Debug("Vision client response", zap.String("content", result))
 
 	return result, nil
+}
+
+// buildContent lays out the multimodal user message: the prompt, then the
+// recalled history interleaved as description/frame pairs, then the current
+// frame last so it is the most recent thing the model sees.
+func buildContent(prompt, jpegBase64 string, hist History) []map[string]any {
+	content := []map[string]any{textPart(prompt)}
+
+	if !hist.Empty() {
+		content = append(content, textPart(historyHeader))
+		for _, step := range hist.Frames {
+			content = append(content,
+				textPart(fmt.Sprintf("[%s ago] you reported: %q", formatAge(step.Age), step.Description)),
+				imagePart(step.JPEGBase64),
+			)
+		}
+		if len(hist.Texts) > 0 {
+			var b strings.Builder
+			b.WriteString(textCacheHeader)
+			for _, step := range hist.Texts {
+				fmt.Fprintf(&b, "\n- [%s ago] %q", formatAge(step.Age), step.Description)
+			}
+			content = append(content, textPart(b.String()))
+		}
+		content = append(content, textPart(currentHeader))
+	}
+
+	if jpegBase64 != "" {
+		content = append(content, imagePart(jpegBase64))
+	}
+
+	if !hist.Empty() {
+		content = append(content, textPart(historyFooter))
+	}
+
+	return content
+}
+
+func textPart(text string) map[string]any {
+	return map[string]any{"type": "text", "text": text}
+}
+
+func imagePart(jpegBase64 string) map[string]any {
+	return map[string]any{
+		"type": "image_url",
+		"image_url": map[string]any{
+			"url":    "data:image/jpeg;base64," + jpegBase64,
+			"detail": "low",
+		},
+	}
+}
+
+// formatAge renders a step age compactly for the prompt.
+func formatAge(age time.Duration) string {
+	if age < time.Minute {
+		return fmt.Sprintf("%.1fs", age.Seconds())
+	}
+	return age.Round(time.Second).String()
 }

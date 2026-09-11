@@ -38,7 +38,7 @@ type providerDefaults struct {
 var openAIDefaults = providerDefaults{
 	baseURL:   "https://api.openmind.com/api/core/openai",
 	model:     "gpt-4o-mini",
-	prompt:    "What is the most interesting aspect in this series of images?",
+	prompt:    "What is the most interesting aspect in the current camera frame?",
 	maxTokens: 300,
 }
 
@@ -59,6 +59,9 @@ type VLMConfig struct {
 	Width       int    `json:"resolution_width"`
 	Height      int    `json:"resolution_height"`
 
+	// Memory harness: past frames and descriptions re-sent with each request.
+	video.MemoryOptions
+
 	// Camera-only.
 	CameraIndex int `json:"camera_index"`
 
@@ -72,6 +75,7 @@ type vlmSensor struct {
 	log       *zap.Logger
 	describer *video.Describer
 	source    frameSource
+	memory    *video.Memory
 
 	mu       sync.Mutex
 	messages []inputs.Message
@@ -152,15 +156,19 @@ func parseConfig(configMap map[string]any, defaults providerDefaults) (VLMConfig
 
 func NewSensor(name string, cfg VLMConfig, source frameSource) *vlmSensor {
 	log := logger.Get().Named(name)
+	memoryCfg := cfg.MemoryOptions.Config()
 	log.Info("initializing",
 		zap.String("base_url", cfg.BaseURL),
 		zap.String("model", cfg.Model),
 		zap.Int("fps", cfg.FPS),
+		zap.Int("memory_frames", memoryCfg.MaxFrames),
+		zap.Int("memory_texts", memoryCfg.MaxTexts),
 	)
 	return &vlmSensor{
 		name:   name,
 		log:    log,
 		source: source,
+		memory: video.NewMemory(memoryCfg),
 		describer: video.NewDescriber(video.Describer{
 			Name:      name,
 			APIKey:    cfg.APIKey,
@@ -197,7 +205,9 @@ func (s *vlmSensor) Listen(ctx context.Context) (<-chan any, error) {
 				}
 
 				providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
-				text, err := s.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
+				jpegBase64 := base64.StdEncoding.EncodeToString(frame.JPEG)
+				text, err := s.describer.DescribeWithHistory(ctx, jpegBase64,
+					s.memory.History(frame.Timestamp))
 				if err != nil {
 					if ctx.Err() != nil {
 						return
@@ -208,6 +218,7 @@ func (s *vlmSensor) Listen(ctx context.Context) (<-chan any, error) {
 				if text == "" {
 					continue
 				}
+				s.memory.Add(frame.Timestamp, jpegBase64, text)
 
 				select {
 				case out <- text:
