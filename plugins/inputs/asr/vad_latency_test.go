@@ -274,13 +274,8 @@ func TestCheckInterruptDoesNotRefireOnceConfirmed(t *testing.T) {
 	}
 }
 
-// TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm is the
-// regression test for the bug this fix addresses: a single above-threshold
-// frame followed by silence must not be able to satisfy interruptConfirmDelay
-// just because wall-clock time elapses. Before this fix, checkInterrupt only
-// checked "no speech_end event yet", and the segmenter's own hangover (a
-// separate 300ms debounce meant to bridge natural pauses) kept speechActive
-// true for far longer than the sound itself lasted.
+// Regression test: one above-threshold frame followed by silence must not
+// satisfy interruptConfirmDelay just because wall-clock time elapses.
 func TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm(t *testing.T) {
 	resetTTSState(t)
 	tts.Speaking.Store(true)
@@ -294,9 +289,9 @@ func TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm(t *testing.T) {
 	}
 
 	start := time.Now()
-	tr.updateInterruptCandidate(start) // one frame above threshold
+	tr.updateInterruptCandidate(start)
 
-	fake.above = false // everything after that one frame is silence
+	fake.above = false
 	tr.updateInterruptCandidate(start.Add(150 * time.Millisecond))
 
 	if tr.confirmed {
@@ -307,9 +302,7 @@ func TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm(t *testing.T) {
 	}
 }
 
-// TestUpdateInterruptCandidate_SustainedAboveThresholdConfirms is the
-// companion case: genuinely continuous above-threshold frames for the full
-// confirm delay must still fire the interrupt.
+// Continuous above-threshold frames spanning the confirm delay must still fire.
 func TestUpdateInterruptCandidate_SustainedAboveThresholdConfirms(t *testing.T) {
 	resetTTSState(t)
 	tts.Speaking.Store(true)
@@ -335,9 +328,8 @@ func TestUpdateInterruptCandidate_SustainedAboveThresholdConfirms(t *testing.T) 
 	}
 }
 
-// TestUpdateInterruptCandidate_DropResetsStreak confirms a below-threshold
-// frame restarts the confirm window from the next above-threshold frame,
-// rather than carrying over the original start time.
+// A below-threshold frame restarts the confirm window from the next
+// above-threshold frame rather than carrying over the original start time.
 func TestUpdateInterruptCandidate_DropResetsStreak(t *testing.T) {
 	resetTTSState(t)
 	tts.Speaking.Store(true)
@@ -357,15 +349,13 @@ func TestUpdateInterruptCandidate_DropResetsStreak(t *testing.T) {
 	tr.updateInterruptCandidate(start.Add(50 * time.Millisecond))
 
 	fake.above = true
-	tr.updateInterruptCandidate(start.Add(100 * time.Millisecond)) // new streak begins here
+	tr.updateInterruptCandidate(start.Add(100 * time.Millisecond))
 
-	// 200ms after the original start, but only 100ms into the restarted streak.
 	tr.updateInterruptCandidate(start.Add(200 * time.Millisecond))
 	if tr.confirmed {
 		t.Error("expected the restarted streak to not yet satisfy the confirm delay")
 	}
 
-	// 150ms after the restarted streak began: now it should confirm.
 	tr.updateInterruptCandidate(start.Add(250 * time.Millisecond))
 	if !tr.confirmed {
 		t.Error("expected the restarted streak to confirm once it reaches the confirm delay")

@@ -49,9 +49,8 @@ type vadLatencyRecord struct {
 	Transcript       string  `json:"transcript"`
 }
 
-// speechDetector is the subset of *vad.Segmenter that vadLatencyTracker needs
-// for interrupt confirmation, narrowed to an interface so tests can drive it
-// with a fake instead of a real (model-backed) Segmenter.
+// speechDetector is the subset of *vad.Segmenter used for interrupt
+// confirmation, narrowed so tests can drive it without a loaded model.
 type speechDetector interface {
 	Feed(pcm []byte, t time.Time) []vad.Event
 	LastFrameAboveThreshold() bool
@@ -73,8 +72,6 @@ type vadLatencyTracker struct {
 	pendingEnd time.Time
 	lastStart  time.Time
 
-	// aboveSince is when the current unbroken run of above-threshold frames
-	// began; zero when the most recent frame was below threshold.
 	aboveSince    time.Time
 	candidateProb float32
 	confirmed     bool
@@ -157,13 +154,8 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	}
 }
 
-// updateInterruptCandidate tracks how long audio has stayed continuously
-// above the VAD threshold. This is deliberately independent of the
-// segmenter's own speech_start/speech_end events: those use a longer
-// hangover meant to bridge natural pauses within an utterance, which would
-// otherwise let a single loud transient hold "in speech" long enough to
-// satisfy interruptConfirmDelay on its own, even with silence the rest of
-// the way. Any below-threshold frame resets the streak here.
+// updateInterruptCandidate times the current unbroken above-threshold run,
+// independent of speech_end, whose longer hangover would outlast the confirm delay.
 func (t *vadLatencyTracker) updateInterruptCandidate(now time.Time) {
 	if t.segmenter.LastFrameAboveThreshold() {
 		if t.aboveSince.IsZero() {
@@ -178,9 +170,8 @@ func (t *vadLatencyTracker) updateInterruptCandidate(now time.Time) {
 	t.checkInterrupt(now)
 }
 
-// checkInterrupt fires tts.RequestInterrupt once audio has stayed
-// continuously above the VAD threshold for interruptConfirmDelay, filtering
-// out sub-confirm-delay blips.
+// checkInterrupt fires tts.RequestInterrupt once audio has stayed continuously
+// above the VAD threshold for interruptConfirmDelay.
 func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
 	if !t.enableInterrupt || t.aboveSince.IsZero() || t.confirmed {
 		return
