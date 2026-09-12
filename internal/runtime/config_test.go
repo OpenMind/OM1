@@ -112,6 +112,23 @@ func TestTraceOutput(t *testing.T) {
 	require.Equal(t, map[string]any{"dir": "left"}, got[0]["value"])
 }
 
+func TestTraceOutputIncludesText(t *testing.T) {
+	got := traceOutput(&llm.Response{
+		TextContent: "hello there",
+		ToolCalls:   []llm.ToolCall{{Name: "move", Arguments: map[string]any{"dir": "left"}}},
+	})
+	require.Len(t, got, 2)
+	require.Equal(t, "text", got[0]["type"])
+	require.Equal(t, "hello there", got[0]["value"])
+	require.Equal(t, "move", got[1]["type"])
+	require.Equal(t, map[string]any{"dir": "left"}, got[1]["value"])
+}
+
+func TestTraceOutputEmptyTextOmitted(t *testing.T) {
+	got := traceOutput(&llm.Response{})
+	require.Len(t, got, 0)
+}
+
 func TestLoadComponentsRequiresLLM(t *testing.T) {
 	m := NewModeSetup(config.ModeConfig{Name: "greeting"}, &config.SystemConfig{}, nil)
 	err := m.loadComponents()
