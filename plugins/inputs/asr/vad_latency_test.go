@@ -11,7 +11,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/providers/tts"
+	"github.com/openmind/om1/internal/vad"
 )
+
+// fakeSegmenter drives updateInterruptCandidate deterministically, standing
+// in for a real (model-backed) *vad.Segmenter that unit tests can't load.
+type fakeSegmenter struct {
+	above bool
+	prob  float32
+}
+
+func (f *fakeSegmenter) Feed(pcm []byte, t time.Time) []vad.Event { return nil }
+func (f *fakeSegmenter) LastFrameAboveThreshold() bool            { return f.above }
+func (f *fakeSegmenter) LastFrameProb() float32                   { return f.prob }
 
 func resetTTSState(t *testing.T) {
 	t.Helper()
@@ -163,8 +175,7 @@ func TestCheckInterruptFiresAfterConfirmDelayWhileTTSSpeaking(t *testing.T) {
 		log:                   zap.NewNop(),
 		enableInterrupt:       true,
 		interruptConfirmDelay: 150 * time.Millisecond,
-		speechActive:          true,
-		candidateStart:        now.Add(-200 * time.Millisecond),
+		aboveSince:            now.Add(-200 * time.Millisecond),
 	}
 
 	tr.checkInterrupt(now)
@@ -186,8 +197,7 @@ func TestCheckInterruptIgnoresBlipShorterThanConfirmDelay(t *testing.T) {
 		log:                   zap.NewNop(),
 		enableInterrupt:       true,
 		interruptConfirmDelay: 150 * time.Millisecond,
-		speechActive:          true,
-		candidateStart:        now.Add(-50 * time.Millisecond), // shorter than the 150ms confirm delay
+		aboveSince:            now.Add(-50 * time.Millisecond), // shorter than the 150ms confirm delay
 	}
 
 	tr.checkInterrupt(now)
@@ -209,8 +219,7 @@ func TestCheckInterruptSkipsRequestWhenTTSNotSpeaking(t *testing.T) {
 		log:                   zap.NewNop(),
 		enableInterrupt:       true,
 		interruptConfirmDelay: 150 * time.Millisecond,
-		speechActive:          true,
-		candidateStart:        now.Add(-200 * time.Millisecond),
+		aboveSince:            now.Add(-200 * time.Millisecond),
 	}
 
 	tr.checkInterrupt(now)
@@ -232,8 +241,7 @@ func TestCheckInterruptNoopWhenInterruptDisabled(t *testing.T) {
 		log:                   zap.NewNop(),
 		enableInterrupt:       false,
 		interruptConfirmDelay: 150 * time.Millisecond,
-		speechActive:          true,
-		candidateStart:        now.Add(-200 * time.Millisecond),
+		aboveSince:            now.Add(-200 * time.Millisecond),
 	}
 
 	tr.checkInterrupt(now)
@@ -255,8 +263,7 @@ func TestCheckInterruptDoesNotRefireOnceConfirmed(t *testing.T) {
 		log:                   zap.NewNop(),
 		enableInterrupt:       true,
 		interruptConfirmDelay: 150 * time.Millisecond,
-		speechActive:          true,
-		candidateStart:        now.Add(-200 * time.Millisecond),
+		aboveSince:            now.Add(-200 * time.Millisecond),
 		confirmed:             true,
 	}
 
@@ -264,5 +271,103 @@ func TestCheckInterruptDoesNotRefireOnceConfirmed(t *testing.T) {
 
 	if tts.Interrupt.Load() {
 		t.Error("expected tts.RequestInterrupt to not fire again once already confirmed")
+	}
+}
+
+// TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm is the
+// regression test for the bug this fix addresses: a single above-threshold
+// frame followed by silence must not be able to satisfy interruptConfirmDelay
+// just because wall-clock time elapses. Before this fix, checkInterrupt only
+// checked "no speech_end event yet", and the segmenter's own hangover (a
+// separate 300ms debounce meant to bridge natural pauses) kept speechActive
+// true for far longer than the sound itself lasted.
+func TestUpdateInterruptCandidate_SingleFrameSpikeDoesNotConfirm(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	fake := &fakeSegmenter{above: true, prob: 0.95}
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		segmenter:             fake,
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+	}
+
+	start := time.Now()
+	tr.updateInterruptCandidate(start) // one frame above threshold
+
+	fake.above = false // everything after that one frame is silence
+	tr.updateInterruptCandidate(start.Add(150 * time.Millisecond))
+
+	if tr.confirmed {
+		t.Error("a single above-threshold frame followed by silence must not confirm")
+	}
+	if tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to not fire for a single-frame spike")
+	}
+}
+
+// TestUpdateInterruptCandidate_SustainedAboveThresholdConfirms is the
+// companion case: genuinely continuous above-threshold frames for the full
+// confirm delay must still fire the interrupt.
+func TestUpdateInterruptCandidate_SustainedAboveThresholdConfirms(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	fake := &fakeSegmenter{above: true, prob: 0.9}
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		segmenter:             fake,
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+	}
+
+	start := time.Now()
+	tr.updateInterruptCandidate(start)
+	tr.updateInterruptCandidate(start.Add(75 * time.Millisecond))
+	tr.updateInterruptCandidate(start.Add(160 * time.Millisecond))
+
+	if !tr.confirmed {
+		t.Error("expected sustained above-threshold audio to confirm")
+	}
+	if !tts.Interrupt.Load() {
+		t.Error("expected tts.RequestInterrupt to have fired")
+	}
+}
+
+// TestUpdateInterruptCandidate_DropResetsStreak confirms a below-threshold
+// frame restarts the confirm window from the next above-threshold frame,
+// rather than carrying over the original start time.
+func TestUpdateInterruptCandidate_DropResetsStreak(t *testing.T) {
+	resetTTSState(t)
+	tts.Speaking.Store(true)
+
+	fake := &fakeSegmenter{above: true, prob: 0.9}
+	tr := &vadLatencyTracker{
+		log:                   zap.NewNop(),
+		segmenter:             fake,
+		enableInterrupt:       true,
+		interruptConfirmDelay: 150 * time.Millisecond,
+	}
+
+	start := time.Now()
+	tr.updateInterruptCandidate(start)
+
+	fake.above = false
+	tr.updateInterruptCandidate(start.Add(50 * time.Millisecond))
+
+	fake.above = true
+	tr.updateInterruptCandidate(start.Add(100 * time.Millisecond)) // new streak begins here
+
+	// 200ms after the original start, but only 100ms into the restarted streak.
+	tr.updateInterruptCandidate(start.Add(200 * time.Millisecond))
+	if tr.confirmed {
+		t.Error("expected the restarted streak to not yet satisfy the confirm delay")
+	}
+
+	// 150ms after the restarted streak began: now it should confirm.
+	tr.updateInterruptCandidate(start.Add(250 * time.Millisecond))
+	if !tr.confirmed {
+		t.Error("expected the restarted streak to confirm once it reaches the confirm delay")
 	}
 }

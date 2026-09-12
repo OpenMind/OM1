@@ -49,12 +49,21 @@ type vadLatencyRecord struct {
 	Transcript       string  `json:"transcript"`
 }
 
+// speechDetector is the subset of *vad.Segmenter that vadLatencyTracker needs
+// for interrupt confirmation, narrowed to an interface so tests can drive it
+// with a fake instead of a real (model-backed) Segmenter.
+type speechDetector interface {
+	Feed(pcm []byte, t time.Time) []vad.Event
+	LastFrameAboveThreshold() bool
+	LastFrameProb() float32
+}
+
 // vadLatencyTracker runs a local Silero VAD alongside the ASR stream for
 // latency measurement and TTS barge-in
 type vadLatencyTracker struct {
 	log        *zap.Logger
 	model      *vad.Model
-	segmenter  *vad.Segmenter
+	segmenter  speechDetector
 	outputPath string
 
 	enableInterrupt       bool
@@ -64,10 +73,11 @@ type vadLatencyTracker struct {
 	pendingEnd time.Time
 	lastStart  time.Time
 
-	speechActive   bool
-	candidateStart time.Time
-	candidateProb  float32
-	confirmed      bool
+	// aboveSince is when the current unbroken run of above-threshold frames
+	// began; zero when the most recent frame was below threshold.
+	aboveSince    time.Time
+	candidateProb float32
+	confirmed     bool
 }
 
 // newVADLatencyTracker builds a tracker from cfg, or returns nil if the
@@ -132,12 +142,6 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 		case vad.EventSpeechStart:
 			t.lastStart = ev.At
 			t.log.Info("vad: speech started", zap.Time("at", ev.At))
-			if t.enableInterrupt {
-				t.speechActive = true
-				t.candidateStart = ev.At
-				t.candidateProb = ev.Prob
-				t.confirmed = false
-			}
 		case vad.EventSpeechEnd:
 			t.pendingEnd = ev.At
 			fields := []zap.Field{zap.Time("at", ev.At)}
@@ -145,32 +149,50 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 				fields = append(fields, zap.Duration("utterance_duration", ev.At.Sub(t.lastStart)))
 			}
 			t.log.Info("vad: speech ended", fields...)
-			if t.enableInterrupt {
-				t.speechActive = false
-				t.candidateStart = time.Time{}
-				t.confirmed = false
-			}
 		}
 	}
 
+	if t.enableInterrupt {
+		t.updateInterruptCandidate(now)
+	}
+}
+
+// updateInterruptCandidate tracks how long audio has stayed continuously
+// above the VAD threshold. This is deliberately independent of the
+// segmenter's own speech_start/speech_end events: those use a longer
+// hangover meant to bridge natural pauses within an utterance, which would
+// otherwise let a single loud transient hold "in speech" long enough to
+// satisfy interruptConfirmDelay on its own, even with silence the rest of
+// the way. Any below-threshold frame resets the streak here.
+func (t *vadLatencyTracker) updateInterruptCandidate(now time.Time) {
+	if t.segmenter.LastFrameAboveThreshold() {
+		if t.aboveSince.IsZero() {
+			t.aboveSince = now
+			t.candidateProb = t.segmenter.LastFrameProb()
+			t.confirmed = false
+		}
+	} else {
+		t.aboveSince = time.Time{}
+		t.confirmed = false
+	}
 	t.checkInterrupt(now)
 }
 
-// checkInterrupt fires tts.RequestInterrupt once speechActive has persisted
-// past interruptConfirmDelay without an intervening speech_end, filtering
-// out sub-confirm-delay blips
+// checkInterrupt fires tts.RequestInterrupt once audio has stayed
+// continuously above the VAD threshold for interruptConfirmDelay, filtering
+// out sub-confirm-delay blips.
 func (t *vadLatencyTracker) checkInterrupt(now time.Time) {
-	if !t.enableInterrupt || !t.speechActive || t.confirmed {
+	if !t.enableInterrupt || t.aboveSince.IsZero() || t.confirmed {
 		return
 	}
-	if now.Sub(t.candidateStart) < t.interruptConfirmDelay {
+	if now.Sub(t.aboveSince) < t.interruptConfirmDelay {
 		return
 	}
 
 	t.confirmed = true
 	if tts.Speaking.Load() {
 		t.log.Info("vad: barge-in detected, interrupting TTS",
-			zap.Duration("confirm_delay", now.Sub(t.candidateStart)),
+			zap.Duration("confirm_delay", now.Sub(t.aboveSince)),
 			zap.Float32("confidence", t.candidateProb))
 		tts.RequestInterrupt()
 	}
