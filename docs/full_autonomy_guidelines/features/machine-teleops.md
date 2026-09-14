@@ -18,6 +18,16 @@ The **Robot Control** panel sets the robot's motion state — **Stand** (stand a
 
 ![Robot Control panel — motion state and gait selection](../../.gitbook/assets/full-autonomy-assets/robot_control.png)
 
+## Map view
+
+The **Map view** tab shows the robot on its map — whether it's mapping, navigating, or patrolling. Its toolbar carries the tools you'll reach for most:
+
+| ![Set goal](../../.gitbook/assets/full-autonomy-assets/set_goal.png) | ![Clear robot trail](../../.gitbook/assets/full-autonomy-assets/clear_robot_trail.png) |
+|:---:|:---:|
+| **Set goal** — click a point on the map to send the robot there | **Clear robot trail** — remove the trail the robot has drawn on the map |
+
+The toolbar's third tool, **Localize**, re-establishes the robot's pose if it drifts — see [Relocalization](relocalization.md). As the robot drives, the map view shows its live pose and draws a **trail** of where it has been; **Clear robot trail** wipes it when the view gets busy.
+
 ## Running autonomy from here
 
 Machine Teleops is also where you launch and monitor autonomy — connect a machine, pick a map, and start a run. Each capability has its own guide:

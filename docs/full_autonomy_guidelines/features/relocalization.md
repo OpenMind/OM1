@@ -6,7 +6,13 @@ icon: location-crosshairs
 
 Navigation is only as good as the robot's belief about where it is. When that belief drifts — or is lost outright after a restart — the robot needs to **relocalize**: re-establish a trustworthy pose in the map before it moves again.
 
-Two endpoints cover it: one to check the pose, one to fix it.
+## In the portal
+
+In the [Machine Teleops](machine-teleops.md#map-view) **Map view**, the **Localize** tool fixes the pose by hand — reach for it when the robot has drifted or comes up unsure of where it is. Click **Localize (estimate pose)**, then set the robot's position and heading on the map.
+
+![The Localize (estimate pose) tool on the Map view toolbar](../../.gitbook/assets/full-autonomy-assets/localise.png)
+
+Over the API, two endpoints cover it: one to check the pose, one to fix it from the dock.
 
 ## Checking the pose
 

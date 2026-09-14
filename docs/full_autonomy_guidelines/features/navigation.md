@@ -12,15 +12,11 @@ There are two APIs involved. You start and stop the Nav2 stack through the Orche
 
 ## In the portal
 
-From the [OpenMind portal](https://portal.openmind.com) you can drive the robot without touching the API. Pick a saved map, then work from the **Map view** toolbar:
-
-| ![Set goal](../../.gitbook/assets/full-autonomy-assets/set_goal.png) | ![Localize](../../.gitbook/assets/full-autonomy-assets/localise.png) | ![Clear robot trail](../../.gitbook/assets/full-autonomy-assets/clear_robot_trail.png) |
-|:---:|:---:|:---:|
-| **Set goal** — click a point on the map to send the robot there | **Localize** — re-establish the robot's pose if it loses localization | **Clear robot trail** — remove the trail the robot has drawn on the map |
-
-As the robot drives, the map view shows its live pose and draws a **trail** of where it has been — handy for seeing the ground it has covered. **Clear robot trail** wipes that trail when the view gets busy.
+From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map (**Set goal**) — no API calls needed. Pick a saved map, and the map view shows the robot's live pose as it drives.
 
 ![Select a map for navigation in the portal](../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
+
+The **Set goal** tool lives on the shared Map view toolbar, alongside Localize and Clear robot trail — see [Machine Teleops → Map view](machine-teleops.md#map-view).
 
 ## Before you start
 
