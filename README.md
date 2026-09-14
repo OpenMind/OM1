@@ -213,7 +213,7 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 ## Full Autonomy Guidance
 
-OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The following features are supported with BrainPack:
+OM1 supports **full autonomy** for the Unitree Go2, Deep Robotics M20 Pro, Unitree G1, and LimX Tron with BrainPack. The following features are supported with BrainPack:
 
 - **Navigation** - Autonomous path planning and movement.
 - **SLAM** - Simultaneous Localization and Mapping for persistent map-based operation.
