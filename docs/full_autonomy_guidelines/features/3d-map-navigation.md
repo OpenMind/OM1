@@ -1,23 +1,23 @@
 ---
-title: 3D Map Navigation
+title: 3D Navigation
 description: "Localize and plan on a point-cloud map built with 3D SLAM."
 icon: cube
 ---
 
-When a flat 2D grid isn't enough — think ramps, split levels, or anything where height matters — you navigate against the **point-cloud map** you captured with [3D SLAM](mapping-slam.md) instead. 3D map navigation localizes the robot against that `.pcd` and plans paths over it.
+When a flat 2D grid isn't enough — think ramps, split levels, or anything where height matters — you navigate against the **point-cloud map** you captured with [3D SLAM](mapping-slam.md) instead. 3D navigation localizes the robot against that `.pcd` and plans paths over it. (For everyday flat, single-floor spaces, [2D Navigation](navigation.md) is simpler.)
 
 Two pieces come up together: **ICP localization**, which matches the live LiDAR against the saved point cloud to track where the robot is, and the **PCT planner**, which plans a route from there to a goal. One thing to design around: this **localizes and plans only — it doesn't drive the robot**. A separate motion controller consumes the planned path, so pair it accordingly.
 
 ## In the portal
 
-The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-cloud) map and set navigation goals against it from the machine's autonomy view, the same way you would for a 2D map.
+The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-cloud) map and set navigation goals against it from the machine's autonomy view, the same way you would for a 2D map. In **Machine Teleops → Robot Settings → Navigation Mode**, choose **3D Navigation** and pick a saved 3D map.
 
 ![ ](../../.gitbook/assets/full-autonomy-assets/3D-slam-map.png)
 
 ## Before you start
 
 - You have a map with a saved geometry **`.pcd`** — meaning it was built with **3D SLAM** or **3D Full**. A **3D Color** map is view-only and has no navigable cloud, so it won't work here.
-- The robot type supports 3D (`slam_3d_supported` in `GET /status`). A real Go2 doesn't — its 3D stack is simulation-only, so 3D map navigation on Go2 is a sim feature. See [Robot & simulation support](robot-support.md).
+- The robot type supports 3D (`slam_3d_supported` in `GET /status`). A real Go2 doesn't — its 3D stack is simulation-only, so 3D navigation on Go2 is a sim feature. See [Robot & simulation support](robot-support.md).
 - **SLAM and Nav2 are both stopped.**
 
 ## Running it

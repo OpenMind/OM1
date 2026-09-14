@@ -16,7 +16,7 @@ The columns below use the portal's short names — **Go2** is the Unitree Go2, *
 |---|:---:|:---:|:---:|
 | 2D mapping & navigation | ✅ | ✅ | ✅ |
 | 3D mapping — SLAM / Color / Full | ❌ | ✅ | ✅ |
-| 3D map navigation | ❌ | ✅ | ✅ |
+| 3D navigation | ❌ | ✅ | ✅ |
 | Patrol (+ scheduling) | ✅ | ✅ | ✅ |
 | Auto-charging | ✅ | ✅ | ✅ |
 

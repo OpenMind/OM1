@@ -14,7 +14,7 @@ The [OpenMind portal](https://portal.openmind.com) shows live battery state and 
 
 ![ ](../../.gitbook/assets/full-autonomy-assets/auto-charging.png)
 
-<!-- SCREENSHOT: Auto-charge + Scheduled charge panel (M20, front/rear battery packs) in Machine Teleops -->
+![Auto-charge and Scheduled charge panel on an M20 Pro, with front/rear battery packs](../../.gitbook/assets/full-autonomy-assets/autocharge_m20.png)
 
 ## Autonomous charging on low battery
 

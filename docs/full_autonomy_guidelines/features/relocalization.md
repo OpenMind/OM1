@@ -26,7 +26,7 @@ curl -X POST http://<robot>:5000/localization/reseed -H 'Content-Type: applicati
 
 This is only valid **while the robot is charging** — that's what makes the dock pose reliable. It's also the **3D stack's only relocalization channel**: unlike 2D AMCL, 3D ICP localization can't recover on its own, so a robot whose 3D pose has drifted is brought back by docking and re-seeding.
 
-This is why [Deploy](deploy-commissioning.md) sends the robot home before restarting navigation — the restart discards the pose estimate, and the dock is where it's re-established. In the portal you'll see this as the **"Seeding localization from the charging station"** step of a deploy.
+This is why [deploying a patrol](patrol.md#deploying-a-patrol) sends the robot home before restarting navigation — the restart discards the pose estimate, and the dock is where it's re-established. In the portal you'll see this as the **"Seeding localization from the charging station"** step of a deploy.
 
 ## Parameters
 

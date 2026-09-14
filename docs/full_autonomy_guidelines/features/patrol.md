@@ -98,6 +98,10 @@ In the portal, this is the **Scheduled** option on the deploy dialog: pick the d
 
 ![Scheduled patrol setup with weekday picker, time window, and timezone](../../.gitbook/assets/full-autonomy-assets/deploy-route.png)
 
+Once deployed, the schedule bar shows every configured window, the next run, and quick **Edit hours** / **Start now** / **Stop patrol** controls:
+
+![Active patrol schedule with time windows and next-run status](../../.gitbook/assets/full-autonomy-assets/patrol_schedule.png)
+
 A window can't cross midnight — for an overnight patrol, add two schedules (e.g. `22:00–23:59` and `00:00–06:00`). Overlapping windows on a shared weekday are rejected with `409`.
 
 Manage the set:
@@ -111,6 +115,42 @@ curl -X POST http://<robot>:5000/patrol/schedules/delete   -d '{"schedule_id": "
 Use `/patrol/schedules/replace` (body `{"schedules": [...]}`) when you're editing several at once — it swaps the entire set in one step and avoids transient-overlap rejections you'd hit posting them one by one.
 
 > **Works with auto-charging.** In `scheduled` mode, a low battery sends the robot to dock; once it's charged it rejoins the schedule — patrolling if it's still inside a window, waiting if not. The **Scheduled charge** control (see [Auto Charging](auto-charging.md)) sets the level to leave the dock at before returning to the schedule.
+
+## Deploying a patrol
+
+`POST /deploy` is the one-step way to put a patrol into service — it's what the portal's **Deploy** button runs. Instead of starting Nav2, seeding localization, and arming the patrol by hand, one call commissions everything and parks the robot ready to go. It runs in the background and steps through:
+
+1. Save the route to the robot
+2. Stop any running patrol
+3. **Return to the charging station**
+4. Restart navigation on the deployed map
+5. **Re-seed localization from the dock**
+6. Arm the chosen mode — `manual`, `continuous`, or `scheduled`
+
+Docking first is deliberate: restarting navigation costs the robot its pose estimate — and on the [3D stack](3d-map-navigation.md) it can't recover that on its own — so it heads back to the charger, the one spot whose pose is known, and [re-seeds from there](relocalization.md).
+
+![Deploy progress — saving the route, returning to the dock, seeding localization, arming patrol](../../.gitbook/assets/full-autonomy-assets/patrol-process.png)
+
+```bash
+curl -X POST http://<robot>:5000/deploy \
+  -H 'Content-Type: application/json' \
+  -d '{"map_name": "office", "route_name": "patrol_route_1", "mode": "continuous"}'
+
+# check progress, or stop it
+curl http://<robot>:5000/deploy/status
+curl -X POST http://<robot>:5000/deploy/cancel -H 'Content-Type: application/json' -d '{}'
+```
+
+For `scheduled` mode, include a `schedules` array in the body (same shape as [Schedules](#schedules) above).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `map_name` | string | yes | Map to commission |
+| `route_name` | string | no | Route graph to load |
+| `mode` | string | no | Mode to arm — `manual`, `continuous`, or `scheduled` |
+| `schedules` | object[] | no | Schedules to install when `mode` is `scheduled` |
+| `use_nav3d` | bool | no | Commission on the [3D map](3d-map-navigation.md) instead of 2D |
+| `skip_return_to_dock` | bool | no | Skip the drive back to the charger — only when the robot is already localized |
 
 ## Parameters
 

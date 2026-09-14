@@ -77,12 +77,11 @@ Every feature-specific endpoint is documented — with how, when, and why to use
 | Feature | Endpoints | Guide |
 |---------|-----------|-------|
 | Mapping & SLAM | `/start/slam/2d`, `/start/slam/3d`, `/start/slam/3d_color`, `/start/slam/3d_full`, `/stop/slam`, `/maps/save` | [Mapping & SLAM](features/mapping-slam.md) |
-| Navigation | `/start/nav2`, `/stop/nav2`, `/api/move_to_pose`, `/api/nav2_status` | [Navigation (Nav2)](features/navigation.md) |
-| 3D Map Navigation | `/start/nav3d`, `/stop/nav3d` | [3D Map Navigation](features/3d-map-navigation.md) |
+| 2D Navigation | `/start/nav2`, `/stop/nav2`, `/api/move_to_pose`, `/api/nav2_status` | [2D Navigation](features/navigation.md) |
+| 3D Navigation | `/start/nav3d`, `/stop/nav3d` | [3D Navigation](features/3d-map-navigation.md) |
 | Relocalization | `/localization/status`, `/localization/reseed` | [Relocalization](features/relocalization.md) |
 | Frontier Exploration | `/explore/stop`, `/explore/resume`, `/explore/status` | [Frontier Exploration](features/frontier-exploration.md) |
-| Patrol | `/start/patrol`, `/stop/patrol`, `/pause/patrol`, `/resume/patrol`, `/patrol/mode`, `/patrol/schedules*` | [Patrol](features/patrol.md) |
-| Deploy & Commissioning | `/deploy`, `/deploy/status`, `/deploy/cancel` | [Deploy & Commissioning](features/deploy-commissioning.md) |
+| Patrol | `/start/patrol`, `/stop/patrol`, `/pause/patrol`, `/resume/patrol`, `/patrol/mode`, `/patrol/schedules*`, `/deploy`, `/deploy/status`, `/deploy/cancel` | [Patrol](features/patrol.md) |
 | Auto Charging | `/charging/dock`, `/charging/stop`, `/charging/status`, `/charging/auto`, `/charging/undock`, `/charging/location`, `/charging/location/save` | [Auto Charging](features/auto-charging.md) |
 | Maps, Routes & Locations | `/maps/list`, `/maps/delete`, `/maps/route/save`, `/maps/locations/*`, `/maps/<map>/pcd/raw`, `/maps/<map>/pcd/info` | [Maps, Routes & Locations](features/maps-routes-locations.md) |
 | Keep-out Zones | `/maps/keepout/save`, `/maps/keepout/list`, `/maps/keepout/get`, `/maps/keepout/delete` | [Keep-out Zones](features/keepout-zones.md) |

@@ -14,12 +14,16 @@ Open the **Camera** tab for the robot's live feeds (Front, Top, Down) alongside 
 
 ![Machine Teleops](../../.gitbook/assets/full-autonomy-assets/machine_teleops.png)
 
+The **Robot Control** panel sets the robot's motion state — **Stand** (stand and walk) or **Sit** (lie down) — and, on supported robots, the **gait**: **Basic** (standard motion), **High Obstacles** (tall clearance), or **Stair** (stair climbing).
+
+![Robot Control panel — motion state and gait selection](../../.gitbook/assets/full-autonomy-assets/robot_control.png)
+
 ## Running autonomy from here
 
 Machine Teleops is also where you launch and monitor autonomy — connect a machine, pick a map, and start a run. Each capability has its own guide:
 
 - [Mapping & SLAM](mapping-slam.md) — build a map
-- [Navigation (Nav2)](navigation.md) — send the robot to a goal
+- [2D Navigation](navigation.md) — send the robot to a goal
 - [Patrol](patrol.md) — loop a route between waypoints
 - [Maps, Routes & Locations](maps-routes-locations.md) — manage what it navigates on
 
