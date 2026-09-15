@@ -19,7 +19,7 @@ If you're just getting oriented, the [Cloud Simulator](../../simulators/cloud-is
 - [Mapping & SLAM](mapping-slam.md) — build 2D and 3D maps
 - [Hybrid Localization](../localization.md) — how the robot tracks where it is
 - [Relocalization](relocalization.md) — check the pose and recover it from the dock
-- [2D Navigation](navigation.md) — autonomous point-to-point on a 2D map (Nav2)
+- [2D Navigation](navigation.md) — autonomous point-to-point on a 2D map
 - [3D Navigation](3d-map-navigation.md) — localize and plan on a point-cloud map
 - [Frontier Exploration](frontier-exploration.md) — explore an unknown space on its own
 

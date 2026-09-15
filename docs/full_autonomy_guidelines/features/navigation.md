@@ -1,32 +1,32 @@
 ---
 title: 2D Navigation
-description: "Autonomous point-to-point navigation on a saved 2D map, powered by Nav2."
+description: "Autonomous point-to-point navigation on a saved 2D map."
 icon: route
 ---
 
-Once you have a [map](mapping-slam.md), navigation is what makes the robot useful on its own: give it a destination and it plans a path there, drives, and steers around whatever's in the way. Under the hood it's the **Nav2** stack (ROS 2 Navigation) handling planning, obstacle avoidance, and localization on the 2D occupancy grid.
+Once you have a [map](mapping-slam.md), navigation is what makes the robot useful on its own: give it a destination and it plans a path there, drives, and steers around whatever's in the way. Under the hood it's a ROS 2 navigation stack handling planning, obstacle avoidance, and localization on the 2D occupancy grid.
 
 Got ramps or multiple floors? Navigate a point-cloud map with [3D Navigation](3d-map-navigation.md) instead.
 
-There are two APIs involved. You start and stop the Nav2 stack through the Orchestrator (`:5000`), then send goals and watch their progress through the Nav2 API (`:5001`). If you want the robot to stick to fixed paths rather than plan freely, point it at a [route graph](maps-routes-locations.md).
+There are two APIs involved. You start and stop the navigation stack through the Orchestrator (`:5000`), then send goals and watch their progress through the Navigation API (`:5001`). If you want the robot to stick to fixed paths rather than plan freely, point it at a [route graph](maps-routes-locations.md).
 
 ## In the portal
 
 From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map (**Set goal**) — no API calls needed. Pick a saved map, and the map view shows the robot's live pose as it drives.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Select a map for navigation in the portal" width="480" height="312">
+<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Select a map for navigation in the portal" width="480" height="230">
 
 The **Set goal** tool lives on the shared Map view toolbar, alongside Localize and Clear robot trail — see [Machine Teleops → Map view](machine-teleops.md#map-view).
 
 ## Before you start
 
 - You have a **saved 2D map** (from either 2D or 3D SLAM).
-- **SLAM is stopped** — Nav2 and SLAM can't run together.
+- **SLAM is stopped** — navigation and SLAM can't run together.
 - If you're using a route graph, it's already saved for that map.
 
 ## Driving to a goal
 
-Bring up Nav2 on the map you want to use:
+Bring up navigation on the map you want to use:
 
 ```bash
 curl -X POST http://<robot>:5000/start/nav2 \
@@ -36,7 +36,7 @@ curl -X POST http://<robot>:5000/start/nav2 \
 
 Add `"route_name": "patrol_route_1"` to constrain it to a route graph.
 
-The robot localizes itself in the map, and you can now send it a goal pose (in the map frame) through the Nav2 API:
+The robot localizes itself in the map, and you can now send it a goal pose (in the map frame) through the Navigation API:
 
 ```bash
 curl -X POST http://<robot>:5001/api/move_to_pose \
@@ -66,10 +66,10 @@ curl -X POST http://<robot>:5000/stop/nav2 -H 'Content-Type: application/json' -
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `map_name` | string | yes | Saved map to navigate on |
-| `launch_file` | string | no | Custom Nav2 launch file (default `nav2_launch.py`) |
+| `launch_file` | string | no | Custom navigation launch file (default `nav2_launch.py`) |
 | `route_name` | string | no | Route graph for graph-constrained navigation |
 
-`POST /api/move_to_pose` (Nav2 API, `:5001`) takes a `position` (`x, y, z` in the map frame) and an `orientation` (quaternion) — both required.
+`POST /api/move_to_pose` (Navigation API, `:5001`) takes a `position` (`x, y, z` in the map frame) and an `orientation` (quaternion) — both required.
 
 ## If something goes wrong
 

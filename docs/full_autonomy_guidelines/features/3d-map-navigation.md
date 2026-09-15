@@ -18,7 +18,7 @@ The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-clo
 
 - You have a map with a saved geometry **`.pcd`** — meaning it was built with **3D SLAM** or **3D Full**. A **3D Color** map is view-only and has no navigable cloud, so it won't work here.
 - The robot type supports 3D (`slam_3d_supported` in `GET /status`). A real Go2 doesn't — its 3D stack is simulation-only, so 3D navigation on Go2 is a sim feature. See [Robot & simulation support](robot-support.md).
-- **SLAM and Nav2 are both stopped.**
+- **SLAM and navigation are both stopped.**
 
 ## Running it
 
@@ -49,7 +49,7 @@ curl -X POST http://<robot>:5000/stop/nav3d -H 'Content-Type: application/json' 
 
 ## If something goes wrong
 
-- **`400`** — SLAM or Nav2 is running, or 3D nav is already up. Stop the other one first.
+- **`400`** — SLAM or navigation is running, or 3D nav is already up. Stop the other one first.
 - **`404`** — the map has no `.pcd`; it wasn't saved during 3D SLAM.
 - **`400` unsupported** — the robot type has no 3D stack.
 

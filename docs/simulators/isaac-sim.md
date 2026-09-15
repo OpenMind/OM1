@@ -19,7 +19,7 @@ icon: robot
 ## Features
 
 - Isaac Sim: Realistic physics simulation of the Unitree Go2.
-- Navigation Stack (Nav2): Fully configured navigation stack for autonomous movement.
+- Navigation Stack: Fully configured navigation stack for autonomous movement.
 - SLAM: Mapping capabilities using slam_toolbox.
 - LiDAR Support: Simulation of Velodyne VLP-16 and Unitree 4D LiDAR.
 

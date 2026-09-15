@@ -6,13 +6,13 @@ icon: shield-halved
 
 Patrol turns navigation into a routine: the robot loops between the waypoints of a [route graph](maps-routes-locations.md), over and over, without anyone driving it. It's the backbone of monitoring and inspection deployments. If you've set up [auto-charging](auto-charging.md), a patrol becomes genuinely hands-off — when the battery runs low the robot docks, tops up, and picks the route back up where it left off.
 
-Patrol is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and it runs on top of Nav2 — so Nav2 needs to be up on the map first, with a route graph saved for it.
+Patrol is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and it runs on top of navigation — so navigation needs to be up on the map first, with a route graph saved for it.
 
 ## In the portal
 
 You can lay out a patrol route and start it from the [OpenMind portal](https://portal.openmind.com): in **Machine Teleops → Route Planner**, draw the waypoints on the map, save the route, and start the patrol — then pause, resume, or stop it from the same view. You can also set it to run **continuously** or on a **schedule** rather than starting each run by hand.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/patrol.png" alt=" " width="480" height="411">
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol.png" alt=" " width="600" height="430">
 
 ![Autonomous patrol running in the Cloud Simulator](../../.gitbook/assets/gifs/patrol.gif)
 
@@ -118,7 +118,7 @@ Use `/patrol/schedules/replace` (body `{"schedules": [...]}`) when you're editin
 
 ## Deploying a patrol
 
-`POST /deploy` is the one-step way to put a patrol into service — it's what the portal's **Deploy** button runs. Instead of starting Nav2, seeding localization, and arming the patrol by hand, one call commissions everything and parks the robot ready to go. It runs in the background and steps through:
+`POST /deploy` is the one-step way to put a patrol into service — it's what the portal's **Deploy** button runs. Instead of starting navigation, seeding localization, and arming the patrol by hand, one call commissions everything and parks the robot ready to go. It runs in the background and steps through:
 
 1. Save the route to the robot
 2. Stop any running patrol
@@ -164,7 +164,7 @@ For `scheduled` mode, include a `schedules` array in the body (same shape as [Sc
 
 ## If something goes wrong
 
-- **`400` starting** — the robot type doesn't support patrol, Nav2 isn't running, a patrol is already going, or you left out `map_name`/`route_name`.
+- **`400` starting** — the robot type doesn't support patrol, navigation isn't running, a patrol is already going, or you left out `map_name`/`route_name`.
 - **`400` route missing** — save the route first with `POST /maps/route/save`.
 - **`400` on pause/resume** — nothing is patrolling.
 

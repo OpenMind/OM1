@@ -6,13 +6,13 @@ icon: battery-full
 
 For a robot that's meant to run all day, someone plugging it in defeats the purpose. Auto-charging lets it take itself to the dock and charge — and because you can save a charger location per map, it knows where the dock is in each space it works. Paired with [patrol](patrol.md), it closes the loop: patrol until low, dock, charge, resume.
 
-It's supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and needs Nav2 running. Docking uses each platform's own launch (`go2_charge_launch.py` / `m20_charge_launch.py`), and there's no sim gate — auto-charging works the same in the [Cloud Simulator](../../simulators/cloud-isaac-sim.md) as on hardware. See [Robot & simulation support](robot-support.md).
+It's supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and needs navigation running. Docking uses each platform's own launch (`go2_charge_launch.py` / `m20_charge_launch.py`), and there's no sim gate — auto-charging works the same in the [Cloud Simulator](../../simulators/cloud-isaac-sim.md) as on hardware. See [Robot & simulation support](robot-support.md).
 
 ## In the portal
 
 The [OpenMind portal](https://portal.openmind.com) shows live battery state and lets you send the robot to dock (and stop docking) from the machine view. Under **Battery Status** you'll find **Dock to charger**, an **Auto-charge** toggle ("Dock and resume patrol on low battery") with a **Charge below** threshold, and a **Scheduled charge** control that sets the level to **leave the charger above** before rejoining the [patrol schedule](patrol.md#scheduling-patrols). On a multi-pack robot like the M20 Pro, battery state is shown per pack (front / rear).
 
-<img src="../../.gitbook/assets/full-autonomy-assets/autocharge_m20.png" alt="Auto-charge and Scheduled charge panel on an M20 Pro, with front/rear battery packs" width="312" height="500">
+<img src="../../.gitbook/assets/full-autonomy-assets/autocharge_m20.png" alt="Auto-charge and Scheduled charge panel on an M20 Pro, with front/rear battery packs" width="312" height="450">
 
 ## Autonomous charging on low battery
 
@@ -81,7 +81,7 @@ curl -X POST http://<robot>:5000/charging/location/save \
 
 ## If something goes wrong
 
-- **`400` / "Charging is not supported for &lt;type&gt;"** — the robot type isn't a Go2 or M20, Nav2 isn't running, or it's already charging/docking.
+- **`400` / "Charging is not supported for &lt;type&gt;"** — the robot type isn't a Go2 or M20, navigation isn't running, or it's already charging/docking.
 - **`400` on save** — a field is missing, a pose failed validation, or the `map_name` is invalid or doesn't exist.
 - **Wrong dock spot** — save a per-map override as above.
 

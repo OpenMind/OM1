@@ -9,7 +9,7 @@ The OM1 ROS2 SDK exposes two REST APIs for controlling and monitoring an autonom
 | API | Port | What it's for |
 |-----|------|---------------|
 | **Orchestrator API** | `5000` | Start/stop autonomy processes and manage maps, routes, and locations |
-| **Nav2 API** | `5001` | Read live navigation and localization data |
+| **Navigation API** | `5001` | Read live navigation and localization data |
 
 > Orchestrator endpoints return a JSON object with a `status` field (`"success"`, `"partial_success"`, or `"error"`). Several `GET` endpoints return their payload as a **JSON-encoded string** in the `message` field — decode `message` a second time to read the fields.
 
@@ -38,7 +38,7 @@ The one call to check what's running and the battery state before starting or st
 | `battery_current` | `float` | mA; negative = discharging, positive = charging |
 | `battery_voltage` | `float` | Pack voltage (V) |
 | `battery_temperature` | `float` | °C |
-| `current_patrol` | `object` \| `null` | Map (and route, if any) currently loaded, or `null`. Precedence: patrol > Nav2 > 3D nav; only `map_name` is guaranteed |
+| `current_patrol` | `object` \| `null` | Map (and route, if any) currently loaded, or `null`. Precedence: patrol > navigation > 3D nav; only `map_name` is guaranteed |
 | `robot_type` | `str` | e.g. `"go2"`, `"g1"`, `"tron"`, `"m20"` |
 | `use_sim` | `bool` | Whether the robot is running in simulation — affects what's supported (e.g. 3D SLAM on Go2) |
 | `slam_3d_supported` | `bool` | Whether this robot has a 3D SLAM (geometry) stack — use this to decide whether to offer 3D SLAM |
@@ -57,9 +57,9 @@ curl -X POST http://<robot>:5000/start/base_control -H 'Content-Type: applicatio
 curl -X POST http://<robot>:5000/stop/base_control  -H 'Content-Type: application/json' -d '{}'
 ```
 
-`/start/base_control` accepts an optional `launch_file` (default `base_control_launch.py`), and returns `400` if SLAM or Nav2 is already running.
+`/start/base_control` accepts an optional `launch_file` (default `base_control_launch.py`), and returns `400` if SLAM or navigation is already running.
 
-## Live monitoring (Nav2 API, `:5001`)
+## Live monitoring (Navigation API, `:5001`)
 
 Read-only endpoints for dashboards and health checks. (Sending navigation goals lives with [Navigation](features/navigation.md).)
 

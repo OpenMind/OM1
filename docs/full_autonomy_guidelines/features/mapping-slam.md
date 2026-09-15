@@ -21,7 +21,7 @@ If you just want to watch mapping happen, the [Cloud Simulator](../../simulators
 
 You don't have to touch the API — a full mapping session runs from the [OpenMind portal](https://portal.openmind.com). In **Machine Teleops → Robot Settings → SLAM Mode**, pick one of the four cards — **2D SLAM** (Occupancy map), **3D SLAM** (Point cloud), **3D Color** (Colored cloud), or **3D Full** (Nav + color) — *before* enabling the SLAM toggle. Then drive or let it explore, watch it fill in on the **Map view** tab, and save the map when it looks complete.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/SLAM-maps.png" alt=" " width="338" height="313">
+<img src="../../.gitbook/assets/full-autonomy-assets/SLAM-maps.png" alt=" " width="338" height="330">
 
 A **3D Color** or **3D Full** run renders the space in true color (RGB) rather than shaded by height:
 
@@ -37,7 +37,7 @@ _The three 3D cards are marked **BETA**; on a real Go2 they're disabled and only
 ## Before you start
 
 - The robot is online and its Orchestrator is reachable at `http://<robot>:5000`.
-- **Nav2 is stopped** — SLAM and Nav2 can't run at the same time.
+- **navigation is stopped** — SLAM and navigation can't run at the same time.
 - For any 3D mode, the robot actually has the stack. Check `slam_3d_supported` (geometry) and `slam_3d_color_supported` (color) in `GET /status` first — on a real Go2 both are `false`, so only 2D is available.
 
 ## Building a map
@@ -128,11 +128,11 @@ A saved map is a folder under `maps/<map_name>/`. What's in it depends on how yo
 - **3D (geometry):** all of the above, plus the point cloud in up to three resolution tiers — `<name>.pcd` (reference), `<name>_downsampled.pcd` (the one uploaded to the cloud), `<name>_localization.pcd` (a sparse cloud used for localization), and, only if you passed `raw_map: true`, `<name>_raw.pcd` (full resolution — this can be large, and it stays on the robot rather than being uploaded).
 - **3D Color / 3D Full:** the colorized cloud as `<name>_color.pcd` and `<name>_color_downsampled.pcd` (uploaded), plus `<name>_color_raw.pcd` when a full-resolution run produced one. **3D Full** also writes the geometry tiers above; **3D Color** writes only the color cloud — there's no localization cloud for a view-only map.
 
-A folder with only a grid can't be used for [3D navigation](3d-map-navigation.md), one with only a color cloud is view-only, and one with only a point cloud can't be used by [Nav2](navigation.md) — so what a map supports follows from the mode that made it. The full-resolution `_raw.pcd` is downloadable on demand; see [Maps, Routes & Locations → Downloading a 3D map](maps-routes-locations.md#downloading-a-3d-map).
+A folder with only a grid can't be used for [3D navigation](3d-map-navigation.md), one with only a color cloud is view-only, and one with only a point cloud can't be used by [2D navigation](navigation.md) — so what a map supports follows from the mode that made it. The full-resolution `_raw.pcd` is downloadable on demand; see [Maps, Routes & Locations → Downloading a 3D map](maps-routes-locations.md#downloading-a-3d-map).
 
 ## If something goes wrong
 
-- **`400` when starting SLAM** — Nav2 is running, or SLAM already is. Check `GET /status` and stop the other one.
+- **`400` when starting SLAM** — navigation is running, or SLAM already is. Check `GET /status` and stop the other one.
 - **`400` on `/start/slam/3d`** — the robot type has no 3D stack (e.g. a real Go2). Confirm `slam_3d_supported: true`; in the portal the 3D cards are simply disabled.
 - **`400` on `/start/slam/3d_color` or `/3d_full`** — no color stack on this platform. Confirm `slam_3d_color_supported: true`.
 - **`partial_success` on save** — one artifact type failed; the `errors` field says which. Whatever saved is still uploaded.

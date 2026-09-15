@@ -20,7 +20,7 @@ Over the API, two endpoints cover it: one to check the pose, one to fix it from 
 curl http://<robot>:5000/localization/status
 ```
 
-This reports whether the current pose estimate can be trusted. On the 2D stack, [Nav2's AMCL variance](../api_endpoints.md#live-monitoring-nav2-api-5001) (`/api/amcl_variance` on `:5001`) is the finer-grained signal; on the 3D stack, the pose comes from ICP matching against the point cloud.
+This reports whether the current pose estimate can be trusted. On the 2D stack, [the navigation stack's AMCL variance](../api_endpoints.md#live-monitoring-navigation-api-5001) (`/api/amcl_variance` on `:5001`) is the finer-grained signal; on the 3D stack, the pose comes from ICP matching against the point cloud.
 
 ## Re-seeding from the dock
 
