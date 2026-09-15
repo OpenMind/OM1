@@ -21,11 +21,11 @@ If you just want to watch mapping happen, the [Cloud Simulator](../../simulators
 
 You don't have to touch the API — a full mapping session runs from the [OpenMind portal](https://portal.openmind.com). In **Machine Teleops → Robot Settings → SLAM Mode**, pick one of the four cards — **2D SLAM** (Occupancy map), **3D SLAM** (Point cloud), **3D Color** (Colored cloud), or **3D Full** (Nav + color) — *before* enabling the SLAM toggle. Then drive or let it explore, watch it fill in on the **Map view** tab, and save the map when it looks complete.
 
-![ ](../../.gitbook/assets/full-autonomy-assets/SLAM-maps.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/SLAM-maps.png" alt=" " width="338" height="313">
 
 A **3D Color** or **3D Full** run renders the space in true color (RGB) rather than shaded by height:
 
-![Colorized RGB point cloud from a 3D Full run](../../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png)
+<img src="../../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png" alt="Colorized RGB point cloud from a 3D Full run" width="480" height="411">
 
 ![Building a 3D color map on an M20 Pro in the Cloud Simulator](../../.gitbook/assets/gifs/3dcolor.gif)
 

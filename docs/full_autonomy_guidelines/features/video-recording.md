@@ -14,7 +14,7 @@ Each recording captures the robot's **camera angles** — for example Top, Front
 
 To capture one, use the **Record** button on a robot's live view (Camera / Map view). When you stop, the clip appears under Recordings, organized by date.
 
-![Recordings grouped by date, each card showing duration, timestamp, robot, and camera tags](../../.gitbook/assets/full-autonomy-assets/video-recording.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/video-recording.png" alt="Recordings grouped by date, each card showing duration, timestamp, robot, and camera tags" width="480" height="402">
 
 ## Notes
 

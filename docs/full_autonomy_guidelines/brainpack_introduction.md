@@ -12,7 +12,7 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 > The BrainPack makes your robot smarter — a system that **learns, moves, and builds with you.**
 
-![ ](../.gitbook/assets/full-autonomy-assets/dog_brainpack_line.png)
+<img src="../.gitbook/assets/full-autonomy-assets/dog_brainpack_line.png" alt=" " width="480" height="360">
 
 ## Key Features
 
