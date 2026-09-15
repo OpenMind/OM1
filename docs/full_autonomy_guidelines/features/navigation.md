@@ -1,18 +1,22 @@
 ---
-title: Navigation (Nav2)
-description: "Autonomous point-to-point navigation on a saved 2D map."
+title: 2D Navigation
+description: "Autonomous point-to-point navigation on a saved 2D map, powered by Nav2."
 icon: route
 ---
 
-Once you have a [map](mapping-slam.md), navigation is what makes the robot useful on its own: give it a destination and it plans a path there, drives, and steers around whatever's in the way. Under the hood it's the Nav2 stack handling planning, obstacle avoidance, and localization.
+Once you have a [map](mapping-slam.md), navigation is what makes the robot useful on its own: give it a destination and it plans a path there, drives, and steers around whatever's in the way. Under the hood it's the **Nav2** stack (ROS 2 Navigation) handling planning, obstacle avoidance, and localization on the 2D occupancy grid.
+
+Got ramps or multiple floors? Navigate a point-cloud map with [3D Navigation](3d-map-navigation.md) instead.
 
 There are two APIs involved. You start and stop the Nav2 stack through the Orchestrator (`:5000`), then send goals and watch their progress through the Nav2 API (`:5001`). If you want the robot to stick to fixed paths rather than plan freely, point it at a [route graph](maps-routes-locations.md).
 
 ## In the portal
 
-From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map or picking a saved [location](maps-routes-locations.md) — no API calls needed. The map view also shows the robot's live pose as it drives.
+From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map (**Set goal**) — no API calls needed. Pick a saved map, and the map view shows the robot's live pose as it drives.
 
 ![Select a map for navigation in the portal](../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png)
+
+The **Set goal** tool lives on the shared Map view toolbar, alongside Localize and Clear robot trail — see [Machine Teleops → Map view](machine-teleops.md#map-view).
 
 ## Before you start
 

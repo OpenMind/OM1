@@ -213,12 +213,20 @@ The BrainPack is designed to be mounted directly onto a robot to bring together 
 
 ## Full Autonomy Guidance
 
-OM1 supports **full autonomy** for Unitree Go2 and G1 with BrainPack. The following features are supported with BrainPack:
+OM1 supports **full autonomy** for the Unitree Go2, Deep Robotics M20 Pro, Unitree G1, and LimX Tron with BrainPack. The following features are supported with BrainPack:
 
 - **Navigation** - Autonomous path planning and movement.
 - **SLAM** - Simultaneous Localization and Mapping for persistent map-based operation.
 - **Auto Charging** - Automated docking and battery charging workflows.
 - **Face Detection and Anonymization** - Real-time perception and privacy-aware processing.
+
+### See it in action
+
+Full autonomy running in the [Cloud Simulator](docs/simulators/cloud-isaac-sim.md) — 3D mapping and autonomous patrol, no hardware required:
+
+| 3D Color Mapping | 3D Full Mapping | Autonomous Patrol |
+|:---:|:---:|:---:|
+| ![3D color mapping](docs/.gitbook/assets/gifs/3dcolor.gif) | ![3D full mapping](docs/.gitbook/assets/gifs/3dfull.gif) | ![Autonomous patrol](docs/.gitbook/assets/gifs/patrol.gif) |
 
 For more details, see [Full Autonomy](docs/full_autonomy_guidelines/architecture_overview.md).
 

@@ -33,13 +33,14 @@ Each BrainPack comes with:
 - Integrated speakers for TTS output
 - Multiple connectivity options (Ethernet, USB)
 - Flexible power input options
-- Mounting hardware for Unitree robots
+- Mounting hardware for supported robots
 
 ## Supported Robots
 
 | Robot | Support Level |
 |-------|---------------|
 | Unitree Go2 | ✅ Fully Supported |
+| Deep Robotics M20 Pro | ✅ Fully Supported |
 | Unitree G1 | ✅ Fully Supported |
 | LimX Tron | ✅ Fully Supported |
 
