@@ -13,7 +13,6 @@
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
     * [Inputs](developing/4_inputs.md)
-    * [Video Processor Integration](developing/video_processor_integration.md)
     * [LLMs](developing/5_llms.md)
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
@@ -52,7 +51,7 @@
 * [Autonomy Features](full_autonomy_guidelines/features/README.md)
     * [Machine Teleops](full_autonomy_guidelines/features/machine-teleops.md)
     * [Mapping & SLAM](full_autonomy_guidelines/features/mapping-slam.md)
-    * [Hybrid Localisation](full_autonomy_guidelines/localization.md)
+    * [Hybrid Localization](full_autonomy_guidelines/localization.md)
     * [Relocalization](full_autonomy_guidelines/features/relocalization.md)
     * [2D Navigation](full_autonomy_guidelines/features/navigation.md)
     * [3D Navigation](full_autonomy_guidelines/features/3d-map-navigation.md)
@@ -96,7 +95,7 @@
     * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
     * [LLM](api-reference/endpoints/llm.md)
     * [Riva](api-reference/endpoints/riva.md)
-    * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
+    * [VILA VLM](api-reference/endpoints/vila_vlm.md)
 * [Subscription Plans](api-reference/api_pricing.md)
 
 ## Release Notes <a href="#release-notes" id="release-notes"></a>

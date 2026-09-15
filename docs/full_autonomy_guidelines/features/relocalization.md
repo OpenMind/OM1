@@ -10,7 +10,7 @@ Navigation is only as good as the robot's belief about where it is. When that be
 
 In the [Machine Teleops](machine-teleops.md#map-view) **Map view**, the **Localize** tool fixes the pose by hand — reach for it when the robot has drifted or comes up unsure of where it is. Click **Localize (estimate pose)**, then set the robot's position and heading on the map.
 
-![The Localize (estimate pose) tool on the Map view toolbar](../../.gitbook/assets/full-autonomy-assets/localise.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/localise.png" alt="The Localize (estimate pose) tool on the Map view toolbar" width="339" height="500">
 
 Over the API, two endpoints cover it: one to check the pose, one to fix it from the dock.
 

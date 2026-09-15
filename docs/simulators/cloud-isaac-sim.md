@@ -55,7 +55,7 @@ Choose based on your simulation workload:
 
 The portal recommends **Performance Type** for optimal simulator performance. Choose Standard Type when you want to keep costs down and your scenario is light.
 
-![Cloud Simulator launch form showing instance type, robot type, and environment selection](../.gitbook/assets/cloud-isaac-sim-assets/select_instance_and_env.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/select_instance_and_env.png" alt="Cloud Simulator launch form showing instance type, robot type, and environment selection" width="480" height="254">
 
 #### Supported Robots
 
@@ -97,13 +97,13 @@ The status badge at the top of the card tracks these as **Provisioning…**, **C
 
 Once you initiate the launch, the system begins setting up your cloud environment.
 
-![Cloud Simulator card in the Processing state](../.gitbook/assets/cloud-isaac-sim-assets/processing.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/processing.png" alt="Cloud Simulator card in the Processing state" width="480" height="216">
 
 The instance is ready when the status changes to **Ready**.
 
 > **Note**: If GPU capacity is not available, the launch fails with `GPU capacity is temporarily unavailable. Please try again later or select a different instance type.` This is often transient and the platform may retry and recover on its own — check the card again before relaunching. If it does not recover, shut the failed instance down, then try again or switch instance type.
 
-![Launch failure showing the GPU capacity unavailable error](../.gitbook/assets/cloud-isaac-sim-assets/gpu_unavailable.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/gpu_unavailable.png" alt="Launch failure showing the GPU capacity unavailable error" width="480" height="228">
 
 Once the instance is **Ready**, its card offers:
 
@@ -114,7 +114,7 @@ Once the instance is **Ready**, its card offers:
 - **Instance details** — expandable, showing Instance ID, Private IP, and creation timestamp
 - **Shut Down** — tears the instance down and stops billing
 
-![Ready instance card with Open Session, Open Code Server, and Persistent connection controls](../.gitbook/assets/cloud-isaac-sim-assets/session.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/session.png" alt="Ready instance card with Open Session, Open Code Server, and Persistent connection controls" width="480" height="232">
 
 #### Where to go next: two pages, two jobs
 
@@ -129,19 +129,19 @@ The Open Session viewport reflects the robot you selected when launching the ins
 
 Unitree Go2 in the cloud simulator warehouse environment:
 
-![](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_go2.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_go2.png" alt="" width="480" height="267">
 
 Unitree G1 humanoid in the cloud simulator:
 
-![](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_g1.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_g1.png" alt="" width="480" height="276">
 
 LimX Tron in the cloud simulator:
 
-![](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_tron.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_tron.png" alt="" width="480" height="268">
 
 Deep Robotics M20 Pro in the cloud simulator:
 
-![](../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_M20Pro.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/cloud_isaac_sim_M20Pro.png" alt="" width="480" height="266">
 
 ### Step 2: Connect to the Robot in Machine Teleops
 
@@ -176,11 +176,11 @@ Now enable **SLAM Mode**. What happens next surprises people who expect to chauf
 
 Watch progress on the **Map view** tab. The map header has a variant dropdown — **2D map**, **3D point cloud**, or **Colored cloud** — so you can flip between representations of the same run. The 3D SLAM point cloud is colored by height:
 
-![Live 3D SLAM point cloud coloured by height](../.gitbook/assets/cloud-isaac-sim-assets/3D_slam_map.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/3D_slam_map.png" alt="Live 3D SLAM point cloud coloured by height" width="480" height="458">
 
 A **3D Color** or **3D Full** run instead renders a true-color (RGB) cloud — the environment in its real colors:
 
-![Colorized RGB point cloud from a 3D Full run](../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/colored-cloud.png" alt="Colorized RGB point cloud from a 3D Full run" width="480" height="411">
 
 Every run is also flattened into a **2D navigation map** — an occupancy grid showing walls and obstacles. This is the navigation-ready artifact used for autonomous tasks like patrols and navigation.
 
@@ -200,7 +200,7 @@ Select the map from Step 4 and enable **Navigation Mode**. The robot will now na
 
 With Navigation active, **Map view** gains **Set Goal** and **Localize** tools and shows the robot's live position:
 
-![2D occupancy grid navigation map with Set Goal and Localize tools](../.gitbook/assets/cloud-isaac-sim-assets/2D_slam_map.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/2D_slam_map.png" alt="2D occupancy grid navigation map with Set Goal and Localize tools" width="407" height="500">
 
 Send the robot to a single goal before building a route. One successful point-to-point run confirms localization is healthy, which saves debugging a multi-waypoint patrol that was never going to work.
 
@@ -217,11 +217,11 @@ Open the **Route Planner** tab and create a **patrol route** by placing waypoint
 
 The robot then takes over and begins following the route autonomously, navigating between each waypoint while continuously localizing itself within the map. The route overlays on whichever map variant you're viewing — the 2D occupancy grid:
 
-![Deployed patrol route with numbered waypoints on the 2D map](../.gitbook/assets/cloud-isaac-sim-assets/patrol-2D.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/patrol-2D.png" alt="Deployed patrol route with numbered waypoints on the 2D map" width="383" height="500">
 
 …or the 3D point cloud:
 
-![Deployed patrol route with waypoints on the 3D point cloud](../.gitbook/assets/cloud-isaac-sim-assets/patrol-3D-point-cloud.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/patrol-3D-point-cloud.png" alt="Deployed patrol route with waypoints on the 3D point cloud" width="480" height="408">
 
 For the full deploy flow — Manual vs Continuous vs Scheduled, the weekday/time-window editor, and how it ties into auto-charging — see [Patrol → Scheduling patrols](../full_autonomy_guidelines/features/patrol.md#scheduling-patrols).
 
@@ -271,7 +271,7 @@ When you're finished with your simulation:
 1. Return to the Cloud Simulator dashboard
 2. Click **Shut Down** on the instance card
 
-![Instance card with the Shut Down control](../.gitbook/assets/cloud-isaac-sim-assets/delete-instance.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/delete-instance.png" alt="Instance card with the Shut Down control" width="480" height="177">
 
 3. The card moves to a **Deleting…** state and runs a **Cleaning up instance** stage. Teardown takes roughly **5 minutes**; billing stops once it completes and cloud resources are freed.
 
@@ -285,7 +285,7 @@ Part 1 runs the robot's autonomy entirely from the portal. If you want to drive 
 
 Click **Open Code Server** on the Ready instance card to open a browser-based [code-server](https://github.com/coder/code-server) dev environment running alongside your simulator. No local setup is required.
 
-![code-server open in the browser alongside a running cloud simulator instance](../.gitbook/assets/cloud-isaac-sim-assets/cloud-vscode.png)
+<img src="../.gitbook/assets/cloud-isaac-sim-assets/cloud-vscode.png" alt="code-server open in the browser alongside a running cloud simulator instance" width="480" height="336">
 
 From here, you can:
 

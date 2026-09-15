@@ -10,11 +10,9 @@ It's supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and nee
 
 ## In the portal
 
-The [OpenMind portal](https://portal.openmind.com) shows live battery state and lets you send the robot to dock (and stop docking) from the machine view. Under **Battery Status** you'll find **Dock to charger**, an **Auto-charge** toggle ("Dock and resume patrol on low battery") with a **Charge below** threshold, and a **Scheduled charge** control that sets the level to **leave the charger above** before rejoining the [patrol schedule](patrol.md#scheduling-patrols). On a multi-pack robot like the M20, battery state is shown per pack (front / rear).
+The [OpenMind portal](https://portal.openmind.com) shows live battery state and lets you send the robot to dock (and stop docking) from the machine view. Under **Battery Status** you'll find **Dock to charger**, an **Auto-charge** toggle ("Dock and resume patrol on low battery") with a **Charge below** threshold, and a **Scheduled charge** control that sets the level to **leave the charger above** before rejoining the [patrol schedule](patrol.md#scheduling-patrols). On a multi-pack robot like the M20 Pro, battery state is shown per pack (front / rear).
 
-![ ](../../.gitbook/assets/full-autonomy-assets/auto-charging.png)
-
-![Auto-charge and Scheduled charge panel on an M20 Pro, with front/rear battery packs](../../.gitbook/assets/full-autonomy-assets/autocharge_m20.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/autocharge_m20.png" alt="Auto-charge and Scheduled charge panel on an M20 Pro, with front/rear battery packs" width="312" height="500">
 
 ## Autonomous charging on low battery
 

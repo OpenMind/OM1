@@ -12,7 +12,7 @@ Two pieces come up together: **ICP localization**, which matches the live LiDAR 
 
 The [OpenMind portal](https://portal.openmind.com) lets you load a 3D (point-cloud) map and set navigation goals against it from the machine's autonomy view, the same way you would for a 2D map. In **Machine Teleops → Robot Settings → Navigation Mode**, choose **3D Navigation** and pick a saved 3D map.
 
-![ ](../../.gitbook/assets/full-autonomy-assets/3D-slam-map.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/3D-slam-map.png" alt=" " width="480" height="383">
 
 ## Before you start
 

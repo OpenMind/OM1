@@ -12,13 +12,13 @@ Patrol is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, an
 
 You can lay out a patrol route and start it from the [OpenMind portal](https://portal.openmind.com): in **Machine Teleops → Route Planner**, draw the waypoints on the map, save the route, and start the patrol — then pause, resume, or stop it from the same view. You can also set it to run **continuously** or on a **schedule** rather than starting each run by hand.
 
-![ ](../../.gitbook/assets/full-autonomy-assets/patrol.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol.png" alt=" " width="480" height="411">
 
 ![Autonomous patrol running in the Cloud Simulator](../../.gitbook/assets/gifs/patrol.gif)
 
 When you deploy a route, you choose how it should run — **Manual**, **Continuous**, or **Scheduled**:
 
-![Deploy route dialog with Manual, Continuous, and Scheduled options](../../.gitbook/assets/full-autonomy-assets/patrol-deploy-methods.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol-deploy-methods.png" alt="Deploy route dialog with Manual, Continuous, and Scheduled options" width="480" height="362">
 
 _The Route Planner needs a saved map selected under Navigation Mode before it will open — if it reads "Please select a map from Settings to start planning," finish mapping and navigation setup first._
 
@@ -96,11 +96,11 @@ curl -X POST http://<robot>:5000/patrol/schedules \
 
 In the portal, this is the **Scheduled** option on the deploy dialog: pick the days, set a **From**/**To** time, choose the timezone (including "the robot's own clock"), and **Add a time window** for more than one block per day.
 
-![Scheduled patrol setup with weekday picker, time window, and timezone](../../.gitbook/assets/full-autonomy-assets/deploy-route.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/deploy-route.png" alt="Scheduled patrol setup with weekday picker, time window, and timezone" width="362" height="500">
 
 Once deployed, the schedule bar shows every configured window, the next run, and quick **Edit hours** / **Start now** / **Stop patrol** controls:
 
-![Active patrol schedule with time windows and next-run status](../../.gitbook/assets/full-autonomy-assets/patrol_schedule.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol_schedule.png" alt="Active patrol schedule with time windows and next-run status" width="480" height="68">
 
 A window can't cross midnight — for an overnight patrol, add two schedules (e.g. `22:00–23:59` and `00:00–06:00`). Overlapping windows on a shared weekday are rejected with `409`.
 
@@ -129,7 +129,7 @@ Use `/patrol/schedules/replace` (body `{"schedules": [...]}`) when you're editin
 
 Docking first is deliberate: restarting navigation costs the robot its pose estimate — and on the [3D stack](3d-map-navigation.md) it can't recover that on its own — so it heads back to the charger, the one spot whose pose is known, and [re-seeds from there](relocalization.md).
 
-![Deploy progress — saving the route, returning to the dock, seeding localization, arming patrol](../../.gitbook/assets/full-autonomy-assets/patrol-process.png)
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol-process.png" alt="Deploy progress — saving the route, returning to the dock, seeding localization, arming patrol" width="480" height="456">
 
 ```bash
 curl -X POST http://<robot>:5000/deploy \
