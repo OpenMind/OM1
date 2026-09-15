@@ -20,9 +20,9 @@ By default a robot's maps and routes are private to it. Robots placed in the sam
 curl -X POST http://<robot>:5000/maps/save -H 'Content-Type: application/json' -d '{"map_name": "office"}'
 ```
 
-Check the `status` field, not just the HTTP code — a `partial_success` means one artifact saved and another didn't, with details in `errors`. What lands in `maps/<map_name>/` depends on the mode: a 2D map is a grid (`.pgm`/`.yaml` plus pose data), a 3D map adds the point cloud (`.pcd`). A grid-only folder can't be used for [3D navigation](3d-map-navigation.md), and a cloud-only folder can't be used by Nav2 — the map supports whatever the mode that made it produced. In the portal, each saved map is tagged with what it carries — **2D**, **3D**, **COLOR**, **ROUTES** — so you can see at a glance what it's good for:
+Check the `status` field, not just the HTTP code — a `partial_success` means one artifact saved and another didn't, with details in `errors`. What lands in `maps/<map_name>/` depends on the mode: a 2D map is a grid (`.pgm`/`.yaml` plus pose data), a 3D map adds the point cloud (`.pcd`). A grid-only folder can't be used for [3D navigation](3d-map-navigation.md), and a cloud-only folder can't be used by 2D navigation — the map supports whatever the mode that made it produced. In the portal, each saved map is tagged with what it carries — **2D**, **3D**, **COLOR**, **ROUTES** — so you can see at a glance what it's good for:
 
-<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Saved maps tagged with their capabilities — 2D, 3D, COLOR, ROUTES" width="480" height="212">
+<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Saved maps tagged with their capabilities — 2D, 3D, COLOR, ROUTES" width="338" height="313">
 
 List and delete are what you'd expect:
 

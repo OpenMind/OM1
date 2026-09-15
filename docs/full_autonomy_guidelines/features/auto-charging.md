@@ -6,7 +6,7 @@ icon: battery-full
 
 For a robot that's meant to run all day, someone plugging it in defeats the purpose. Auto-charging lets it take itself to the dock and charge — and because you can save a charger location per map, it knows where the dock is in each space it works. Paired with [patrol](patrol.md), it closes the loop: patrol until low, dock, charge, resume.
 
-It's supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and needs Nav2 running. Docking uses each platform's own launch (`go2_charge_launch.py` / `m20_charge_launch.py`), and there's no sim gate — auto-charging works the same in the [Cloud Simulator](../../simulators/cloud-isaac-sim.md) as on hardware. See [Robot & simulation support](robot-support.md).
+It's supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, and needs navigation running. Docking uses each platform's own launch (`go2_charge_launch.py` / `m20_charge_launch.py`), and there's no sim gate — auto-charging works the same in the [Cloud Simulator](../../simulators/cloud-isaac-sim.md) as on hardware. See [Robot & simulation support](robot-support.md).
 
 ## In the portal
 
@@ -81,7 +81,7 @@ curl -X POST http://<robot>:5000/charging/location/save \
 
 ## If something goes wrong
 
-- **`400` / "Charging is not supported for &lt;type&gt;"** — the robot type isn't a Go2 or M20, Nav2 isn't running, or it's already charging/docking.
+- **`400` / "Charging is not supported for &lt;type&gt;"** — the robot type isn't a Go2 or M20, navigation isn't running, or it's already charging/docking.
 - **`400` on save** — a field is missing, a pose failed validation, or the `map_name` is invalid or doesn't exist.
 - **Wrong dock spot** — save a per-map override as above.
 

@@ -32,7 +32,7 @@ The hybrid localization system combines three complementary technologies into on
 |------------|-------------|
 | **Visual Place Recognition (VPR)** | Uses camera images to estimate which general area of the map the robot is in |
 | **Correlative Scan Matching (CSM)** | Uses LiDAR to brute-force search for the exact position, guided by the VPR hint |
-| **Nav2 AMCL** | The standard ROS 2 particle filter for smooth, continuous position tracking during navigation |
+| **AMCL** | The standard ROS 2 particle filter for smooth, continuous position tracking during navigation |
 
 Together, these three systems handle every failure mode listed above:
 
@@ -44,7 +44,7 @@ A health monitor watches AMCL's output and triggers automatic recovery when need
 
 ## Architecture
 
-The system is implemented as three ROS 2 nodes working together, orchestrated by a state machine in the Hybrid Localization Manager. This node does not publish any TF transforms — Nav2 AMCL is the sole authority for the `map→odom` transform. The hybrid node acts as a quality gate: it finds initial poses, validates them, feeds them to AMCL, and monitors AMCL's output for failures.
+The system is implemented as three ROS 2 nodes working together, orchestrated by a state machine in the Hybrid Localization Manager. This node does not publish any TF transforms — AMCL is the sole authority for the `map→odom` transform. The hybrid node acts as a quality gate: it finds initial poses, validates them, feeds them to AMCL, and monitors AMCL's output for failures.
 
 ### The Three Nodes
 
@@ -100,7 +100,7 @@ It contains the correlative scan matcher for global localization, the candidate 
 
 ### The /initialpose interception pattern
 
-A critical architectural detail: Nav2 AMCL does not subscribe to the standard /initialpose topic in this system. Instead, it subscribes to /initialpose_validated. The hybrid node intercepts all /initialpose messages (including those from RViz’s "2D Pose Estimate" button), evaluates them via scan matching, and only forwards them to /initialpose_validated if they pass quality validation (score above 90%).
+A critical architectural detail: AMCL does not subscribe to the standard /initialpose topic in this system. Instead, it subscribes to /initialpose_validated. The hybrid node intercepts all /initialpose messages (including those from RViz’s "2D Pose Estimate" button), evaluates them via scan matching, and only forwards them to /initialpose_validated if they pass quality validation (score above 90%).
 
 This means every pose that reaches AMCL has been validated. A careless RViz click or a malfunctioning external node cannot inject a bad pose and destroy a perfectly good localization. During the early states (before monitoring begins), external poses are forwarded without validation since there is no existing good localization to protect.
 
@@ -115,10 +115,10 @@ To tie everything together, here is the exact sequence of events from power-on t
 | **t = 1–4s** | VPR continues publishing hints at 2 Hz. The hybrid node accumulates these into a list. Once 3 or more hints are collected and the ready signal has been received, it computes the VPR consensus (median, outlier removal, inlier average). |
 | **t = 2–4s** | The hybrid node runs `perform_global_localization`: generates ~160,000 VPR-biased candidate poses, evaluates all of them against the gradient map via Numba, selects the top 5 spatially distinct candidates, refines each via iterative hill-climbing, ranks them with VPR proximity bonus. |
 | **t = 3–5s** | Best candidate published to `/initialpose_validated`. The hybrid node transitions to `SEEDING_AMCL`. Starts re-publish timer (every 2 seconds). |
-| **t = 3–6s** | Nav2 AMCL receives `/initialpose_validated`. Initializes particle cloud around the given pose. Publishes first `/amcl_pose`. The hybrid node detects this, cancels re-publish timer, transitions to `MONITORING`. Starts 5-second settle timer. |
+| **t = 3–6s** | AMCL receives `/initialpose_validated`. Initializes particle cloud around the given pose. Publishes first `/amcl_pose`. The hybrid node detects this, cancels re-publish timer, transitions to `MONITORING`. Starts 5-second settle timer. |
 | **t = 8–11s** | Settle time elapses. AMCL particles have converged. The hybrid node begins active health monitoring (jump detection, scan match validation, covariance checks). The robot is now localized and ready for autonomous navigation. |
 
-> **Total time from power-on to navigation-ready: typically 8–11 seconds**, fully automatic, no human intervention. Compared to Nav2 AMCL alone (which requires a manual 2D Pose Estimate click and 10–30 seconds of wandering), this is a significant operational improvement.
+> **Total time from power-on to navigation-ready: typically 8–11 seconds**, fully automatic, no human intervention. Compared to AMCL alone (which requires a manual 2D Pose Estimate click and 10–30 seconds of wandering), this is a significant operational improvement.
 
 ## Comparison with Previous Approaches
 
@@ -139,7 +139,7 @@ This system was designed and tested on the **Unitree Go2** quadruped robot with 
 
 | Sensor | Type | Purpose |
 |--------|------|---------|
-| **Primary LiDAR** | RPLidar S2L (2D, 360°) | Mounted on top. Used for mapping, localization (CSM + AMCL), and obstacle detection in Nav2 costmap. |
+| **Primary LiDAR** | RPLidar S2L (2D, 360°) | Mounted on top. Used for mapping, localization (CSM + AMCL), and obstacle detection in navigation costmap. |
 | **Secondary LiDAR** | 4D LiDAR | Mounted on nose. Used only for ground obstacle detection via STVL costmap layer. Not used for localization. |
 | **Camera** | Any ROS 2 compatible | Used for Visual Place Recognition. Any camera publishing `sensor_msgs/Image` is compatible. |
 

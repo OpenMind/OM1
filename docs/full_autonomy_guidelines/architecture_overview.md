@@ -93,20 +93,20 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 
 - **Auto Charging** - When the robot's battery falls below a threshold, the system initiates an autonomous return-to-dock sequence:
 
-1. The Nav2 stack navigates the robot to the general vicinity of the charging station using the stored map
+1. The navigation stack navigates the robot to the general vicinity of the charging station using the stored map
 2. The robot switches to precision docking mode and activates its onboard cameras to detect AprilTag markers mounted on or near the dock
 3. Visual servoing aligns the robot incrementally by tracking the AprilTag's pose in camera space
 4. The robot approaches and physically docks, aligning its charging contacts with the pad's contact points
 
 > **Note:** Currently supported on the **Unitree Go2 and Deep Robotics M20 Pro**.
 
-- **Navigation & Localisation** - Integration with Nav2 for autonomous navigation. We have a custom localisation pipeline that the robot uses to determine its position and plan paths through its environment.Process incoming LaserScan message to determine feasible paths.Publish feasible paths and visualization markers.
+- **Navigation & Localisation** - Integration with a ROS 2 navigation stack for autonomous navigation. We have a custom localisation pipeline that the robot uses to determine its position and plan paths through its environment.Process incoming LaserScan message to determine feasible paths.Publish feasible paths and visualization markers.
 
 | Component | Description |
 |-----------|-------------|
 | **Visual Place Recognition (VPR)** | Uses camera images to estimate which general area of the map the robot is in |
 | **Correlative Scan Matching (CSM)** | Identifies distinctive geometric landmarks in sensor data and aligns them against a reference map |
-| **Nav2 AMCL** | A probabilistic particle filter that converges on the most likely position as new sensor data arrives. Robust in dynamic environments where the map may have changed. |
+| **AMCL** | A probabilistic particle filter that converges on the most likely position as new sensor data arrives. Robust in dynamic environments where the map may have changed. |
 
 > Refer to [Hybrid Localisation](./localization.md) for an in-depth explanation of the system.
 
