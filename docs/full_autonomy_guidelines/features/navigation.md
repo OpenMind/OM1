@@ -14,7 +14,7 @@ There are two APIs involved. You start and stop the navigation stack through the
 
 From the [OpenMind portal](https://portal.openmind.com) you can send the robot somewhere by clicking a point on the map (**Set goal**) — no API calls needed. Pick a saved map, and the map view shows the robot's live pose as it drives.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Select a map for navigation in the portal" width="480" height="312">
+<img src="../../.gitbook/assets/full-autonomy-assets/select_location_to_navigate.png" alt="Select a map for navigation in the portal" width="480" height="250">
 
 The **Set goal** tool lives on the shared Map view toolbar, alongside Localize and Clear robot trail — see [Machine Teleops → Map view](machine-teleops.md#map-view).
 
