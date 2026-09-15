@@ -18,6 +18,7 @@ OM1 is a modular robotics intelligence platform that connects perception, langua
 ### Robot Support
 
 - Unitree Go2
+- Deep Robotics M20 Pro
 - Unitree G1
 - LimX Tron
 
@@ -88,7 +89,7 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 
 - **Full simulation support** — The complete ROS2 SDK stack — sensors, SLAM, navigation, and control — can run inside a simulator (such as Gazebo) without physical hardware. This enables developers to test navigation algorithms, tune parameters, and validate new features in a reproducible environment before deploying to a physical robot.
 
-- **Multi-Robot Support** - Compatible with Unitree Go2, Unitree G1, and LimX Tron robots.
+- **Multi-Robot Support** - Compatible with Unitree Go2, Deep Robotics M20 Pro, Unitree G1, and LimX Tron robots.
 
 - **Auto Charging** - When the robot's battery falls below a threshold, the system initiates an autonomous return-to-dock sequence:
 
@@ -97,7 +98,7 @@ Without the ROS2 SDK, OM1 can speak and reason but cannot navigate, map, or perc
 3. Visual servoing aligns the robot incrementally by tracking the AprilTag's pose in camera space
 4. The robot approaches and physically docks, aligning its charging contacts with the pad's contact points
 
-> **Note:** Currently supported on **Go2 only**.
+> **Note:** Currently supported on the **Unitree Go2 and Deep Robotics M20 Pro**.
 
 - **Navigation & Localisation** - Integration with Nav2 for autonomous navigation. We have a custom localisation pipeline that the robot uses to determine its position and plan paths through its environment.Process incoming LaserScan message to determine feasible paths.Publish feasible paths and visualization markers.
 

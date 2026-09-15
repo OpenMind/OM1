@@ -8,7 +8,7 @@ Not every autonomy feature runs on every robot, and a few behave differently in 
 
 Your integration doesn't have to hard-code any of this — the robot tells you what it can do. `GET /status` reports `robot_type`, `use_sim`, `slam_3d_supported`, and `slam_3d_color_supported`, so you can check a capability at runtime and adapt to whatever robot you're talking to.
 
-The columns below use the portal's short names — **Go2** is the Unitree Go2, **M20 Pro** is the Deep Robotics M20 Pro (its `robot_type` is `m20`).
+The columns use each robot's short name — **Go2** is the Unitree Go2 and **M20 Pro** is the Deep Robotics M20 Pro (shown as **M20** in the portal; its `robot_type` is `m20`).
 
 ## Support matrix
 

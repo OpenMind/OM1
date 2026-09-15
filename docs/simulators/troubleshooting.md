@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description:
+description: "Common issues and fixes when running OM1 with a simulator."
 icon: gear
 ---
 

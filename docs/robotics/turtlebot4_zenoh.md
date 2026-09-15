@@ -128,7 +128,7 @@ sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev
 
 Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues).
 
-Make sure [Identity and Keys](#identity-and-keys) are set correctly. To update the `.env` with your OM1 key, run `vim .env`, "i" to insert, paste in key, "ESC", ":", "wq" to write and exit.
+Make sure [Identity and API Keys](#identity-and-api-keys) are set correctly. To update the `.env` with your OM1 key, run `vim .env`, "i" to insert, paste in key, "ESC", ":", "wq" to write and exit.
 
 Finally, set Default Input and Output Audio devices. Use `pactl` to set your default microphone and speaker. If you get `pa_context_connect() failed: Connection refused`, then start the audio daemon manually via `pulseaudio --start -D`.
 
