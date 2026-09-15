@@ -12,7 +12,7 @@ Patrol is supported on the **Unitree Go2** and the **Deep Robotics M20 Pro**, an
 
 You can lay out a patrol route and start it from the [OpenMind portal](https://portal.openmind.com): in **Machine Teleops → Route Planner**, draw the waypoints on the map, save the route, and start the patrol — then pause, resume, or stop it from the same view. You can also set it to run **continuously** or on a **schedule** rather than starting each run by hand.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/patrol.png" alt=" " width="600" height="411">
+<img src="../../.gitbook/assets/full-autonomy-assets/patrol.png" alt=" " width="600" height="430">
 
 ![Autonomous patrol running in the Cloud Simulator](../../.gitbook/assets/gifs/patrol.gif)
 

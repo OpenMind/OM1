@@ -12,7 +12,7 @@ Open the **Camera** tab for the robot's live feeds (Front, Top, Down) alongside 
 
 > On a physical robot, the game controller takes precedence over the AI — controller input overrides AI-generated motion. See [Unitree Go2 controls](../../robotics/unitree_go2_quadruped_configurations.md) for the button mapping.
 
-<img src="../../.gitbook/assets/full-autonomy-assets/machine_teleops.png" alt="Machine Teleops" width="380" height="460">
+<img src="../../.gitbook/assets/full-autonomy-assets/machine_teleops.png" alt="Machine Teleops" width="380" height="450">
 
 The **Robot Control** panel sets the robot's motion state — **Stand** (stand and walk) or **Sit** (lie down) — and, on supported robots, the **gait**: **Basic** (standard motion), **High Obstacles** (tall clearance), or **Stair** (stair climbing).
 
