@@ -9,6 +9,7 @@ import (
 type Event struct {
 	Type string //"speech_start" or "speech_end"
 	At   time.Time
+	Prob float32 // Silero speech probability of the frame that triggered this event
 }
 
 const (
@@ -46,6 +47,9 @@ type Segmenter struct {
 	inSpeech     bool
 	haveSilence  bool
 	silenceSince time.Time
+
+	lastProb  float32
+	lastAbove bool
 }
 
 // NewSegmenter builds a Segmenter reading PCM
@@ -77,13 +81,23 @@ func (s *Segmenter) Feed(pcm []byte, t time.Time) []Event {
 	return events
 }
 
+// LastFrameProb is the most recently inferred frame's speech probability.
+func (s *Segmenter) LastFrameProb() float32 { return s.lastProb }
+
+// LastFrameAboveThreshold reports whether the most recently inferred frame's
+// probability met the configured threshold.
+func (s *Segmenter) LastFrameAboveThreshold() bool { return s.lastAbove }
+
 // apply the threshold+hangover state machine to one frame's speech probability
 func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
+	s.lastProb = prob
+	s.lastAbove = prob >= s.cfg.Threshold
+
 	if prob >= s.cfg.Threshold {
 		s.haveSilence = false
 		if !s.inSpeech {
 			s.inSpeech = true
-			return Event{Type: EventSpeechStart, At: t}, true
+			return Event{Type: EventSpeechStart, At: t, Prob: prob}, true
 		}
 		return Event{}, false
 	}
@@ -101,7 +115,7 @@ func (s *Segmenter) observe(prob float32, t time.Time) (Event, bool) {
 	if t.Sub(s.silenceSince) >= s.cfg.MinSilenceDuration {
 		s.inSpeech = false
 		s.haveSilence = false
-		return Event{Type: EventSpeechEnd, At: s.silenceSince}, true
+		return Event{Type: EventSpeechEnd, At: s.silenceSince, Prob: prob}, true
 	}
 	return Event{}, false
 }

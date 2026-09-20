@@ -1,0 +1,69 @@
+// Package traceexport broadcasts live LLM trace records as Prometheus
+// series on GET /metrics for a co-located telemetry sidecar to poll.
+package traceexport
+
+import (
+	"context"
+	"encoding/json"
+	"strconv"
+	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/metrics"
+	"github.com/openmind/om1/internal/tracer/tracetype"
+)
+
+// maxBuffered bounds how many recent trace records stay exposed at once,
+// capping memory even if no sidecar ever polls.
+const maxBuffered = 200
+
+// labelValues is one record's Prometheus label values, in the exact order
+// metrics.TraceInfo declares them.
+type labelValues [5]string
+
+// Start begins exporting trace records from records as Prometheus series,
+// evicting the oldest once maxBuffered is exceeded.
+func Start(ctx context.Context, records <-chan tracetype.TraceRecord, log *zap.Logger) {
+	log.Info("traceexport: started, exporting live trace records on /metrics")
+
+	go func() {
+		var window []labelValues
+		var nextSeq int64
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case rec, ok := <-records:
+				if !ok {
+					return
+				}
+
+				outputJSON, err := json.Marshal(rec.LLMOutput)
+				if err != nil {
+					log.Warn("traceexport: failed to marshal llm_output, skipping record", zap.Error(err))
+					continue
+				}
+
+				lv := labelValues{
+					strconv.FormatInt(nextSeq, 10),
+					rec.Timestamp,
+					strconv.Itoa(rec.Generation),
+					strings.ToValidUTF8(rec.LLMInput, "�"),
+					strings.ToValidUTF8(string(outputJSON), "�"),
+				}
+				nextSeq++
+
+				metrics.TraceInfo.WithLabelValues(lv[0], lv[1], lv[2], lv[3], lv[4]).Set(1)
+				window = append(window, lv)
+
+				for len(window) > maxBuffered {
+					evict := window[0]
+					window = window[1:]
+					metrics.TraceInfo.DeleteLabelValues(evict[0], evict[1], evict[2], evict[3], evict[4])
+				}
+			}
+		}
+	}()
+}

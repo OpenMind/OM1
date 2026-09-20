@@ -199,8 +199,16 @@ var qualityCoherenceScore = map[string]float64{
 	"coherent":   1.0,
 }
 
+// TraceInfo is an "info" metric (value always 1, all content in labels) --
+// the same pattern as kube_pod_info.
+var TraceInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "om1_trace_info",
+	Help: "One series per buffered LLM trace record awaiting export by the telemetry sidecar; value is always 1, full record in labels.",
+}, []string{"seq", "ts", "generation", "llm_input", "llm_output"})
+
 func init() {
 	prometheus.MustRegister(
+		TraceInfo,
 		LLMLatency, LLMLatencyLast,
 		VLMLatency, VLMLatencyLast,
 		ASRLatency, ASRLatencyLast,
