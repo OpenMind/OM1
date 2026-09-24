@@ -1,5 +1,3 @@
-![om1_banner_w](https://github.com/user-attachments/assets/cc23bdfe-c3da-47e0-8ec1-ab31723affb6)
-
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
 <a href="https://docs.openmind.com/">Documentation</a> |
