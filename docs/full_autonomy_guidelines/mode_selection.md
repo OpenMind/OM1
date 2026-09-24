@@ -97,7 +97,7 @@ Example config to setup time based transition type for transitioning into guard 
 
 2. Login to your OM1 portal and head over to **Machine Teleops** on the left navigation bar.
 
-   <img src="../.gitbook/assets/full-autonomy-assets/machine_teleops.png" alt=" " width="419" height="500">
+   <img src="../.gitbook/assets/full-autonomy-assets/machine_teleops.png" alt=" " width="300" height="420">
 
 3. Once connected, you'll see your machine listed as **Online** at the top of the screen.
 
