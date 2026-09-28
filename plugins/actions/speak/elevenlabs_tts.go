@@ -36,6 +36,7 @@ type ElevenLabsConfig struct {
 	OutputFormat     string `json:"output_format"`
 	Rate             int    `json:"rate"`
 	SilenceRate      int    `json:"silence_rate"`
+	SkipWhenBusy     bool   `json:"skip_when_busy"`
 }
 
 type ElevenLabsConnector struct {
@@ -45,6 +46,7 @@ type ElevenLabsConnector struct {
 	silenceMu      sync.Mutex
 	silenceCounter int
 	silenceRate    int
+	skipWhenBusy   bool
 }
 
 // NewElevenLabsTTS creates a new ElevenLabsConnector with the provided configuration.
@@ -80,9 +82,10 @@ func NewElevenLabsTTS(configMap map[string]any) (actions.Connector, error) {
 	}, log)
 
 	return &ElevenLabsConnector{
-		elevenlabs:  elevenlabs,
-		log:         log,
-		silenceRate: cfg.SilenceRate,
+		elevenlabs:   elevenlabs,
+		log:          log,
+		silenceRate:  cfg.SilenceRate,
+		skipWhenBusy: cfg.SkipWhenBusy,
 	}, nil
 }
 
@@ -108,8 +111,10 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 		return nil, nil
 	}
 
+	priority := tts.Priority.Load()
+
 	e.silenceMu.Lock()
-	if e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
+	if !priority && e.silenceRate > 0 && e.silenceCounter < e.silenceRate {
 		e.silenceCounter++
 		e.silenceMu.Unlock()
 		e.log.Info("skipping (silence_rate)", zap.Int("counter", e.silenceCounter))
@@ -117,6 +122,11 @@ func (e *ElevenLabsConnector) Connect(_ context.Context, input actions.Input) (a
 	}
 	e.silenceCounter = 0
 	e.silenceMu.Unlock()
+
+	if e.skipWhenBusy && tts.Busy() {
+		e.log.Info("skipping (tts busy)", zap.String("text", text))
+		return nil, nil
+	}
 
 	e.log.Info("enqueueing text", zap.String("text", text))
 	e.elevenlabs.AddText(text)

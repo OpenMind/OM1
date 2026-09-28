@@ -23,6 +23,7 @@ type Describer struct {
 	Model     string
 	Prompt    string
 	MaxTokens int
+	Detail    string
 	Log       *zap.Logger
 }
 
@@ -42,21 +43,34 @@ func NewDescriber(d Describer) *Describer {
 	return &d
 }
 
-// Describe sends the prompt to the vision endpoint and returns the generated
-// text. When jpegBase64 is non-empty the frame is attached as an image; when it
-// is empty the request is text-only, so callers can still get a response if
-// frame capture failed. An empty result is returned (without error) when the
-// model produces no choices.
+// Describe sends the prompt with an optional single frame; empty jpegBase64 is text-only.
 func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, error) {
+	var imgs []string
+	if jpegBase64 != "" {
+		imgs = []string{jpegBase64}
+	}
+	return d.DescribeImages(ctx, imgs)
+}
+
+// DescribeImages attaches multiple frames to one request; empty entries are skipped.
+func (d *Describer) DescribeImages(ctx context.Context, jpegBase64s []string) (string, error) {
+	detail := d.Detail
+	if detail == "" {
+		detail = "low"
+	}
+
 	content := []any{
 		map[string]any{"type": "text", "text": d.Prompt},
 	}
-	if jpegBase64 != "" {
+	for _, jpegBase64 := range jpegBase64s {
+		if jpegBase64 == "" {
+			continue
+		}
 		content = append(content, map[string]any{
 			"type": "image_url",
 			"image_url": map[string]any{
 				"url":    "data:image/jpeg;base64," + jpegBase64,
-				"detail": "low",
+				"detail": detail,
 			},
 		})
 	}
