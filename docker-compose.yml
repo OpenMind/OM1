@@ -16,6 +16,7 @@ services:
       - ASR_INPUT_PLUGIN=${ASR_INPUT_PLUGIN:-GoogleASRInput}
       - ASR_RTSP_URL=${ASR_RTSP_URL:-rtsp://localhost:8555/live}
       - VLM_RTSP_URL=${VLM_RTSP_URL:-rtsp://localhost:8556/raw}
+      - VLM_BACKGROUND_PLUGIN=${VLM_BACKGROUND_PLUGIN:-VLMGeminiRTSP}
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
@@ -47,6 +48,40 @@ services:
       - audio
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  cosmos_edge:
+    image: vllm/vllm-openai:cosmos3
+    container_name: cosmos_edge
+    profiles: ["cosmos"]
+    restart: unless-stopped
+    network_mode: host
+    runtime: nvidia
+    shm_size: 8g
+    ulimits:
+      memlock: -1
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/vllm:/root/.cache/vllm
+    command:
+      - --model=${COSMOS_MODEL:-nvidia/Cosmos3-Edge}
+      - --served-model-name=nvidia/Cosmos3-Edge
+      - --port=8000
+      - --max-model-len=8192
+      - --gpu-memory-utilization=${COSMOS_GPU_MEMORY_UTILIZATION:-0.1}
+      - --max-num-seqs=4
+      - --limit-mm-per-prompt={"image":1,"video":0}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 5s
+      start_period: 600s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   grafana:
     image: grafana/grafana:latest
