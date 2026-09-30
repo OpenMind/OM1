@@ -75,6 +75,14 @@ func TestParseConfigGeminiDefaults(t *testing.T) {
 	assert.Equal(t, geminiDefaults.maxTokens, cfg.MaxTokens)
 }
 
+func TestParseConfigCosmosDefaults(t *testing.T) {
+	cfg, err := parseConfig(map[string]any{}, cosmosDefaults)
+	require.NoError(t, err)
+	assert.Equal(t, cosmosDefaults.apiKey, cfg.APIKey)
+	assert.Equal(t, cosmosDefaults.extraBody, cfg.ExtraBody)
+	assert.True(t, cfg.Warmup)
+}
+
 func TestParseConfigOverrides(t *testing.T) {
 	cfg, err := parseConfig(map[string]any{
 		"api_key": "k",
@@ -91,8 +99,8 @@ func TestParseConfigRequiresAPIKey(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestGeminiSensorsRegistered(t *testing.T) {
-	for _, name := range []string{"VLMOpenAI", "VLMOpenAIRTSP", "VLMGemini", "VLMGeminiRTSP"} {
+func TestSensorsRegistered(t *testing.T) {
+	for _, name := range []string{"VLMOpenAI", "VLMOpenAIRTSP", "VLMGemini", "VLMGeminiRTSP", "VLMCosmos", "VLMCosmosRTSP"} {
 		s, err := inputs.Load(name, map[string]any{"api_key": "k", "rtsp_url": "rtsp://x"})
 		require.NoError(t, err, name)
 		require.NotNil(t, s, name)

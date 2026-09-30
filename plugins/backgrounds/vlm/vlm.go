@@ -32,9 +32,13 @@ const (
 // providerDefaults holds the per-backend vision endpoint defaults.
 type providerDefaults struct {
 	baseURL   string
+	apiKey    string
 	model     string
 	prompt    string
 	maxTokens int
+	extraBody map[string]any
+	timeout   time.Duration
+	warmup    bool
 }
 
 var openAIDefaults = providerDefaults{
@@ -62,6 +66,10 @@ type VLMConfig struct {
 	JPEGQuality int    `json:"jpeg_quality"`
 	Width       int    `json:"resolution_width"`
 	Height      int    `json:"resolution_height"`
+
+	ExtraBody  map[string]any `json:"extra_body"`
+	TimeoutSec float64        `json:"timeout_sec"`
+	Warmup     bool           `json:"warmup"`
 
 	CameraIndex int    `json:"camera_index"`
 	RTSPURL     string `json:"rtsp_url"`
@@ -119,6 +127,9 @@ func parseConfig(configMap map[string]any, defaults providerDefaults) (VLMConfig
 		_ = json.Unmarshal(b, &cfg)
 	}
 	if cfg.APIKey == "" {
+		cfg.APIKey = defaults.apiKey
+	}
+	if cfg.APIKey == "" {
 		return cfg, fmt.Errorf("vlm background: api_key is required")
 	}
 	if cfg.BaseURL == "" {
@@ -136,6 +147,13 @@ func parseConfig(configMap map[string]any, defaults providerDefaults) (VLMConfig
 	if cfg.MaxTokens <= 0 {
 		cfg.MaxTokens = defaults.maxTokens
 	}
+	if cfg.ExtraBody == nil {
+		cfg.ExtraBody = defaults.extraBody
+	}
+	if cfg.TimeoutSec <= 0 {
+		cfg.TimeoutSec = defaults.timeout.Seconds()
+	}
+	cfg.Warmup = cfg.Warmup || defaults.warmup
 	return cfg, nil
 }
 
@@ -170,6 +188,9 @@ func NewBackground(name string, cfg VLMConfig, source frameSource) bg.Background
 			Model:     cfg.Model,
 			Prompt:    cfg.Prompt,
 			MaxTokens: cfg.MaxTokens,
+			ExtraBody: cfg.ExtraBody,
+			Timeout:   time.Duration(cfg.TimeoutSec * float64(time.Second)),
+			Warmup:    cfg.Warmup,
 			Log:       log,
 		}),
 	}

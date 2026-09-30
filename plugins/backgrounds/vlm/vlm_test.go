@@ -61,8 +61,17 @@ func TestParseConfigOverrides(t *testing.T) {
 	assert.Equal(t, 4, cfg.FPS)
 }
 
+func TestParseConfigCosmosDefaults(t *testing.T) {
+	cfg, err := parseConfig(map[string]any{}, cosmosDefaults)
+	require.NoError(t, err)
+	assert.Equal(t, cosmosDefaults.apiKey, cfg.APIKey)
+	assert.Equal(t, cosmosDefaults.extraBody, cfg.ExtraBody)
+	assert.Equal(t, 10.0, cfg.TimeoutSec)
+	assert.True(t, cfg.Warmup)
+}
+
 func TestBackgroundsRegistered(t *testing.T) {
-	for _, name := range []string{"VLMOpenAI", "VLMOpenAIRTSP", "VLMGemini", "VLMGeminiRTSP"} {
+	for _, name := range []string{"VLMOpenAI", "VLMOpenAIRTSP", "VLMGemini", "VLMGeminiRTSP", "VLMCosmos", "VLMCosmosRTSP"} {
 		b, err := bg.Load(name, map[string]any{"api_key": "k", "rtsp_url": "rtsp://x"})
 		require.NoError(t, err, name)
 		require.NotNil(t, b, name)
@@ -109,4 +118,30 @@ func TestRunPublishesFrameAndDescription(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("source was not stopped")
 	}
+}
+
+func TestRunSkipsOutputUntilWarm(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"a dog"}}]}`))
+	}))
+	defer srv.Close()
+
+	source := newFakeSource()
+	b := NewBackground("test", VLMConfig{APIKey: "k", BaseURL: srv.URL, Warmup: true}, source)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go b.Run(ctx)
+
+	require.Eventually(t, func() bool {
+		select {
+		case source.ch <- video.Frame{Timestamp: time.Now(), JPEG: []byte{0x01}}:
+		default:
+		}
+		text, _, ok := video.LatestDescription().Get()
+		return ok && text == "a dog"
+	}, 2*time.Second, 10*time.Millisecond)
+
+	cancel()
+	b.Stop()
 }

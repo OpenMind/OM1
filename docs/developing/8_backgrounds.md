@@ -20,6 +20,7 @@ The currently registered background tasks are:
 - **`ApproachingPerson`**: Reacts when a person approaches.
 - **`VLMGemini`**, **`VLMGeminiRTSP`**: Background vision captioning via Gemini.
 - **`VLMOpenAI`**, **`VLMOpenAIRTSP`**: Background vision captioning via OpenAI.
+- **`VLMCosmos`**, **`VLMCosmosRTSP`**: Background vision captioning via a local NVIDIA Cosmos3-Edge vLLM server.
 - **`UnitreeGo2FrontierExploration`**: Autonomous frontier exploration for the Unitree Go2.
 
 > The authoritative list is whatever is registered via `bg.Register(...)` under `plugins/backgrounds/`. Background tasks are configured through the runtime config and can be extended by adding new plugin modules.
