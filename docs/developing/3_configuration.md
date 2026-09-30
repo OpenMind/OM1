@@ -225,6 +225,7 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 **Vision (VLM)**
 * `VLMGemini`, `VLMGeminiRTSP`
 * `VLMOpenAI`, `VLMOpenAIRTSP`
+* `VLMCosmos`, `VLMCosmosRTSP`
 * `VLMBackground`
 
 **Perception & state**

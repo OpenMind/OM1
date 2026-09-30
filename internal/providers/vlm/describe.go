@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -14,7 +15,10 @@ import (
 	"github.com/openmind/om1/internal/httpclient"
 	"github.com/openmind/om1/internal/logger"
 	"github.com/openmind/om1/internal/metrics"
+	"github.com/openmind/om1/internal/util"
 )
+
+var warmupRetryDelay = 2 * time.Second
 
 type Describer struct {
 	Name      string
@@ -23,7 +27,17 @@ type Describer struct {
 	Model     string
 	Prompt    string
 	MaxTokens int
+	ExtraBody map[string]any
+	Timeout   time.Duration
+	Warmup    bool
 	Log       *zap.Logger
+
+	warm *warmupState
+}
+
+type warmupState struct {
+	started atomic.Bool
+	ready   atomic.Bool
 }
 
 type chatResponse struct {
@@ -39,6 +53,9 @@ func NewDescriber(d Describer) *Describer {
 	if d.Log == nil {
 		d.Log = logger.Get()
 	}
+	if d.Warmup {
+		d.warm = &warmupState{}
+	}
 	return &d
 }
 
@@ -46,8 +63,42 @@ func NewDescriber(d Describer) *Describer {
 // text. When jpegBase64 is non-empty the frame is attached as an image; when it
 // is empty the request is text-only, so callers can still get a response if
 // frame capture failed. An empty result is returned (without error) when the
-// model produces no choices.
+// model produces no choices, or while a Warmup describer is still warming up.
 func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, error) {
+	if d.warm != nil && !d.warm.ready.Load() {
+		if d.warm.started.CompareAndSwap(false, true) {
+			go d.warmup(ctx, jpegBase64)
+		}
+		return "", nil
+	}
+	if d.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, d.Timeout)
+		defer cancel()
+	}
+	return d.describe(ctx, jpegBase64)
+}
+
+// warmup retries untimed requests until the endpoint answers.
+func (d *Describer) warmup(ctx context.Context, jpegBase64 string) {
+	d.Log.Info("warming up vision endpoint in background")
+	start := time.Now()
+	for {
+		_, err := d.describe(ctx, jpegBase64)
+		if err == nil {
+			d.warm.ready.Store(true)
+			d.Log.Info("vision endpoint warmed up", zap.Duration("elapsed", time.Since(start)))
+			return
+		}
+		d.Log.Debug("vision endpoint not ready", zap.Error(err))
+		if !util.Sleep(ctx, warmupRetryDelay) {
+			d.warm.started.Store(false)
+			return
+		}
+	}
+}
+
+func (d *Describer) describe(ctx context.Context, jpegBase64 string) (string, error) {
 	content := []any{
 		map[string]any{"type": "text", "text": d.Prompt},
 	}
@@ -70,6 +121,9 @@ func (d *Describer) Describe(ctx context.Context, jpegBase64 string) (string, er
 				"content": content,
 			},
 		},
+	}
+	for k, v := range d.ExtraBody {
+		requestBody[k] = v
 	}
 
 	requestBytes, err := json.Marshal(requestBody)
