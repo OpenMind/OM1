@@ -123,9 +123,17 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 		KnowledgeBase:    m.sys.KnowledgeBase,
 		ActionExecMode:   m.cfg.ActionExecMode,
 		ActionDeps:       m.cfg.ActionDeps,
+		SpeechActions:    m.cfg.SpeechActions,
 	}
 	if rc.Hertz == 0 {
 		rc.Hertz = 1.0
+	}
+	if rc.SpeechActions == nil {
+		if m.sys != nil && m.sys.SpeechActions != nil {
+			rc.SpeechActions = m.sys.SpeechActions
+		} else {
+			rc.SpeechActions = []string{"speak"}
+		}
 	}
 	return rc
 }

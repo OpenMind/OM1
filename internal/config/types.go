@@ -19,10 +19,13 @@ type SystemConfig struct {
 	AgentActions      []ActionSpec `json:"agent_actions"`
 	AgentBackgrounds  []PluginSpec `json:"agent_backgrounds"`
 	GlobalBackgrounds []PluginSpec `json:"global_backgrounds"`
-	MCPServers        []MCPSpec    `json:"mcp_servers"`
-	KnowledgeBase     *KBSpec      `json:"knowledge_base"`
-	Memory            *MemorySpec  `json:"memory"`
-	LifecycleHooks    []HookSpec   `json:"lifecycle_hooks"`
+	// SpeechActions names the actions that talk to people (default ["speak"]). They run only on a tick that
+	// carries a conversation turn or an event; world state alone never earns speech. Empty list = no gating.
+	SpeechActions  []string    `json:"speech_actions"`
+	MCPServers     []MCPSpec   `json:"mcp_servers"`
+	KnowledgeBase  *KBSpec     `json:"knowledge_base"`
+	Memory         *MemorySpec `json:"memory"`
+	LifecycleHooks []HookSpec  `json:"lifecycle_hooks"`
 
 	APIKey  string `json:"api_key"`
 	RobotIP string `json:"robot_ip"`
@@ -54,6 +57,7 @@ type ModeConfig struct {
 	MCPServers       []MCPSpec    `json:"mcp_servers"`
 	LifecycleHooks   []HookSpec   `json:"lifecycle_hooks"`
 	TimeoutSeconds   float64      `json:"timeout_seconds"`
+	SpeechActions    []string     `json:"speech_actions"`
 
 	// Execution mode: "concurrent" | "sequential" | "dependencies"
 	ActionExecMode string              `json:"action_execution_mode"`
@@ -168,4 +172,5 @@ type RuntimeConfig struct {
 	KnowledgeBase    *KBSpec
 	ActionExecMode   string
 	ActionDeps       map[string][]string
+	SpeechActions    []string
 }

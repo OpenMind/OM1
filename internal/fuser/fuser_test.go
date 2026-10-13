@@ -10,6 +10,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -154,4 +155,47 @@ func TestFusePartsSaysWhenNothingIsNew(t *testing.T) {
 	require.NotContains(t, p.User, "Current observations:")
 	require.Contains(t, p.Summary, "no new observations")
 	require.Equal(t, "", p.Observations)
+}
+
+func TestFuseObservationsSeparatesRoles(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseObservations(context.Background(), []inputs.Observation{
+		{Role: inputs.RoleWorld, Text: "camera: a man at a desk", New: false, Age: 3 * time.Second},
+		{Role: inputs.RoleConversation, Text: "what do you see?", New: true},
+		{Role: inputs.RoleEvent, Text: "classifier confirms change", New: true},
+	})
+	require.NoError(t, err)
+	require.True(t, p.HasConversation)
+	require.True(t, p.HasEvent)
+	require.Contains(t, p.User, "Someone said to you:\n- what do you see?")
+	require.Contains(t, p.User, "Current observations:\n- classifier confirms change")
+	require.Contains(t, p.User, "World state, for your awareness")
+	require.Contains(t, p.User, "camera: a man at a desk (3 s ago)")
+	require.NotContains(t, p.User, "No new observations")
+	require.Contains(t, p.Observations, "what do you see?")
+	require.Contains(t, p.Observations, "classifier confirms change")
+	require.NotContains(t, p.Observations, "camera", "world state is not part of the observation key or the history summary")
+	require.NotContains(t, p.Summary, "camera")
+}
+
+func TestFuseObservationsWorldOnlyIsIdle(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseObservations(context.Background(), []inputs.Observation{
+		{Role: inputs.RoleWorld, Text: "camera: a person sitting", New: true},
+	})
+	require.NoError(t, err)
+	require.False(t, p.HasConversation)
+	require.False(t, p.HasEvent)
+	require.Contains(t, p.User, "No new observations since your last action.")
+	require.Contains(t, p.User, "camera: a person sitting (just updated)")
+	require.Equal(t, "", p.Observations)
+	require.Contains(t, p.Summary, "no new observations")
+}
+
+func TestFusePartsTreatsBuffersAsEvents(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseParts(context.Background(), []string{"saw a person"})
+	require.NoError(t, err)
+	require.True(t, p.HasEvent)
+	require.False(t, p.HasConversation)
 }
