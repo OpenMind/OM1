@@ -491,11 +491,12 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
-	prompt, err := current.promptFuser.Fuse(ctx, sensorBuffers)
+	parts, err := current.promptFuser.FuseParts(ctx, sensorBuffers)
 	if err != nil {
 		rt.log.Warn("fuse failed", zap.Error(err))
 		return
 	}
+	prompt := parts.User
 
 	if ctx.Err() != nil {
 		return
@@ -503,7 +504,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 
 	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
 
-	response, err := current.cortexLLM.Call(ctx, prompt, nil)
+	response, err := current.cortexLLM.CallParts(ctx, parts.System, parts.User, parts.Summary)
 	if err != nil {
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return

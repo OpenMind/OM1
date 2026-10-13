@@ -107,3 +107,40 @@ func TestFormatToolCalls(t *testing.T) {
 	})
 	require.Equal(t, `speak({"text":"hi"}) | move({"dir":"left"})`, out)
 }
+
+func TestOrchestratorCallPartsSendsSystemOnceAndStoresSummary(t *testing.T) {
+	f := &fakeLLM{resp: &Response{ToolCalls: []ToolCall{{Name: "wave", Arguments: map[string]any{}}}}}
+	o := NewOrchestrator(f, map[string]any{"history_length": float64(3)}, nil)
+
+	_, err := o.CallParts(context.Background(), "SYSTEM", "USER 1 full prompt", "At 10:00:00 you observed: change")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	require.Equal(t, "USER 1 full prompt", f.calls[0].prompt)
+	require.Equal(t, []Message{{Role: "system", Content: "SYSTEM"}}, f.calls[0].history, "first call: system message only")
+
+	require.Len(t, o.msgs, 2)
+	require.Equal(t, Message{Role: "user", Content: "At 10:00:00 you observed: change"}, o.msgs[0], "history keeps the summary, not the prompt")
+	require.Equal(t, "assistant", o.msgs[1].Role)
+	require.Contains(t, o.msgs[1].Content, "you did: wave")
+
+	f.resp = &Response{}
+	_, err = o.CallParts(context.Background(), "SYSTEM", "USER 2", "At 10:00:02 there were no new observations.")
+	require.NoError(t, err)
+	h := f.calls[1].history
+	require.Equal(t, "system", h[0].Role)
+	require.Equal(t, 3, len(h), "system + one remembered turn")
+	for _, m := range h[1:] {
+		require.NotEqual(t, "system", m.Role, "the system message is sent once, never stored in history")
+		require.NotContains(t, m.Content, "full prompt")
+	}
+	require.Equal(t, "you did nothing", o.msgs[3].Content)
+}
+
+func TestOrchestratorCallPartsStateless(t *testing.T) {
+	f := &fakeLLM{resp: &Response{TextContent: "ok"}}
+	o := NewOrchestrator(f, nil, nil)
+	_, err := o.CallParts(context.Background(), "SYSTEM", "USER", "summary")
+	require.NoError(t, err)
+	require.Equal(t, []Message{{Role: "system", Content: "SYSTEM"}}, f.calls[0].history)
+	require.Empty(t, o.msgs)
+}

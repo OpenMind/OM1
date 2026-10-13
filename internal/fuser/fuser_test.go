@@ -122,3 +122,34 @@ func TestFuseToleratesKBError(t *testing.T) {
 	require.NoError(t, err, "a KB failure is logged, not fatal")
 	require.NotContains(t, out, "Relevant context:")
 }
+
+func TestFusePartsSplitsConstantAndPerTick(t *testing.T) {
+	rc := newRC()
+	rc.SystemGovernance = "Be safe."
+	rc.PromptExamples = "Example: greet."
+	acts := []*actions.AgentAction{{LLMLabel: "speak"}}
+	p, err := NewFuser(rc, acts, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), []string{"saw a person"})
+	require.NoError(t, err)
+
+	require.Contains(t, p.System, "You are a robot.")
+	require.Contains(t, p.System, "Be safe.")
+	require.Contains(t, p.System, "- speak")
+	require.Contains(t, p.System, "Example: greet.")
+	require.NotContains(t, p.System, "saw a person", "observations never go in the constant part")
+
+	require.Contains(t, p.User, "Current time is ")
+	require.Contains(t, p.User, "- saw a person")
+	require.Contains(t, p.User, "What will you do next?")
+	require.NotContains(t, p.User, "Example: greet.", "examples are not repeated per tick")
+
+	require.Contains(t, p.Summary, "you observed: saw a person")
+	require.Less(t, len(p.Summary), len(p.User), "the history summary is shorter than the prompt")
+}
+
+func TestFusePartsSaysWhenNothingIsNew(t *testing.T) {
+	p, err := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), []string{"", ""})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "No new observations since your last action.")
+	require.NotContains(t, p.User, "Current observations:")
+	require.Contains(t, p.Summary, "no new observations")
+}

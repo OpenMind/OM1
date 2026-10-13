@@ -75,6 +75,52 @@ func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*R
 	return resp, nil
 }
 
+// CallParts sends system as the system message, the stored history, and user as the new user message.
+// Only summary (one line describing the turn's observations) and the model's response are kept in history,
+// so the constant part of the prompt is sent once per call rather than once per remembered turn.
+func (o *Orchestrator) CallParts(ctx context.Context, system, user, summary string) (*Response, error) {
+	if o.maxLen == 0 {
+		return o.llm.Call(ctx, user, []Message{{Role: "system", Content: system}})
+	}
+
+	o.mu.Lock()
+	snapshot := make([]Message, 0, len(o.msgs)+1)
+	snapshot = append(snapshot, Message{Role: "system", Content: system})
+	snapshot = append(snapshot, o.msgs...)
+	o.mu.Unlock()
+
+	resp, err := o.llm.Call(ctx, user, snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	if summary == "" {
+		summary = user
+	}
+
+	o.mu.Lock()
+	o.msgs = append(o.msgs, Message{Role: "user", Content: summary})
+
+	switch {
+	case resp.TextContent != "" && len(resp.ToolCalls) > 0:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: resp.TextContent + " | you did: " + formatToolCalls(resp.ToolCalls)})
+	case resp.TextContent != "":
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: resp.TextContent})
+	case len(resp.ToolCalls) > 0:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: "you did: " + formatToolCalls(resp.ToolCalls)})
+	default:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: "you did nothing"})
+	}
+
+	if len(o.msgs) > o.maxLen*2 {
+		o.msgs = o.msgs[len(o.msgs)-o.maxLen*2:]
+	}
+
+	o.mu.Unlock()
+
+	return resp, nil
+}
+
 // Reset clears the conversation history in the Orchestrator.
 func (o *Orchestrator) Reset() {
 	o.mu.Lock()
