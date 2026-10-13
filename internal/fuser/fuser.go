@@ -43,9 +43,10 @@ func NewFuser(runtimeConfig *config.RuntimeConfig, agentActions []*actions.Agent
 // Keeping the two apart lets the LLM orchestrator send the constant part once as the system message and store
 // only the Summary per turn, instead of a full copy of the prompt per turn.
 type Prompt struct {
-	System  string
-	User    string
-	Summary string
+	System       string
+	User         string
+	Summary      string
+	Observations string // this tick's observations joined, without the time; "" on an idle tick
 }
 
 // Fuse combines the prompt components into a single string to be sent to the LLM.
@@ -153,7 +154,7 @@ func (f *Fuser) FuseParts(ctx context.Context, sensorBuffers []string) (Prompt, 
 		summary = "At " + now.Format("15:04:05") + " you observed: " + strings.Join(observed, "; ")
 	}
 
-	return Prompt{System: sys.String(), User: usr.String(), Summary: summary}, nil
+	return Prompt{System: sys.String(), User: usr.String(), Summary: summary, Observations: strings.Join(observed, "; ")}, nil
 }
 
 // visibleActions filters the agent actions to include only those that are not marked as ExcludeFromPrompt, meaning they should be included in the prompt for the LLM.

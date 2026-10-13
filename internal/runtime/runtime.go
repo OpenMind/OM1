@@ -41,6 +41,7 @@ type modeState struct {
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
 	memory             memory.MemoryManager
+	guard              repeatGuard // drops a response identical to the last one for unchanged observations
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -526,6 +527,12 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 				rt.executeActions(ctx, current, calls)
 			},
 		)
+	}
+
+	if !current.guard.Allow(parts.Observations, toolCalls) {
+		rt.log.Info("suppressing repeated actions for unchanged observations",
+			zap.String("observations", parts.Observations), zap.Int("actions", len(toolCalls)))
+		toolCalls = nil
 	}
 
 	rt.executeActions(ctx, current, toolCalls)

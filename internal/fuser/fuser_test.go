@@ -143,6 +143,7 @@ func TestFusePartsSplitsConstantAndPerTick(t *testing.T) {
 	require.NotContains(t, p.User, "Example: greet.", "examples are not repeated per tick")
 
 	require.Contains(t, p.Summary, "you observed: saw a person")
+	require.Equal(t, "saw a person", p.Observations)
 	require.Less(t, len(p.Summary), len(p.User), "the history summary is shorter than the prompt")
 }
 
@@ -152,4 +153,5 @@ func TestFusePartsSaysWhenNothingIsNew(t *testing.T) {
 	require.Contains(t, p.User, "No new observations since your last action.")
 	require.NotContains(t, p.User, "Current observations:")
 	require.Contains(t, p.Summary, "no new observations")
+	require.Equal(t, "", p.Observations)
 }
