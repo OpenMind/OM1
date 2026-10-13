@@ -54,3 +54,19 @@ func TestTriggersTick(t *testing.T) {
 	require.False(t, triggersTick(&triggeringSensor{wakes: false}))
 	require.True(t, triggersTick(&triggeringSensor{wakes: true}))
 }
+
+type roledSensor struct {
+	fakeSensor
+	role Role
+}
+
+func (s *roledSensor) Role() Role { return s.role }
+
+func TestRoleOfDefaultsToEvent(t *testing.T) {
+	require.Equal(t, RoleEvent, RoleOf(&fakeSensor{}), "a sensor that declares nothing is an event source")
+	require.Equal(t, RoleWorld, RoleOf(&roledSensor{role: RoleWorld}))
+	require.Equal(t, RoleConversation, RoleOf(&roledSensor{role: RoleConversation}))
+	require.Equal(t, "event", RoleEvent.String())
+	require.Equal(t, "world", RoleWorld.String())
+	require.Equal(t, "conversation", RoleConversation.String())
+}

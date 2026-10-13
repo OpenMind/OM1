@@ -48,3 +48,24 @@ func TestActionKey(t *testing.T) {
 	require.Equal(t, k1, k2)
 	require.NotEqual(t, k1, k3)
 }
+
+func TestFilterSpeech(t *testing.T) {
+	speak := llm.ToolCall{Name: "speak", Arguments: map[string]any{"sentence": "hello"}}
+	move := llm.ToolCall{Name: "move", Arguments: map[string]any{"direction": "forward"}}
+
+	kept, dropped := filterSpeech([]llm.ToolCall{speak, move}, []string{"speak"}, false)
+	require.Equal(t, 1, dropped)
+	require.Equal(t, []llm.ToolCall{move}, kept, "speech is dropped, other actions run")
+
+	kept, dropped = filterSpeech([]llm.ToolCall{speak, move}, []string{"speak"}, true)
+	require.Equal(t, 0, dropped)
+	require.Len(t, kept, 2, "a conversation turn or event allows speech")
+
+	kept, dropped = filterSpeech([]llm.ToolCall{speak}, nil, false)
+	require.Equal(t, 0, dropped)
+	require.Len(t, kept, 1, "no speech list means no gate")
+
+	kept, dropped = filterSpeech(nil, []string{"speak"}, false)
+	require.Equal(t, 0, dropped)
+	require.Empty(t, kept)
+}

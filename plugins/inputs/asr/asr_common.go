@@ -201,6 +201,9 @@ func (a *asrSensorCore) RawToText(_ context.Context, raw any) (*inputs.Message, 
 // TriggersTick reports that ASR input wakes the cortex loop.
 func (a *asrSensorCore) TriggersTick() bool { return true }
 
+// Role: a person addressing the robot.
+func (a *asrSensorCore) Role() inputs.Role { return inputs.RoleConversation }
+
 // FormattedLatestBuffer returns the buffered utterance as a Voice block, records
 // it on the IO provider, broadcasts it over zenoh, and clears the buffer.
 func (a *asrSensorCore) FormattedLatestBuffer() string {

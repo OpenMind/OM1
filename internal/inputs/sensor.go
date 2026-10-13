@@ -37,6 +37,56 @@ type Sensor interface {
 	Stop()
 }
 
+// Role says what kind of input a sensor delivers, which decides how the cortex is allowed to respond to it.
+type Role int
+
+const (
+	// RoleEvent: something happened that may warrant a response, speech included (an alarm, a detector firing,
+	// a sensor that does not say otherwise). The default.
+	RoleEvent Role = iota
+	// RoleConversation: a person addressed the robot (voice, text). Speech is a reply.
+	RoleConversation
+	// RoleWorld: the state of the surroundings (camera descriptions, odometry, paths). Kept current for the
+	// robot's awareness; never by itself a reason to speak.
+	RoleWorld
+)
+
+// String returns the role name used in prompts and logs.
+func (r Role) String() string {
+	switch r {
+	case RoleConversation:
+		return "conversation"
+	case RoleWorld:
+		return "world"
+	default:
+		return "event"
+	}
+}
+
+// RoleDeclarer is an optional interface for sensors that declare their Role. Sensors without it are RoleEvent.
+type RoleDeclarer interface {
+	Role() Role
+}
+
+// RoleOf returns a sensor's declared role, or RoleEvent.
+func RoleOf(sensor Sensor) Role {
+	if d, ok := sensor.(RoleDeclarer); ok {
+		return d.Role()
+	}
+	return RoleEvent
+}
+
+// Observation is one sensor's contribution to a cortex tick.
+type Observation struct {
+	Role Role
+	Text string
+	// New is true when the text arrived since the previous tick. World observations are repeated with New=false
+	// until replaced, so the robot's picture of its surroundings stays in the prompt.
+	New bool
+	// Age is how long ago the text was produced (world observations only; zero for new text).
+	Age time.Duration
+}
+
 // TickTrigger is an optional interface that sensors can implement to indicate
 // whether they should wake the cortex loop when new input is available.
 type TickTrigger interface {
