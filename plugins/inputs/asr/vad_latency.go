@@ -36,6 +36,11 @@ type vadLatencyConfig struct {
 	VADOutputPath  string `json:"vad_output_path"`
 
 	VADInterruptConfirmMS int `json:"vad_interrupt_confirm_ms"`
+
+	// TurnHoldMS is how long the sensor waits after a final transcript before handing the turn to the cortex.
+	// Another transcript inside the window is appended and the window restarts; while the local VAD still
+	// hears voice the window is extended (up to ten windows). 0 disables the hold (deliver immediately).
+	TurnHoldMS int `json:"turn_hold_ms"`
 }
 
 // vadLatencyRecord is one JSONL line pairing a locally-detected end-of-speech
@@ -66,6 +71,8 @@ type vadLatencyTracker struct {
 	speechActive   bool
 	candidateStart time.Time
 	confirmed      bool
+
+	voiceActive bool // speech_start seen and no speech_end yet, tracked regardless of the interrupt setting
 }
 
 // newVADLatencyTracker builds a tracker from cfg, or returns nil if the
@@ -126,6 +133,7 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 		switch ev.Type {
 		case vad.EventSpeechStart:
 			t.lastStart = ev.At
+			t.voiceActive = true
 			t.log.Info("vad: speech started", zap.Time("at", ev.At))
 			if t.enableInterrupt {
 				t.speechActive = true
@@ -134,6 +142,7 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 			}
 		case vad.EventSpeechEnd:
 			t.pendingEnd = ev.At
+			t.voiceActive = false
 			fields := []zap.Field{zap.Time("at", ev.At)}
 			if !t.lastStart.IsZero() {
 				fields = append(fields, zap.Duration("utterance_duration", ev.At.Sub(t.lastStart)))
@@ -148,6 +157,16 @@ func (t *vadLatencyTracker) feedAudio(pcm []byte) {
 	}
 
 	t.checkInterrupt(now)
+}
+
+// VoiceActive reports whether the local VAD currently hears speech. False without a VAD model.
+func (t *vadLatencyTracker) VoiceActive() bool {
+	if t == nil {
+		return false
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.voiceActive
 }
 
 // checkInterrupt fires tts.RequestInterrupt once speechActive has persisted

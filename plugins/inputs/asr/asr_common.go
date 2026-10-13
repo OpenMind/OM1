@@ -82,7 +82,8 @@ type asrSensorCore struct {
 	stopped     bool
 	captureDone chan struct{}
 
-	vad *vadLatencyTracker
+	vad      *vadLatencyTracker
+	turnHold time.Duration // see vadLatencyConfig.TurnHoldMS
 
 	zenohSession   zenohsession.Session
 	zenohPublisher zenohsession.Publisher
@@ -99,6 +100,10 @@ func newSensorCore(name string, enableTTSInterrupt bool, vadCfg vadLatencyConfig
 		apiVersion:   apiVersion,
 		transcriptCh: make(chan string, 32),
 		vad:          newVADLatencyTracker(vadCfg, enableTTSInterrupt, rate, log),
+		turnHold:     time.Duration(vadCfg.TurnHoldMS) * time.Millisecond,
+	}
+	if a.turnHold > 0 {
+		log.Info("turn hold enabled", zap.Duration("turn_hold", a.turnHold))
 	}
 
 	sess, err := zenohsession.Open()
@@ -169,12 +174,55 @@ func (a *asrSensorCore) pollLoop(ctx context.Context, out chan any) {
 		if err != nil {
 			return
 		}
+		if text, ok := raw.(string); ok && a.turnHold > 0 {
+			raw = a.holdTurn(ctx, text)
+		}
 		providers.Speaker().WaitFresh(ctx)
 
 		select {
 		case out <- raw:
 		case <-ctx.Done():
 			return
+		}
+	}
+}
+
+// holdTurn waits for the speaker to finish before the transcript goes to the cortex. A streaming recogniser
+// finalises on any pause, so a breath mid-sentence would otherwise be answered as a whole sentence. Transcripts
+// arriving within the hold window are appended and restart the window; while the local VAD still hears voice
+// the window is extended, up to ten windows in all.
+func (a *asrSensorCore) holdTurn(ctx context.Context, text string) string {
+	const pollEvery = 50 * time.Millisecond
+	start := time.Now()
+	deadline := start.Add(a.turnHold)
+	hardCap := start.Add(10 * a.turnHold)
+	parts := 1
+	for {
+		wait := time.Until(deadline)
+		if wait <= 0 {
+			if a.vad.VoiceActive() && time.Now().Before(hardCap) {
+				deadline = time.Now().Add(a.turnHold)
+				continue
+			}
+			if parts > 1 {
+				a.log.Info("turn held: joined transcripts", zap.Int("parts", parts), zap.Duration("held", time.Since(start)))
+			}
+			return text
+		}
+		if wait > pollEvery {
+			wait = pollEvery
+		}
+		select {
+		case more, ok := <-a.transcriptCh:
+			if !ok {
+				return text
+			}
+			text = text + " " + more
+			parts++
+			deadline = time.Now().Add(a.turnHold)
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return text
 		}
 	}
 }
