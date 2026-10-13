@@ -41,6 +41,7 @@ type modeState struct {
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
 	memory             memory.MemoryManager
+	guard              repeatGuard // drops a response identical to the last one for unchanged observations
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -491,11 +492,12 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		return
 	}
 
-	prompt, err := current.promptFuser.Fuse(ctx, sensorBuffers)
+	parts, err := current.promptFuser.FuseParts(ctx, sensorBuffers)
 	if err != nil {
 		rt.log.Warn("fuse failed", zap.Error(err))
 		return
 	}
+	prompt := parts.User
 
 	if ctx.Err() != nil {
 		return
@@ -503,7 +505,7 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 
 	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
 
-	response, err := current.cortexLLM.Call(ctx, prompt, nil)
+	response, err := current.cortexLLM.CallParts(ctx, parts.System, parts.User, parts.Summary)
 	if err != nil {
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return
@@ -525,6 +527,12 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 				rt.executeActions(ctx, current, calls)
 			},
 		)
+	}
+
+	if !current.guard.Allow(parts.Observations, toolCalls) {
+		rt.log.Info("suppressing repeated actions for unchanged observations",
+			zap.String("observations", parts.Observations), zap.Int("actions", len(toolCalls)))
+		toolCalls = nil
 	}
 
 	rt.executeActions(ctx, current, toolCalls)
