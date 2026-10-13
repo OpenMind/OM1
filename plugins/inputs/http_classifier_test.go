@@ -14,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/openmind/om1/internal/providers"
 )
 
 // newClassifierServer serves /classify with a fixed response and records what it received.
@@ -194,6 +196,41 @@ func TestHTTPClassifierRawToText(t *testing.T) {
 	s.mu.Unlock()
 }
 
+func TestHTTPClassifierOnlyOnChange(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"min_confidence": 0.5, "only_on_change": true})
+	pos := &httpClassifierResponse{Label: "A", Confidence: 0.9}
+	weak := &httpClassifierResponse{Label: "A", Confidence: 0.2}
+	neg := &httpClassifierResponse{Label: "B", Confidence: 0.9}
+
+	msg, err := s.RawToText(context.Background(), pos)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "first positive is reported")
+	msg, err = s.RawToText(context.Background(), pos)
+	require.NoError(t, err)
+	require.Nil(t, msg, "a persisting positive is not repeated")
+	msg, err = s.RawToText(context.Background(), weak)
+	require.NoError(t, err)
+	require.Nil(t, msg, "a weak positive is never reported")
+	msg, err = s.RawToText(context.Background(), pos)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "a positive after a weak one starts a new episode")
+	msg, err = s.RawToText(context.Background(), neg)
+	require.NoError(t, err)
+	require.Nil(t, msg, "negatives are silent unless report_negative")
+	msg, err = s.RawToText(context.Background(), pos)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "positive after negative is a new episode")
+
+	s.cfg.ReportNegative = true
+	msg, err = s.RawToText(context.Background(), neg)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "with report_negative the transition to negative is reported once")
+	msg, err = s.RawToText(context.Background(), neg)
+	require.NoError(t, err)
+	require.Nil(t, msg)
+}
+
 func TestHTTPClassifierFormattedLatestBuffer(t *testing.T) {
 	p := writeLabel(t, t.TempDir(), "A")
 	s := newFileSensor(t, "http://127.0.0.1:1", p, nil)
@@ -263,5 +300,101 @@ func TestHTTPClassifierListenKeepsPollingAfterErrors(t *testing.T) {
 		require.GreaterOrEqual(t, atomic.LoadInt32(&n), int32(3), "refusals were retried, not fatal")
 	case <-ctx.Done():
 		t.Fatal("never recovered from refusals")
+	}
+}
+
+func TestMatchSymbol(t *testing.T) {
+	rules := []SymbolRule{{Match: []string{"waving", "smiling"}, Symbol: "A"}, {Match: []string{"turned away", "back to the camera"}, Symbol: "B"}}
+	require.Equal(t, "A", matchSymbol("A man is Smiling at the camera", rules))
+	require.Equal(t, "B", matchSymbol("the person has turned away from the desk", rules))
+	require.Equal(t, "A", matchSymbol("waving while turned away", rules), "first matching rule wins")
+	require.Equal(t, "", matchSymbol("a desk with two monitors", rules))
+	require.Equal(t, "", matchSymbol("", rules))
+}
+
+func TestHTTPClassifierInputSourceConfig(t *testing.T) {
+	_, err := NewHTTPClassifier(map[string]any{"source": "input"})
+	require.Error(t, err, "input_key and symbol_rules are required")
+	_, err = NewHTTPClassifier(map[string]any{"source": "input", "input_key": "VLMGemini", "symbol_rules": []any{map[string]any{"match": []any{"x"}, "symbol": "C"}}})
+	require.Error(t, err, "symbols must be A or B")
+	s, err := NewHTTPClassifier(map[string]any{"source": "input", "input_key": "VLMGemini", "symbol_rules": []any{map[string]any{"match": []any{"smiling"}, "symbol": "A"}}})
+	require.NoError(t, err)
+	require.Equal(t, "VLMGemini", s.(*HTTPClassifierSensor).cfg.InputKey)
+}
+
+func TestHTTPClassifierInputSourcePollsOnlyOnNewMatchingText(t *testing.T) {
+	srv, got := newClassifierServer(t, http.StatusOK, map[string]any{"label": "A", "confidence": 1.0, "latency_ms": 1.0})
+	cfg := map[string]any{"endpoint_url": srv.URL, "source": "input", "input_key": "TestCaption", "timeout_ms": 500,
+		"symbol_rules": []any{map[string]any{"match": []any{"waving", "smiling"}, "symbol": "A"}, map[string]any{"match": []any{"turned away"}, "symbol": "B"}}}
+	raw, err := NewHTTPClassifier(cfg)
+	require.NoError(t, err)
+	s := raw.(*HTTPClassifierSensor)
+	s.log = zap.NewNop()
+	t.Cleanup(func() { providers.IO().RemoveInput("TestCaption") })
+
+	r, err := s.Poll(context.Background())
+	require.NoError(t, err)
+	require.Nil(t, r, "no caption yet: no request")
+	require.Empty(t, *got)
+
+	providers.IO().AddInput("TestCaption", "a desk and a chair", time.Now())
+	r, err = s.Poll(context.Background())
+	require.NoError(t, err)
+	require.Nil(t, r, "caption matches no rule: no request")
+	require.Empty(t, *got)
+
+	providers.IO().AddInput("TestCaption", "a man smiling at the camera", time.Now())
+	r, err = s.Poll(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	require.Len(t, *got, 1)
+	require.Equal(t, "A", (*got)[0]["symbol"])
+
+	r, err = s.Poll(context.Background())
+	require.NoError(t, err)
+	require.Nil(t, r, "the same caption is not classified twice")
+	require.Len(t, *got, 1)
+
+	providers.IO().AddInput("TestCaption", "the man has turned away", time.Now())
+	r, err = s.Poll(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	require.Len(t, *got, 2)
+	require.Equal(t, "B", (*got)[1]["symbol"])
+}
+
+func TestHTTPClassifierLabelsNameResults(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"report_negative": true, "labels": map[string]any{"A": "warmth", "B": "distance"}})
+	msg, err := s.RawToText(context.Background(), &httpClassifierResponse{Label: "A", Confidence: 0.9})
+	require.NoError(t, err)
+	require.Contains(t, msg.Message, "reports: warmth (0.90")
+	msg, err = s.RawToText(context.Background(), &httpClassifierResponse{Label: "B", Confidence: 0.8})
+	require.NoError(t, err)
+	require.Contains(t, msg.Message, "reports: distance (0.80")
+}
+
+func TestHTTPClassifierListenSkipsEmptyPolls(t *testing.T) {
+	srv, got := newClassifierServer(t, http.StatusOK, map[string]any{"label": "A", "confidence": 1.0})
+	cfg := map[string]any{"endpoint_url": srv.URL, "source": "input", "input_key": "TestCaption2", "period_ms": 20, "timeout_ms": 500,
+		"symbol_rules": []any{map[string]any{"match": []any{"waving"}, "symbol": "A"}}}
+	raw, err := NewHTTPClassifier(cfg)
+	require.NoError(t, err)
+	s := raw.(*HTTPClassifierSensor)
+	s.log = zap.NewNop()
+	t.Cleanup(func() { providers.IO().RemoveInput("TestCaption2") })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	out, err := s.Listen(ctx)
+	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond)
+	require.Empty(t, *got, "no caption: the loop makes no requests")
+	providers.IO().AddInput("TestCaption2", "a person waving", time.Now())
+	select {
+	case r := <-out:
+		require.Equal(t, "A", r.(*httpClassifierResponse).Label)
+	case <-time.After(2 * time.Second):
+		t.Fatal("no reading after a matching caption")
 	}
 }

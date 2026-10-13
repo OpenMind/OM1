@@ -10,6 +10,11 @@ package inputs
 //
 // only_on_change reports a result only when it differs from the last reported kind (positive / negative / none),
 // so a condition that persists across polls produces one message per episode rather than one per poll.
+//
+// source "input" takes the label from another input's latest text (input_key, e.g. "VLMGemini") through
+// symbol_rules, e.g. [{match: ["waving", "smiling"], symbol: "A"}, {match: ["turned away"], symbol: "B"}];
+// a text matching no rule, or one already classified, makes no request. labels names the results in
+// messages, e.g. {A: "warmth", B: "distance"}.
 
 import (
 	"bytes"
@@ -45,11 +50,24 @@ type HTTPClassifierConfig struct {
 	EndpointURL    string  `json:"endpoint_url"`
 	PeriodMs       int     `json:"period_ms"`
 	TimeoutMs      int     `json:"timeout_ms"`
-	Source         string  `json:"source"`     // "paths" | "file"
+	Source         string  `json:"source"`     // "paths" | "file" | "input"
 	LabelFile      string  `json:"label_file"` // source "file"
 	ReportNegative bool    `json:"report_negative"`
 	MinConfidence  float64 `json:"min_confidence"`
 	OnlyOnChange   bool    `json:"only_on_change"` // report a result only when it differs from the last reported one
+	// source "input": derive the label from the latest text another input stored on the IO provider under
+	// InputKey (an input's name, e.g. a VLM caption), using SymbolRules. No rule matching means no poll.
+	InputKey    string       `json:"input_key"`
+	SymbolRules []SymbolRule `json:"symbol_rules"`
+	// Labels names the results in messages, e.g. {"A": "warmth", "B": "distance"}; unset keeps the generic text.
+	Labels map[string]string `json:"labels"`
+}
+
+// SymbolRule maps phrases found in an input's text to a symbol. Matching is case-insensitive substring; the
+// first rule whose phrase occurs wins, in config order.
+type SymbolRule struct {
+	Match  []string `json:"match"`
+	Symbol string   `json:"symbol"`
 }
 
 type httpClassifierResponse struct {
@@ -72,6 +90,7 @@ type HTTPClassifierSensor struct {
 	messages []inputs.Message
 	stopped  bool
 	lastKind string // last result kind seen ("positive", "negative", "none"); drives only_on_change
+	lastText string // source "input": the last text a label was derived from, so one caption is polled once
 }
 
 // NewHTTPClassifier constructs the sensor from its config map.
@@ -87,11 +106,19 @@ func NewHTTPClassifier(configMap map[string]any) (inputs.Sensor, error) {
 	if cfg.Source == "" {
 		cfg.Source = "paths"
 	}
-	if cfg.Source != "paths" && cfg.Source != "file" {
-		return nil, fmt.Errorf("http_classifier: source must be \"paths\" or \"file\", got %q", cfg.Source)
+	if cfg.Source != "paths" && cfg.Source != "file" && cfg.Source != "input" {
+		return nil, fmt.Errorf("http_classifier: source must be \"paths\", \"file\" or \"input\", got %q", cfg.Source)
 	}
 	if cfg.Source == "file" && cfg.LabelFile == "" {
 		return nil, fmt.Errorf("http_classifier: source \"file\" needs label_file")
+	}
+	if cfg.Source == "input" && (cfg.InputKey == "" || len(cfg.SymbolRules) == 0) {
+		return nil, fmt.Errorf("http_classifier: source \"input\" needs input_key and symbol_rules")
+	}
+	for i, r := range cfg.SymbolRules {
+		if r.Symbol != "A" && r.Symbol != "B" {
+			return nil, fmt.Errorf("http_classifier: symbol_rules[%d]: symbol must be A or B, got %q", i, r.Symbol)
+		}
 	}
 	period := httpClassifierDefaultPeriod
 	if cfg.PeriodMs > 0 {
@@ -117,9 +144,23 @@ func NewHTTPClassifier(configMap map[string]any) (inputs.Sensor, error) {
 	return s, nil
 }
 
-// label derives the current A/B label from the configured source.
+// label derives the current A/B label from the configured source. An empty label with a nil error means
+// "nothing to classify this period" (source "input" with no matching rule, or an unchanged text).
 func (s *HTTPClassifierSensor) label() (string, error) {
 	switch s.cfg.Source {
+	case "input":
+		in := providers.IO().GetInput(s.cfg.InputKey)
+		if in == nil || strings.TrimSpace(in.Input) == "" {
+			return "", nil
+		}
+		s.mu.Lock()
+		same := in.Input == s.lastText
+		s.lastText = in.Input
+		s.mu.Unlock()
+		if same {
+			return "", nil
+		}
+		return matchSymbol(in.Input, s.cfg.SymbolRules), nil
 	case "paths":
 		m := s.paths.Movement()
 		if m.Retreat || len(m.Advance) == 0 {
@@ -144,6 +185,19 @@ func (s *HTTPClassifierSensor) label() (string, error) {
 		return "", fmt.Errorf("http_classifier: label file must start with A or B, got %q", t)
 	}
 	return "", fmt.Errorf("http_classifier: unknown source %q", s.cfg.Source)
+}
+
+// matchSymbol returns the symbol of the first rule with a phrase occurring in text (case-insensitive), or "".
+func matchSymbol(text string, rules []SymbolRule) string {
+	t := strings.ToLower(text)
+	for _, r := range rules {
+		for _, m := range r.Match {
+			if m != "" && strings.Contains(t, strings.ToLower(m)) {
+				return r.Symbol
+			}
+		}
+	}
+	return ""
 }
 
 // classify POSTs one label to the endpoint and returns the response.
@@ -223,6 +277,9 @@ func (s *HTTPClassifierSensor) Poll(ctx context.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if label == "" {
+		return nil, nil // nothing to classify this period; no request is made
+	}
 	return s.classify(ctx, label)
 }
 
@@ -237,10 +294,10 @@ func (s *HTTPClassifierSensor) RawToText(_ context.Context, raw any) (*inputs.Me
 	switch r.Label {
 	case "A":
 		if r.Confidence >= s.cfg.MinConfidence {
-			kind, text = "positive", fmt.Sprintf("external classifier confirms change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
+			kind, text = "positive", s.describe("A", "confirms change", r)
 		}
 	case "B":
-		kind, text = "negative", fmt.Sprintf("external classifier reports no change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
+		kind, text = "negative", s.describe("B", "reports no change", r)
 	}
 
 	s.mu.Lock()
@@ -268,6 +325,14 @@ func (s *HTTPClassifierSensor) RawToText(_ context.Context, raw any) (*inputs.Me
 	s.mu.Unlock()
 
 	return msg, nil
+}
+
+// describe renders a result for the prompt: the configured label name if any, else the generic phrase.
+func (s *HTTPClassifierSensor) describe(symbol, generic string, r *httpClassifierResponse) string {
+	if name, ok := s.cfg.Labels[symbol]; ok && name != "" {
+		return fmt.Sprintf("external classifier reports: %s (%.2f, %.0f ms)", name, r.Confidence, r.LatencyMs)
+	}
+	return fmt.Sprintf("external classifier %s (%.2f, %.0f ms)", generic, r.Confidence, r.LatencyMs)
 }
 
 // FormattedLatestBuffer returns the most recent message and clears the buffer.
