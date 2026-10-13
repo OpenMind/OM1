@@ -6,7 +6,10 @@ package inputs
 // Config:
 //
 //	{ type: "HTTPClassifierInput", config: { endpoint_url: "http://127.0.0.1:5557", period_ms: 2000,
-//	                                         source: "paths", min_confidence: 0.5 } }
+//	                                         source: "paths", min_confidence: 0.5, only_on_change: true } }
+//
+// only_on_change reports a result only when it differs from the last reported kind (positive / negative / none),
+// so a condition that persists across polls produces one message per episode rather than one per poll.
 
 import (
 	"bytes"
@@ -46,6 +49,7 @@ type HTTPClassifierConfig struct {
 	LabelFile      string  `json:"label_file"` // source "file"
 	ReportNegative bool    `json:"report_negative"`
 	MinConfidence  float64 `json:"min_confidence"`
+	OnlyOnChange   bool    `json:"only_on_change"` // report a result only when it differs from the last reported one
 }
 
 type httpClassifierResponse struct {
@@ -67,6 +71,7 @@ type HTTPClassifierSensor struct {
 	seq      int
 	messages []inputs.Message
 	stopped  bool
+	lastKind string // last result kind seen ("positive", "negative", "none"); drives only_on_change
 }
 
 // NewHTTPClassifier constructs the sensor from its config map.
@@ -227,23 +232,30 @@ func (s *HTTPClassifierSensor) RawToText(_ context.Context, raw any) (*inputs.Me
 	if !ok || r == nil {
 		return nil, nil
 	}
-	var text string
+	// Classify the result; a positive below min_confidence counts as "none" so a weak A does not end an episode.
+	kind, text := "none", "external classifier returned no result"
 	switch r.Label {
 	case "A":
-		if r.Confidence < s.cfg.MinConfidence {
-			return nil, nil
+		if r.Confidence >= s.cfg.MinConfidence {
+			kind, text = "positive", fmt.Sprintf("external classifier confirms change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
 		}
-		text = fmt.Sprintf("external classifier confirms change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
 	case "B":
-		if !s.cfg.ReportNegative {
-			return nil, nil
-		}
-		text = fmt.Sprintf("external classifier reports no change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
-	default:
-		if !s.cfg.ReportNegative {
-			return nil, nil
-		}
-		text = "external classifier returned no result"
+		kind, text = "negative", fmt.Sprintf("external classifier reports no change (%.2f, %.0f ms)", r.Confidence, r.LatencyMs)
+	}
+
+	s.mu.Lock()
+	changed := kind != s.lastKind
+	s.lastKind = kind
+	s.mu.Unlock()
+
+	if r.Label == "A" && kind == "none" {
+		return nil, nil
+	}
+	if kind != "positive" && !s.cfg.ReportNegative {
+		return nil, nil
+	}
+	if s.cfg.OnlyOnChange && !changed {
+		return nil, nil
 	}
 
 	msg := inputs.NewMessage(text)
@@ -281,6 +293,9 @@ func (s *HTTPClassifierSensor) FormattedLatestBuffer() string {
 func (s *HTTPClassifierSensor) TriggersTick() bool {
 	return true
 }
+
+// Role: a classifier result is an event.
+func (s *HTTPClassifierSensor) Role() inputs.Role { return inputs.RoleEvent }
 
 // Stop releases the paths provider.
 func (s *HTTPClassifierSensor) Stop() {
