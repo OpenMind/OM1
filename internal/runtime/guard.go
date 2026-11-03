@@ -41,3 +41,26 @@ func actionKey(calls []llm.ToolCall) string {
 	b, _ := json.Marshal(parts)
 	return string(b)
 }
+
+// filterSpeech removes the speech actions from calls when the tick carries nothing to talk to: no conversation
+// turn and no event. It returns the remaining calls and how many were dropped. An empty speech list disables
+// the gate.
+func filterSpeech(calls []llm.ToolCall, speech []string, allowSpeech bool) ([]llm.ToolCall, int) {
+	if allowSpeech || len(speech) == 0 || len(calls) == 0 {
+		return calls, 0
+	}
+	isSpeech := make(map[string]bool, len(speech))
+	for _, name := range speech {
+		isSpeech[name] = true
+	}
+	kept := calls[:0:0]
+	dropped := 0
+	for _, c := range calls {
+		if isSpeech[c.Name] {
+			dropped++
+			continue
+		}
+		kept = append(kept, c)
+	}
+	return kept, dropped
+}

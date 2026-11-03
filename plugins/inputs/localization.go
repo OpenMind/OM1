@@ -142,6 +142,9 @@ func (s *LocalizationSensor) FormattedLatestBuffer() string {
 }
 
 // Stop releases the underlying provider.
+// Role: the state of the surroundings, kept for awareness; never by itself a reason to speak.
+func (s *LocalizationSensor) Role() inputs.Role { return inputs.RoleWorld }
+
 func (s *LocalizationSensor) Stop() {
 	s.mu.Lock()
 	if s.stopped {

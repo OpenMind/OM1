@@ -486,13 +486,17 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	}
 
 	rt.ioProvider.IncrementTick()
-	sensorBuffers := current.inputOrchestrator.Buffers()
+	observations := current.inputOrchestrator.Observations()
+	sensorBuffers := make([]string, 0, len(observations))
+	for _, o := range observations {
+		sensorBuffers = append(sensorBuffers, o.Text)
+	}
 
 	if rt.scheduleTransition(rt.manager.CheckTransitions(ctx, sensorBuffers)) {
 		return
 	}
 
-	parts, err := current.promptFuser.FuseParts(ctx, sensorBuffers)
+	parts, err := current.promptFuser.FuseObservations(ctx, observations)
 	if err != nil {
 		rt.log.Warn("fuse failed", zap.Error(err))
 		return
@@ -527,6 +531,11 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 				rt.executeActions(ctx, current, calls)
 			},
 		)
+	}
+
+	if kept, dropped := filterSpeech(toolCalls, current.runtimeConfig.SpeechActions, parts.HasConversation || parts.HasEvent); dropped > 0 {
+		rt.log.Info("dropping speech: nothing to talk to on this tick (no conversation turn, no event)", zap.Int("dropped", dropped))
+		toolCalls = kept
 	}
 
 	if !current.guard.Allow(parts.Observations, toolCalls) {

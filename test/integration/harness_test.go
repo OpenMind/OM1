@@ -119,6 +119,7 @@ type mockSensor struct {
 	voiceKey       string
 	dynamicVars    map[string]string
 	consumed       chan struct{}
+	role           inputs.Role
 }
 
 func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
@@ -141,6 +142,14 @@ func newMockSensor(cfg map[string]any) (inputs.Sensor, error) {
 
 	if vk, ok := cfg["voice_key"].(string); ok {
 		s.voiceKey = vk
+	}
+	switch cfg["role"] {
+	case "world":
+		s.role = inputs.RoleWorld
+	case "conversation":
+		s.role = inputs.RoleConversation
+	default:
+		s.role = inputs.RoleEvent
 	}
 	if dv, ok := cfg["dynamic_vars"].(map[string]any); ok {
 		s.dynamicVars = make(map[string]string)
@@ -218,6 +227,7 @@ func (s *mockSensor) FormattedLatestBuffer() string {
 }
 func (s *mockSensor) Stop()              {}
 func (s *mockSensor) TriggersTick() bool { return s.triggers }
+func (s *mockSensor) Role() inputs.Role  { return s.role }
 
 type llmRule struct {
 	whenContains    string

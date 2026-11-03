@@ -155,6 +155,9 @@ func (s *vlmBackgroundSensor) FormattedLatestBuffer() string {
 	return result
 }
 
+// Role: the state of the surroundings, kept for awareness; never by itself a reason to speak.
+func (s *vlmBackgroundSensor) Role() inputs.Role { return inputs.RoleWorld }
+
 func (s *vlmBackgroundSensor) Stop() {
 	s.mu.Lock()
 	if s.stopped {

@@ -2,11 +2,13 @@ package fuser
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/memory"
 	"github.com/openmind/om1/internal/providers"
 	"go.uber.org/zap"
@@ -46,7 +48,11 @@ type Prompt struct {
 	System       string
 	User         string
 	Summary      string
-	Observations string // this tick's observations joined, without the time; "" on an idle tick
+	Observations string // this tick's new conversation and event text joined, without the time; "" on an idle tick
+	// HasConversation / HasEvent say whether this tick carries a new conversation turn or a new event. World
+	// state alone sets neither: it keeps the robot aware but is not a reason to respond.
+	HasConversation bool
+	HasEvent        bool
 }
 
 // Fuse combines the prompt components into a single string to be sent to the LLM.
@@ -58,8 +64,21 @@ func (f *Fuser) Fuse(ctx context.Context, sensorBuffers []string) (string, error
 	return p.System + "\n\n" + p.User, nil
 }
 
-// FuseParts builds the prompt as separate system and user parts (see Prompt).
+// FuseParts builds the prompt as separate system and user parts (see Prompt). Plain buffers carry no role and
+// are treated as events, which is what every input was before roles existed.
 func (f *Fuser) FuseParts(ctx context.Context, sensorBuffers []string) (Prompt, error) {
+	obs := make([]inputs.Observation, 0, len(sensorBuffers))
+	for _, b := range sensorBuffers {
+		if b != "" {
+			obs = append(obs, inputs.Observation{Role: inputs.RoleEvent, Text: strings.TrimSpace(b), New: true})
+		}
+	}
+	return f.FuseObservations(ctx, obs)
+}
+
+// FuseObservations builds the prompt from role-tagged observations. Conversation turns and events are listed as
+// what happened since the last action; world state is a standing section the model is told not to narrate.
+func (f *Fuser) FuseObservations(ctx context.Context, observations []inputs.Observation) (Prompt, error) {
 	var sys, usr strings.Builder
 
 	// System part: persona, governance, available actions, MCP tools, examples. Constant across ticks.
@@ -90,8 +109,10 @@ func (f *Fuser) FuseParts(ctx context.Context, sensorBuffers []string) (Prompt, 
 		sys.WriteString(f.runtimeConfig.PromptExamples)
 		sys.WriteString("\n\n")
 	}
-	sys.WriteString("Each turn lists the observations that are new since your last action. Observations you already " +
-		"responded to appear in the conversation history together with what you did; do not respond to them again.")
+	sys.WriteString("Each turn lists what is new since your last action: what someone said to you, and events. " +
+		"World state is shown separately for your awareness; it is not a reason to speak or act by itself. " +
+		"Observations you already responded to appear in the conversation history together with what you did; " +
+		"do not respond to them again.")
 
 	// User part: time, this tick's observations, retrieved context, closing question.
 	now := time.Now()
@@ -99,22 +120,57 @@ func (f *Fuser) FuseParts(ctx context.Context, sensorBuffers []string) (Prompt, 
 	usr.WriteString(now.Format("Monday, January 2, 2006 at 3:04 PM"))
 	usr.WriteString(".\n\n")
 
-	var observed []string
-	for _, buffer := range sensorBuffers {
-		if buffer != "" {
-			observed = append(observed, strings.TrimSpace(buffer))
+	var conversation, events, observed []string
+	var world []inputs.Observation
+	for _, o := range observations {
+		if o.Text == "" {
+			continue
+		}
+		switch o.Role {
+		case inputs.RoleConversation:
+			conversation = append(conversation, o.Text)
+			observed = append(observed, o.Text)
+		case inputs.RoleWorld:
+			world = append(world, o)
+		default:
+			events = append(events, o.Text)
+			observed = append(observed, o.Text)
 		}
 	}
-	if len(observed) > 0 {
-		usr.WriteString("Current observations:\n")
-		for _, o := range observed {
+	if len(conversation) > 0 {
+		usr.WriteString("Someone said to you:\n")
+		for _, c := range conversation {
 			usr.WriteString("- ")
-			usr.WriteString(o)
+			usr.WriteString(c)
 			usr.WriteString("\n")
 		}
 		usr.WriteString("\n")
-	} else {
+	}
+	if len(events) > 0 {
+		usr.WriteString("Current observations:\n")
+		for _, e := range events {
+			usr.WriteString("- ")
+			usr.WriteString(e)
+			usr.WriteString("\n")
+		}
+		usr.WriteString("\n")
+	}
+	if len(conversation) == 0 && len(events) == 0 {
 		usr.WriteString("No new observations since your last action.\n\n")
+	}
+	if len(world) > 0 {
+		usr.WriteString("World state, for your awareness (do not narrate or react to it by itself):\n")
+		for _, w := range world {
+			usr.WriteString("- ")
+			usr.WriteString(w.Text)
+			if w.New {
+				usr.WriteString(" (just updated)")
+			} else {
+				usr.WriteString(" (" + ageString(w.Age) + " ago)")
+			}
+			usr.WriteString("\n")
+		}
+		usr.WriteString("\n")
 	}
 
 	if f.knowledgeBase != nil && f.runtimeConfig.KnowledgeBase != nil {
@@ -154,7 +210,16 @@ func (f *Fuser) FuseParts(ctx context.Context, sensorBuffers []string) (Prompt, 
 		summary = "At " + now.Format("15:04:05") + " you observed: " + strings.Join(observed, "; ")
 	}
 
-	return Prompt{System: sys.String(), User: usr.String(), Summary: summary, Observations: strings.Join(observed, "; ")}, nil
+	return Prompt{System: sys.String(), User: usr.String(), Summary: summary, Observations: strings.Join(observed, "; "),
+		HasConversation: len(conversation) > 0, HasEvent: len(events) > 0}, nil
+}
+
+// ageString renders a duration coarsely for the prompt ("3 s", "2 min").
+func ageString(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%d s", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%d min", int(d.Minutes()))
 }
 
 // visibleActions filters the agent actions to include only those that are not marked as ExcludeFromPrompt, meaning they should be included in the prompt for the LLM.
