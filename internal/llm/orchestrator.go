@@ -161,6 +161,13 @@ func formatToolCalls(calls []ToolCall) string {
 	parts := make([]string, 0, len(calls))
 
 	for _, tc := range calls {
+		// Speech reads back as what was said, not as a JSON-wrapped argument named "action".
+		if tc.Name == "speak" {
+			if text, ok := tc.Arguments["action"].(string); ok && text != "" {
+				parts = append(parts, fmt.Sprintf("said: %q", text))
+				continue
+			}
+		}
 		args, _ := json.Marshal(tc.Arguments)
 		parts = append(parts, tc.Name+"("+string(args)+")")
 	}

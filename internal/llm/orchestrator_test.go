@@ -150,3 +150,8 @@ func TestOrchestratorCallPartsStateless(t *testing.T) {
 	require.Equal(t, []Message{{Role: "system", Content: "SYSTEM"}}, f.calls[0].history)
 	require.Empty(t, o.msgs)
 }
+
+func TestFormatToolCallsRendersSpeech(t *testing.T) {
+	got := formatToolCalls([]ToolCall{{Name: "speak", Arguments: map[string]any{"action": "Hello there."}}, {Name: "robot_action", Arguments: map[string]any{"action": "wave"}}})
+	require.Equal(t, `said: "Hello there." | robot_action({"action":"wave"})`, got)
+}

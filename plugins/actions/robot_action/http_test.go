@@ -38,6 +38,9 @@ func TestRobotActionEnumIncludesSupportedActions(t *testing.T) {
 	values := RobotAction("").EnumValues()
 	assert.Contains(t, values, "wave")
 	assert.Contains(t, values, "shakehand")
+	for _, g := range []string{"face_wave", "salute", "heart", "shrug", "show_hand", "stand_still", "talking_4s"} {
+		assert.Contains(t, values, g, "the G1 arm vocabulary is available to the HTTP body too")
+	}
 }
 
 func TestDefaultActionsHandshakeMappings(t *testing.T) {
@@ -173,24 +176,24 @@ func TestConnectOverrideMappingIsUsed(t *testing.T) {
 	assert.Equal(t, "wave_v2", gotPayload["motion"])
 }
 
-func TestConnectUnknownActionFallsBackToActionPath(t *testing.T) {
+func TestConnectUnmappedActionPostsMotion(t *testing.T) {
 	var (
-		gotPath   string
-		gotLength int64
+		gotPath string
+		gotBody map[string]any
 	)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotLength = r.ContentLength
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
 	c := newTestConnector(srv.URL, nil)
 
-	_, err := c.Connect(context.Background(), map[string]any{"action": "spin"})
+	_, err := c.Connect(context.Background(), map[string]any{"action": "heart"})
 	require.NoError(t, err)
-	assert.Equal(t, "/spin", gotPath, "unmapped actions fall back to /{action}")
-	assert.Equal(t, int64(0), gotLength, "fallback mapping sends no body")
+	assert.Equal(t, "/motion", gotPath, "names without an explicit mapping go to /motion")
+	assert.Equal(t, map[string]any{"motion": "heart"}, gotBody, "as {motion: name}, like the built-in gestures")
 }
 
 func TestConnectEmptyActionNoRequest(t *testing.T) {
