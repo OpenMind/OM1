@@ -172,6 +172,9 @@ func (s *LocationsSensor) FormattedLatestBuffer() string {
 	return result
 }
 
+// Role: the state of the surroundings, kept for awareness; never by itself a reason to speak.
+func (s *LocationsSensor) Role() inputs.Role { return inputs.RoleWorld }
+
 func (s *LocationsSensor) Stop() {
 	s.mu.Lock()
 	if s.stopped {

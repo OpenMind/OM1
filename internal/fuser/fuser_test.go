@@ -10,6 +10,7 @@ import (
 
 	"github.com/openmind/om1/internal/actions"
 	"github.com/openmind/om1/internal/config"
+	"github.com/openmind/om1/internal/inputs"
 	"github.com/openmind/om1/internal/providers"
 )
 
@@ -121,4 +122,110 @@ func TestFuseToleratesKBError(t *testing.T) {
 	out, err := NewFuser(rc, nil, kb, nil, nil, zap.NewNop()).Fuse(context.Background(), nil)
 	require.NoError(t, err, "a KB failure is logged, not fatal")
 	require.NotContains(t, out, "Relevant context:")
+}
+
+func TestFusePartsSplitsConstantAndPerTick(t *testing.T) {
+	rc := newRC()
+	rc.SystemGovernance = "Be safe."
+	rc.PromptExamples = "Example: greet."
+	acts := []*actions.AgentAction{{LLMLabel: "speak"}}
+	p, err := NewFuser(rc, acts, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), []string{"saw a person"})
+	require.NoError(t, err)
+
+	require.Contains(t, p.System, "You are a robot.")
+	require.Contains(t, p.System, "Be safe.")
+	require.Contains(t, p.System, "- speak")
+	require.Contains(t, p.System, "Example: greet.")
+	require.NotContains(t, p.System, "saw a person", "observations never go in the constant part")
+
+	require.Contains(t, p.User, "Current time is ")
+	require.Contains(t, p.User, "- saw a person")
+	require.Contains(t, p.User, "What will you do next?")
+	require.NotContains(t, p.User, "Example: greet.", "examples are not repeated per tick")
+
+	require.Contains(t, p.Summary, "you observed: saw a person")
+	require.Equal(t, "saw a person", p.Observations)
+	require.Less(t, len(p.Summary), len(p.User), "the history summary is shorter than the prompt")
+}
+
+func TestFusePartsSaysWhenNothingIsNew(t *testing.T) {
+	p, err := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), []string{"", ""})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "No new observations since your last action.")
+	require.NotContains(t, p.User, "Current observations:")
+	require.Contains(t, p.Summary, "no new observations")
+	require.Equal(t, "", p.Observations)
+}
+
+func TestFuseObservationsSeparatesRoles(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseObservations(context.Background(), []inputs.Observation{
+		{Role: inputs.RoleWorld, Text: "camera: a man at a desk", New: false, Age: 3 * time.Second},
+		{Role: inputs.RoleConversation, Text: "what do you see?", New: true},
+		{Role: inputs.RoleEvent, Text: "classifier confirms change", New: true},
+	})
+	require.NoError(t, err)
+	require.True(t, p.HasConversation)
+	require.True(t, p.HasEvent)
+	require.Contains(t, p.User, "Someone said to you:\n- what do you see?")
+	require.Contains(t, p.User, "Current observations:\n- classifier confirms change")
+	require.Contains(t, p.User, "World state, for your awareness")
+	require.Contains(t, p.User, "camera: a man at a desk (3 s ago)")
+	require.NotContains(t, p.User, "No new observations")
+	require.Contains(t, p.Observations, "what do you see?")
+	require.Contains(t, p.Observations, "classifier confirms change")
+	require.NotContains(t, p.Observations, "camera", "world state is not part of the observation key")
+	require.Contains(t, p.Summary, "You saw: camera", "but the history summary records what the robot saw when it acted")
+}
+
+func TestFuseObservationsWorldOnlyIsIdle(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseObservations(context.Background(), []inputs.Observation{
+		{Role: inputs.RoleWorld, Text: "camera: a person sitting", New: true},
+	})
+	require.NoError(t, err)
+	require.False(t, p.HasConversation)
+	require.False(t, p.HasEvent)
+	require.Contains(t, p.User, "No new observations since your last action.")
+	require.Contains(t, p.User, "camera: a person sitting (first reading)")
+	require.Equal(t, "", p.Observations)
+	require.Contains(t, p.Summary, "no new observations")
+	require.Contains(t, p.Summary, "You saw: camera: a person sitting")
+
+	p, err = f.FuseObservations(context.Background(), []inputs.Observation{{Role: inputs.RoleWorld, Text: "camera: a person sitting", New: true}})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "camera: a person sitting (unchanged)")
+	p, err = f.FuseObservations(context.Background(), []inputs.Observation{{Role: inputs.RoleWorld, Text: "camera: a person waving", New: true}})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "camera: a person waving (new reading; before: camera: a person sitting)", "a fresh caption is shown against what it replaced")
+}
+
+func TestFusePartsTreatsBuffersAsEvents(t *testing.T) {
+	f := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop())
+	p, err := f.FuseParts(context.Background(), []string{"saw a person"})
+	require.NoError(t, err)
+	require.True(t, p.HasEvent)
+	require.False(t, p.HasConversation)
+}
+
+func TestFusePartsCarriesDisposition(t *testing.T) {
+	providers.IO().SetDynamicVar("disposition", "warm, strongly")
+	defer providers.IO().SetDynamicVar("disposition", "")
+	p, err := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.Contains(t, p.System, "Your current disposition: warm, strongly.", "the disposition is in the system part")
+	require.NotContains(t, p.User, "disposition", "and not an observation")
+	providers.IO().SetDynamicVar("disposition", "")
+	p, err = NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.NotContains(t, p.System, "disposition", "an empty disposition adds nothing")
+}
+
+func TestFusePromptClosingIsConfigurable(t *testing.T) {
+	rc := newRC()
+	rc.PromptClosing = "Anything to do? Usually not."
+	p, err := NewFuser(rc, nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.Contains(t, p.User, "Anything to do? Usually not.")
+	require.NotContains(t, p.User, "What will you do next?")
 }

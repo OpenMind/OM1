@@ -78,8 +78,19 @@ func (b *streamBase) start(ctx context.Context, loop func(context.Context)) <-ch
 	return out
 }
 
-// send attempts to send the frame to the output channel without blocking.
+// send hands the frame to the consumer without blocking. When the consumer is behind (a caption still in flight),
+// the newest frame wins: the stale one waiting in the buffer is discarded so that the next caption describes
+// what the camera sees now, not what it saw when the previous caption started.
 func (b *streamBase) send(f Frame) {
+	select {
+	case b.out <- f:
+		return
+	default:
+	}
+	select {
+	case <-b.out: // make room by discarding the oldest queued frame
+	default:
+	}
 	select {
 	case b.out <- f:
 	default:

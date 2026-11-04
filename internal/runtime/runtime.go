@@ -41,6 +41,7 @@ type modeState struct {
 	inputOrchestrator  *inputs.Orchestrator      // set by startOrchestrators
 	modeHooks          *hooks.Runner
 	memory             memory.MemoryManager
+	guard              repeatGuard // drops a response identical to the last one for unchanged observations
 
 	cancelCtx      context.CancelFunc
 	inputDone      <-chan struct{}
@@ -485,25 +486,45 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 	}
 
 	rt.ioProvider.IncrementTick()
-	sensorBuffers := current.inputOrchestrator.Buffers()
+	observations := current.inputOrchestrator.Observations()
+	sensorBuffers := make([]string, 0, len(observations))
+	for _, o := range observations {
+		sensorBuffers = append(sensorBuffers, o.Text)
+	}
 
 	if rt.scheduleTransition(rt.manager.CheckTransitions(ctx, sensorBuffers)) {
 		return
 	}
 
-	prompt, err := current.promptFuser.Fuse(ctx, sensorBuffers)
+	parts, err := current.promptFuser.FuseObservations(ctx, observations)
 	if err != nil {
 		rt.log.Warn("fuse failed", zap.Error(err))
 		return
 	}
+	prompt := parts.User
 
 	if ctx.Err() != nil {
 		return
 	}
 
+	if cd := current.runtimeConfig.EventCooldownS; cd > 0 && parts.HasEvent && !parts.HasConversation {
+		if since := rt.ioProvider.SinceReaction(); since < time.Duration(cd*float64(time.Second)) {
+			// One happening, one reaction: a second detector's event arriving on the heels of the first is context now, not news.
+			rt.log.Info("dropping event tick inside the reaction cooldown", zap.String("observations", parts.Observations), zap.Duration("since_reaction", since))
+			rt.ioProvider.RecordTick(tickStart)
+			return
+		}
+	}
+	if current.runtimeConfig.SkipIdleTicks && !parts.HasConversation && !parts.HasEvent {
+		// Nothing to respond to: no call, no tokens, and the runtime is free when the next event lands.
+		rt.log.Debug("idle tick: no new observations, skipping the cortex call", zap.String("mode", rt.manager.CurrentMode()))
+		rt.ioProvider.RecordTick(tickStart)
+		return
+	}
+
 	rt.log.Info("cortex tick", zap.String("mode", rt.manager.CurrentMode()), zap.String("prompt", prompt))
 
-	response, err := current.cortexLLM.Call(ctx, prompt, nil)
+	response, err := current.cortexLLM.CallParts(ctx, parts.System, parts.User, parts.Summary)
 	if err != nil {
 		rt.log.Warn("llm call failed", zap.Error(err))
 		return
@@ -527,7 +548,21 @@ func (rt *Runtime) tick(ctx context.Context, current *modeState, tickStart time.
 		)
 	}
 
+	if kept, dropped := filterSpeech(toolCalls, current.runtimeConfig.SpeechActions, parts.HasConversation || parts.HasEvent); dropped > 0 {
+		rt.log.Info("dropping speech: nothing to talk to on this tick (no conversation turn, no event)", zap.Int("dropped", dropped))
+		toolCalls = kept
+	}
+
+	if !current.guard.Allow(parts.Observations, toolCalls, parts.HasConversation || parts.HasEvent) {
+		rt.log.Info("suppressing repeated actions for unchanged observations",
+			zap.String("observations", parts.Observations), zap.Int("actions", len(toolCalls)))
+		toolCalls = nil
+	}
+
 	rt.executeActions(ctx, current, toolCalls)
+	if len(toolCalls) > 0 {
+		rt.ioProvider.MarkReaction() // a reply counts too: for the cooldown after it, only speech can prompt the robot
+	}
 
 	if current.memory != nil {
 		voice := rt.ioProvider.GetInput("Voice")

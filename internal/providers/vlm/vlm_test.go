@@ -85,7 +85,7 @@ func TestFrameMarshalJSON(t *testing.T) {
 	assert.Equal(t, f.JPEG, decoded)
 }
 
-func TestStreamBaseSendDropsWhenFull(t *testing.T) {
+func TestStreamBaseSendKeepsNewestWhenFull(t *testing.T) {
 	b := &streamBase{name: "test", log: zap.NewNop()}
 	b.out = make(chan Frame, 2)
 
@@ -93,8 +93,10 @@ func TestStreamBaseSendDropsWhenFull(t *testing.T) {
 	b.send(Frame{JPEG: []byte{2}})
 	b.send(Frame{JPEG: []byte{3}})
 
-	assert.Equal(t, uint64(1), b.dropped.Load())
+	assert.Equal(t, uint64(0), b.dropped.Load(), "the newest frame is kept; the oldest queued one goes")
 	assert.Len(t, b.out, 2)
+	assert.Equal(t, []byte{2}, (<-b.out).JPEG)
+	assert.Equal(t, []byte{3}, (<-b.out).JPEG, "a caption started now describes the latest frame")
 }
 
 func TestStreamBaseLifecycle(t *testing.T) {

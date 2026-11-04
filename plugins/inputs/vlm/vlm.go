@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,6 +68,13 @@ type VLMConfig struct {
 	TimeoutSec float64        `json:"timeout_sec"`
 	Warmup     bool           `json:"warmup"`
 
+	// EventMarker: when a description contains this marker (e.g. "[change:"), the text after it (to the closing
+	// "]" or the end) is raised as an event, so the cortex reacts to a change in view; descriptions without it
+	// stay world state. The prompt may contain {previous}, replaced by the previous description, so the model can
+	// judge what changed. EventMinIntervalS (default 8) is the least time between two such events.
+	EventMarker       string  `json:"event_marker"`
+	EventMinIntervalS float64 `json:"event_min_interval_s"`
+
 	// Camera-only.
 	CameraIndex int `json:"camera_index"`
 
@@ -85,6 +93,13 @@ type vlmSensor struct {
 	messages []inputs.Message
 	stopped  bool
 	cancel   context.CancelFunc
+
+	prompt      string // the configured prompt, with {previous} unexpanded
+	previous    string // the last description, for {previous}
+	eventMarker string
+	eventMinGap time.Duration
+	pendingEv   string
+	lastEventAt time.Time
 }
 
 // NewVLMOpenAI constructs a camera-backed OpenAI VLM sensor.
@@ -175,10 +190,17 @@ func NewSensor(name string, cfg VLMConfig, source frameSource) *vlmSensor {
 		zap.String("model", cfg.Model),
 		zap.Int("fps", cfg.FPS),
 	)
+	gap := time.Duration(cfg.EventMinIntervalS * float64(time.Second))
+	if cfg.EventMinIntervalS <= 0 {
+		gap = 8 * time.Second
+	}
 	return &vlmSensor{
-		name:   name,
-		log:    log,
-		source: source,
+		name:        name,
+		log:         log,
+		source:      source,
+		prompt:      cfg.Prompt,
+		eventMarker: cfg.EventMarker,
+		eventMinGap: gap,
 		describer: video.NewDescriber(video.Describer{
 			Name:      name,
 			APIKey:    cfg.APIKey,
@@ -218,6 +240,15 @@ func (s *vlmSensor) Listen(ctx context.Context) (<-chan any, error) {
 				}
 
 				providers.LatestFrame().Set(frame.JPEG, frame.Timestamp)
+				if strings.Contains(s.prompt, "{previous}") {
+					s.mu.Lock()
+					prev := s.previous
+					s.mu.Unlock()
+					if prev == "" {
+						prev = "(none yet)"
+					}
+					s.describer.Prompt = strings.ReplaceAll(s.prompt, "{previous}", prev)
+				}
 				text, err := s.describer.Describe(ctx, base64.StdEncoding.EncodeToString(frame.JPEG))
 				if err != nil {
 					if ctx.Err() != nil {
@@ -256,14 +287,56 @@ func (s *vlmSensor) RawToText(_ context.Context, raw any) (*inputs.Message, erro
 	msg := inputs.NewMessage(text)
 
 	s.mu.Lock()
+	s.previous = text
 	s.messages = append(s.messages, *msg)
 	if len(s.messages) > vlmMaxMessages {
 		s.messages = s.messages[len(s.messages)-vlmMaxMessages:]
+	}
+	if ev := s.eventIn(text); ev != "" && time.Since(s.lastEventAt) >= s.eventMinGap && providers.IO().SinceReaction() >= s.eventMinGap {
+		s.pendingEv = ev
+		s.lastEventAt = time.Now()
 	}
 	s.mu.Unlock()
 
 	return msg, nil
 }
+
+// eventIn returns the event text marked in a description, or "".
+func (s *vlmSensor) eventIn(text string) string {
+	if s.eventMarker == "" {
+		return ""
+	}
+	i := strings.Index(text, s.eventMarker)
+	if i < 0 {
+		return ""
+	}
+	ev := text[i+len(s.eventMarker):]
+	if j := strings.IndexAny(ev, "[]"); j >= 0 { // stop at the next tag, whichever way round the model put them
+		ev = ev[:j]
+	}
+	return strings.TrimSpace(ev)
+}
+
+// LatestEvent returns the pending change event once (inputs.EventSource). While a conversation is in progress
+// (the "Voice" input updated within 30 s) the event is worded as being about the person the robot is talking
+// with, so that a change in view is never read as a new arrival to greet.
+func (s *vlmSensor) LatestEvent() string {
+	s.mu.Lock()
+	ev := s.pendingEv
+	s.pendingEv = ""
+	s.mu.Unlock()
+	if ev == "" {
+		return ""
+	}
+	if in := providers.IO().GetInput("Voice"); in != nil && !in.Timestamp.IsZero() && time.Since(in.Timestamp) < 30*time.Second {
+		return fmt.Sprintf("%s (the person you are talking with): %s", vlmDescriptor, ev)
+	}
+	return fmt.Sprintf("%s: %s", vlmDescriptor, ev)
+}
+
+// TriggersTick: a sensor that can raise events wakes the cortex when a description arrives (an idle tick costs
+// nothing with skip_idle_ticks); a pure world-state sensor does not.
+func (s *vlmSensor) TriggersTick() bool { return s.eventMarker != "" }
 
 // FormattedLatestBuffer returns the most recent description in the buffer, prefixed by the descriptor and suffixed by a newline.
 func (s *vlmSensor) FormattedLatestBuffer() string {
@@ -283,6 +356,9 @@ func (s *vlmSensor) FormattedLatestBuffer() string {
 
 	return result
 }
+
+// Role: the state of the surroundings, kept for awareness; never by itself a reason to speak.
+func (s *vlmSensor) Role() inputs.Role { return inputs.RoleWorld }
 
 func (s *vlmSensor) Stop() {
 	s.mu.Lock()

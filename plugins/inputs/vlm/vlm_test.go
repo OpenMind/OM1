@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/openmind/om1/internal/inputs"
+	"github.com/openmind/om1/internal/providers"
 	video "github.com/openmind/om1/internal/providers/vlm"
 )
 
@@ -181,4 +182,38 @@ func TestRawToTextBoundsHistory(t *testing.T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	assert.Len(t, s.messages, vlmMaxMessages)
+}
+
+func TestSensorRaisesChangeEvents(t *testing.T) {
+	s := NewSensor("VLMOpenAI", VLMConfig{APIKey: "k", BaseURL: "http://x", Prompt: "describe. Previous: {previous}", EventMarker: "CHANGE:", EventMinIntervalS: 0.2}, newFakeSource())
+	assert.True(t, s.TriggersTick(), "a sensor that can raise events wakes the cortex")
+	assert.Equal(t, "", s.LatestEvent())
+
+	_, err := s.RawToText(context.Background(), "A man at a desk. [towards] [same]")
+	require.NoError(t, err)
+	assert.Equal(t, "", s.LatestEvent(), "no marker, no event")
+	assert.Contains(t, s.FormattedLatestBuffer(), "[same]", "the description is still world state")
+
+	_, err = s.RawToText(context.Background(), "Two people at the desk. [towards] CHANGE: a second person appeared")
+	require.NoError(t, err)
+	assert.Equal(t, "Vision: a second person appeared", s.LatestEvent())
+	assert.Equal(t, "", s.LatestEvent(), "an event is reported once")
+
+	_, err = s.RawToText(context.Background(), "Two people. CHANGE: one is waving [towards]")
+	require.NoError(t, err)
+	assert.Equal(t, "", s.LatestEvent(), "rate-limited: too soon after the last event")
+	time.Sleep(250 * time.Millisecond)
+	_, err = s.RawToText(context.Background(), "Two people. CHANGE: one is waving [towards]")
+	require.NoError(t, err)
+	assert.Equal(t, "Vision: one is waving", s.LatestEvent())
+
+	providers.IO().AddInput("Voice", "hey", time.Now())
+	time.Sleep(250 * time.Millisecond)
+	_, err = s.RawToText(context.Background(), "Two people. CHANGE: one covered their face [away]")
+	require.NoError(t, err)
+	assert.Equal(t, "Vision (the person you are talking with): one covered their face", s.LatestEvent(), "worded for a conversation in progress")
+	providers.IO().AddInput("Voice", "hey", time.Now().Add(-2*time.Minute))
+
+	s2 := NewSensor("VLMOpenAI", VLMConfig{APIKey: "k", BaseURL: "http://x"}, newFakeSource())
+	assert.False(t, s2.TriggersTick(), "a pure world-state sensor does not wake the cortex")
 }

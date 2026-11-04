@@ -50,12 +50,17 @@ func (RobotAction) EnumValues() []string {
 	return []string{
 		"wave",
 		"shakehand",
+		// The same gesture vocabulary as the Unitree G1 arm plugin, so a prompt tuned against a desk or
+		// digital body (which accepts any motion name) runs unchanged on the robot.
+		"idle", "stand_still", "face_wave", "salute", "hands_up", "heart", "shrug", "show_hand", "come_closer",
+		"shake_hand", "push", "rotate_hands", "flexible",
+		"talking_2s", "talking_4s", "talking_6s", "talking_8s", "talking_10s", "talking_12s", "talking_14s", "talking_16s", "talking_18s", "talking_20s",
 	}
 }
 
 // RobotActionInput is the input the LLM provides when calling this action.
 type RobotActionInput struct {
-	Action RobotAction `json:"action" description:"The robot motion to trigger. Use 'wave' when the user asks the robot to wave, and 'shakehand' when the user asks to shake hands. The value selects a configured endpoint + body on the robot's HTTP API."`
+	Action RobotAction `json:"action" description:"The robot motion to trigger. The value selects a configured endpoint + body on the robot's HTTP API; names without a configured mapping are POSTed to /motion as {\"motion\": name}."`
 }
 
 // ActionMapping describes how a single LLM-facing action maps to an HTTP call.
@@ -176,9 +181,10 @@ func (c *Connector) Connect(ctx context.Context, input actions.Input) (actions.O
 
 	mapping, known := c.actions[action]
 	if !known {
-		c.log.Warn("no mapping for action; falling back to /{action}",
-			zap.String("action", action))
-		mapping = ActionMapping{Path: "/" + action}
+		// Every name in the vocabulary that has no explicit mapping goes to /motion as {"motion": name}, the
+		// same route the built-in wave and shakehand use.
+		c.log.Debug("no explicit mapping for action; using /motion", zap.String("action", action))
+		mapping = ActionMapping{Path: "/motion", Body: map[string]any{"motion": action}}
 	}
 
 	path := mapping.Path

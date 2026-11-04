@@ -96,6 +96,19 @@ func TestToRuntimeConfig(t *testing.T) {
 	require.Equal(t, "mode prompt", rc.SystemPromptBase)
 	require.Equal(t, "rules", rc.SystemGovernance)
 	require.Equal(t, 1.0, rc.Hertz, "zero hertz defaults to 1.0")
+	require.False(t, rc.SkipIdleTicks, "idle ticks call the cortex unless configured otherwise")
+}
+
+func TestToRuntimeConfigSkipIdleTicks(t *testing.T) {
+	sys := &config.SystemConfig{Version: "v1", Name: "robot", SkipIdleTicks: true}
+	rc := (&modeSetup{sys: sys, cfg: config.ModeConfig{}}).toRuntimeConfig()
+	require.True(t, rc.SkipIdleTicks, "the mode inherits the system setting")
+	off := false
+	rc = (&modeSetup{sys: sys, cfg: config.ModeConfig{SkipIdleTicks: &off}}).toRuntimeConfig()
+	require.False(t, rc.SkipIdleTicks, "a mode can turn it off explicitly")
+	cd := 3.0
+	rc = (&modeSetup{sys: &config.SystemConfig{EventCooldownS: 8}, cfg: config.ModeConfig{EventCooldownS: &cd}}).toRuntimeConfig()
+	require.Equal(t, 3.0, rc.EventCooldownS, "event cooldown: mode overrides system")
 }
 
 func TestToolCallsToMaps(t *testing.T) {

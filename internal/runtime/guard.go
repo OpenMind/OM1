@@ -1,0 +1,68 @@
+package runtime
+
+import (
+	"encoding/json"
+	"sort"
+
+	"github.com/openmind/om1/internal/llm"
+)
+
+// repeatGuard suppresses a set of actions that is identical to the set already taken for the same
+// observations. It protects against a model that re-acts on input it has already handled: the second
+// identical response to an unchanged observation (including "no new observations") is dropped. Any change in
+// the observations or in the requested actions resets the guard.
+type repeatGuard struct {
+	observations string
+	actions      string
+}
+
+// Allow reports whether the actions may run for these observations and records them if so. A tick that
+// carries something new (fresh: a conversation turn or an event) is never a repeat, even when its text is the
+// same as last time: a second visitor who "turned towards you" is a second visitor.
+func (g *repeatGuard) Allow(observations string, calls []llm.ToolCall, fresh bool) bool {
+	key := actionKey(calls)
+	if !fresh && key != "" && key == g.actions && observations == g.observations {
+		return false
+	}
+	g.observations = observations
+	g.actions = key
+	return true
+}
+
+// actionKey is a canonical string for a set of tool calls, independent of their order.
+func actionKey(calls []llm.ToolCall) string {
+	if len(calls) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(calls))
+	for _, c := range calls {
+		args, _ := json.Marshal(c.Arguments)
+		parts = append(parts, c.Name+"("+string(args)+")")
+	}
+	sort.Strings(parts)
+	b, _ := json.Marshal(parts)
+	return string(b)
+}
+
+// filterSpeech removes the speech actions from calls when the tick carries nothing to talk to: no conversation
+// turn and no event. It returns the remaining calls and how many were dropped. An empty speech list disables
+// the gate.
+func filterSpeech(calls []llm.ToolCall, speech []string, allowSpeech bool) ([]llm.ToolCall, int) {
+	if allowSpeech || len(speech) == 0 || len(calls) == 0 {
+		return calls, 0
+	}
+	isSpeech := make(map[string]bool, len(speech))
+	for _, name := range speech {
+		isSpeech[name] = true
+	}
+	kept := calls[:0:0]
+	dropped := 0
+	for _, c := range calls {
+		if isSpeech[c.Name] {
+			dropped++
+			continue
+		}
+		kept = append(kept, c)
+	}
+	return kept, dropped
+}
