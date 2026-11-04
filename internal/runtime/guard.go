@@ -16,10 +16,12 @@ type repeatGuard struct {
 	actions      string
 }
 
-// Allow reports whether the actions may run for these observations and records them if so.
-func (g *repeatGuard) Allow(observations string, calls []llm.ToolCall) bool {
+// Allow reports whether the actions may run for these observations and records them if so. A tick that
+// carries something new (fresh: a conversation turn or an event) is never a repeat, even when its text is the
+// same as last time: a second visitor who "turned towards you" is a second visitor.
+func (g *repeatGuard) Allow(observations string, calls []llm.ToolCall, fresh bool) bool {
 	key := actionKey(calls)
-	if key != "" && key == g.actions && observations == g.observations {
+	if !fresh && key != "" && key == g.actions && observations == g.observations {
 		return false
 	}
 	g.observations = observations

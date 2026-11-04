@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/openmind/om1/internal/actions"
@@ -22,6 +23,9 @@ type Fuser struct {
 	memory        memory.MemoryManager
 	mcp           MCPDescriber
 	log           *zap.Logger
+
+	worldMu   sync.Mutex
+	lastWorld map[int]string // previous text per world line, so a fresh caption can be shown against what it replaced
 }
 
 // KnowledgeBase defines an interface for querying a knowledge base with a question and retrieving relevant documents.
@@ -113,6 +117,13 @@ func (f *Fuser) FuseObservations(ctx context.Context, observations []inputs.Obse
 		"World state is shown separately for your awareness; it is not a reason to speak or act by itself. " +
 		"Observations you already responded to appear in the conversation history together with what you did; " +
 		"do not respond to them again.")
+	// A disposition set by an input (see HTTPClassifierInput present_as) is a state the robot carries: it goes in
+	// the system part so that every reply is coloured by it, and it is never an observation to react to.
+	if d, ok := providers.IO().GetDynamicVar("disposition"); ok && strings.TrimSpace(d) != "" {
+		sys.WriteString("\n\nYour current disposition: ")
+		sys.WriteString(strings.TrimSpace(d))
+		sys.WriteString(". Let it colour how you speak and act; do not mention it unless you are asked.")
+	}
 
 	// User part: time, this tick's observations, retrieved context, closing question.
 	now := time.Now()
@@ -158,18 +169,35 @@ func (f *Fuser) FuseObservations(ctx context.Context, observations []inputs.Obse
 	if len(conversation) == 0 && len(events) == 0 {
 		usr.WriteString("No new observations since your last action.\n\n")
 	}
+	var saw []string
 	if len(world) > 0 {
 		usr.WriteString("World state, for your awareness (do not narrate or react to it by itself):\n")
-		for _, w := range world {
+		f.worldMu.Lock()
+		if f.lastWorld == nil {
+			f.lastWorld = map[int]string{}
+		}
+		for i, w := range world {
 			usr.WriteString("- ")
 			usr.WriteString(w.Text)
-			if w.New {
-				usr.WriteString(" (just updated)")
-			} else {
+			prev := f.lastWorld[i]
+			switch {
+			case w.New && prev == "":
+				usr.WriteString(" (first reading)")
+			case w.New && w.Text == prev:
+				usr.WriteString(" (unchanged)")
+			case w.New:
+				// A fresh caption is usually the same scene in new words; show what it replaced so the model can judge.
+				usr.WriteString(" (new reading; before: " + strings.TrimPrefix(prev, "Vision: ") + ")")
+			default:
 				usr.WriteString(" (" + ageString(w.Age) + " ago)")
 			}
+			if w.New {
+				f.lastWorld[i] = w.Text
+			}
+			saw = append(saw, w.Text)
 			usr.WriteString("\n")
 		}
+		f.worldMu.Unlock()
 		usr.WriteString("\n")
 	}
 
@@ -203,11 +231,18 @@ func (f *Fuser) FuseObservations(ctx context.Context, observations []inputs.Obse
 		}
 	}
 
-	usr.WriteString("What will you do next?")
+	if f.runtimeConfig.PromptClosing != "" {
+		usr.WriteString(f.runtimeConfig.PromptClosing)
+	} else {
+		usr.WriteString("What will you do next?")
+	}
 
 	summary := "At " + now.Format("15:04:05") + " there were no new observations."
 	if len(observed) > 0 {
 		summary = "At " + now.Format("15:04:05") + " you observed: " + strings.Join(observed, "; ")
+	}
+	if len(saw) > 0 {
+		summary += " You saw: " + strings.Join(saw, "; ")
 	}
 
 	return Prompt{System: sys.String(), User: usr.String(), Summary: summary, Observations: strings.Join(observed, "; "),

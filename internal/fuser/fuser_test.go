@@ -174,8 +174,8 @@ func TestFuseObservationsSeparatesRoles(t *testing.T) {
 	require.NotContains(t, p.User, "No new observations")
 	require.Contains(t, p.Observations, "what do you see?")
 	require.Contains(t, p.Observations, "classifier confirms change")
-	require.NotContains(t, p.Observations, "camera", "world state is not part of the observation key or the history summary")
-	require.NotContains(t, p.Summary, "camera")
+	require.NotContains(t, p.Observations, "camera", "world state is not part of the observation key")
+	require.Contains(t, p.Summary, "You saw: camera", "but the history summary records what the robot saw when it acted")
 }
 
 func TestFuseObservationsWorldOnlyIsIdle(t *testing.T) {
@@ -187,9 +187,17 @@ func TestFuseObservationsWorldOnlyIsIdle(t *testing.T) {
 	require.False(t, p.HasConversation)
 	require.False(t, p.HasEvent)
 	require.Contains(t, p.User, "No new observations since your last action.")
-	require.Contains(t, p.User, "camera: a person sitting (just updated)")
+	require.Contains(t, p.User, "camera: a person sitting (first reading)")
 	require.Equal(t, "", p.Observations)
 	require.Contains(t, p.Summary, "no new observations")
+	require.Contains(t, p.Summary, "You saw: camera: a person sitting")
+
+	p, err = f.FuseObservations(context.Background(), []inputs.Observation{{Role: inputs.RoleWorld, Text: "camera: a person sitting", New: true}})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "camera: a person sitting (unchanged)")
+	p, err = f.FuseObservations(context.Background(), []inputs.Observation{{Role: inputs.RoleWorld, Text: "camera: a person waving", New: true}})
+	require.NoError(t, err)
+	require.Contains(t, p.User, "camera: a person waving (new reading; before: camera: a person sitting)", "a fresh caption is shown against what it replaced")
 }
 
 func TestFusePartsTreatsBuffersAsEvents(t *testing.T) {
@@ -198,4 +206,26 @@ func TestFusePartsTreatsBuffersAsEvents(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, p.HasEvent)
 	require.False(t, p.HasConversation)
+}
+
+func TestFusePartsCarriesDisposition(t *testing.T) {
+	providers.IO().SetDynamicVar("disposition", "warm, strongly")
+	defer providers.IO().SetDynamicVar("disposition", "")
+	p, err := NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.Contains(t, p.System, "Your current disposition: warm, strongly.", "the disposition is in the system part")
+	require.NotContains(t, p.User, "disposition", "and not an observation")
+	providers.IO().SetDynamicVar("disposition", "")
+	p, err = NewFuser(newRC(), nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.NotContains(t, p.System, "disposition", "an empty disposition adds nothing")
+}
+
+func TestFusePromptClosingIsConfigurable(t *testing.T) {
+	rc := newRC()
+	rc.PromptClosing = "Anything to do? Usually not."
+	p, err := NewFuser(rc, nil, nil, nil, nil, zap.NewNop()).FuseParts(context.Background(), nil)
+	require.NoError(t, err)
+	require.Contains(t, p.User, "Anything to do? Usually not.")
+	require.NotContains(t, p.User, "What will you do next?")
 }

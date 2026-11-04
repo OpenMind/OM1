@@ -118,6 +118,11 @@ func (o *Orchestrator) Observations() []Observation {
 		if ok {
 			out = append(out, Observation{Role: RoleWorld, Text: st.text, New: text != "", Age: now.Sub(st.at)})
 		}
+		if es, isES := sensor.(EventSource); isES {
+			if ev := strings.TrimSpace(es.LatestEvent()); ev != "" {
+				out = append(out, Observation{Role: RoleEvent, Text: ev, New: true})
+			}
+		}
 	}
 	return out
 }

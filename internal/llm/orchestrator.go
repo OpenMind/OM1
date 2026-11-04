@@ -3,6 +3,8 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"strings"
 	"sync"
 )
@@ -13,6 +15,9 @@ type Orchestrator struct {
 	mu     sync.Mutex
 	msgs   []Message
 	maxLen int
+	// logContext: print, on every call, exactly what the model is given (system, the stored history, the new
+	// user part) and what it answered. cortex_llm config `log_context: true`.
+	logContext bool
 }
 
 // NewOrchestrator creates an Orchestrator with the given LLM, config, and schemas.
@@ -27,6 +32,11 @@ func NewOrchestrator(llm LLM, config map[string]any, schemas []map[string]any) *
 	}
 
 	orchestrator := &Orchestrator{llm: llm, maxLen: historyLen}
+	if config != nil {
+		if v, ok := config["log_context"].(bool); ok {
+			orchestrator.logContext = v
+		}
+	}
 
 	if len(schemas) > 0 {
 		orchestrator.llm.SetSchemas(schemas)
@@ -89,13 +99,31 @@ func (o *Orchestrator) CallParts(ctx context.Context, system, user, summary stri
 	snapshot = append(snapshot, o.msgs...)
 	o.mu.Unlock()
 
+	if o.logContext {
+		var b strings.Builder
+		b.WriteString("\n===== LLM CONTEXT (" + fmt.Sprint(len(snapshot)) + " prior messages + user) =====\n")
+		for i, m := range snapshot {
+			b.WriteString(fmt.Sprintf("[%d] %s: %s\n", i, strings.ToUpper(m.Role), m.Content))
+		}
+		b.WriteString("[user] " + user + "\n===== END CONTEXT =====")
+		fmt.Fprintln(os.Stderr, b.String())
+	}
 	resp, err := o.llm.Call(ctx, user, snapshot)
 	if err != nil {
 		return nil, err
 	}
+	if o.logContext {
+		fmt.Fprintf(os.Stderr, "===== LLM ANSWER ===== text=%q tools=%s\n", resp.TextContent, formatToolCalls(resp.ToolCalls))
+	}
 
 	if summary == "" {
 		summary = user
+	}
+
+	// An idle turn on which the model did nothing adds no information; in a continuous loop (a tick a second)
+	// storing it would push the turns that matter (what was said, what the robot did) out of the window.
+	if len(resp.ToolCalls) == 0 && strings.Contains(summary, "there were no new observations") {
+		return resp, nil // whatever text came back ("(no commands)" and the like), nothing was done
 	}
 
 	o.mu.Lock()

@@ -125,6 +125,19 @@ func (m *modeSetup) toRuntimeConfig() *config.RuntimeConfig {
 		ActionDeps:       m.cfg.ActionDeps,
 		SpeechActions:    m.cfg.SpeechActions,
 	}
+	if m.cfg.SkipIdleTicks != nil {
+		rc.SkipIdleTicks = *m.cfg.SkipIdleTicks
+	} else if m.sys != nil {
+		rc.SkipIdleTicks = m.sys.SkipIdleTicks
+	}
+	if m.sys != nil {
+		rc.PromptClosing = m.sys.PromptClosing
+	}
+	if m.cfg.EventCooldownS != nil {
+		rc.EventCooldownS = *m.cfg.EventCooldownS
+	} else if m.sys != nil {
+		rc.EventCooldownS = m.sys.EventCooldownS
+	}
 	if rc.Hertz == 0 {
 		rc.Hertz = 1.0
 	}

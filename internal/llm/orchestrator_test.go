@@ -123,7 +123,7 @@ func TestOrchestratorCallPartsSendsSystemOnceAndStoresSummary(t *testing.T) {
 	require.Equal(t, "assistant", o.msgs[1].Role)
 	require.Contains(t, o.msgs[1].Content, "you did: wave")
 
-	f.resp = &Response{}
+	f.resp = &Response{TextContent: "(no commands)"}
 	_, err = o.CallParts(context.Background(), "SYSTEM", "USER 2", "At 10:00:02 there were no new observations.")
 	require.NoError(t, err)
 	h := f.calls[1].history
@@ -133,6 +133,12 @@ func TestOrchestratorCallPartsSendsSystemOnceAndStoresSummary(t *testing.T) {
 		require.NotEqual(t, "system", m.Role, "the system message is sent once, never stored in history")
 		require.NotContains(t, m.Content, "full prompt")
 	}
+	require.Len(t, o.msgs, 2, "an idle turn on which the model did nothing is not stored")
+
+	f.resp = &Response{}
+	_, err = o.CallParts(context.Background(), "SYSTEM", "USER 3", "At 10:00:03 you observed: a man covers his face")
+	require.NoError(t, err)
+	require.Len(t, o.msgs, 4, "doing nothing about something observed is a decision worth remembering")
 	require.Equal(t, "you did nothing", o.msgs[3].Content)
 }
 

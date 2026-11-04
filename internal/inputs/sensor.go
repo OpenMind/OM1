@@ -87,6 +87,14 @@ type Observation struct {
 	Age time.Duration
 }
 
+// EventSource is an optional interface for a RoleWorld sensor that can also raise an event: LatestEvent returns
+// the event text once (and "" when there is none). The orchestrator reports it as a RoleEvent observation
+// alongside the sensor's world state, so a camera that mostly keeps the robot aware can still make it react
+// when something changes in view.
+type EventSource interface {
+	LatestEvent() string
+}
+
 // TickTrigger is an optional interface that sensors can implement to indicate
 // whether they should wake the cortex loop when new input is available.
 type TickTrigger interface {

@@ -145,3 +145,24 @@ func TestObservationsEmptyWhenNothingArrived(t *testing.T) {
 	o := NewOrchestrator([]Sensor{&drainingSensor{role: RoleWorld}, &drainingSensor{role: RoleEvent}}, zap.NewNop())
 	require.Empty(t, o.Observations(), "a world sensor that never reported contributes nothing")
 }
+
+type eventingWorldSensor struct {
+	drainingSensor
+	event string
+}
+
+func (s *eventingWorldSensor) LatestEvent() string { ev := s.event; s.event = ""; return ev }
+
+func TestObservationsWorldSensorCanRaiseAnEvent(t *testing.T) {
+	cam := &eventingWorldSensor{drainingSensor: drainingSensor{fakeSensor: fakeSensor{buffer: "Vision: 'two people CHANGE: a second person appeared'"}, role: RoleWorld}, event: "Vision: a second person appeared"}
+	o := NewOrchestrator([]Sensor{cam}, zap.NewNop())
+
+	obs := o.Observations()
+	require.Len(t, obs, 2, "world state plus the event")
+	require.Equal(t, RoleWorld, obs[0].Role)
+	require.Equal(t, Observation{Role: RoleEvent, Text: "Vision: a second person appeared", New: true}, obs[1])
+
+	obs = o.Observations()
+	require.Len(t, obs, 1, "the event is consumed; world state persists")
+	require.Equal(t, RoleWorld, obs[0].Role)
+}

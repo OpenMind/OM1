@@ -55,6 +55,33 @@ type HTTPClassifierConfig struct {
 	ReportNegative bool    `json:"report_negative"`
 	MinConfidence  float64 `json:"min_confidence"`
 	OnlyOnChange   bool    `json:"only_on_change"` // report a result only when it differs from the last reported one
+	// PresentAs "disposition": the result is a state the robot carries, not news. Each result sets the dynamic
+	// variable "disposition" (which the fuser places in the system part, so every reply is coloured by it), and an
+	// event is emitted only when the disposition changes, worded by Events[symbol] (default: "your disposition
+	// changed to <label>"). ChangeAfter consecutive results of the same kind are needed before the disposition
+	// changes (default 1), so one stray vote does not flip it.
+	PresentAs   string            `json:"present_as"`
+	ChangeAfter int               `json:"change_after"`
+	Events      map[string]string `json:"events"`
+	Silent      bool              `json:"silent"` // disposition mode: set the variable, never raise an event
+	// Smooth: the disposition is the majority of the last Smooth results (default 1 = the latest result), with
+	// "strongly" when they all agree and "faintly" on a bare majority, so that per-vote noise does not reach the
+	// prompt and the classifier reads as the slow input it is meant to be.
+	Smooth int `json:"smooth"`
+	// StrongConfidence: a result at or above this confidence counts as change_after results on its own (default
+	// 0.9: with three voters behind the endpoint that is a unanimous vote).
+	StrongConfidence float64 `json:"strong_confidence"`
+	// While a conversation is in progress (the input ConversationKey, default "Voice", updated within
+	// ConversationWindowS seconds, default 30) a disposition change is worded by ConversationEvents[symbol]
+	// instead of Events[symbol], so that it reads as something happening to the person the robot is talking
+	// with ("the person you are talking with turned away") rather than a new arrival to greet. Default wording:
+	// "while you were talking, " + the event text. ConversationWindowS < 0 disables the distinction.
+	ConversationWindowS float64           `json:"conversation_window_s"`
+	ConversationKey     string            `json:"conversation_key"`
+	ConversationEvents  map[string]string `json:"conversation_events"`
+	// ReactionCooldownS: no disposition-change event within this many seconds of the runtime acting on any
+	// event (default 8; < 0 disables), so one happening seen by two detectors draws one reaction.
+	ReactionCooldownS float64 `json:"reaction_cooldown_s"`
 	// source "input": derive the label from the latest text another input stored on the IO provider under
 	// InputKey (an input's name, e.g. a VLM caption), using SymbolRules. No rule matching means no poll.
 	InputKey    string       `json:"input_key"`
@@ -89,8 +116,12 @@ type HTTPClassifierSensor struct {
 	seq      int
 	messages []inputs.Message
 	stopped  bool
-	lastKind string // last result kind seen ("positive", "negative", "none"); drives only_on_change
-	lastText string // source "input": the last text a label was derived from, so one caption is polled once
+	lastKind string   // last result kind seen ("positive", "negative", "none"); drives only_on_change
+	dispKind string   // disposition mode: the kind currently in force
+	dispRun  string   // disposition mode: the kind seen on the last result
+	dispN    int      // disposition mode: how many consecutive results of dispRun
+	dispWin  []string // disposition mode: the last Smooth kinds, for the majority
+	lastText string   // source "input": the last text a label was derived from, so one caption is polled once
 }
 
 // NewHTTPClassifier constructs the sensor from its config map.
@@ -239,8 +270,15 @@ func (s *HTTPClassifierSensor) Listen(ctx context.Context) (<-chan any, error) {
 		defer close(out)
 		defer s.Stop()
 
-		ticker := time.NewTicker(s.period)
+		// Watch the source often, but send at most once per period: with source "input" a change in the caption is
+		// then sent within a quarter second of arriving instead of at the next tick of a 2 s clock.
+		watch := s.period
+		if s.cfg.Source == "input" && watch > 250*time.Millisecond {
+			watch = 250 * time.Millisecond
+		}
+		ticker := time.NewTicker(watch)
 		defer ticker.Stop()
+		var lastSent time.Time
 
 		for {
 			select {
@@ -248,8 +286,14 @@ func (s *HTTPClassifierSensor) Listen(ctx context.Context) (<-chan any, error) {
 				return
 			case <-ticker.C:
 			}
+			if time.Since(lastSent) < s.period {
+				continue
+			}
 
 			raw, err := s.Poll(ctx)
+			if raw != nil || err != nil {
+				lastSent = time.Now()
+			}
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -289,6 +333,9 @@ func (s *HTTPClassifierSensor) RawToText(_ context.Context, raw any) (*inputs.Me
 	if !ok || r == nil {
 		return nil, nil
 	}
+	if s.cfg.PresentAs == "disposition" {
+		return s.disposition(r), nil
+	}
 	// Classify the result; a positive below min_confidence counts as "none" so a weak A does not end an episode.
 	kind, text := "none", "external classifier returned no result"
 	switch r.Label {
@@ -325,6 +372,145 @@ func (s *HTTPClassifierSensor) RawToText(_ context.Context, raw any) (*inputs.Me
 	s.mu.Unlock()
 
 	return msg, nil
+}
+
+// disposition handles a result in "disposition" mode: it updates the dynamic variable the fuser shows in the
+// system part on every call, and returns an event only when the disposition changes (after change_after
+// consecutive results of the new kind). A positive below min_confidence counts as the previous kind.
+func (s *HTTPClassifierSensor) disposition(r *httpClassifierResponse) *inputs.Message {
+	kind := ""
+	switch r.Label {
+	case "A":
+		if r.Confidence >= s.cfg.MinConfidence {
+			kind = "A"
+		}
+	case "B":
+		kind = "B"
+	}
+	if kind == "" {
+		return nil
+	}
+	strength := ""
+	switch {
+	case r.Confidence >= 0.9:
+		strength = ", strongly"
+	case r.Confidence < 0.65:
+		strength = ", faintly"
+	}
+	if n := s.cfg.Smooth; n > 1 {
+		// majority of the last n results replaces the single result; strength from how united they are
+		s.mu.Lock()
+		s.dispWin = append(s.dispWin, kind)
+		if len(s.dispWin) > n {
+			s.dispWin = s.dispWin[len(s.dispWin)-n:]
+		}
+		a := 0
+		for _, k := range s.dispWin {
+			if k == "A" {
+				a++
+			}
+		}
+		total := len(s.dispWin)
+		s.mu.Unlock()
+		b := total - a
+		if a >= b {
+			kind = "A"
+		} else {
+			kind = "B"
+		}
+		margin := a - b
+		if margin < 0 {
+			margin = -margin
+		}
+		switch {
+		case margin == total:
+			strength = ", strongly" // unanimous window
+		case margin <= 1:
+			strength = ", faintly" // bare majority
+		default:
+			strength = ""
+		}
+	}
+	label := kind
+	if name, ok := s.cfg.Labels[kind]; ok && name != "" {
+		label = name
+	}
+	need := s.cfg.ChangeAfter
+	if need < 1 {
+		need = 1
+	}
+
+	strong := s.cfg.StrongConfidence
+	if strong <= 0 {
+		strong = 0.9
+	}
+
+	s.mu.Lock()
+	if kind == s.dispRun {
+		s.dispN++
+	} else {
+		s.dispRun, s.dispN = kind, 1
+	}
+	if r.Confidence >= strong {
+		s.dispN = need
+	}
+	changed := kind != s.dispKind && s.dispN >= need
+	if changed {
+		s.dispKind = kind
+	}
+	current := s.dispKind
+	s.mu.Unlock()
+
+	if current == kind {
+		providers.IO().SetDynamicVar("disposition", label+strength)
+	}
+	if !changed || s.cfg.Silent {
+		return nil
+	}
+	if cd := s.cfg.ReactionCooldownS; cd >= 0 {
+		if cd == 0 {
+			cd = 8
+		}
+		if providers.IO().SinceReaction() < time.Duration(cd*float64(time.Second)) {
+			return nil
+		}
+	}
+	text := "your disposition changed to " + label
+	if ev, ok := s.cfg.Events[kind]; ok && ev != "" {
+		text = ev
+	}
+	if s.inConversation() {
+		if ev, ok := s.cfg.ConversationEvents[kind]; ok && ev != "" {
+			text = ev
+		} else {
+			text = "while you were talking, " + text
+		}
+	}
+	msg := inputs.NewMessage(text)
+	s.mu.Lock()
+	s.messages = append(s.messages, *msg)
+	if len(s.messages) > httpClassifierMaxMessages {
+		s.messages = s.messages[len(s.messages)-httpClassifierMaxMessages:]
+	}
+	s.mu.Unlock()
+	return msg
+}
+
+// inConversation reports whether the conversation input was updated within conversation_window_s.
+func (s *HTTPClassifierSensor) inConversation() bool {
+	quiet := s.cfg.ConversationWindowS
+	if quiet == 0 {
+		quiet = 30
+	}
+	if quiet < 0 {
+		return false
+	}
+	key := s.cfg.ConversationKey
+	if key == "" {
+		key = "Voice"
+	}
+	in := providers.IO().GetInput(key)
+	return in != nil && !in.Timestamp.IsZero() && time.Since(in.Timestamp) < time.Duration(quiet*float64(time.Second))
 }
 
 // describe renders a result for the prompt: the configured label name if any, else the generic phrase.

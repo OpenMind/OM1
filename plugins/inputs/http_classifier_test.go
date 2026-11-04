@@ -398,3 +398,127 @@ func TestHTTPClassifierListenSkipsEmptyPolls(t *testing.T) {
 		t.Fatal("no reading after a matching caption")
 	}
 }
+
+func TestHTTPClassifierDisposition(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{
+		"min_confidence": 0.5, "present_as": "disposition", "change_after": 2, "conversation_window_s": -1, "reaction_cooldown_s": -1,
+		"labels": map[string]any{"A": "warm", "B": "muted"}, "events": map[string]any{"A": "someone turned towards you"},
+	})
+	providers.IO().SetDynamicVar("disposition", "")
+	warm := &httpClassifierResponse{Label: "A", Confidence: 0.8}
+	faint := &httpClassifierResponse{Label: "A", Confidence: 0.6}
+	muted := &httpClassifierResponse{Label: "B", Confidence: 0.8}
+	strong := &httpClassifierResponse{Label: "A", Confidence: 1.0}
+
+	msg, err := s.RawToText(context.Background(), warm)
+	require.NoError(t, err)
+	require.Nil(t, msg, "one result does not change the disposition when change_after is 2")
+	d, _ := providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "", d, "the variable is not set until the disposition is in force")
+	msg, err = s.RawToText(context.Background(), warm)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "the second consecutive result changes it")
+	require.Equal(t, "someone turned towards you", msg.Message, "the configured event wording")
+	d, _ = providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "warm", d)
+	msg, err = s.RawToText(context.Background(), faint)
+	require.NoError(t, err)
+	require.Nil(t, msg, "the same disposition again is no event")
+	d, _ = providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "warm, faintly", d, "but the strength follows the latest result")
+	msg, err = s.RawToText(context.Background(), muted)
+	require.NoError(t, err)
+	require.Nil(t, msg, "one stray vote does not flip it")
+	msg, err = s.RawToText(context.Background(), muted)
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	require.Equal(t, "your disposition changed to muted", msg.Message, "default wording when no event text is configured")
+	d, _ = providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "muted", d)
+	msg, err = s.RawToText(context.Background(), strong)
+	require.NoError(t, err)
+	require.NotNil(t, msg, "a strong (unanimous) vote flips the disposition on its own")
+	d, _ = providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "warm, strongly", d)
+	providers.IO().SetDynamicVar("disposition", "")
+}
+
+func TestHTTPClassifierDispositionInConversation(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"min_confidence": 0.5, "present_as": "disposition", "reaction_cooldown_s": -1,
+		"labels": map[string]any{"A": "warm", "B": "muted"}, "events": map[string]any{"A": "someone turned towards you"},
+		"conversation_events": map[string]any{"B": "the person you are talking with turned away or covered their face"}})
+	providers.IO().SetDynamicVar("disposition", "")
+	providers.IO().AddInput("Voice", "hey, how's it going?", time.Now())
+	msg, err := s.RawToText(context.Background(), &httpClassifierResponse{Label: "A", Confidence: 1.0})
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	require.Equal(t, "while you were talking, someone turned towards you", msg.Message, "default in-conversation wording")
+	msg, err = s.RawToText(context.Background(), &httpClassifierResponse{Label: "B", Confidence: 1.0})
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	require.Equal(t, "the person you are talking with turned away or covered their face", msg.Message, "configured in-conversation wording")
+	providers.IO().AddInput("Voice", "hey, how's it going?", time.Now().Add(-2*time.Minute))
+	msg, err = s.RawToText(context.Background(), &httpClassifierResponse{Label: "A", Confidence: 1.0})
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	require.Equal(t, "someone turned towards you", msg.Message, "after the conversation has gone quiet, the arrival wording")
+	providers.IO().SetDynamicVar("disposition", "")
+}
+
+func TestHTTPClassifierDispositionReactionCooldown(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"min_confidence": 0.5, "present_as": "disposition", "conversation_window_s": -1, "reaction_cooldown_s": 0.3})
+	providers.IO().SetDynamicVar("disposition", "")
+	providers.IO().MarkReaction()
+	msg, err := s.RawToText(context.Background(), &httpClassifierResponse{Label: "A", Confidence: 1.0})
+	require.NoError(t, err)
+	require.Nil(t, msg, "no event right after the runtime reacted to something else")
+	d, _ := providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "A, strongly", d, "the disposition still changed")
+	time.Sleep(350 * time.Millisecond)
+	msg, err = s.RawToText(context.Background(), &httpClassifierResponse{Label: "B", Confidence: 1.0})
+	require.NoError(t, err)
+	require.NotNil(t, msg, "after the cooldown, changes are events again")
+	providers.IO().SetDynamicVar("disposition", "")
+}
+
+func TestHTTPClassifierDispositionSilent(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"min_confidence": 0.5, "present_as": "disposition", "silent": true, "labels": map[string]any{"A": "warm"}})
+	providers.IO().SetDynamicVar("disposition", "")
+	msg, err := s.RawToText(context.Background(), &httpClassifierResponse{Label: "A", Confidence: 1.0})
+	require.NoError(t, err)
+	require.Nil(t, msg, "silent: no event, ever")
+	d, _ := providers.IO().GetDynamicVar("disposition")
+	require.Equal(t, "warm, strongly", d, "only the disposition")
+	providers.IO().SetDynamicVar("disposition", "")
+}
+
+func TestHTTPClassifierDispositionSmooth(t *testing.T) {
+	p := writeLabel(t, t.TempDir(), "A")
+	s := newFileSensor(t, "http://127.0.0.1:1", p, map[string]any{"min_confidence": 0.5, "present_as": "disposition", "silent": true, "smooth": 5, "labels": map[string]any{"A": "warm", "B": "muted"}})
+	providers.IO().SetDynamicVar("disposition", "")
+	vote := func(label string) {
+		_, err := s.RawToText(context.Background(), &httpClassifierResponse{Label: label, Confidence: 1.0})
+		require.NoError(t, err)
+	}
+	get := func() string { d, _ := providers.IO().GetDynamicVar("disposition"); return d }
+	vote("A")
+	vote("A")
+	vote("A")
+	vote("A")
+	vote("A")
+	require.Equal(t, "warm, strongly", get(), "five of five")
+	vote("B")
+	require.Equal(t, "warm", get(), "four of five: still warm, no longer strongly")
+	vote("B")
+	require.Equal(t, "warm, faintly", get(), "three of five")
+	vote("B")
+	vote("B")
+	require.Equal(t, "muted", get(), "four of five the other way")
+	vote("B")
+	require.Equal(t, "muted, strongly", get())
+	providers.IO().SetDynamicVar("disposition", "")
+}

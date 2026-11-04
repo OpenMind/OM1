@@ -21,7 +21,18 @@ type SystemConfig struct {
 	GlobalBackgrounds []PluginSpec `json:"global_backgrounds"`
 	// SpeechActions names the actions that talk to people (default ["speak"]). They run only on a tick that
 	// carries a conversation turn or an event; world state alone never earns speech. Empty list = no gating.
-	SpeechActions  []string    `json:"speech_actions"`
+	SpeechActions []string `json:"speech_actions"`
+	// SkipIdleTicks: when true, a tick with no new conversation turn and no new event (the "No new
+	// observations" prompt) makes no cortex call at all; world state alone keeps the robot aware but is not a
+	// reason to think. Off by default: a robot that acts on its own initiative needs the idle ticks.
+	SkipIdleTicks bool `json:"skip_idle_ticks"`
+	// EventCooldownS: a tick that carries only events (no conversation turn) is dropped if the runtime acted on
+	// an event less than this many seconds ago, so one happening seen by two detectors on two clocks draws one
+	// reaction. 0 (default) disables. Speech is never dropped.
+	EventCooldownS float64 `json:"event_cooldown_s"`
+	// PromptClosing replaces the question that ends every prompt (default "What will you do next?"). A
+	// continuous loop wants one that makes doing nothing the expected answer.
+	PromptClosing  string      `json:"prompt_closing"`
 	MCPServers     []MCPSpec   `json:"mcp_servers"`
 	KnowledgeBase  *KBSpec     `json:"knowledge_base"`
 	Memory         *MemorySpec `json:"memory"`
@@ -58,6 +69,8 @@ type ModeConfig struct {
 	LifecycleHooks   []HookSpec   `json:"lifecycle_hooks"`
 	TimeoutSeconds   float64      `json:"timeout_seconds"`
 	SpeechActions    []string     `json:"speech_actions"`
+	SkipIdleTicks    *bool        `json:"skip_idle_ticks"` // nil = inherit the system setting
+	EventCooldownS   *float64     `json:"event_cooldown_s"`
 
 	// Execution mode: "concurrent" | "sequential" | "dependencies"
 	ActionExecMode string              `json:"action_execution_mode"`
@@ -173,4 +186,7 @@ type RuntimeConfig struct {
 	ActionExecMode   string
 	ActionDeps       map[string][]string
 	SpeechActions    []string
+	SkipIdleTicks    bool
+	EventCooldownS   float64
+	PromptClosing    string
 }
