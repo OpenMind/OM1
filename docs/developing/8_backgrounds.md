@@ -18,12 +18,58 @@ The currently registered background tasks are:
 
 - **`TTSControl`**: Coordinates text-to-speech playback state.
 - **`ApproachingPerson`**: Reacts when a person approaches.
-- **`VLMGemini`**, **`VLMGeminiRTSP`**: Background vision captioning via Gemini.
-- **`VLMOpenAI`**, **`VLMOpenAIRTSP`**: Background vision captioning via OpenAI.
-- **`VLMCosmos`**, **`VLMCosmosRTSP`**: Background vision captioning via a local NVIDIA Cosmos3-Edge vLLM server.
 - **`UnitreeGo2FrontierExploration`**: Autonomous frontier exploration for the Unitree Go2.
+- **Vision Language Model (VLM)** backgrounds (see below).
 
 > The authoritative list is whatever is registered via `bg.Register(...)` under `plugins/backgrounds/`. Background tasks are configured through the runtime config and can be extended by adding new plugin modules.
+
+### Vision Language Model (VLM) Backgrounds
+
+VLM backgrounds periodically capture frames from a camera or RTSP stream, send them to a vision language model, and publish the model's text description of the scene. This allows an agent to have a general sense of its surroundings.
+
+Several VLM providers are available:
+
+| Type              | Provider / Model                                 |
+| ----------------- | ------------------------------------------------ |
+| `VLMOpenAI`       | OpenAI (`gpt-4-vision-preview`)                  |
+| `VLMGemini`       | Google Gemini (`gemini-pro-vision`)              |
+| `VLMCosmos`       | Local NVIDIA Cosmos (`nvidia/Cosmos3-Edge`)      |
+
+Each provider has a camera variant (e.g. `VLMOpenAI`) and an RTSP variant (e.g. `VLMOpenAIRTSP`).
+
+#### Configuration
+
+All VLM backgrounds share this common configuration structure:
+
+```json5
+{
+  "type": "VLMCosmos", // or VLMOpenAI, VLMGemini, etc.
+  "api_key": "...",   // required
+  "base_url": "...",  // optional; overrides the default endpoint
+  "model": "...",     // optional; overrides the default model
+  "prompt": "...",    // optional; overrides the default system prompt
+  "max_tokens": 128,  // optional
+  "fps": 4,           // optional; frames to process per second
+  "resolution_width": 640,
+  "resolution_height": 480,
+  
+  // New in 1.9.0
+  "timeout_sec": 10.0,
+  "warmup": true,
+  "extra_body": { "temperature": 0.5 }
+}
+```
+
+- `api_key` (string, required): Your API key for the VLM provider.
+- `base_url` (string): The base URL of the API endpoint. Defaults to the standard endpoint for each provider.
+- `model` (string): The specific model to use (e.g., `gpt-4o`).
+- `prompt` (string): The system prompt sent to the model with each frame.
+- `max_tokens` (integer): The maximum number of tokens to generate in the response.
+- `fps` (integer): The number of frames per second to capture and send to the model.
+- `resolution_width`, `resolution_height` (integers): The resolution for frame capture.
+- `timeout_sec` (float): The timeout in seconds for requests to the VLM.
+- `warmup` (boolean): If true, the plugin will repeatedly try to contact the VLM endpoint in the background after starting up, and will not send any real requests until it succeeds. This is useful for models that take a long time to load. Defaults to `true` for `VLMCosmos` and `false` for others.
+- `extra_body` (object): A JSON object of extra parameters to include in the body of the request to the VLM API. This can be used to pass non-standard or provider-specific parameters like `temperature`.
 
 ### Scopes: `agent_backgrounds` vs `global_backgrounds`
 
