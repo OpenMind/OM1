@@ -309,7 +309,10 @@ func evaluateSingleCondition(key string, expected any, userCtx map[string]any) b
 
 // Transition updates the mode state and fires lifecycle hooks for the transition.
 func (m *ModeManager) Transition(toMode, reason string, exitHooks, entryHooks *hooks.Runner) {
+	m.mu.RLock()
 	fromMode := m.state.CurrentMode
+	m.mu.RUnlock()
+
 	transitionKey := fromMode + "->" + toMode
 	transitionCtx := map[string]any{
 		"from_mode":      fromMode,
