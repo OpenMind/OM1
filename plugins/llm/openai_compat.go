@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"time"
 
@@ -15,11 +16,13 @@ import (
 )
 
 type compatConfig struct {
-	APIKey     string `json:"api_key"`
-	Model      string `json:"model"`
-	BaseURL    string `json:"base_url"`
-	AgentName  string `json:"agent_name"`
-	HistoryLen int    `json:"history_length"`
+	APIKey     string         `json:"api_key"`
+	Model      string         `json:"model"`
+	BaseURL    string         `json:"base_url"`
+	AgentName  string         `json:"agent_name"`
+	HistoryLen int            `json:"history_length"`
+	ToolChoice string         `json:"tool_choice"`
+	ExtraBody  map[string]any `json:"extra_params"`
 }
 
 type openAICompatLLM struct {
@@ -44,7 +47,10 @@ func newOpenAICompat(provider string, configMap map[string]any, defaultModel, de
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = defaultBaseURL
 	}
-	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice}, nil
+	if cfg.ToolChoice != "" {
+		toolChoice = cfg.ToolChoice
+	}
+	return &openAICompatLLM{provider: provider, config: cfg, toolChoice: toolChoice, extraBody: cfg.ExtraBody}, nil
 }
 
 func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas }
@@ -52,18 +58,15 @@ func (c *openAICompatLLM) FunctionSchemas() []map[string]any { return c.schemas 
 func (c *openAICompatLLM) SetSchemas(schemas []map[string]any) { c.schemas = schemas }
 
 func (c *openAICompatLLM) Call(ctx context.Context, prompt string, history []llm.Message) (*llm.Response, error) {
-	requestBody := map[string]any{
-		"model":    c.config.Model,
-		"messages": buildMessages(prompt, history),
-	}
+	requestBody := make(map[string]any, len(c.extraBody)+4)
+	maps.Copy(requestBody, c.extraBody)
+
+	requestBody["model"] = c.config.Model
+	requestBody["messages"] = buildMessages(prompt, history)
 
 	if len(c.schemas) > 0 {
 		requestBody["tools"] = c.schemas
 		requestBody["tool_choice"] = c.toolChoice
-	}
-
-	for k, v := range c.extraBody {
-		requestBody[k] = v
 	}
 
 	body, err := c.doRequest(ctx, requestBody)
