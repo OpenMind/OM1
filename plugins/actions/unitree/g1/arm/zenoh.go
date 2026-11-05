@@ -26,14 +26,14 @@ func (ArmAction) EnumValues() []string {
 		"hands_up",
 		"stand_still",
 		"show_hand",
-		"come_closer",
+		// "come_closer", // disabled for G1
 		"flexible",
 		"hands_up",
 		"heart",
-		"push",
+		// "push", // disabled for G1
 		"rotate_hands",
-		"salute",
-		"shrug",
+		// "salute", // disabled for G1
+		// "shrug", // disabled for G1
 		"talking_2s",
 		"talking_4s",
 		"talking_6s",
