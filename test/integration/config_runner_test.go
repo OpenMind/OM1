@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -168,37 +167,10 @@ func loadTestMeta(t *testing.T, path string) testCase {
 	require.NoError(t, err)
 
 	var tc testCase
-	require.NoError(t, json.Unmarshal(stripJSON5(raw), &tc), "parse test-case metadata")
+	jsonData, err := config.StripJSON5(raw)
+	require.NoError(t, err, "strip JSON5 from test-case metadata")
+	require.NoError(t, json.Unmarshal(jsonData, &tc), "parse test-case metadata")
 	return tc
-}
-
-func stripJSON5(src []byte) []byte {
-	text := strings.ReplaceAll(string(src), "\\\n", "")
-	lines := strings.Split(text, "\n")
-	stripped := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if c := commentIndex(line); c >= 0 {
-			line = line[:c]
-		}
-		stripped = append(stripped, line)
-	}
-	text = strings.Join(stripped, "\n")
-	text = regexp.MustCompile(`,(\s*[}\]])`).ReplaceAllString(text, "$1")
-	text = regexp.MustCompile(`([{\[,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:`).ReplaceAllString(text, `$1"$2":`)
-	return []byte(text)
-}
-
-func commentIndex(line string) int {
-	inString := false
-	for i := 0; i < len(line)-1; i++ {
-		if line[i] == '"' {
-			inString = !inString
-		}
-		if !inString && line[i] == '/' && line[i+1] == '/' {
-			return i
-		}
-	}
-	return -1
 }
 
 func max(a, b int) int {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +31,7 @@ func TestStripJSON5(t *testing.T) {
 		},
 		list: [1, 2,],
 	}`)
-	out, err := stripJSON5(src)
+	out, err := StripJSON5(src)
 	require.NoError(t, err)
 	require.Contains(t, string(out), `"key": "value"`, "unquoted keys are quoted")
 	require.Contains(t, string(out), `"url": "http://x/y"`, "urls inside strings survive")
@@ -145,4 +146,61 @@ func TestLoadUseTracerBothForms(t *testing.T) {
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load("/no/such/file.json5")
 	require.Error(t, err)
+}
+
+func TestCommentIndexEscapedQuote(t *testing.T) {
+	require.Equal(t, 9, commentIndex(`"a\"//b" // c`), "escaped quote does not end the string")
+	require.Equal(t, -1, commentIndex(`"a\"//b"`), "// after an escaped quote is still inside the string")
+}
+
+func stripAndParse(t *testing.T, src string) map[string]any {
+	t.Helper()
+	out, err := StripJSON5([]byte(src))
+	require.NoError(t, err)
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(out, &got), "output: %s", out)
+	return got
+}
+
+func TestStripJSON5PreservesStringContents(t *testing.T) {
+	t.Run("trailing comma pattern inside string", func(t *testing.T) {
+		got := stripAndParse(t, `{ text: "wait, }" }`)
+		require.Equal(t, "wait, }", got["text"])
+	})
+
+	t.Run("comma and key-like pattern inside string", func(t *testing.T) {
+		got := stripAndParse(t, `{ description: "hello, name: John" }`)
+		require.Equal(t, "hello, name: John", got["description"])
+	})
+
+	t.Run("escaped quote inside string", func(t *testing.T) {
+		got := stripAndParse(t, `{ quote: "say \"hi\", name: x" }`)
+		require.Equal(t, `say "hi", name: x`, got["quote"])
+	})
+
+	t.Run("cleanup still applies outside strings", func(t *testing.T) {
+		got := stripAndParse(t, `{ a: "x, }", b: [1, 2,], }`)
+		require.Equal(t, "x, }", got["a"])
+		require.Equal(t, []any{float64(1), float64(2)}, got["b"])
+	})
+
+	t.Run("quote inside a comment", func(t *testing.T) {
+		got := stripAndParse(t, "{ a: 1, // it's \"x\n b: 2 }")
+		require.Equal(t, float64(1), got["a"])
+		require.Equal(t, float64(2), got["b"])
+	})
+}
+
+func TestStripJSON5StringEdgeCases(t *testing.T) {
+	t.Run("input ending with a string literal", func(t *testing.T) {
+		out, err := StripJSON5([]byte(`"just a string"`))
+		require.NoError(t, err)
+		require.Equal(t, `"just a string"`, string(out))
+	})
+
+	t.Run("unterminated string is left untouched", func(t *testing.T) {
+		out, err := StripJSON5([]byte(`{ a: "oops, }`))
+		require.NoError(t, err)
+		require.Equal(t, `{ "a": "oops, }`, string(out))
+	})
 }

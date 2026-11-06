@@ -25,7 +25,7 @@ func Load(nameOrPath string) (*SystemConfig, error) {
 
 	expanded := expandEnv(string(rawBytes))
 
-	jsonData, err := stripJSON5([]byte(expanded))
+	jsonData, err := StripJSON5([]byte(expanded))
 	if err != nil {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
@@ -87,8 +87,14 @@ func expandEnv(text string) string {
 	})
 }
 
-// stripJSON5 removes comments, trailing commas, and unquotes keys to convert JSON5 to standard JSON.
-func stripJSON5(src []byte) ([]byte, error) {
+var (
+	trailingCommaRe = regexp.MustCompile(`,(\s*[}\]])`)
+	unquotedKeyRe   = regexp.MustCompile(`([{\[,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:`)
+)
+
+// StripJSON5 removes comments, trailing commas, and unquotes keys to convert JSON5 to standard JSON.
+// Cleanup is applied only outside of string literals, so string values are never rewritten.
+func StripJSON5(src []byte) ([]byte, error) {
 	text := strings.ReplaceAll(string(src), "\\\n", "")
 	lines := strings.Split(text, "\n")
 
@@ -102,23 +108,62 @@ func stripJSON5(src []byte) ([]byte, error) {
 
 	text = strings.Join(stripped, "\n")
 
-	trailingComma := regexp.MustCompile(`,(\s*[}\]])`)
-	text = trailingComma.ReplaceAllString(text, "$1")
-
-	unquotedKey := regexp.MustCompile(`([{\[,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:`)
-	text = unquotedKey.ReplaceAllString(text, `$1"$2":`)
+	text = transformOutsideStrings(text, func(segment string) string {
+		segment = trailingCommaRe.ReplaceAllString(segment, "$1")
+		return unquotedKeyRe.ReplaceAllString(segment, `$1"$2":`)
+	})
 
 	return []byte(text), nil
 }
 
-// commentIndex finds the index of the start of a comment (//) in a line, ignoring any // that are inside string literals.
+// transformOutsideStrings applies fn to every part of text that is not inside a
+// double-quoted string literal. String literals (including their quotes) are copied as is.
+// A backslash inside a string escapes the next character, so \" does not end the string.
+func transformOutsideStrings(text string, fn func(string) string) string {
+	var out strings.Builder
+	start := 0
+	inString := false
+
+	for i := 0; i < len(text); i++ {
+		c := text[i]
+		if inString {
+			if c == '\\' {
+				i++ // skip the escaped character
+			} else if c == '"' {
+				out.WriteString(text[start : i+1])
+				start = i + 1
+				inString = false
+			}
+			continue
+		}
+		if c == '"' {
+			out.WriteString(fn(text[start:i]))
+			start = i
+			inString = true
+		}
+	}
+
+	if start < len(text) {
+		if inString {
+			out.WriteString(text[start:]) // unterminated string: leave as is
+		} else {
+			out.WriteString(fn(text[start:]))
+		}
+	}
+	return out.String()
+}
+
+// commentIndex finds the start of a comment (//) in a line, ignoring any // inside string literals.
+// Escaped quotes (\") inside strings do not end the string.
 func commentIndex(line string) int {
 	inString := false
-	for i := 0; i < len(line)-1; i++ {
-		if line[i] == '"' {
+	for i := 0; i < len(line); i++ {
+		switch c := line[i]; {
+		case inString && c == '\\':
+			i++ // skip the escaped character
+		case c == '"':
 			inString = !inString
-		}
-		if !inString && line[i] == '/' && line[i+1] == '/' {
+		case !inString && c == '/' && i+1 < len(line) && line[i+1] == '/':
 			return i
 		}
 	}

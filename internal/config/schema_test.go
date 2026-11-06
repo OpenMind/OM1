@@ -58,7 +58,7 @@ func TestConfigFilesMatchSchema(t *testing.T) {
 			raw, err := os.ReadFile(filepath.Join(configDir, name))
 			require.NoError(t, err, "read config")
 
-			jsonData, err := stripJSON5([]byte(expandEnv(string(raw))))
+			jsonData, err := StripJSON5([]byte(expandEnv(string(raw))))
 			require.NoError(t, err, "convert JSON5 to JSON")
 
 			inst, err := jsonschema.UnmarshalJSON(bytes.NewReader(jsonData))
