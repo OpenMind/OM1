@@ -45,6 +45,7 @@ func TestProviderDefaults(t *testing.T) {
 		{"DeepSeekLLM", map[string]any{"api_key": "k"}, defaultDeepSeekModel, defaultDeepSeekBaseURL},
 		{"XAILLM", map[string]any{"api_key": "k"}, defaultXAIModel, defaultXAIBaseURL},
 		{"OpenRouter", map[string]any{"api_key": "k"}, defaultOpenRouterModel, defaultOpenRouterBaseURL},
+		{"Requesty", map[string]any{"api_key": "k"}, defaultRequestyModel, "https://router.requesty.ai/v1"},
 		{"NearAILLM", map[string]any{"api_key": "k"}, defaultNearAIModel, defaultNearAIBaseURL},
 		{"FunctionGemmaLLM", map[string]any{"api_key": "k"}, defaultFunctionGemmaModel, defaultFunctionGemmaBaseURL},
 	}
