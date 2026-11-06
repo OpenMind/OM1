@@ -12,6 +12,11 @@ func TestArmActionEnumValues(t *testing.T) {
 	require.Contains(t, values, "shake_hand")
 	require.Contains(t, values, "stand_still")
 	require.NotEmpty(t, values)
+	seen := map[string]bool{}
+	for _, v := range values {
+		require.False(t, seen[v], "duplicate gesture in the enum: %s", v)
+		seen[v] = true
+	}
 }
 
 func TestSerializeUnitreeRequestHeaderAndAPIID(t *testing.T) {
