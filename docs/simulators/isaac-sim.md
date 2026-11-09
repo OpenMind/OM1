@@ -126,7 +126,7 @@ To run the script, export the following
 
 ```bash
 export ROS_DISTRO=humble
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaacsim/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
 ```
 
 > **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment. We use `env_isaacsim` (Python 3.11) for Isaac Sim and `.venv` (Python 3.10) for other services like orchestrator due to compatibility requirements.
