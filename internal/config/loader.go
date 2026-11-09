@@ -201,6 +201,7 @@ func normalize(systemConfig *SystemConfig) {
 			AgentBackgrounds: systemConfig.AgentBackgrounds,
 			MCPServers:       systemConfig.MCPServers,
 			LifecycleHooks:   systemConfig.LifecycleHooks,
+			SpeechActions:    systemConfig.SpeechActions,
 		},
 	}
 	systemConfig.DefaultMode = modeName

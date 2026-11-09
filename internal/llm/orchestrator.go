@@ -3,6 +3,8 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"strings"
 	"sync"
 )
@@ -13,6 +15,9 @@ type Orchestrator struct {
 	mu     sync.Mutex
 	msgs   []Message
 	maxLen int
+	// logContext: print, on every call, exactly what the model is given (system, the stored history, the new
+	// user part) and what it answered. cortex_llm config `log_context: true`.
+	logContext bool
 }
 
 // NewOrchestrator creates an Orchestrator with the given LLM, config, and schemas.
@@ -27,6 +32,11 @@ func NewOrchestrator(llm LLM, config map[string]any, schemas []map[string]any) *
 	}
 
 	orchestrator := &Orchestrator{llm: llm, maxLen: historyLen}
+	if config != nil {
+		if v, ok := config["log_context"].(bool); ok {
+			orchestrator.logContext = v
+		}
+	}
 
 	if len(schemas) > 0 {
 		orchestrator.llm.SetSchemas(schemas)
@@ -75,6 +85,70 @@ func (o *Orchestrator) Call(ctx context.Context, prompt string, _ []Message) (*R
 	return resp, nil
 }
 
+// CallParts sends system as the system message, the stored history, and user as the new user message.
+// Only summary (one line describing the turn's observations) and the model's response are kept in history,
+// so the constant part of the prompt is sent once per call rather than once per remembered turn.
+func (o *Orchestrator) CallParts(ctx context.Context, system, user, summary string) (*Response, error) {
+	if o.maxLen == 0 {
+		return o.llm.Call(ctx, user, []Message{{Role: "system", Content: system}})
+	}
+
+	o.mu.Lock()
+	snapshot := make([]Message, 0, len(o.msgs)+1)
+	snapshot = append(snapshot, Message{Role: "system", Content: system})
+	snapshot = append(snapshot, o.msgs...)
+	o.mu.Unlock()
+
+	if o.logContext {
+		var b strings.Builder
+		b.WriteString("\n===== LLM CONTEXT (" + fmt.Sprint(len(snapshot)) + " prior messages + user) =====\n")
+		for i, m := range snapshot {
+			b.WriteString(fmt.Sprintf("[%d] %s: %s\n", i, strings.ToUpper(m.Role), m.Content))
+		}
+		b.WriteString("[user] " + user + "\n===== END CONTEXT =====")
+		fmt.Fprintln(os.Stderr, b.String())
+	}
+	resp, err := o.llm.Call(ctx, user, snapshot)
+	if err != nil {
+		return nil, err
+	}
+	if o.logContext {
+		fmt.Fprintf(os.Stderr, "===== LLM ANSWER ===== text=%q tools=%s\n", resp.TextContent, formatToolCalls(resp.ToolCalls))
+	}
+
+	if summary == "" {
+		summary = user
+	}
+
+	// An idle turn on which the model did nothing adds no information; in a continuous loop (a tick a second)
+	// storing it would push the turns that matter (what was said, what the robot did) out of the window.
+	if len(resp.ToolCalls) == 0 && strings.Contains(summary, "there were no new observations") {
+		return resp, nil // whatever text came back ("(no commands)" and the like), nothing was done
+	}
+
+	o.mu.Lock()
+	o.msgs = append(o.msgs, Message{Role: "user", Content: summary})
+
+	switch {
+	case resp.TextContent != "" && len(resp.ToolCalls) > 0:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: resp.TextContent + " | you did: " + formatToolCalls(resp.ToolCalls)})
+	case resp.TextContent != "":
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: resp.TextContent})
+	case len(resp.ToolCalls) > 0:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: "you did: " + formatToolCalls(resp.ToolCalls)})
+	default:
+		o.msgs = append(o.msgs, Message{Role: "assistant", Content: "you did nothing"})
+	}
+
+	if len(o.msgs) > o.maxLen*2 {
+		o.msgs = o.msgs[len(o.msgs)-o.maxLen*2:]
+	}
+
+	o.mu.Unlock()
+
+	return resp, nil
+}
+
 // Reset clears the conversation history in the Orchestrator.
 func (o *Orchestrator) Reset() {
 	o.mu.Lock()
@@ -87,6 +161,13 @@ func formatToolCalls(calls []ToolCall) string {
 	parts := make([]string, 0, len(calls))
 
 	for _, tc := range calls {
+		// Speech reads back as what was said, not as a JSON-wrapped argument named "action".
+		if tc.Name == "speak" {
+			if text, ok := tc.Arguments["action"].(string); ok && text != "" {
+				parts = append(parts, fmt.Sprintf("said: %q", text))
+				continue
+			}
+		}
 		args, _ := json.Marshal(tc.Arguments)
 		parts = append(parts, tc.Name+"("+string(args)+")")
 	}

@@ -123,6 +123,9 @@ func (s *PathsSensor) FormattedLatestBuffer() string {
 }
 
 // Stop releases the underlying provider.
+// Role: the state of the surroundings, kept for awareness; never by itself a reason to speak.
+func (s *PathsSensor) Role() inputs.Role { return inputs.RoleWorld }
+
 func (s *PathsSensor) Stop() {
 	s.mu.Lock()
 	if s.stopped {

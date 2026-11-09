@@ -15,6 +15,7 @@ type Input struct {
 // IOProvider is a singleton that manages input storage and tick counting for the runtime.
 type IOProvider struct {
 	mu            sync.Mutex
+	lastReaction  time.Time
 	lastTickStart time.Time
 	totalTicks    int64
 
@@ -41,6 +42,25 @@ func (p *IOProvider) SetDynamicVar(key, value string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.dynamicVars[key] = value
+}
+
+// MarkReaction records that the runtime has just acted (on an event or a conversation turn). The event cooldown
+// in the runtime and the inputs that raise events consult SinceReaction so that one happening does not draw
+// two reactions from two detectors, and a camera change seconds after a reply is not greeted as an arrival.
+func (p *IOProvider) MarkReaction() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.lastReaction = time.Now()
+}
+
+// SinceReaction is the time since MarkReaction was last called (a very long duration if never).
+func (p *IOProvider) SinceReaction() time.Duration {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.lastReaction.IsZero() {
+		return 24 * time.Hour
+	}
+	return time.Since(p.lastReaction)
 }
 
 // GetDynamicVar returns the dynamic variable for key. The bool is false if absent.

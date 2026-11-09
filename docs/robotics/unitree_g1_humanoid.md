@@ -188,6 +188,30 @@ Other actions:
 
 Use the joysticks to move forwards and backwards, and to rotate/turn
 
+## Arm Actions
+
+The `unitree_g1_arm/zenoh` action plugin provides a set of arm gestures that can be triggered through OM1. The following actions are available:
+
+* `idle`
+* `shake_hand`
+* `face_wave`
+* `hands_up`
+* `stand_still`
+* `show_hand`
+* `flexible`
+* `heart`
+* `rotate_hands`
+* `talking_2s`
+* `talking_4s`
+* `talking_6s`
+* `talking_8s`
+* `talking_10s`
+* `talking_12s`
+* `talking_14s`
+* `talking_16s`
+* `talking_18s`
+* `talking_20s`
+
 ## Boot from Chair
 
 This is similar to boot from gantry, except, when you press "L1+UP", you have to help the humanoid stand up, while it straightens itself. For the sit-down procedure, back up the chair behind the robot, select "L1+LEFT", and help the humanoid settle back into the chair.
