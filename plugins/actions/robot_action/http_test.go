@@ -38,8 +38,17 @@ func TestRobotActionEnumIncludesSupportedActions(t *testing.T) {
 	values := RobotAction("").EnumValues()
 	assert.Contains(t, values, "wave")
 	assert.Contains(t, values, "shakehand")
-	for _, g := range []string{"face_wave", "salute", "heart", "shrug", "show_hand", "stand_still", "talking_4s"} {
+	for _, g := range []string{"face_wave", "hands_up", "heart", "show_hand", "stand_still", "talking_4s"} {
 		assert.Contains(t, values, g, "the G1 arm vocabulary is available to the HTTP body too")
+	}
+	// Gestures the G1 arm plugin no longer offers must not be offered here either.
+	for _, g := range []string{"salute", "shrug", "come_closer", "push"} {
+		assert.NotContains(t, values, g, "not in the G1 arm vocabulary")
+	}
+	seen := map[string]bool{}
+	for _, v := range values {
+		assert.False(t, seen[v], "duplicate action in the enum: %s", v)
+		seen[v] = true
 	}
 }
 
