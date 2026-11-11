@@ -50,10 +50,11 @@ func (RobotAction) EnumValues() []string {
 	return []string{
 		"wave",
 		"shakehand",
-		// The same gesture vocabulary as the Unitree G1 arm plugin, so a prompt tuned against a desk or
-		// digital body (which accepts any motion name) runs unchanged on the robot.
-		"idle", "stand_still", "face_wave", "salute", "hands_up", "heart", "shrug", "show_hand", "come_closer",
-		"shake_hand", "push", "rotate_hands", "flexible",
+		// The same gesture vocabulary as the Unitree G1 arm plugin (plugins/actions/unitree/g1/arm), so a
+		// prompt tuned against a desk or digital body (which accepts any motion name) runs unchanged on the
+		// robot. Keep the two lists in step: a gesture offered here and not there is one the robot refuses.
+		"idle", "stand_still", "face_wave", "hands_up", "heart", "show_hand",
+		"shake_hand", "rotate_hands", "flexible",
 		"talking_2s", "talking_4s", "talking_6s", "talking_8s", "talking_10s", "talking_12s", "talking_14s", "talking_16s", "talking_18s", "talking_20s",
 	}
 }
