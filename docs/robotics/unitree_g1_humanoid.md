@@ -201,6 +201,7 @@ The `unitree_g1_arm/zenoh` action plugin provides a set of arm gestures that can
 * `flexible`
 * `heart`
 * `rotate_hands`
+* `shrug`
 * `talking_2s`
 * `talking_4s`
 * `talking_6s`
