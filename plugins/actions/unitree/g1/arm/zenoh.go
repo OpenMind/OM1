@@ -25,7 +25,7 @@ func (ArmAction) EnumValues() []string {
 		"face_wave",
 		"hands_up",
 		"stand_still",
-		"show_hand",
+		// "show_hand",
 		// "come_closer",
 		"flexible",
 		"heart",
@@ -55,8 +55,8 @@ func init() {
 		"unitree_g1_arm",
 		"Action interface for Unitree G1 arm gesture control. "+
 			"Publishes custom arm motion commands to the g1_arm_action ROS2 node via Zenoh. "+
-			"Supported gestures: idle, shake_hand, face_wave, hands_up, stand_still, show_hand, flexible, heart, "+
-			"rotate_hands, and talking_2s to talking_20s (arm motion while speaking, chosen by the length of the line).",
+			"Supported gestures: idle, shake_hand, face_wave, hands_up, stand_still, flexible, heart, "+
+			"rotate_hands, shrug, and talking_2s to talking_20s (arm motion while speaking, chosen by the length of the line).",
 		ArmInput{},
 	)
 	actions.Register("unitree_g1_arm/zenoh", NewArmG1ZenohConnector)
