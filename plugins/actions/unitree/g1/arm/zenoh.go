@@ -32,7 +32,7 @@ func (ArmAction) EnumValues() []string {
 		// "push",
 		"rotate_hands",
 		// "salute",
-		// "shrug",
+		"shrug",
 		"talking_2s",
 		"talking_4s",
 		"talking_6s",
