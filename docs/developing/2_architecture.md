@@ -4,6 +4,10 @@ description: "Core Architecture and Runtime Flow"
 icon: sitemap
 ---
 
+{% hint style="warning" %}
+OM1 is no longer maintained. The code and docs are still here if you need them. [See what's next](https://openmind.com)
+{% endhint %}
+
 ## Architecture Overview
 
 This system diagram illustrates some of OM1's layers and modules.
