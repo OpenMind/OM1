@@ -62,7 +62,7 @@ jobs:
             runner: ubuntu-22.04-arm
             os: linux
           - name: darwin-arm64
-            runner: macos-14
+            runner: macos-15
             os: darwin
           - name: darwin-amd64
             runner: macos-15-intel
