@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> **OM1 is archived.**
+>
+> We've stopped active development on OM1 as of November 2026. The code isn't going anywhere: it's still MIT licensed, and you're welcome to use it, learn from it, star it or fork it. We just won't be shipping updates or responding to issues and pull requests here anymore.
+>
+> If you want to keep up with what we're working on now, head to [openmind.com](https://openmind.com).
+>
+> To everyone who filed issues, sent PRs, or built something with OM1: thank you. It meant a lot to us.
+
 ![om1_banner_w](https://github.com/user-attachments/assets/86590615-018d-4443-b345-8d224227e83f)
 
 <p align="center">
