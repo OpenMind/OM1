@@ -6,7 +6,7 @@ icon: gear
 
 ## Configuration
 
-Agents are configured via JSON5 files in the `/config` directory. The configuration file is used to define the LLM `system prompt`, agent's inputs, LLM configuration, and actions etc.
+Agents are configured via JSON5 files in the `/config` directory. The configuration file is used to define the LLM `system prompt`, agent's inputs, LLM configuration, and actions etc. The parser is robust, allowing string values to safely contain characters that might otherwise be significant in JSON5, such as `//`, `}`, or unquoted key patterns. These are only processed when outside of string literals.
 
 > **Single-mode vs multi-mode.** A config can either be **single-mode** (top-level `agent_inputs` / `cortex_llm` / `agent_actions` for one behavior) or **multi-mode** (a `modes` map with transitions). Multi-mode is the canonical structure the runtime executes — a single-mode config is folded into one synthesized mode at load (`internal/config/loader.go`). Write single-mode for a single-behavior agent; use multi-mode once you need more than one behavior. The example below is multi-mode.
 
